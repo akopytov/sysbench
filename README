@@ -1,0 +1,66 @@
+SysBench:  System evaluation benchmark
+
+
+Why ?
+The idea is to quickly get an impression about system performance for MySQL
+usage without setting up complex benchmark and even without installing MySQL.
+In some cases this is very helpful. This is also the reason for having
+everything in simple file not depending on any external libraries.
+
+Description:
+This benchmark was designed for identifying basic system parameters, as they
+are important for system using MySQL (w Innodb) under intensive load.
+Handling of IO in case of many parallel requests, checked as well as 
+memory allocation/transfer speed and scheduler performance. 
+CPU is benchmarked by using 64bit integer manipulation using Euklid 
+algorithms for prime number computation. 
+Benchmarks are designed to show benefit of multiple CPUs as well as of
+multiple hard drives, battery backed up write cache.
+
+Sequential read/writes test is a bit tricky, it means request are just given
+out sequentially, but there is no guaranty they will be actually executed this
+way, it could result in some sort of random IO in case of bad IO or threads
+scheduler
+
+Installing:
+See the file INSTALL for generic installation instructions.
+In most cases you will need the following steps:
+    ./configure (or ./configure --without-mysql to compile w/o MySQL support)
+    make
+    make install
+
+Running:
+The general syntax is
+    sysbench [<general-options>] [<test-options>] <command>
+To see available options, tests and commands type:
+    sysbench help
+or
+    sysbench --test=<name> help
+to see options supported by a specified test. Default values for the options
+are specified in brackets after description.
+Currently supported commands are help, run and create-db (for the MySQL test).
+The latter will create a table and fill it with values required to run the 
+MySQL test, using database, table name and size passed as MySQL test options. 
+
+Notes:
+* Make sure number of threads is at least 2 times of numbers CPUs you have.
+* For the fileio test make sure you're using file size which is at least 5 
+times larger than your memory for reliable results. Make sure to use enough 
+files to keep size of each less than 2/4G. 
+* For the threads test --thread-locks should be at least 2 times less than 
+number of threads.
+* If you're running on 64bit CPU make sure to compile 64bit binary for good
+results. 
+
+
+Basic design:
+This test is designed to be easily extensible to add your own test operations,
+as well as create operation mixes to benchmark some particular load.
+The architecture is very simple. Several threads are started and they all
+run in the loop asking for requests from get_request() function,  until
+NULL operation is received. For each request execute_request() is executed,
+which runs it as designed. This allows to design test highly scalable as well
+as producing large amount of conflicts if needed for test case.
+
+Bug reporting:
+Please report any bugs you encounter to <alexeyk@mysql.com>. 

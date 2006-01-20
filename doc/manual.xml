@@ -1,0 +1,751 @@
+<?xml version="1.0" encoding='ISO-8859-1'?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
+
+<book id="sysbench-guide">
+  <bookinfo>
+    <title>SysBench manual</title>
+    
+    <authorgroup>
+      <author>
+	<firstname>Alexey</firstname>
+	<surname>Kopytov</surname>
+	<affiliation>
+	  <address><email>kaamos@users.sourceforge.net</email></address>
+	</affiliation>
+      </author>
+    </authorgroup>
+    
+    <copyright>
+      <year>2004-2005</year>
+      <holder>MySQL AB</holder>
+    </copyright></bookinfo>
+  
+  <toc></toc>
+
+  <chapter id="introduction">
+    <title>Introduction</title>
+
+    <para>
+      SysBench is a modular, cross-platform and multi-threaded benchmark tool for evaluating OS parameters 
+      that are important for a system running a database under intensive load. 
+    </para>
+    <para>
+      The idea of this benchmark suite is to quickly get an impression about system performance without setting up 
+      complex database benchmarks or even without installing a database at all. 
+    </para>
+    <section id="features">
+      <title>Features of SysBench</title>
+      <para>
+	Current features allow to test the following system parameters: 
+	<itemizedlist>
+	  <listitem><para>file I/O performance</para></listitem>
+	  <listitem><para>scheduler performance</para></listitem>
+	  <listitem><para>memory allocation and transfer speed</para></listitem>
+	  <listitem><para>POSIX threads implementation performance</para></listitem>
+	  <listitem><para>database server performance</para></listitem>
+	</itemizedlist> 
+      </para>
+    </section>
+
+    <section id="design">
+      <title>Design</title>
+      <para>
+	The design is very simple. SysBench runs a specified number of threads and they all execute requests in parallel.
+	The actual workload produced by requests depends on the specified test mode. You can limit either the total number of
+	requests or the total time for the benchmark, or both.
+      </para>
+      <para>
+	Available test modes are implemented by compiled-in modules, and SysBench was designed to make adding new test modes
+	an easy task. Each test mode may have additional (or workload-specific) options.
+      </para>
+    </section>
+
+    <section id="links">
+      <title>Links</title>
+
+      <variablelist>
+	<varlistentry>
+	  <term>Home page</term>
+	  <listitem><para>
+	      <ulink url="http://sysbench.sf.net/">http://sysbench.sf.net/</ulink>.
+	    </para></listitem>
+	</varlistentry>
+	<varlistentry>
+	  <term>Download</term>
+	  <listitem><para>
+	      <ulink url="http://sf.net/projects/sysbench/">http://sf.net/projects/sysbench/</ulink>.
+	    </para></listitem>
+	</varlistentry>
+	<varlistentry>
+	  <term>Mailing lists</term>
+	  <listitem><para>
+	      <ulink url="http://sourceforge.net/mail/?group_id=102348">sysbench-general</ulink>
+	    </para></listitem>
+	</varlistentry>
+	<varlistentry>
+	  <term>Web forums</term>
+	  <listitem><para>
+	      <itemizedlist>
+		<listitem>
+		  <ulink url="http://sourceforge.net/forum/forum.php?forum_id=353125">Developers</ulink>
+		</listitem>
+		<listitem>
+		  <ulink url="http://sourceforge.net/forum/forum.php?forum_id=353124">Help</ulink>
+		</listitem>
+		<listitem>
+		  <ulink url="http://sourceforge.net/forum/forum.php?forum_id=353123">Open discussion</ulink>
+		</listitem>
+	      </itemizedlist> 
+	    </para></listitem>
+	</varlistentry>
+	<varlistentry>
+	  <term>Bug tracking system</term>
+	  <listitem><para>
+	      <itemizedlist>
+		<listitem>
+		  <ulink url="http://sourceforge.net/tracker/?atid=631676&amp;group_id=102348&amp;func=browse">
+		    Bug reports
+		  </ulink>
+		</listitem>
+		<listitem>
+		  <ulink url="http://sourceforge.net/tracker/?atid=631679&amp;group_id=102348&amp;func=browse">
+		    Feature requests
+		  </ulink>
+		</listitem>
+	      </itemizedlist> 
+	    </para></listitem>
+	</varlistentry>
+      </variablelist>
+
+    </section>
+
+    <section id="install">
+      <title>Installation</title>
+
+      <para>
+	The following standart procedure will be sufficient to build SysBench in most cases:
+	<synopsis>
+	  <command>./configure</command>
+	  <command>make</command>
+	  <command>make install</command>
+	</synopsis>
+	The above procedure will try to compile SysBench with MySQL support by default. If you have MySQL headers and libraries
+	in non-standard locations (and no <command>mysql_config</command> can be found in the <constant>PATH</constant>
+	environmental variable), then you can specify them explicitly with <option>--with-mysql-includes</option> and
+	<option>--with-mysql-libs</option> options to <command>./configure</command>. 
+      </para>
+      <para>
+	To compile SysBench without MySQL support, use <option>--without-mysql</option>. In this case all database-related
+	test modes will be unavailable.
+      </para>
+      <para>
+	If you are running on a 64-bit platform, make sure to build a 64-bit binary by passing the proper target platform and compiler options to <command>configure</command> script. You can also consult the INSTALL file for generic installation instructions.
+      </para>
+    </section>
+
+  </chapter>
+
+  <chapter id="usage"> 
+    <title>Usage</title>
+    <section id="general_syntax">
+      <title>General syntax</title>
+
+      <para>
+	The general syntax for SysBench is as follows:
+	<screen>
+	  sysbench <emphasis>[common-options]</emphasis> --test=<emphasis>name</emphasis> <emphasis>[test-options]</emphasis> <emphasis>command</emphasis>
+	</screen>
+	See <xref linkend="common_options"/> for a description of common options and documentation for particular test mode for a list
+	of test-specific options.
+      </para>
+
+      <para>
+	Below is a brief description of available commands and their purpose:
+	<variablelist>
+	  <varlistentry>
+	    <term><command>prepare</command></term>
+	    <listitem>Performs preparative actions for those tests which need them, e.g. creating the necessary 
+	      files on disk for the <option>fileio</option> test, or filling the test database for the
+	      <option>oltp</option> test.
+	    </listitem>
+	  </varlistentry>
+	  <varlistentry>
+	    <term><command>run</command></term>
+	    <listitem>Runs the actual test specified with the <option>--test=<emphasis>name</emphasis></option> option.
+	    </listitem>
+	  </varlistentry>
+	  <varlistentry>
+	    <term><command>cleanup</command></term>
+	    <listitem>Removes temporary data after the test run in those tests which create one.
+	    </listitem>
+	  </varlistentry>
+	  <varlistentry>
+	    <term><command>help</command></term>
+	    <listitem>Displays usage information for a test specified with the 
+	      <option>--test=<emphasis>name</emphasis></option> option.
+	    </listitem>
+	  </varlistentry>
+	</variablelist>
+      </para>
+      <para>
+	Also you can use <command>sysbench help</command> to display the brief usage summary and the list of available test modes.
+      </para>
+    </section>
+
+    <section id="common_options">
+      <title>Common command line options</title>
+      <para>
+	The table below lists the supported common options, their descriptions and default values:
+      </para>
+      <informaltable frame="all">
+	<tgroup cols='3'> 
+	  <tbody>
+	    <row><entry><emphasis>Option</emphasis></entry><entry><emphasis>Description</emphasis></entry><entry><emphasis>Default value</emphasis></entry></row>
+	    <row><entry><option>--num-threads</option></entry><entry>The total number of worker threads to create</entry><entry>1</entry></row>
+	    <row><entry><option>--max-requests</option></entry><entry>Limit for total number of requests. 0 means unlimited</entry><entry>10000</entry></row>
+	    <row><entry><option>--max-time</option></entry><entry>Limit for total execution time in seconds. 0 (default) means unlimited</entry><entry>0</entry></row>
+	    <row><entry><option>--thread-stack-size</option></entry><entry>Size of stack for each thread</entry><entry>32K</entry></row>
+	    <row><entry><option>--init-rnd</option></entry><entry>Specifies if random numbers generator should be initialized from timer before the test start</entry><entry>off</entry></row>
+	    <row><entry><option>--test</option></entry><entry>Name of the test mode to run</entry><entry><emphasis>Required</emphasis></entry></row>
+	    <row><entry><option>--debug</option></entry><entry>Print more debug info</entry><entry>off</entry></row>
+	    <row><entry><option>--validate</option></entry><entry>Perform
+		validation of test results where possible </entry><entry>off</entry></row>
+	    <row><entry><option>--help</option></entry><entry>Print help on general syntax or on a test mode specified with --test, and exit</entry><entry>off</entry></row>
+	    <row><entry><option>--verbosity</option></entry><entry>Verbosity level (0 - only critical messages, 5 - debug)</entry><entry>4</entry></row>
+	    <row><entry><option>--percentile</option></entry>
+	      <entry>
+		<para>
+		  SysBench measures execution times for all processed
+		  requests to display statistical information like minimal, average and
+		  maximum execution time. For most benchmarks it is also useful to know
+		  a request execution time value matching some percentile (e.g. 95%
+		  percentile means we should drop 5% of the most long requests and
+		  choose the maximal value from the remaining ones). 
+		</para>
+		<para>
+		  This option allows to specify a percentile rank of query
+		  execution times to count
+		</para>
+	      </entry>
+	      <entry>95</entry></row>
+	    <row><entry><option>--batch</option></entry><entry>Dump current results periodically (see <xref linkend="batch_mode"/>)</entry><entry>off</entry></row>
+	    <row><entry><option>--batch-delay</option></entry><entry>Delay between batch dumps in secods (see <xref linkend="batch_mode"/>)</entry><entry>300</entry></row>
+	    <row><entry><option>--validate</option></entry><entry>Perform validation of test results where possible</entry><entry>off</entry></row>
+	  </tbody>
+	</tgroup>
+      </informaltable>
+      <para>
+	Note that numerical values for all <emphasis>size</emphasis> options
+	(like <option>--thread-stack-size</option> in this table) may be
+	specified by appending the corresponding multiplicative suffix (K for
+	kilobytes, M for megabytes, G for gigabytes and T for terabytes).
+      </para>
+    </section>
+    <section id="batch_mode">
+      <title>Batch mode</title>
+      In some cases it is useful to have not only the final benchmarks
+      statistics, but also periodical dumps of current stats to see how they
+      change over the test run. For this purpose SysBench has a batch
+      execution mode which is turned on by the <option>--batch</option>
+      option. You may specify the delay in seconds between the consequent dumps with
+      the <option>--batch-delay</option> option. Example:
+      <screen>
+	sysbench --batch --batch-delay=5 --test=threads run
+      </screen>
+      This will run SysBench in a threads test mode, with the current values
+      of minimum, average, maximum and percentile for request execution
+      times printed every 5 seconds.
+    </section>
+
+
+    <section id="test_modes">
+      <title>Test modes</title>
+      This section gives a detailed description for each test mode available
+      in SysBench.
+
+      <section id="cpu_mode">
+	<title><option>cpu</option></title>
+      </section>
+      <para>
+	The <option>cpu</option> is one of the most simple benchmarks in
+	SysBench. In this mode each request consists in calculation of prime numbers up to a value
+	specified by the <option>--cpu-max-primes</option> option. All calculations are performed using 64-bit integers.
+      </para>
+      <para>
+	Each thread executes the requests concurrently until either the total number of requests or the total execution
+	time exceed the limits specified with the common command line options.
+      </para>
+      <para>
+	Example:
+	<screen>
+	  sysbench --test=cpu --cpu-max-prime=20000 run
+	</screen>
+      </para>
+
+      <section id="threads_mode">
+	<title><option>threads</option></title>
+      </section>
+      <para>
+	This test mode was written to benchmark scheduler performance, more specifically the cases
+	when a scheduler has a large number of threads competing for some set of mutexes.
+      </para>
+      <para>
+	SysBench creates a specified number of threads and a specified number of mutexes. Then each thread
+	starts running the requests consisting of locking the mutex, yielding the CPU, so the thread is
+	placed in the run queue by the scheduler, then unlocking the mutex when the thread is rescheduled back
+	to execution. For each request, the above actions are run several times in a loop, so the more iterations
+	is performed, the more concurrency is placed on each mutex.
+      </para>
+      <para>
+	The following options are available in this test mode:
+	<informaltable frame="all">
+	  <tgroup cols='3'> 
+	    <tbody>
+	      <row><entry><emphasis>Option</emphasis></entry><entry><emphasis>Description</emphasis></entry><entry><emphasis>Default value</emphasis></entry></row>
+	      <row><entry><option>--thread-yields</option></entry><entry>Number of <emphasis>lock/yield/unlock</emphasis> loops to execute per each request</entry><entry>1000</entry></row>
+	      <row><entry><option>--thread-locks</option></entry><entry>Number of mutexes to create</entry><entry>8</entry></row>
+	    </tbody>
+	  </tgroup>
+	</informaltable>
+      </para>
+      <para>
+	Example:
+	<screen>
+	  sysbench --num-threads=64 --test=threads --thread-yields=100 --thread-locks=2 run
+	</screen>
+      </para>
+
+
+      <section id="mutex_mode">
+	<title><option>mutex</option></title>
+      </section>
+      <para>
+	This test mode was written to emulate a situation when all threads run concurrently most of the time, 
+	acquiring the mutex lock only for a short period of time (incrementing a global variable). So the purpose
+	of this benchmarks is to examine the performance of mutex implementation.
+      </para>
+      <para>
+	The following options are available in this test mode:
+	<informaltable frame="all">
+	  <tgroup cols='3'> 
+	    <tbody>
+	      <row><entry><emphasis>Option</emphasis></entry><entry><emphasis>Description</emphasis></entry><entry><emphasis>Default value</emphasis></entry></row>
+	      <row><entry><option>--mutex-num</option></entry><entry>Number of mutexes. The actual mutex to lock is chosen randomly before each lock</entry><entry>4096</entry></row>
+	      <row><entry><option>--mutex-locks</option></entry><entry>Number of mutex locks to acquire per each request</entry><entry>50000</entry></row>
+	      <row><entry><option>--mutex-loops</option></entry><entry>Number of iterations for an empty loop to perform before acquiring the lock</entry><entry>10000</entry></row>
+	    </tbody>
+	  </tgroup>
+	</informaltable>
+      </para>
+
+
+      <section id="memory_mode">
+	<title><option>memory</option></title>
+	<para>
+	  This test mode can be used to benchmark sequential memory reads or writes. Depending on command line
+	  options each thread can access either a global or a local block for all memory operations.
+	</para>
+	<para>
+	  The following options are available in this test mode:
+	  <informaltable frame="all">
+	    <tgroup cols='3'> 
+	      <tbody>
+		<row><entry><emphasis>Option</emphasis></entry><entry><emphasis>Description</emphasis></entry><entry><emphasis>Default value</emphasis></entry></row>
+		<row><entry><option>--memory-block-size</option></entry><entry>Size of memory block to use</entry><entry>1K</entry></row>
+		<row><entry><option>--memory-scope</option></entry><entry>
+		    Possible values: <option>global</option>, <option>local</option>. Specifies whether each thread will
+		    use a globally allocated memory block, or a local one.
+		  </entry><entry>global</entry></row>
+		<row><entry><option>--memory-total-size</option></entry><entry>Total size of data to transfer</entry><entry>100G</entry></row>
+		<row><entry><option>--memory-oper</option></entry><entry>
+		    Type of memory operations. Possible values: <option>read</option>, <option>write</option>.
+		  </entry><entry>100G</entry></row>
+	      </tbody>
+	    </tgroup>
+	  </informaltable>
+	</para>
+      </section>
+
+      <section id="fileio_mode">
+	<title><option>fileio</option></title>
+
+	<para>
+	  This test mode can be used to produce various kinds of file I/O workloads. At the <option>prepare</option>
+	  stage SysBench creates a specified number of files with a specified total size, then at the <option>run</option>
+	  stage, each thread performs specified I/O operations on this set of files.
+	</para>
+
+	<para>
+	  When the global <option>--validate</option> option is used with the <option>fileio</option> test mode, SysBench
+	  performs checksums validation on all data read from the disk. On each write operation the block is filled with random values,
+	  then the checksum is calculated
+	  and stored in the block along with the offset of this block within a file. On each read operation the block is validated
+	  by comparing the stored offset with the real offset, and the stored checksum with the real calculated checksum.
+	</para>
+
+	<para>
+	  The following I/O operations are supported:
+
+	  <variablelist>
+	    <varlistentry>
+	      <term><command>seqwr</command></term>
+	      <listitem>sequential write
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term><command>seqrewr</command></term>
+	      <listitem>sequential rewrite
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term><command>seqrd</command></term>
+	      <listitem>sequential read
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term><command>rndrd</command></term>
+	      <listitem>random read
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term><command>rndwr</command></term>
+	      <listitem>random write
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term><command>rndrw</command></term>
+	      <listitem>combined random read/write
+	      </listitem>
+	    </varlistentry>
+	  </variablelist>
+	</para>
+
+	<para>
+	  Also, the following file access modes can be specified, if the underlying platform supports them:
+	  <variablelist>
+	    <varlistentry>
+	      <term>Asynchronous I/O mode</term>
+	      <listitem>
+		At the moment only Linux AIO implementation is supported. When running in asynchronous mode,
+		SysBench queues a specified number of I/O requests using Linux AIO API, then waits for 
+		at least one of submitted requests to complete. After that a new series of I/O requests
+		is submitted. 
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term>Slow <option>mmap()</option> mode</term>
+	      <listitem>In this mode SysBench will use <option>mmap</option>'ed I/O. However, a separate
+		<option>mmap</option> will be used for each I/O request due to the limitation of 32-bit
+		architectures (we cannot <option>mmap()</option> the whole file, as its size migth possibly
+		exceed the maximum of 2 GB of the process address space).
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term>Fast <option>mmap()</option> mode</term>
+	      <listitem>On 64-bit architectures it is possible to <option>mmap()</option> the whole file
+		into the process address space, avoiding the limitation of 2 GB on 32-bit platforms.
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term>Using <option>fdatasync()</option> instead of <option>fsync()</option></term>
+	      Flush only data buffers, but not the metadata.
+	      <listitem>
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term>Additional flags to <option>open(2)</option></term>
+	      <listitem>SysBench can use additional flags to <option>open(2)</option>, such as <option>O_SYNC</option>,
+                <option>O_DSYNC</option> and <option>O_DIRECT</option>.
+	      </listitem>
+	    </varlistentry>
+	  </variablelist>
+	</para>
+	<para>
+	  Below is a list of test-specific option for the <command>fileio</command> mode:
+
+	  <informaltable frame="all">
+	    <tgroup cols='3'> 
+	      <tbody>
+		<row><entry><emphasis>Option</emphasis></entry><entry><emphasis>Description</emphasis></entry><entry><emphasis>Default value</emphasis></entry></row>
+		<row><entry><option>--file-num</option></entry><entry>Number of files to create</entry><entry>128</entry></row>
+		<row><entry><option>--file-block-size</option></entry><entry>
+		    Block size to use in all I/O operations
+		  </entry><entry>16K</entry></row>
+		<row><entry><option>--file-total-size</option></entry><entry>Total size of files</entry><entry>2G</entry></row>
+		<row><entry><option>--file-test-mode</option></entry><entry>
+		    Type of workload to produce. Possible values: <option>seqwr</option>, <option>seqrewr</option>,
+		    <option>seqrd</option>, <option>rndrd</option>, <option>rndwr</option>, <option>rndwr</option> (see above)
+		  </entry><entry><emphasis>required</emphasis></entry></row>
+		<row><entry><option>--file-io-mode</option></entry><entry>
+		    I/O mode. Possible values: <option>sync</option>, <option>async</option>, <option>fastmmap</option>, 
+		    <option>slowmmap</option> (only if supported by the platform, see above).
+		  </entry><entry>sync</entry></row>
+		<row><entry><option>--file-async-backlog</option></entry><entry>
+		    Number of asynchronous operations to queue per thread (only for <option>--file-io-mode=async</option>, see above)
+		  </entry><entry>128</entry></row>
+		<row><entry><option> --file-extra-flags</option></entry><entry>
+		    Additional flags to use with <option>open(2)</option>
+		  </entry><entry></entry></row>
+		<row><entry><option>--file-fsync-freq</option></entry><entry>
+		    Do <option>fsync()</option> after this number of requests (0 - don't use <option>fsync()</option>)
+		  </entry><entry>100</entry></row>
+		<row><entry><option>--file-fsync-all</option></entry><entry>
+		    Do <option>fsync()</option> after each write operation
+		  </entry><entry>no</entry></row>
+		<row><entry><option>--file-fsync-end</option></entry><entry>
+		    Do <option>fsync()</option> at the end of the test
+		  </entry><entry>yes</entry></row>
+		<row><entry><option>--file-fsync-mode</option></entry><entry>
+		    Which method to use for synchronization. Possible values: <option>fsync</option>, <option>fdatasync</option> (see above)
+		  </entry><entry>fsync</entry></row>
+		<row><entry><option>--file-merged-requests</option></entry><entry>
+		    Merge at most this number of I/O requests if possible (0 - don't merge)
+		  </entry><entry>0</entry></row>
+		<row><entry><option>--file-rw-ratio</option></entry><entry>
+		    reads/writes ration for combined random read/write test
+		  </entry><entry>1.5</entry></row>
+
+	      </tbody>
+	    </tgroup>
+	  </informaltable>
+
+	</para>
+
+	<para>
+	  Usage example:
+	  <screen>
+	    $ sysbench --num-threads=16 --test=fileio --file-total-size=3G --file-test-mode=rndrw prepare
+	    $ sysbench --num-threads=16 --test=fileio --file-total-size=3G --file-test-mode=rndrw run
+	    $ sysbench --num-threads=16 --test=fileio --file-total-size=3G --file-test-mode=rndrw cleanup
+	  </screen>
+	  In the above example the first command creates 128 files with the total size of 3 GB in the current directory, the
+	  second command runs the actual benchmark and displays the results upon completion, and the third one removes the files
+	  used for the test.
+	</para>
+      </section>
+
+      <section id="database_mode">
+	<title><option>oltp</option></title>
+      </section>
+      <para>
+	This test mode was written to benchmark a real database performance. At the <command>prepare</command> stage
+	the following table is created in the specified database (<option>sbtest</option> by default):
+	<screen>
+	  CREATE TABLE `sbtest` (
+	  `id` int(10) unsigned NOT NULL auto_increment,
+	  `k` int(10) unsigned NOT NULL default '0',
+	  `c` char(120) NOT NULL default '',
+	  `pad` char(60) NOT NULL default '',
+	  PRIMARY KEY  (`id`),
+	  KEY `k` (`k`);
+	</screen>
+	Then this table is filled with a specified number of rows. 
+      </para>
+      <para>
+	The following execution modes are available at the <command>run</command> stage:
+	<variablelist>
+	  <varlistentry>
+	    <term>Simple</term>
+	    <listitem>
+	      <para>
+		In this mode each thread runs simple queries of the following form:
+		<screen> SELECT c FROM sbtest WHERE id=<emphasis>N</emphasis>  </screen>
+		where <emphasis>N</emphasis> takes a random value in range 1..<emphasis>&lt;table size&gt;</emphasis>
+	      </para>
+	    </listitem>
+	  </varlistentry>
+	  <varlistentry>
+	    <term>Advanced transactional</term>
+	    <listitem> 
+	      <para>
+		Each thread performs transactions on the test table. If the test table and database support transactions
+		(e.g. InnoDB engine in MySQL), then <option>BEGIN</option>/<option>COMMIT</option> statements will be used
+		to start/stop a transaction. Otherwise, SysBench will use <option>LOCK TABLES</option>/<option>UNLOCK TABLES
+		</option> statements (e.g. for MyISAM engine in MySQL). If some rows are deleted in a transaction,
+		the same rows will be inserted within the same transaction, so this test mode does not destruct any data
+		in the test table and can be run multiple times on the same table.
+	      </para>
+
+	      Depending on the command line options, each transaction may contain the following statements:
+	      <itemizedlist>
+		<listitem>Point queries: <screen>SELECT c FROM sbtest WHERE id=<emphasis>N</emphasis></screen></listitem>
+		<listitem>
+		  Range queries: <screen>SELECT c FROM sbtest WHERE id BETWEEN <emphasis>N</emphasis> AND <emphasis>M</emphasis> </screen> </listitem>
+		<listitem>
+		  Range SUM() queries: <screen>SELECT SUM(K) FROM sbtest WHERE id BETWEEN <emphasis>N</emphasis> and <emphasis>M</emphasis></screen></listitem>
+		<listitem>Range ORDER BY queries:<screen>SELECT c FROM sbtest WHERE id between <emphasis>N</emphasis> and <emphasis>M</emphasis> ORDER BY c</screen></listitem>
+		<listitem>Range DISTINCT queries:<screen>SELECT DISTINCT c FROM sbtest WHERE id BETWEEN <emphasis>N</emphasis> and <emphasis>M</emphasis> ORDER BY c</screen> </listitem>
+		<listitem>UPDATEs on index column:<screen>UPDATE sbtest SET k=k+1 WHERE id=<emphasis>N</emphasis> </screen> </listitem>
+		<listitem>UPDATEs on non-index column:<screen>UPDATE sbtest SET c=<emphasis>N</emphasis> WHERE id=<emphasis>M</emphasis> </screen> </listitem>
+		<listitem>DELETE queries:<screen>DELETE FROM sbtest WHERE id=<emphasis>N</emphasis> </screen> </listitem>
+		<listitem>INSERT queries:<screen>INSERT INTO sbtest VALUES (<emphasis>...</emphasis>) </screen> </listitem>
+	      </itemizedlist> 
+	    </listitem>
+	  </varlistentry>
+	  <varlistentry>
+            
+	    <term>Non-transactional</term>
+	    <listitem>
+	      <para>
+		This mode is similar to <command>Simple</command>, but you can also choose the query to run. Note that unlike the 
+		<command>Advanced transactional</command> mode, this one does not preserve the test table between requests, so
+		you should recreate it with the appropriate <command>cleanup</command>/<command>prepare</command> commands between
+		consecutive benchmarks. 
+	      </para>
+	      <para>
+		Below is a list of possible queries:
+		<itemizedlist>
+		  <listitem>
+		    Point queries:
+		    <screen>SELECT pad FROM sbtest WHERE id=<emphasis>N</emphasis></screen>
+		  </listitem>
+		  <listitem>
+		    UPDATEs on index column:
+		    <screen>UPDATE sbtest SET k=k+1 WHERE id=<emphasis>N</emphasis></screen>
+		  </listitem>
+		  <listitem>
+		    UPDATEs on non-index column:
+		    <screen>UPDATE sbtest SET c=<emphasis>N</emphasis> WHERE id=<emphasis>M</emphasis></screen>
+		  </listitem>
+		  <listitem>
+		    DELETE queries:
+		    <screen>DELETE FROM sbtest WHERE id=<emphasis>N</emphasis></screen> 
+		    The generated row IDs are unique over each test run, so no row is deleted twice.
+		  </listitem>
+		  <listitem>
+		    INSERT queries:
+		    <screen>INSERT INTO sbtest (k, c, pad) VALUES(<emphasis>N</emphasis>, <emphasis>M</emphasis>, <emphasis>S</emphasis>)</screen> 
+		  </listitem>
+		</itemizedlist> 
+	      </para>
+	    </listitem>
+	  </varlistentry>
+	</variablelist>
+      </para>
+
+      <para>
+	Below is a list of options available for the database test mode:
+
+	<informaltable frame="all">
+	  <tgroup cols='3'> 
+	    <tbody>
+	      <row><entry><emphasis>Option</emphasis></entry><entry><emphasis>Description</emphasis></entry><entry><emphasis>Default value</emphasis></entry></row>
+	      <row><entry><option>--oltp-test-mode</option></entry><entry>Execution mode (see above). Possible values: <option>simpe</option> (simple), <option>complex</option> (advanced transactional) and <option>nontrx</option> (non-transactional)</entry><entry><option>complex</option></entry></row>
+	      <row><entry><option>--oltp-read-only</option></entry><entry>
+		  Read-only mode. No <option>UPDATE</option>, <option>DELETE</option> or <option>INSERT</option> queries will be performed.
+		</entry><entry>off</entry></row>
+	      <row><entry><option>--oltp-range-size</option></entry><entry>Range size for range queries</entry><entry>100</entry></row>
+	      <row><entry><option>--oltp-point-selects</option></entry><entry>
+		  Number of point select queries in a single transaction
+		</entry><entry>10</entry></row>
+	      <row><entry><option>--oltp-simple-ranges</option></entry><entry>
+		  Number of simple range queries in a single transaction
+		</entry><entry>1</entry></row>
+	      <row><entry><option>--oltp-sum-ranges</option></entry><entry>
+		  Number of SUM range queries in a single transaction
+		</entry><entry>1</entry></row>
+	      <row><entry><option>--oltp-order-ranges</option></entry><entry>
+		  Number of ORDER range queries in a single transaction
+		</entry><entry>1</entry></row>
+	      <row><entry><option>--oltp-distinct-ranges</option></entry><entry>
+		  Number of DISTINCT range queries in a single transaction
+		</entry><entry>1</entry></row>
+	      <row><entry><option>--oltp-index-updates</option></entry><entry>
+		  Number of index UPDATE queries in a single transaction
+		</entry><entry>1</entry></row>
+	      <row><entry><option>--oltp-non-index-updates</option></entry><entry>
+		  Number of non-index UPDATE queries in a single transaction
+		</entry><entry>1</entry></row>
+	      <row><entry><option> --oltp-nontrx-mode</option></entry><entry>
+		  Type of queries for non-transactional execution mode (see above). Possible values: <option>select</option>,
+		  <option>update_key</option>, <option>update_nokey</option>, <option>insert</option>, <option>delete</option>.
+		</entry><entry><option>select</option></entry></row>
+	      <row><entry><option>--oltp-connect-delay</option></entry><entry>
+		  Time in microseconds to sleep after each connection to database
+		</entry><entry>10000</entry></row>
+	      <row><entry><option>--oltp-user-delay-min</option></entry><entry>
+		  Minimum time in microseconds to sleep after each request
+		</entry><entry>0</entry></row>
+	      <row><entry><option>--oltp-user-delay-max</option></entry><entry>
+		  Maximum time in microseconds to sleep after each request
+		</entry><entry>0</entry></row>
+	      <row><entry><option>--oltp-table-name</option></entry><entry>
+		  Name of the test table
+		</entry><entry>sbtest</entry></row>
+	      <row><entry><option>--oltp-table-size</option></entry><entry>
+		  Number of rows in the test table
+		</entry><entry>10000</entry></row>
+	      <row><entry><option>--oltp-dist-type</option></entry><entry>
+		  <para>
+		    Distribution of random numbers. Possible values: <option>uniform</option> (uniform distribution),
+		    <option>gauss</option> (gaussian distribution) and <option>special</option>.
+		  </para>
+		  <para>
+		    With special distribution a specified percent of numbers is generated in a specified percent of cases (see options below).
+		  </para>
+		</entry><entry><option>special</option></entry></row>
+	      <row><entry><option>--oltp-dist-pct</option></entry><entry>
+		  Percentage of values to be treated as 'special' (for special distribution)
+		</entry><entry>1</entry></row>
+	      <row><entry><option>--oltp-dist-res</option></entry><entry>
+		  Percentage of cases when 'special' values are generated (for special distribution)
+		</entry><entry>75</entry></row>
+	      <row><entry><option>--db-ps-mode</option></entry><entry>
+		  If the database driver supports Prepared Statements API, SysBench will use server-side prepared statements for all queries
+		  where possible. Otherwise, client-side (or emulated) prepared statements will be used. This option allows to force using
+		  emulation even when PS API is available. Possible values: <option>disable</option>, <option>auto</option>.
+		</entry><entry><option>auto</option></entry></row>
+
+	    </tbody>
+	  </tgroup>
+	</informaltable>
+      </para>
+
+      <para>
+	Also, each database driver may provide its own options. Currently only MySQL driver is available. Below is a list of MySQL-specific options:
+
+	<informaltable frame="all">
+	  <tgroup cols='3'> 
+	    <tbody>
+	      <row><entry><emphasis>Option</emphasis></entry><entry><emphasis>Description</emphasis></entry><entry><emphasis>Default value</emphasis></entry></row>
+	      <row><entry><option>--mysql-host</option></entry><entry>MySQL server host</entry><entry><option>localhost</option></entry></row>
+	      <row><entry><option>--mysql-port</option></entry><entry>
+		  MySQL server port (in case TCP/IP connection should be used)
+		</entry><entry>3306</entry></row>
+	      <row><entry><option>--mysql-socket</option></entry><entry>Unix socket file to communicate with the MySQL server</entry><entry></entry></row>
+	      <row><entry><option>--mysql-user</option></entry><entry>
+		  MySQL user
+		</entry><entry>user</entry></row>
+	      <row><entry><option>--mysql-password</option></entry><entry>
+		  MySQL password
+		</entry><entry></entry></row>
+	      <row><entry><option>--mysql-db</option></entry><entry>
+		  MySQL database name. Note SysBench will not automatically create this database. You should create it manually and grant
+		  the appropriate privileges to a user which will be used to access the test table.
+		</entry><entry>sbtest</entry></row>
+	      <row><entry><option>--mysql-table-type</option></entry><entry>
+		  Type of the test table. Possible values: <option>myisam</option>, <option>innodb</option>, <option>heap</option>,
+		  <option>ndbcluster</option>, <option>bdb</option>. 
+		</entry><entry>innodb</entry></row>
+	      <row><entry><option>--myisam-max-rows</option></entry><entry>
+		  MAX_ROWS option for MyISAM tables (required for big tables)  
+		</entry><entry>1000000</entry></row>
+	    </tbody>
+	  </tgroup>
+	</informaltable>
+      </para>
+
+      <para>
+	Example usage:
+	<screen>
+	  $ sysbench --test=oltp --mysql-table-type=myisam --oltp-table-size=1000000 --mysql-socket=/tmp/mysql.sock prepare
+	  $ sysbench --num-threads=16 --max-requests=100000 --test=oltp --oltp-table-size=1000000 --mysql-socket=/tmp/mysql.sock --oltp-read-only run
+	</screen>
+	The first command will create a MyISAM table 'sbtest' in a database 'sbtest' on a MySQL server using <option>/tmp/mysql.sock</option> socket, then fill this table with 1M records. The second command will run the actual benchmark with 16 client threads, limiting the total number of request by 100,000.
+      </para>
+
+    </section>
+
+  </chapter>
+
+</book>

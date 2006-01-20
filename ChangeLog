@@ -1,0 +1,209 @@
+2006-01-17  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Fixed several memory leaks in OLTP test
+
+2005-12-14  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Renamed option 'mysql-table-type' to 'mysql-table-engine'
+	* It's now possible to pass arbitrary engine names to MySQL driver
+	* Transactions support must be explicitly specified with 
+	'mysql-engine-trx' option for those engines, which are unknown to SysBench
+
+2005-09-27  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Changed 'thread fairness' calculation from percents to stddev
+	* Added validation mode to OLTP test (--validate switch)
+	* Remove auto_increment from the 'id' field before running OLTP tests
+	* Print separate time for query execution and result fetching in --debug mode
+	* version 0.4.3
+
+2005-07-25  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Minor cleanups in help messages
+	* Several FreeBSD-related fixes
+	* Fixed the Oracle driver
+	* Version 0.4.1
+
+2005-03-04  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Fixed a lot of small bugs, including portability issues on Mac OS X, 
+	64-bit platforms and old MySQL versions
+	* Documentation added to the main tree
+	* New validation mode in fileio test
+
+2005-01-27  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Fixed compilation on Solaris
+	* Added call to thr_setconcurrency() on Solaris
+	* Fixed an overflow bug in sb_timer_current()
+	* Changed the default number of threads to 1
+	* Added non-transactional mode to the OLTP test
+	* Fixed bug with excessive number of connections in OLTP test
+	* Handle ER_LOCK_WAIT_TIMEOUT in the same way as ER_LOCK_DEADLOCK
+	* Version 0.3.2
+
+2004-07-27  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Fixed MySQL driver to use new PS API in MySQL >= 4.1.2
+
+2004-07-12  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Fixed final fsync in random I/O requests
+	* Fixed several race conditions
+
+2004-07-09  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Removed --oltp-time-limit option (obsoleted by --max-time)
+
+2004-07-06  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Changed statistics output to more human-readable format
+
+2004-07-04  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added new logger interface to internal API
+	* Modified all tests to use the new logger interface
+
+2004-06-17  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Fixed table type autodetection with MySQL >= 4.1
+
+2004-06-06  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added preliminary support of prepared statements to DB API
+
+2004-05-31  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added slow-mmap mode for 32-bit boxes in fileio test 
+
+2004-05-30  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Fixed compilation with gcc >= 3.3
+	* Fixed 'prepare' command for sequential write test
+
+2004-05-26  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Changed formatting of file sizes in output
+	* Fixed type cast warning on SuSE 8.1 
+
+2004-05-21  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added mutex performance benchmark 
+
+2004-05-12  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Extended memory benchmark to calculate more useful results
+
+2004-05-10  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Split test file creation, test running and cleaning up into separate 
+	commands (prepare, run, cleanup) for fileio test
+
+2004-05-05  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Removed limit on maximum block size for fileio test 
+
+2004-05-04  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* added --max-time option to limit total test execution time 
+
+2004-05-03  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Fixed compilation with --without-mysql option. 
+
+2004-04-13  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added mmaped I/O support to fileio test
+
+2004-04-11  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Changed default table size to a lower value in OLTP test
+
+2004-04-07  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added automatic table type detection to MySQL driver
+	* Changed the default table type for MySQL driver to InnoDB
+	* Added support for BDB and NDB table types
+
+2004-04-06  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added autoconf macro to handle older (incompatible) version of 
+	libaio.h
+
+2004-04-05  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Fixed compilation on 64-bit systems
+	* Replaced Linux AIO calls with more portable equivalents
+
+2004-04-04  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added parameter to specify maximum number of queued operations
+	in fileio async mode (file-async-backlog)
+	* Added parameter to specify extra open() flags (file-extra-flags)
+	* Fixed memory allocation bug in command line parser
+
+2004-04-02  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added Linux asynchronous I/O support to fileio test
+	* Fixed bug with statistic counters
+
+2004-04-01  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added test file creation to fileio test
+	* Added read-only mode to OLTP test 
+
+2004-03-31  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Close database connections in OLTP test
+	* Added file-fsync-all mode for fileio test
+	
+2004-03-30  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added myisam-max-rows option for MySQL driver
+	* Fixed configure.ac for cases when no MySQL libraries found
+
+2004-03-10  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Implement proper handling of table locks in OLTP test
+
+2004-03-09  Alexey Kopytov  <alexeyk@mysql.com>
+
+        * Recognize MySQL table type when creating test database
+	* Fix driver-specific options
+	* Now it's possible to pass MySQL root directory in --with-mysql option
+	* Trim trailing '.libs' if user passed it in --with-mysql-libs option
+	to configure
+
+2004-03-08  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Build drivers and tests as separate libraries (first step to 
+	dynamically loaded modules)
+	* Display help when required arguments are missing in fileio test
+	* Changed code formatting to match MySQL coding guidelines
+
+2004-03-04  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Generalized DB-dependent code
+	* Added 'database capabilities' feature
+
+2004-02-28  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Fixed possible memory leak in sql request generator
+
+2004-03-27  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Split OLTP code into DB-independent part and MySQL driver 
+
+2004-02-23  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Use libtool for linking with external libraries
+	* Statically link external libraries when they are not installed
+
+2004-02-19  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Print more info when configure finds no MySQL development files
+	* Added --with-mysql-includes and --with-mysql-libs to configure
+	* Fixed compilation error when compiling without MySQL support
+	* Combine several inserts into one query to speed up database creation
+	
+
