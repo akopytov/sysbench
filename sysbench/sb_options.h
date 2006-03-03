@@ -96,6 +96,8 @@ char *sb_get_value_string(char *name);
 
 char *sb_print_value_size(char *buf, unsigned int buflen, double value);
 
+sb_list_t *sb_get_value_list(char *name);
+
 value_t *new_value(void);
 
 option_t *new_option(void);

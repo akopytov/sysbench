@@ -1,5 +1,12 @@
+2006-03-03  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Made auto_increment id column optional
+	* Use TYPE= or ENGINE= in MySQL driver depending on the version of client libraries
+
 2006-01-17  Alexey Kopytov  <alexeyk@mysql.com>
 
+	* version 0.4.5
+	* Added several hosts capability to MySQL driver
 	* Fixed several memory leaks in OLTP test
 
 2005-12-14  Alexey Kopytov  <alexeyk@mysql.com>

@@ -28,7 +28,7 @@
             </div>
           </div>
           <div>
-            <p class="copyright">Copyright © 2004-2005 MySQL AB</p>
+            <p class="copyright">Copyright © 2004-2006 MySQL AB</p>
           </div>
         </div>
         <hr />
@@ -896,7 +896,14 @@
       </p><p>
 	Also, each database driver may provide its own options. Currently only MySQL driver is available. Below is a list of MySQL-specific options:
 
-	</p><div class="informaltable"><table border="1"><colgroup><col /><col /><col /></colgroup><tbody><tr><td><span class="emphasis"><em>Option</em></span></td><td><span class="emphasis"><em>Description</em></span></td><td><span class="emphasis"><em>Default value</em></span></td></tr><tr><td><code class="option">--mysql-host</code></td><td>MySQL server host</td><td><code class="option">localhost</code></td></tr><tr><td><code class="option">--mysql-port</code></td><td>
+	</p><div class="informaltable"><table border="1"><colgroup><col /><col /><col /></colgroup><tbody><tr><td><span class="emphasis"><em>Option</em></span></td><td><span class="emphasis"><em>Description</em></span></td><td><span class="emphasis"><em>Default value</em></span></td></tr><tr><td><code class="option">--mysql-host</code></td><td>
+                      <p>
+                          MySQL server host. 
+                      </p>
+                      <p>
+                          Starting from version 0.4.5 you may specify a list of hosts separated by commas. In this case SysBench will distribute connections between specified MySQL hosts on a round-robin basis. Note that all connection ports and passwords must be the same on all hosts. Also, databases and tables must be prepared explicitely on each host before executing the benchmark.
+                      </p>
+                  </td><td><code class="option">localhost</code></td></tr><tr><td><code class="option">--mysql-port</code></td><td>
 		  MySQL server port (in case TCP/IP connection should be used)
 		</td><td>3306</td></tr><tr><td><code class="option">--mysql-socket</code></td><td>Unix socket file to communicate with the MySQL server</td><td> </td></tr><tr><td><code class="option">--mysql-user</code></td><td>
 		  MySQL user

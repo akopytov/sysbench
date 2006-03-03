@@ -16,7 +16,7 @@
     </authorgroup>
     
     <copyright>
-      <year>2004-2005</year>
+      <year>2004-2006</year>
       <holder>MySQL AB</holder>
     </copyright></bookinfo>
   
@@ -708,7 +708,15 @@
 	  <tgroup cols='3'> 
 	    <tbody>
 	      <row><entry><emphasis>Option</emphasis></entry><entry><emphasis>Description</emphasis></entry><entry><emphasis>Default value</emphasis></entry></row>
-	      <row><entry><option>--mysql-host</option></entry><entry>MySQL server host</entry><entry><option>localhost</option></entry></row>
+	      <row><entry><option>--mysql-host</option></entry>
+                   <entry>
+                      <para>
+                          MySQL server host. 
+                      </para>
+                      <para>
+                          Starting from version 0.4.5 you may specify a list of hosts separated by commas. In this case SysBench will distribute connections between specified MySQL hosts on a round-robin basis. Note that all connection ports and passwords must be the same on all hosts. Also, databases and tables must be prepared explicitely on each host before executing the benchmark.
+                      </para>
+                  </entry><entry><option>localhost</option></entry></row>
 	      <row><entry><option>--mysql-port</option></entry><entry>
 		  MySQL server port (in case TCP/IP connection should be used)
 		</entry><entry>3306</entry></row>

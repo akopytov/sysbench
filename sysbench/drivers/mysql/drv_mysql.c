@@ -40,13 +40,20 @@
 # define HAVE_PS
 #endif
 
+/* Check if we should use the TYPE= (for 3.23) or ENGINE= syntax */
+#if MYSQL_VERSION_ID >= 40000
+# define ENGINE_CLAUSE "ENGINE"
+#else
+#define ENGINE_CLAUSE "TYPE"
+#endif
+
 #define DEBUG(format, ...) do { if (db_globals.debug) log_text(LOG_DEBUG, format, __VA_ARGS__); } while (0)
 
 /* MySQL driver arguments */
 
 static sb_arg_t mysql_drv_args[] =
 {
-  {"mysql-host", "MySQL server host", SB_ARG_TYPE_STRING, "localhost"},
+  {"mysql-host", "MySQL server host", SB_ARG_TYPE_LIST, "localhost"},
   {"mysql-port", "MySQL server port", SB_ARG_TYPE_INT, "3306"},
   {"mysql-socket", "MySQL socket", SB_ARG_TYPE_STRING, NULL},
   {"mysql-user", "MySQL user", SB_ARG_TYPE_STRING, "sbtest"},
@@ -70,7 +77,7 @@ typedef enum
 
 typedef struct
 {
-  char               *host;
+  sb_list_t         *hosts;
   unsigned int       port;
   char               *socket;
   char               *user;
@@ -128,6 +135,10 @@ static mysql_drv_args_t args;          /* driver args */
 static char table_options_str[1024];   /* table options string */
 
 static char use_ps; /* whether server-side prepared statemens should be used */
+
+static sb_list_item_t *hosts_pos;
+
+static pthread_mutex_t hosts_mutex;
 
 /* MySQL driver operations */
 
@@ -203,7 +214,15 @@ int mysql_drv_init(void)
 {
   char *s;
   
-  args.host = sb_get_value_string("mysql-host");
+  args.hosts = sb_get_value_list("mysql-host");
+  if (SB_LIST_IS_EMPTY(args.hosts))
+  {
+    log_text(LOG_FATAL, "No MySQL hosts specified, aborting");
+    return 1;
+  }
+  hosts_pos = args.hosts;
+  pthread_mutex_init(&hosts_mutex, NULL);
+  
   args.port = sb_get_value_int("mysql-port");
   args.socket = sb_get_value_string("mysql-socket");
   args.user = sb_get_value_string("mysql-user");
@@ -228,7 +247,7 @@ int mysql_drv_init(void)
   else
   {
     log_text(LOG_FATAL, "Invalid value of mysql-engine-trx: %s", s);
-    return 0;
+    return 1;
   }
   
   s = sb_get_value_string("mysql-table-engine");
@@ -260,6 +279,10 @@ int mysql_drv_describe(drv_caps_t *caps, const char * table_name)
   /* Try to determine table type */
   if (mysql_drv_connect(&con))
     goto error;
+
+  /* Fix the hosts list */
+  hosts_pos = args.hosts;
+  
   connected = 1;
   snprintf(query, sizeof(query), "SHOW TABLE STATUS LIKE '%s'", table_name);
   
@@ -316,7 +339,8 @@ int mysql_drv_describe(drv_caps_t *caps, const char * table_name)
 
 int mysql_drv_connect(db_conn_t *sb_conn)
 {
-  MYSQL *con;
+  MYSQL          *con;
+  char           *host;
 
   con = (MYSQL *)malloc(sizeof(MYSQL));
   if (con == NULL)
@@ -324,12 +348,20 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   sb_conn->ptr = con;
   
   mysql_init(con);
+
+  pthread_mutex_lock(&hosts_mutex);
+  hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
+  if (hosts_pos == args.hosts)
+    hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
+  host = SB_LIST_ENTRY(hosts_pos, value_t, listitem)->data;
+  pthread_mutex_unlock(&hosts_mutex);
+  
   DEBUG("mysql_init(%p)", con);
   mysql_options(con, MYSQL_READ_DEFAULT_GROUP, "sysbench");
   DEBUG("mysql_options(%p, MYSQL_READ_DEFAULT_GROUP, \"sysbench\")", con);
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",
         con,
-        args.host,
+        host,
         args.user,
         args.password,
         args.db,
@@ -338,7 +370,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
         (MYSQL_VERSION_ID >= 50000) ? "CLIENT_MULTI_STATEMENTS" : "0"
         );
   if (!mysql_real_connect(con,
-                         args.host,
+                         host,
                          args.user,
                          args.password,
                          args.db,
@@ -868,29 +900,29 @@ int parse_table_engine(const char *type)
   {
     if (args.myisam_max_rows > 0)
       snprintf(table_options_str, sizeof(table_options_str),
-               "/*! TYPE=MyISAM MAX_ROWS=%u */", args.myisam_max_rows);
+               "/*! "ENGINE_CLAUSE"=MyISAM MAX_ROWS=%u */", args.myisam_max_rows);
     else
       snprintf(table_options_str, sizeof(table_options_str),
-             "/*! TYPE=MyISAM */");
+             "/*! "ENGINE_CLAUSE"=MyISAM */");
   }
   else if (!strcasecmp(type, "innodb"))
     snprintf(table_options_str, sizeof(table_options_str),
-             "/*! TYPE=InnoDB */");
+             "/*! "ENGINE_CLAUSE"=InnoDB */");
   else if (!strcasecmp(type, "bdb") || !strcasecmp(type, "berkeleydb"))
     snprintf(table_options_str, sizeof(table_options_str),
-             "/*! TYPE=BerkeleyDB */");
+             "/*! "ENGINE_CLAUSE"=BerkeleyDB */");
   else if (!strcasecmp(type, "heap"))
     snprintf(table_options_str, sizeof(table_options_str),
-             "/*! TYPE=HEAP */");
+             "/*! "ENGINE_CLAUSE"=HEAP */");
   else if (!strcasecmp(type, "ndbcluster"))
     snprintf(table_options_str, sizeof(table_options_str),
-             "/*! TYPE=NDB */");
+             "/*! "ENGINE_CLAUSE"=NDB */");
   else if (!strcasecmp(type, "federated"))
     snprintf(table_options_str, sizeof(table_options_str),
-             "/*! TYPE=FEDERATED */");
+             "/*! "ENGINE_CLAUSE"=FEDERATED */");
   else
     snprintf(table_options_str, sizeof(table_options_str),
-             "/*! TYPE=%s */", type);
+             "/*! "ENGINE_CLAUSE"=%s */", type);
 
   mysql_drv_caps.table_options_str = table_options_str;
   

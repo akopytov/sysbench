@@ -55,6 +55,8 @@ static sb_arg_t oltp_args[] =
   {"oltp-nontrx-mode",
    "mode for non-transactional test {select, update_key, update_nokey, insert, delete}",
    SB_ARG_TYPE_STRING, "select"},
+  {"oltp-auto-inc", "whether AUTO_INCREMENT (or equivalent) should be used on id column",
+   SB_ARG_TYPE_FLAG, "on"},
   {"oltp-connect-delay", "time in microseconds to sleep after connection to database", SB_ARG_TYPE_INT,
    "10000"},
   {"oltp-user-delay-min", "minimum time in microseconds to sleep after each request",
@@ -107,6 +109,7 @@ typedef struct
   oltp_mode_t   test_mode;
   unsigned int  read_only;
   unsigned int  skip_trx;
+  unsigned int  auto_inc;
   unsigned int  range_size;
   unsigned int  point_selects;
   unsigned int  simple_ranges;
@@ -231,6 +234,10 @@ static sb_timer_t *fetch_timers;
 static unsigned long long rnd_seed;
 /* Mutex to protect random seed */
 static pthread_mutex_t    rnd_mutex;
+
+/* Variable to pass is_null flag to drivers */
+
+static char oltp_is_null = 1;
 
 /* Parse command line arguments */
 static int parse_arguments(void);
@@ -447,23 +454,25 @@ int oltp_cmd_prepare(void)
     }
   }
 
-  /* Drop auto_increment on the test table */
-  if (!driver_caps.serial && !driver_caps.auto_increment)
-  {
-    db_query(con, "DROP SEQUENCE sbtest_seq");
-    db_query(con, "DROP TRIGGER sbtest_trig");
-  }
-  else if (driver_caps.serial)
-  {
-    snprintf(query, query_len, "ALTER TABLE %s ALTER COLUMN id TYPE INTEGER",
-             args.table_name);
-    db_query(con, query);
-  }
-  else
-  {
-    snprintf(query, query_len, "ALTER TABLE %s CHANGE COLUMN id id INTEGER NOT NULL",
-             args.table_name);
-    db_query(con, query);
+  /* Drop auto_increment on the test table if requested */
+  if (!args.auto_inc) {
+    if (!driver_caps.serial && !driver_caps.auto_increment)
+    {
+      db_query(con, "DROP SEQUENCE sbtest_seq");
+      db_query(con, "DROP TRIGGER sbtest_trig");
+    }
+    else if (driver_caps.serial)
+    {
+      snprintf(query, query_len, "ALTER TABLE %s ALTER COLUMN id TYPE INTEGER",
+               args.table_name);
+      db_query(con, query);
+    }
+    else
+    {
+      snprintf(query, query_len, "ALTER TABLE %s CHANGE COLUMN id id INTEGER NOT NULL",
+               args.table_name);
+      db_query(con, query);
+    }
   }
   
   oltp_disconnect(con);
@@ -683,6 +692,12 @@ void oltp_print_mode(void)
              driver_caps.transactions ? "BEGIN" : "LOCK TABLES",
              (driver_caps.transactions) ? "" :
              ((args.read_only) ? " READ" : " WRITE"));
+
+  if (args.auto_inc)
+    log_text(LOG_NOTICE, "Using auto_inc on the id column");
+  else
+    log_text(LOG_NOTICE, "Not using auto_inc on the id column");
+  
   if (sb_globals.max_requests > 0)
     log_text(LOG_NOTICE,
              "Maximum number of requests for OLTP test is limited to %d",
@@ -1360,6 +1375,7 @@ int parse_arguments(void)
 
   args.read_only = sb_get_value_flag("oltp-read-only");
   args.skip_trx = sb_get_value_flag("oltp-skip-trx");
+  args.auto_inc = sb_get_value_flag("oltp-auto-inc");
   args.range_size = sb_get_value_int("oltp-range-size");
   args.point_selects = sb_get_value_int("oltp-point-selects");
   args.simple_ranges = sb_get_value_int("oltp-simple-ranges");
@@ -1580,7 +1596,7 @@ int prepare_stmt_set_trx(oltp_stmt_set_t *set, oltp_bind_set_t *bufs, db_conn_t 
 
   /* Prepare the range_distinct statement */
   snprintf(query, MAX_QUERY_LEN,
-           "SELECT distinct c from %s where id between ? and ? order by c",
+           "SELECT DISTINCT c from %s where id between ? and ? order by c",
            args.table_name);
   set->range_distinct = db_prepare(conn, query);
   if (set->range_distinct == NULL)
@@ -1920,7 +1936,6 @@ db_stmt_t *get_sql_statement_nontrx(sb_sql_query_t *query, int thread_id)
         We have to bind insert data each time
         because of string parameters
       */
-      buf->range.from = get_unique_random_id();
       buf->range.to = query->u.insert_query.id;
       snprintf(buf->c, 120, "%d-%d-%d-%d-%d-%d-%d-%d-%d-%d",
                sb_rnd(), sb_rnd(), sb_rnd(), sb_rnd(), sb_rnd(), sb_rnd(),
@@ -1930,10 +1945,20 @@ db_stmt_t *get_sql_statement_nontrx(sb_sql_query_t *query, int thread_id)
                sb_rnd(), sb_rnd(), sb_rnd(), sb_rnd(), sb_rnd());
       buf->pad_len = strlen(buf->pad);
 
+      /* Use NULL is AUTO_INCREMENT is used, unique id otherwise */
+      if (args.auto_inc)
+      {
+        binds[0].is_null = &oltp_is_null;
+      }
+      else
+      {
+        buf->range.from = get_unique_random_id();
+        binds[0].buffer = &buf->range.from;
+        binds[0].is_null = 0;
+      }
+      
       binds[0].type = DB_TYPE_INT;
-      binds[0].buffer = &buf->range.from;
       binds[0].data_len = 0;
-      binds[0].is_null = 0;
 
       binds[1].type = DB_TYPE_INT;
       binds[1].buffer = &buf->range.to;
