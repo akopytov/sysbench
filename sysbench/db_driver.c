@@ -442,7 +442,12 @@ int db_free_results(db_result_set_t *rs)
 int db_close(db_stmt_t *stmt)
 {
   int       rc;
-  db_conn_t *con = stmt->connection;
+  db_conn_t *con;
+
+  if (stmt == NULL)
+    return 1;
+  
+  con = stmt->connection;
 
   if (con == NULL || con->driver == NULL)
     return 1;

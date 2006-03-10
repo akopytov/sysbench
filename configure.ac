@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(sysbench, 0.4.5, alexeyk@mysql.com)
+AC_INIT(sysbench, 0.4.6, alexeyk@mysql.com)
 AC_CONFIG_AUX_DIR([config])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE()
