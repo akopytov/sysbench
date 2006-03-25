@@ -303,7 +303,7 @@ int oltp_cmd_prepare(void)
   unsigned int   n;
   unsigned long  nrows;
   unsigned long  commit_cntr = 0;
-  char           *insert_str;
+  char           insert_str[MAX_QUERY_LEN];
   char           *pos;
   char           *table_options_str;
   
@@ -329,7 +329,14 @@ int oltp_cmd_prepare(void)
     nrows = 1;
   
   /* Prepare statement buffer */
-  insert_str = "(0,' ','qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt')";
+  if (args.auto_inc)
+    snprintf(insert_str, sizeof(insert_str),
+             "(0,' ','qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt')");
+  else
+    snprintf(insert_str, sizeof(insert_str),
+             "(%d,0,' ','qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt')",
+             args.table_size);
+  
   query_len = MAX_QUERY_LEN + nrows * (strlen(insert_str) + 1);
   query = (char *)malloc(query_len);
   if (query == NULL)
@@ -350,9 +357,9 @@ int oltp_cmd_prepare(void)
            "PRIMARY KEY  (id) "
            ") %s",
            args.table_name,
-           driver_caps.serial ? "SERIAL" : "INTEGER",
+           (args.auto_inc && driver_caps.serial) ? "SERIAL" : "INTEGER",
            driver_caps.unsigned_int ? "UNSIGNED" : "",
-           driver_caps.auto_increment ? "AUTO_INCREMENT" : "",
+           (args.auto_inc && driver_caps.auto_increment) ? "AUTO_INCREMENT" : "",
            driver_caps.unsigned_int ? "UNSIGNED" : "",
            (table_options_str != NULL) ? table_options_str : ""
            );
@@ -362,7 +369,7 @@ int oltp_cmd_prepare(void)
     goto error;
   }  
 
-  if (!driver_caps.serial && !driver_caps.auto_increment)
+  if (args.auto_inc && !driver_caps.serial && !driver_caps.auto_increment)
   {
     if (db_query(con, "CREATE SEQUENCE sbtest_seq") == NULL ||
         db_query(con,
@@ -393,8 +400,12 @@ int oltp_cmd_prepare(void)
   for (i = 0; i < args.table_size; i += nrows)
   {
     /* Build query */
-    n = snprintf(query, query_len, "INSERT INTO %s(k, c, pad) VALUES ",
-                 args.table_name);
+    if (args.auto_inc)
+      n = snprintf(query, query_len, "INSERT INTO %s(k, c, pad) VALUES ",
+                   args.table_name);
+    else
+      n = snprintf(query, query_len, "INSERT INTO %s(id, k, c, pad) VALUES ",
+                   args.table_name);
     if (n >= query_len)
     {
       log_text(LOG_FATAL, "query is too long!");
@@ -408,8 +419,14 @@ int oltp_cmd_prepare(void)
         log_text(LOG_FATAL, "query is too long!");
         goto error;
       }
-      /* Append comma if it's not the last row in a multirow insert */
-      if (j == nrows - 1 || i+j == args.table_size - 1)
+
+      /* Form the values string when if are not using auto_inc */
+      if (!args.auto_inc)
+        snprintf(insert_str, sizeof(insert_str),
+                 "(%d,0,' ','qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt')",
+                 i + j + 1);
+      
+      if (j == nrows - 1 || i+j == args.table_size -1)
         n = snprintf(pos, query_len - (pos - query), "%s", insert_str);
       else
         n = snprintf(pos, query_len - (pos - query), "%s,", insert_str);
@@ -454,27 +471,6 @@ int oltp_cmd_prepare(void)
     }
   }
 
-  /* Drop auto_increment on the test table if requested */
-  if (!args.auto_inc) {
-    if (!driver_caps.serial && !driver_caps.auto_increment)
-    {
-      db_query(con, "DROP SEQUENCE sbtest_seq");
-      db_query(con, "DROP TRIGGER sbtest_trig");
-    }
-    else if (driver_caps.serial)
-    {
-      snprintf(query, query_len, "ALTER TABLE %s ALTER COLUMN id TYPE INTEGER",
-               args.table_name);
-      db_query(con, query);
-    }
-    else
-    {
-      snprintf(query, query_len, "ALTER TABLE %s CHANGE COLUMN id id INTEGER NOT NULL",
-               args.table_name);
-      db_query(con, query);
-    }
-  }
-  
   oltp_disconnect(con);
   
   return 0;
