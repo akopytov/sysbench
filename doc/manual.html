@@ -849,6 +849,8 @@
 
 	</p><div class="informaltable"><table border="1"><colgroup><col /><col /><col /></colgroup><tbody><tr><td><span class="emphasis"><em>Option</em></span></td><td><span class="emphasis"><em>Description</em></span></td><td><span class="emphasis"><em>Default value</em></span></td></tr><tr><td><code class="option">--oltp-test-mode</code></td><td>Execution mode (see above). Possible values: <code class="option">simpe</code> (simple), <code class="option">complex</code> (advanced transactional) and <code class="option">nontrx</code> (non-transactional)</td><td><code class="option">complex</code></td></tr><tr><td><code class="option">--oltp-read-only</code></td><td>
 		  Read-only mode. No <code class="option">UPDATE</code>, <code class="option">DELETE</code> or <code class="option">INSERT</code> queries will be performed.
+		</td><td>off</td></tr><tr><td><code class="option">--oltp-reconnect</code></td><td>
+		  Re-connect to serveron each transaction.
 		</td><td>off</td></tr><tr><td><code class="option">--oltp-range-size</code></td><td>Range size for range queries</td><td>100</td></tr><tr><td><code class="option">--oltp-point-selects</code></td><td>
 		  Number of point select queries in a single transaction
 		</td><td>10</td></tr><tr><td><code class="option">--oltp-simple-ranges</code></td><td>

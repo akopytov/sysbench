@@ -69,6 +69,12 @@ static unsigned char batch_mode;
 /* delay in seconds between statistics dumps in batch mode */
 static unsigned int batch_delay;
 
+/*
+  gettimeofday() is over-optimized on some architectures what results in excessive warning message
+  This flag is required to issue a warning only once
+*/
+static unsigned char oper_time_warning;
+
 /* array of operation response times for operations handler */
 static unsigned int    operations[OPER_LOG_GRANULARITY]; 
 static double          oper_log_deduct;
@@ -484,14 +490,24 @@ int oper_handler_process(log_msg_t *msg)
   optime = sb_timer_current(&oper_msg->timer);
   if (optime < OPER_LOG_MIN_VALUE)
   {
-    log_text(LOG_WARNING, "Operation time (%f) is less than minimal counted value, "
-             "counting as %f", optime, (double)OPER_LOG_MIN_VALUE);
+    /* Warn only once */
+    if (!oper_time_warning) {
+      log_text(LOG_WARNING, "Operation time (%f) is less than minimal counted value, "
+               "counting as %f", optime, (double)OPER_LOG_MIN_VALUE);
+      log_text(LOG_WARNING, "Percentile statistics will be inaccurate");
+      oper_time_warning = 1;
+    }
     optime = OPER_LOG_MIN_VALUE;
   }
   else if (optime > OPER_LOG_MAX_VALUE)
   {
-    log_text(LOG_WARNING, "Operation time (%f) is greater than maximal counted value, "
-             "counting as %f", optime, (double)OPER_LOG_MAX_VALUE);
+    /* Warn only once */
+    if (!oper_time_warning) {
+      log_text(LOG_WARNING, "Operation time (%f) is greater than maximal counted value, "
+               "counting as %f", optime, (double)OPER_LOG_MAX_VALUE);
+      log_text(LOG_WARNING, "Percentile statistics will be inaccurate");
+      oper_time_warning = 1;
+    }
     optime = OPER_LOG_MAX_VALUE;
   }
   

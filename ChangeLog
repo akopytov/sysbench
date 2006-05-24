@@ -1,3 +1,19 @@
+2006-05-24  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added --oltp-reconnect option
+
+2006-05-18  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Allow build with non-gcc compilers
+	* Fixed random numbers generation on Solaris
+	* Added --mysql-ssl option
+	* version 0.4.7
+	
+2006-04-03  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added a warning for inaccurate gettimeofday() implementations
+	* version 0.4.6
+
 2006-03-10  Alexey Kopytov  <alexeyk@mysql.com>
 
 	* Fixed crash at the end of OLTP test

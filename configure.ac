@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(sysbench, 0.4.6, alexeyk@mysql.com)
+AC_INIT(sysbench, 0.4.8, alexeyk@mysql.com)
 AC_CONFIG_AUX_DIR([config])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE()
@@ -165,9 +165,14 @@ thr_setconcurrency \
 valloc \
 ])
 
-AM_CFLAGS="-W -Wall -Wpointer-arith -Wbad-function-cast \
+if test "$GCC" = "xyes"; then
+    AM_CFLAGS="-W -Wall -Wpointer-arith -Wbad-function-cast \
 -Wstrict-prototypes -Wnested-externs -Winline \
--funroll-loops $PTHREAD_CFLAGS"
+-funroll-loops"
+fi
+
+AM_CFLAGS="$AM_CFLAGS $PTHREAD_CFLAGS"
+
 AM_CPPFLAGS="-D_REENTRANT -D_XOPEN_SOURCE=500 -D_GNU_SOURCE"
 AM_LDFLAGS="$PTHREAD_LIBS"
 

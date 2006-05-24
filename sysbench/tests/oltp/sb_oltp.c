@@ -43,6 +43,7 @@ static sb_arg_t oltp_args[] =
   {"oltp-test-mode", "test type to use {simple,complex,nontrx,sp}", SB_ARG_TYPE_STRING, "complex"},
   {"oltp-sp-name", "name of store procedure to call in SP test mode", SB_ARG_TYPE_STRING, ""},
   {"oltp-read-only", "generate only 'read' queries (do not modify database)", SB_ARG_TYPE_FLAG, "off"},
+  {"oltp-reconnect", "re-connect to server on each transaction", SB_ARG_TYPE_FLAG, "off"},
   {"oltp-skip-trx", "skip BEGIN/COMMIT statements", SB_ARG_TYPE_FLAG, "off"},
   {"oltp-range-size", "range size for range queries", SB_ARG_TYPE_INT, "100"},
   {"oltp-point-selects", "number of point selects", SB_ARG_TYPE_INT, "10"},
@@ -108,6 +109,7 @@ typedef struct
 {
   oltp_mode_t   test_mode;
   unsigned int  read_only;
+  unsigned int  reconnect;
   unsigned int  skip_trx;
   unsigned int  auto_inc;
   unsigned int  range_size;
@@ -521,7 +523,7 @@ int oltp_cmd_cleanup(void)
 int oltp_init(void)
 {
   db_conn_t    *con;
-  unsigned int thread_id;
+  unsigned int i;
   char         query[MAX_QUERY_LEN];
 
   if (parse_arguments())
@@ -554,18 +556,6 @@ int oltp_init(void)
     return 1;
   }
 
-  /* Create database connections */
-  for (thread_id = 0; thread_id < sb_globals.num_threads; thread_id++)
-  {
-    connections[thread_id] = oltp_connect();
-    if (connections[thread_id] == NULL)
-    {
-      log_text(LOG_FATAL, "thread#%d: failed to connect to database server, aborting...",
-             thread_id);
-      return 1;
-    }
-  }
-
   /* Allocate statements pool */
   statements = (oltp_stmt_set_t *)calloc(sb_globals.num_threads,
                                           sizeof(oltp_stmt_set_t));
@@ -578,18 +568,23 @@ int oltp_init(void)
   /* Allocate bind buffers for each thread */
   bind_bufs = (oltp_bind_set_t *)calloc(sb_globals.num_threads,
                                         sizeof(oltp_bind_set_t));
-  /* Prepare statements for each thread */
-  for (thread_id = 0; thread_id < sb_globals.num_threads; thread_id++)
+
+  if (bind_bufs == NULL)
   {
-    if (prepare_stmt_set(statements + thread_id, bind_bufs + thread_id,
-                         connections[thread_id]))
-    {
-      log_text(LOG_FATAL, "thread#%d: failed to prepare statements for test",
-             thread_id);
-      return 1;
-    }
+    log_text(LOG_FATAL, "failed to allocate bind buffers!");
+    return 1;
   }
 
+  /* Initialize connections if not in reconnect mode */
+  if (!args.reconnect)
+  {
+    for (i = 0; i < sb_globals.num_threads; i++)
+    {
+      if (oltp_connection_init(i) != 0)
+        return 1;
+    }
+  }
+  
   /* Initialize random seed for non-transactional delete test */
   if (args.test_mode == TEST_MODE_NONTRX)
   {
@@ -602,10 +597,10 @@ int oltp_init(void)
   {
     exec_timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
     fetch_timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
-    for (thread_id = 0; thread_id < sb_globals.num_threads; thread_id++)
+    for (i = 0; i < sb_globals.num_threads; i++)
     {
-      sb_timer_init(exec_timers + thread_id);
-      sb_timer_init(fetch_timers + thread_id);
+      sb_timer_init(exec_timers + i);
+      sb_timer_init(fetch_timers + i);
     }
   }
   
@@ -615,16 +610,16 @@ int oltp_init(void)
 
 int oltp_done(void)
 {
-  unsigned int thread_id;
+  unsigned int i;
 
   if (args.test_mode == TEST_MODE_NONTRX)
     pthread_mutex_destroy(&rnd_mutex);
 
-  /* Close statements and database connections */
-  for (thread_id = 0; thread_id < sb_globals.num_threads; thread_id++)
+  /* Close statements and database connections if not in reconnect mode */
+  if (!args.reconnect)
   {
-    close_stmt_set(statements + thread_id);
-    oltp_disconnect(connections[thread_id]);
+    for (i = 0; i < sb_globals.num_threads; i++)
+      oltp_connection_done(i);
   }
 
   /* Deallocate connection pool */
@@ -636,6 +631,42 @@ int oltp_done(void)
   return 0;
 }
 
+
+/* Initialize connection with a given number */
+
+
+int oltp_connection_init(unsigned int id)
+{
+  connections[id] = oltp_connect();
+  if (connections[id] == NULL)
+  {
+    log_text(LOG_FATAL, "thread#%d: failed to connect to database server, aborting...",
+             id);
+    return 1;
+  }
+
+  if (prepare_stmt_set(statements + id, bind_bufs + id,
+                       connections[id]))
+  {
+    log_text(LOG_FATAL, "thread#%d: failed to prepare statements for test",
+             id);
+    return 1;
+  }
+  
+  return 0;
+}
+
+
+/* Close connection with a given number */
+
+
+int oltp_connection_done(unsigned int id)
+{
+  close_stmt_set(statements + id);
+  oltp_disconnect(connections[id]);
+
+  return 0;
+}
 
 void oltp_print_mode(void)
 {
@@ -662,6 +693,9 @@ void oltp_print_mode(void)
 
   if (args.read_only)
     log_text(LOG_NOTICE, "Doing read-only test");
+
+  if (args.reconnect)
+    log_text(LOG_NOTICE, "Reconnecting to server on each transaction");
   
   switch (args.dist_type) {
     case DIST_TYPE_UNIFORM:
@@ -782,7 +816,7 @@ sb_request_t get_request_simple(void)
   query->num_times = 1;
   query->think_time = get_think_time();
   query->type = SB_SQL_QUERY_POINT;
-  query->u.point_query.id = 5;
+  query->u.point_query.id = GET_RANDOM_ID();
   query->nrows = 1;
   SB_LIST_ADD_TAIL(&query->listitem, sql_req->queries);
   
@@ -1070,6 +1104,7 @@ sb_request_t get_request_nontrx(void)
 
   /* return request */
   req_performed++;
+  log_text(LOG_INFO, "%d out of %d", req_performed, sb_globals.max_requests);
   return sb_req;
 
   /* Handle memory allocation failures */
@@ -1116,6 +1151,10 @@ int oltp_execute_request(sb_request_t *sb_req, int thread_id)
   /* measure the time for transaction */
   LOG_EVENT_START(msg, thread_id);
 
+  /* Connect to server before each transaction if in reconnect mode */
+  if (args.reconnect && oltp_connection_init(thread_id) != 0)
+    return 1;
+    
   do  /* deadlock handling */
   {
     retry = 0;
@@ -1229,6 +1268,10 @@ int oltp_execute_request(sb_request_t *sb_req, int thread_id)
     }
   } while(retry); /* retry transaction in case of deadlock */
 
+  /* Disconnect from server after each transaction if in reconnect mode */
+  if (args.reconnect)
+    oltp_connection_done(thread_id);
+  
   LOG_EVENT_STOP(msg, thread_id);
   
   SB_THREAD_MUTEX_LOCK();
@@ -1370,6 +1413,7 @@ int parse_arguments(void)
   }
 
   args.read_only = sb_get_value_flag("oltp-read-only");
+  args.reconnect = sb_get_value_flag("oltp-reconnect");
   args.skip_trx = sb_get_value_flag("oltp-skip-trx");
   args.auto_inc = sb_get_value_flag("oltp-auto-inc");
   args.range_size = sb_get_value_int("oltp-range-size");

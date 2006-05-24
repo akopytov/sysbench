@@ -634,6 +634,9 @@
 	      <row><entry><option>--oltp-read-only</option></entry><entry>
 		  Read-only mode. No <option>UPDATE</option>, <option>DELETE</option> or <option>INSERT</option> queries will be performed.
 		</entry><entry>off</entry></row>
+	      <row><entry><option>--oltp-reconnect</option></entry><entry>
+		  Re-connect to serveron each transaction.
+		</entry><entry>off</entry></row>
 	      <row><entry><option>--oltp-range-size</option></entry><entry>Range size for range queries</entry><entry>100</entry></row>
 	      <row><entry><option>--oltp-point-selects</option></entry><entry>
 		  Number of point select queries in a single transaction

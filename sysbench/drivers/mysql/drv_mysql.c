@@ -44,7 +44,7 @@
 #if MYSQL_VERSION_ID >= 40000
 # define ENGINE_CLAUSE "ENGINE"
 #else
-#define ENGINE_CLAUSE "TYPE"
+# define ENGINE_CLAUSE "TYPE"
 #endif
 
 #define DEBUG(format, ...) do { if (db_globals.debug) log_text(LOG_DEBUG, format, __VA_ARGS__); } while (0)
@@ -63,6 +63,7 @@ static sb_arg_t mysql_drv_args[] =
    SB_ARG_TYPE_STRING, "innodb"},
   {"mysql-engine-trx", "whether storage engine used is transactional or not {yes,no,auto}",
    SB_ARG_TYPE_STRING, "auto"},
+  {"mysql-ssl", "use SSL connections, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
   {"myisam-max-rows", "max-rows parameter for MyISAM tables", SB_ARG_TYPE_INT, "1000000"},
   
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
@@ -85,6 +86,7 @@ typedef struct
   char               *db;
   unsigned int       myisam_max_rows;
   mysql_drv_trx_t    engine_trx;
+  unsigned int       use_ssl;
 } mysql_drv_args_t;
 
 #ifdef HAVE_PS
@@ -229,7 +231,8 @@ int mysql_drv_init(void)
   args.password = sb_get_value_string("mysql-password");
   args.db = sb_get_value_string("mysql-db");
   args.myisam_max_rows = sb_get_value_int("myisam-max-rows");
-
+  args.use_ssl = sb_get_value_flag("mysql-ssl");
+  
   use_ps = 0;
 #ifdef HAVE_PS
   mysql_drv_caps.prepared_statements = 1;
@@ -341,7 +344,10 @@ int mysql_drv_connect(db_conn_t *sb_conn)
 {
   MYSQL          *con;
   char           *host;
-
+  char           *ssl_key;
+  char           *ssl_cert;
+  char           *ssl_ca;
+  
   con = (MYSQL *)malloc(sizeof(MYSQL));
   if (con == NULL)
     return 1;
@@ -359,6 +365,18 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   DEBUG("mysql_init(%p)", con);
   mysql_options(con, MYSQL_READ_DEFAULT_GROUP, "sysbench");
   DEBUG("mysql_options(%p, MYSQL_READ_DEFAULT_GROUP, \"sysbench\")", con);
+
+  if (args.use_ssl)
+  {
+    ssl_key= "client-key.pem";
+    ssl_cert= "client-cert.pem";
+    ssl_ca= "cacert.pem";
+
+    DEBUG("mysql_ssl_set(%p,\"%s\", \"%s\", \"%s\", NULL, NULL)", con, ssl_key,
+          ssl_cert, ssl_ca);
+    mysql_ssl_set(con, ssl_key, ssl_cert, ssl_ca, NULL, NULL);
+  }
+  
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",
         con,
         host,

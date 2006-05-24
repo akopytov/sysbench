@@ -51,8 +51,9 @@
 #define SB_THREAD_MUTEX_LOCK() pthread_mutex_lock(&sb_globals.exec_mutex) 
 #define SB_THREAD_MUTEX_UNLOCK() pthread_mutex_unlock(&sb_globals.exec_mutex)
 
-/* used in sb_rnd() */
-#define SB_MAX_RND 0x3fffffff
+#define SB_MAX_RND 0x3fffffffu
+#define sb_rnd() (random() % SB_MAX_RND)
+
 
 /* Sysbench commands */
 typedef enum
@@ -195,16 +196,5 @@ int sb_get_value_int(char *);
 unsigned long long sb_get_value_size(char *);
 float sb_get_value_float(char *);
 char *sb_get_value_string(char *);
-
-/* We need this function as RAND_MAX is too small on some systems*/
-
-static inline unsigned int sb_rnd(void); /* To avoid compilation warnings */
-static inline unsigned int sb_rnd(void)
-{
-  if (RAND_MAX < SB_MAX_RND)
-    return (random() * 0xffff + random()) % SB_MAX_RND;
-  else 
-    return random() % SB_MAX_RND;
-}
 
 #endif
