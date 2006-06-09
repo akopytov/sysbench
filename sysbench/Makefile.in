@@ -82,8 +82,9 @@ am__DEPENDENCIES_1 =
 sysbench_DEPENDENCIES = tests/fileio/libsbfileio.a \
 	tests/threads/libsbthreads.a tests/memory/libsbmemory.a \
 	tests/cpu/libsbcpu.a tests/oltp/libsboltp.a \
-	tests/mutex/libsbmutex.a $(am__DEPENDENCIES_2) \
-	$(am__DEPENDENCIES_3) $(am__DEPENDENCIES_4)
+	tests/mutex/libsbmutex.a scripting/libsbscript.a \
+	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_3) \
+	$(am__DEPENDENCIES_4)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -152,6 +153,8 @@ LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
+LUA_CPPFLAGS = @LUA_CPPFLAGS@
+LUA_LDFLAGS = @LUA_LDFLAGS@
 MAKEINFO = @MAKEINFO@
 MYSQL_CFLAGS = @MYSQL_CFLAGS@
 MYSQL_LIBS = @MYSQL_LIBS@
@@ -176,6 +179,8 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 USE_AIO_FALSE = @USE_AIO_FALSE@
 USE_AIO_TRUE = @USE_AIO_TRUE@
+USE_LUA_FALSE = @USE_LUA_FALSE@
+USE_LUA_TRUE = @USE_LUA_TRUE@
 USE_MYSQL_FALSE = @USE_MYSQL_FALSE@
 USE_MYSQL_TRUE = @USE_MYSQL_TRUE@
 USE_ORACLE_FALSE = @USE_ORACLE_FALSE@
@@ -223,6 +228,7 @@ install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
 localstatedir = @localstatedir@
+luaconfig = @luaconfig@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 mysqlconfig = @mysqlconfig@
@@ -238,22 +244,26 @@ target_alias = @target_alias@
 target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
-SUBDIRS = drivers tests .
+SUBDIRS = drivers tests scripting .
 
 # The following check will be extended as new database drivers will be added
 @USE_MYSQL_TRUE@mysql_ldadd = drivers/mysql/libsbmysql.a $(MYSQL_LIBS)
 @USE_MYSQL_TRUE@mysql_ldflags = -static
 @USE_ORACLE_TRUE@ora_ldadd = drivers/oracle/libsboracle.a $(ORA_LIBS)
 @USE_PGSQL_TRUE@pgsql_ldadd = drivers/pgsql/libsbpgsql.a $(PGSQL_LIBS)
+@USE_LUA_TRUE@lua_ldflags = $(LUA_LDFLAGS)
 sysbench_SOURCES = sysbench.c sysbench.h sb_timer.c sb_timer.h \
 sb_options.c sb_options.h sb_logger.c sb_logger.h sb_list.h db_driver.h \
 db_driver.c
 
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     tests/memory/libsbmemory.a tests/cpu/libsbcpu.a tests/oltp/libsboltp.a \
-    tests/mutex/libsbmutex.a $(mysql_ldadd) $(pgsql_ldadd) $(ora_ldadd)
+    tests/mutex/libsbmutex.a scripting/libsbscript.a \
+    $(mysql_ldadd) $(pgsql_ldadd)  $(ora_ldadd)
 
-sysbench_LDFLAGS = $(mysql_ldflags) $(pgsql_ldflags) $(ora_ldflags)
+sysbench_LDFLAGS = $(mysql_ldflags) $(pgsql_ldflags) $(ora_ldflags) \
+    $(lua_ldflags)
+
 all: all-recursive
 
 .SUFFIXES:

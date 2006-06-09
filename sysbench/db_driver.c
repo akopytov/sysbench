@@ -22,6 +22,11 @@
 #include "db_driver.h"
 #include "sb_list.h"
 
+/* How many rows to insert in a single query (used in bulk insert operations) */
+#define INSERT_ROWS 10000
+
+/* How many rows to insert before COMMITs (used in bulk insert) */
+#define ROWS_BEFORE_COMMIT 1000
 
 /* Global variables */
 
@@ -49,8 +54,8 @@ int register_driver_pgsql(sb_list_t *);
 /* Static functions */
 
 static int db_parse_arguments(void);
-db_error_t db_do_query(db_conn_t *, const char *, db_result_set_t *);
 static void db_free_row(db_row_t *);
+static int db_bulk_do_insert(db_conn_t *, int);
 
 /* DB layer arguments */
 
@@ -534,6 +539,12 @@ int db_print_value(db_bind_t *var, char *buf, int buflen)
 {
   int       n;
   db_time_t *tm;
+
+  if (var->is_null != NULL && *var->is_null)
+  {
+    n = snprintf(buf, buflen, "NULL");
+    return (n < buflen) ? n : -1;
+  }
   
   switch (var->type) {
     case DB_TYPE_TINYINT:
@@ -588,4 +599,120 @@ int db_print_value(db_bind_t *var, char *buf, int buflen)
 void db_free_row(db_row_t *row)
 {
   free(row);
+}
+
+
+/* Initialize multi-row insert operation */
+
+
+int db_bulk_insert_init(db_conn_t *con, const char *query)
+{
+  drv_caps_t driver_caps;
+  unsigned int query_len;
+
+  if (con->driver == NULL)
+    return 1;
+  
+  /* Get database capabilites */
+  if (db_describe(con->driver, &driver_caps, NULL))
+  {
+    log_text(LOG_FATAL, "failed to get database capabilities!");
+    return 1;
+  }
+
+  /* Allocate initial query buffer (will be expanded later if needed) */
+  query_len = strlen(query);
+  con->bulk_max_rows = driver_caps.multi_rows_insert ? INSERT_ROWS : 1;
+  con->bulk_commit_max = driver_caps.needs_commit ? ROWS_BEFORE_COMMIT : 0;
+  con->bulk_commit_cnt = 0;
+  con->bulk_buflen = query_len + con->bulk_max_rows * 80 + 1;
+  con->bulk_buffer = (char *)malloc(con->bulk_buflen);
+  if (con->bulk_buffer == NULL)
+    return 1;
+  strcpy(con->bulk_buffer, query);
+  con->bulk_ptr = query_len;
+  con->bulk_ptr_orig = query_len;
+  con->bulk_cnt = 0;
+  con->bulk_not_first = 0;
+
+  return 0;
+}
+
+/* Add row to multi-row insert operation */
+
+int db_bulk_insert_next(db_conn_t *con, const char *query)
+{
+  unsigned int query_len = strlen(query);
+
+  /*
+    Reserve space for '\0' and ',' (if not the first chunk in
+    a bulk insert
+  */
+  while (con->bulk_ptr + query_len + 1 + con->bulk_not_first > con->bulk_buflen)
+  {
+    con->bulk_buffer = (char *)realloc(con->bulk_buffer, con->bulk_buflen * 2);
+    if (con->bulk_buffer == NULL)
+      return 1;
+    con->bulk_buflen *= 2;
+  }
+
+  if (con->bulk_not_first)
+  {
+    con->bulk_buffer[con->bulk_ptr] = ',';
+    strcpy(con->bulk_buffer + con->bulk_ptr + 1, query);
+  }
+  else
+    strcpy(con->bulk_buffer + con->bulk_ptr, query);
+  con->bulk_ptr += query_len + con->bulk_not_first;
+
+  con->bulk_not_first = 1;
+
+  con->bulk_cnt++;
+  if (con->bulk_cnt == con->bulk_max_rows && db_bulk_do_insert(con, 0))
+    return 1;
+
+  return 0;
+}
+
+/* Do the actual INSERT (and COMMIT, if necessary) */
+
+int db_bulk_do_insert(db_conn_t *con, int is_last)
+{
+  if (con->bulk_not_first == 0)
+    return 0;
+      
+  if (db_query(con, con->bulk_buffer) == NULL)
+    return 1;
+  
+  con->bulk_not_first = 0;
+  con->bulk_ptr = con->bulk_ptr_orig;
+  con->bulk_cnt = 0;
+
+  if (con->bulk_commit_max != 0)
+  {
+    con->bulk_commit_cnt += con->bulk_max_rows;
+
+    if (is_last || con->bulk_commit_cnt >= con->bulk_commit_max)
+    {
+      if (db_query(con, "COMMIT") == NULL)
+        return 1;
+      con->bulk_commit_cnt = 0;
+    }
+  }
+
+  return 0;
+}
+
+/* Finish multi-row insert operation */
+
+void db_bulk_insert_done(db_conn_t *con)
+{
+  /* Flush remaining data in buffer, if any */
+  db_bulk_do_insert(con, 1);
+  
+  if (con->bulk_buffer != NULL)
+  {
+    free(con->bulk_buffer);
+    con->bulk_buffer = NULL;
+  }
 }

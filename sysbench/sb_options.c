@@ -40,6 +40,15 @@ static sb_list_t options;
 /* List of size modifiers (kilo, mega, giga, tera) */
 static const char sizemods[] = "KMGT";
 
+/* Convert dashes to underscores in option names */
+
+static void convert_dashes(char *);
+
+/* Compare option names */
+
+static int opt_name_cmp(const char *, const char *);
+
+
 /* Initialize options library */
 
 
@@ -157,6 +166,12 @@ void sb_print_options(sb_arg_t *opts)
 }
 
 
+int sb_opt_to_flag(option_t *opt)
+{
+  return !SB_LIST_IS_EMPTY(&opt->values);
+}
+
+
 int sb_get_value_flag(char *name)
 {
   option_t *opt;
@@ -165,19 +180,14 @@ int sb_get_value_flag(char *name)
   if (opt == NULL)
     return 0;
 
-  return !SB_LIST_IS_EMPTY(&opt->values);
+  return sb_opt_to_flag(opt);
 }
 
 
-int sb_get_value_int(char *name)
+int sb_opt_to_int(option_t *opt)
 {
-  option_t       *opt;
   value_t        *val;
   sb_list_item_t *pos;
-
-  opt = find_option(&options, name);
-  if (opt == NULL)
-    return 0;
 
   SB_LIST_FOR_EACH(pos, &opt->values)
   {
@@ -186,12 +196,22 @@ int sb_get_value_int(char *name)
   }
 
   return 0;
+}  
+
+int sb_get_value_int(char *name)
+{
+  option_t       *opt;
+
+  opt = find_option(&options, name);
+  if (opt == NULL)
+    return 0;
+
+  return sb_opt_to_int(opt);
 }
 
 
-unsigned long long sb_get_value_size(char *name)
+unsigned long long sb_opt_to_size(option_t *opt)
 {
-  option_t            *opt;
   value_t             *val;
   sb_list_item_t      *pos;
   unsigned long long  res = 0;
@@ -200,16 +220,12 @@ unsigned long long sb_get_value_size(char *name)
   unsigned int        i, n;
   char                *c;
 
-  opt = find_option(&options, name);
-  if (opt == NULL)
-    return 0;
-
   SB_LIST_FOR_EACH(pos, &opt->values)
   {
     val = SB_LIST_ENTRY(pos, value_t, listitem);
     /*
      * Reimplentation of sscanf(val->data, "%llu%c", &res, &mult), since
-     * there is little standartization about how to specify long long values
+     * there is no standard on how to specify long long values
      */
     res = 0;
     for (rc = 0, c = val->data; *c != '\0'; c++)
@@ -227,7 +243,8 @@ unsigned long long sb_get_value_size(char *name)
       res = res * 10 + *c - '0';
     }
 
-    if (rc == 2) {
+    if (rc == 2)
+    {
       for (n = 0; sizemods[n] != '\0'; n++)
         if (mult == sizemods[n])
           break;
@@ -246,16 +263,23 @@ unsigned long long sb_get_value_size(char *name)
 }
 
 
-float sb_get_value_float(char *name)
+unsigned long long sb_get_value_size(char *name)
 {
-  option_t       *opt;
-  value_t        *val;
-  sb_list_item_t *pos;
-  float          res;
-
+  option_t            *opt;
+ 
   opt = find_option(&options, name);
   if (opt == NULL)
     return 0;
+
+  return sb_opt_to_size(opt);
+}
+
+
+float sb_opt_to_float(option_t *opt)
+{
+  value_t        *val;
+  sb_list_item_t *pos;
+  float          res;
 
   SB_LIST_FOR_EACH(pos, &opt->values)
   {
@@ -268,15 +292,22 @@ float sb_get_value_float(char *name)
 }
 
 
-char *sb_get_value_string(char *name)
+float sb_get_value_float(char *name)
 {
   option_t       *opt;
-  value_t        *val;
-  sb_list_item_t *pos;
 
   opt = find_option(&options, name);
   if (opt == NULL)
-    return NULL;
+    return 0;
+
+  return sb_opt_to_float(opt);
+}
+
+
+char *sb_opt_to_string(option_t *opt)
+{
+  value_t        *val;
+  sb_list_item_t *pos;
 
   SB_LIST_FOR_EACH(pos, &opt->values)
   {
@@ -288,6 +319,24 @@ char *sb_get_value_string(char *name)
 }
 
 
+char *sb_get_value_string(char *name)
+{
+  option_t       *opt;
+
+  opt = find_option(&options, name);
+  if (opt == NULL)
+    return NULL;
+
+  return sb_opt_to_string(opt);
+}
+
+
+sb_list_t *sb_opt_to_list(option_t *opt)
+{
+  return &opt->values;
+}
+
+
 sb_list_t *sb_get_value_list(char *name)
 {
   option_t       *opt;
@@ -296,7 +345,7 @@ sb_list_t *sb_get_value_list(char *name)
   if (opt == NULL)
     return NULL;
 
-  return &opt->values;
+  return sb_opt_to_list(opt);
 }
 
 
@@ -476,10 +525,37 @@ option_t *add_option(sb_list_t *options, char *name)
     return NULL;
 
   option->name = strdup(name);
+  convert_dashes(option->name);
   
   SB_LIST_ADD_TAIL(&option->listitem, options);
 
   return option;
+}
+
+
+void convert_dashes(char *s)
+{
+  while (*s != '\0')
+  {
+    if (*s == '-')
+      *s = '_';
+    s++;
+  }
+}
+
+
+int opt_name_cmp(const char *s1, const char *s2)
+{
+  for (/* empty */; *s1 != '\0'; s1++, s2++)
+  {
+    if (*s1 == *s2)
+      continue;
+
+    if ((*s1 != '-' && *s1 != '_') || (*s2 != '-' && *s2 != '_'))
+      break;
+  }
+
+  return *s1 - *s2;
 }
 
 
@@ -494,11 +570,28 @@ option_t *find_option(sb_list_t *options, char *name)
   SB_LIST_FOR_EACH(pos, options)
   {
     opt = SB_LIST_ENTRY(pos, option_t, listitem);
-    if (!strcmp(opt->name, name))
+    if (!opt_name_cmp(opt->name, name))
       return opt;
   }
   
   return NULL;
+}
+
+
+sb_list_item_t *sb_options_enum_start(void)
+{
+  return SB_LIST_ENUM_START(&options);
+}
+
+sb_list_item_t *sb_options_enum_next(sb_list_item_t *pos, option_t **opt)
+{
+  pos = SB_LIST_ENUM_NEXT(pos, &options);
+  if (pos == NULL)
+    return NULL;
+
+  *opt = SB_LIST_ENTRY(pos, option_t, listitem);
+
+  return pos;
 }
 
 

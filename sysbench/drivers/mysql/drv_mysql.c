@@ -515,8 +515,10 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
     rc = mysql_stmt_param_count(stmt->ptr);
     DEBUG("mysql_stmt_param_count(%p) = %u", stmt->ptr, rc);
     if (rc != len)
+    {
+      log_text(LOG_FATAL, "Wrong number of parameters to mysql_stmt_bind_param");
       return 1;
-
+    }
     /* Convert SysBench bind structures to MySQL ones */
     bind = (MYSQL_BIND *)calloc(len, sizeof(MYSQL_BIND));
     if (bind == NULL)

@@ -59,9 +59,32 @@
 
 #include "sysbench.h"
 #include "sb_options.h"
+#include "scripting/sb_script.h"
+#include "db_driver.h"
+
+/* Large prime number to generate unique random IDs */
+#define LARGE_PRIME 2147483647
+
+/* Random numbers distributions */
+typedef enum
+{
+  DIST_TYPE_UNIFORM,
+  DIST_TYPE_GAUSSIAN,
+  DIST_TYPE_SPECIAL
+} rand_dist_t;
 
 /* If we should initialize random numbers generator */
-static int init_rng;
+static int rand_init;
+static rand_dist_t rand_type;
+static int (*rand_func)(int, int); /* pointer to random numbers generator */
+static unsigned int rand_iter;
+static unsigned int rand_pct;
+static unsigned int rand_res;
+
+/* Random seed used to generate unique random numbers */
+static unsigned long long rnd_seed;
+/* Mutex to protect random seed */
+static pthread_mutex_t    rnd_mutex;
 
 /* Stack size for each thread */
 static int thread_stack_size;
@@ -73,15 +96,22 @@ sb_arg_t general_args[] =
   {"max-requests", "limit for total number of requests", SB_ARG_TYPE_INT, "10000"},
   {"max-time", "limit for total execution time in seconds", SB_ARG_TYPE_INT, "0"},
   {"thread-stack-size", "size of stack per thread", SB_ARG_TYPE_SIZE, "32K"},
-  {"init-rng", "initialize random number generator", SB_ARG_TYPE_FLAG, "off"},
   {"test", "test to run", SB_ARG_TYPE_STRING, NULL},
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
   {"help", "print help and exit", SB_ARG_TYPE_FLAG, NULL},
+  {"rand-init", "initialize random number generator", SB_ARG_TYPE_FLAG, "off"},
+  {"rand-type", "random numbers distribution {uniform,gaussian,special}", SB_ARG_TYPE_STRING,
+   "special"},
+  {"rand-spec-iter", "number of iterations used for numbers generation", SB_ARG_TYPE_INT, "12"},
+  {"rand-spec-pct", "percentage of values to be treated as 'special' (for special distribution)",
+   SB_ARG_TYPE_INT, "1"},
+  {"rand-spec-res", "percentage of 'special' values to use (for special distribution)",
+   SB_ARG_TYPE_INT, "75"},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
 
-/* Our main thread descriptors */
+/* Thread descriptors */
 sb_thread_ctxt_t *threads;
 
 /* List of available tests */
@@ -158,7 +188,7 @@ int register_tests(void)
     + register_test_memory(&tests)
     + register_test_threads(&tests)
     + register_test_mutex(&tests)
-    + register_test_oltp(&tests)
+    + db_register()
     ;
 }
 
@@ -285,10 +315,10 @@ int parse_arguments(int argc, char *argv[])
     opt = sb_find_option(name);
     if (opt == NULL)
     {
-      fprintf(stderr, "Unknown option: %s.\n", argv[i]);
-      return 1;
+      if (set_option(name, value, SB_ARG_TYPE_STRING))
+        return 1;
     }
-    if (set_option(name, value, opt->type))
+    else if (set_option(name, value, opt->type))
       return 1;
   }
 
@@ -307,7 +337,7 @@ void print_run_mode(sb_test_t *test)
   if (sb_globals.validate)
     log_text(LOG_NOTICE, "Additional request validation enabled.\n");
 
-  if (init_rng)
+  if (rand_init)
   {
     log_text(LOG_NOTICE, "Initializing random number generator from timer.\n");
     srandom(time(NULL));
@@ -420,6 +450,10 @@ int run_test(sb_test_t *test)
   thr_setconcurrency(sb_globals.num_threads);
 #endif
   
+  /* Initialize random seed  */
+  rnd_seed = LARGE_PRIME;
+  pthread_mutex_init(&rnd_mutex, NULL);
+
   /* Starting the test threads */
   for(i = 0; i < sb_globals.num_threads; i++)
   {
@@ -455,6 +489,8 @@ int run_test(sb_test_t *test)
   if (test->ops.print_stats != NULL && !sb_globals.error)
     test->ops.print_stats();
 
+  pthread_mutex_destroy(&rnd_mutex);
+
   pthread_mutex_destroy(&sb_globals.exec_mutex);
 
   pthread_mutex_destroy(&thread_start_mutex);
@@ -485,8 +521,9 @@ sb_test_t *find_test(char *name)
 
 int init(void)
 {
-  option_t          *opt;
-
+  option_t *opt;
+  char     *s;
+  
   sb_globals.num_threads = sb_get_value_int("num-threads");
   if (sb_globals.num_threads <= 0)
   {
@@ -525,7 +562,34 @@ int init(void)
   }
   
   sb_globals.validate = sb_get_value_flag("validate");
-  init_rng = sb_get_value_flag("init-rng"); 
+
+  rand_init = sb_get_value_flag("rand-init"); 
+  s = sb_get_value_string("rand-type");
+  if (!strcmp(s, "uniform"))
+  {
+    rand_type = DIST_TYPE_UNIFORM;
+    rand_func = &sb_rand_uniform;
+  }
+  else if (!strcmp(s, "gaussian"))
+  {
+    rand_type = DIST_TYPE_GAUSSIAN;
+    rand_func = &sb_rand_gaussian;
+  }
+  else if (!strcmp(s, "special"))
+  {
+    rand_type = DIST_TYPE_SPECIAL;
+    rand_func = &sb_rand_special;
+  }
+  else
+  {
+    log_text(LOG_FATAL, "Invalid random numbers distribution: %s.", s);
+    return 1;
+  }
+  
+  rand_iter = sb_get_value_int("rand-spec-iter");
+  rand_pct = sb_get_value_int("rand-spec-pct");
+  rand_res = sb_get_value_int("rand-spec-res");
+
   
   return 0;
 }
@@ -572,7 +636,13 @@ int main(int argc, char *argv[])
 
   testname = sb_get_value_string("test");
   if (testname != NULL)
+  {
     test = find_test(testname);
+    
+    /* Check if the testname is a script filename */
+    if (test == NULL)
+      test = script_load(testname);
+  }
 
   /* 'help' command */
   if (sb_globals.command == SB_COMMAND_HELP)
@@ -595,12 +665,13 @@ int main(int argc, char *argv[])
     print_usage();
     exit(1);
   }
+
   if (test == NULL)
   {
-    fprintf(stderr, "Invalid test name: %s.\n", testname);
-    exit(1);
+      fprintf(stderr, "Invalid test name: %s.\n", testname);
+      exit(1);
   }
-
+  
   /* 'prepare' command */
   if (sb_globals.command == SB_COMMAND_PREPARE)
   {
@@ -636,3 +707,97 @@ int main(int argc, char *argv[])
   
   exit(0);
 }
+
+/*
+  Return random number in specified range with distribution specified
+  with the --rand-type command line option
+*/
+
+int sb_rand(int a, int b)
+{
+  return rand_func(a,b);
+}
+
+/* uniform distribution */
+
+int sb_rand_uniform(int a, int b)
+{
+  return a + sb_rnd() % (b - a + 1);
+}
+
+/* gaussian distribution */
+
+int sb_rand_gaussian(int a, int b)
+{
+  int          sum;
+  unsigned int i, t;
+
+  t = b - a + 1;
+  for(i=0, sum=0; i < rand_iter; i++)
+    sum += sb_rnd() % t;
+  
+  return a + sum / rand_iter;
+}
+
+/* 'special' distribution */
+
+int sb_rand_special(int a, int b)
+{
+  int          sum = 0;
+  unsigned int i;
+  unsigned int d;
+  unsigned int t;
+  unsigned int res;
+  unsigned int range_size;
+  
+  if (a >= b)
+    return 0;
+
+  t = b - a + 1;
+  
+  /* Increase range size for special values. */
+  range_size = t * (100 / (100 - rand_res));
+  
+  /* Generate uniformly distributed one at this stage  */
+  res = sb_rnd() % range_size;
+  
+  /* For first part use gaussian distribution */
+  if (res < t)
+  {
+    for(i = 0; i < rand_iter; i++)
+      sum += sb_rnd() % t;
+    return a + sum / rand_iter;  
+  }
+
+  /*
+   * For second part use even distribution mapped to few items 
+   * We shall distribute other values near by the center
+   */
+  d = t * rand_pct / 100;
+  if (d < 1)
+    d = 1;
+  res %= d;
+   
+  /* Now we have res values in SPECIAL_PCT range of the data */
+  res += (t / 2 - t * rand_pct / (100 * 2));
+   
+  return a + res;
+}
+
+
+/* Generate unique random id */
+
+
+int sb_rand_uniq(int a, int b)
+{
+  int res;
+
+  pthread_mutex_lock(&rnd_mutex);
+  res = (unsigned int) (rnd_seed % (b - a + 1)) ;
+  rnd_seed += LARGE_PRIME;
+  pthread_mutex_unlock(&rnd_mutex);
+
+  return res + a;
+}
+
+

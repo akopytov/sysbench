@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(sysbench, 0.4.8, alexeyk@mysql.com)
+AC_INIT(sysbench, 0.5, alexeyk@mysql.com)
 AC_CONFIG_AUX_DIR([config])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE()
@@ -30,6 +30,9 @@ AC_ARG_WITH([pgsql],
             [ac_cv_use_pgsql=$withval], [ac_cv_use_pgsql=no]
 )
 AC_CACHE_CHECK([whether to compile with PostgreSQL support], [ac_cv_use_pgsql], [ac_cv_use_pgsql=yes])
+
+# Check if we should compile with Lua interpreter support
+AC_LUA_DEVEL
 
 # Check if we should enable large files support
 AC_ARG_ENABLE(largefile,
@@ -165,7 +168,7 @@ thr_setconcurrency \
 valloc \
 ])
 
-if test "$GCC" = "xyes"; then
+if test "x$GCC" = "xyes"; then
     AM_CFLAGS="-W -Wall -Wpointer-arith -Wbad-function-cast \
 -Wstrict-prototypes -Wnested-externs -Winline \
 -funroll-loops"
@@ -197,4 +200,5 @@ sysbench/tests/memory/Makefile
 sysbench/tests/threads/Makefile
 sysbench/tests/mutex/Makefile
 sysbench/tests/oltp/Makefile
+sysbench/scripting/Makefile
 ])

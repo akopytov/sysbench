@@ -589,7 +589,6 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
                   fd, (long long)file_req->pos);
         return 1;
       }
-      LOG_EVENT_STOP(msg, thread_id);
 
       /* Check if we have to fsync each write operation */
       if (file_fsync_all)
@@ -600,6 +599,8 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
           return 1;
         }
       }
+
+      LOG_EVENT_STOP(msg, thread_id);
 
       SB_THREAD_MUTEX_LOCK();
       write_ops++;

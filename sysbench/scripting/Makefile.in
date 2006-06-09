@@ -14,7 +14,7 @@
 
 @SET_MAKE@
 
-# Copyright (C) 2004 MySQL AB
+# Copyright (C) 2006 MySQL AB
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-SOURCES = $(libsbmysql_a_SOURCES)
+SOURCES = $(libsbscript_a_SOURCES)
 
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
@@ -38,7 +38,7 @@ VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkglibdir = $(libdir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
-top_builddir = ../../..
+top_builddir = ../..
 am__cd = CDPATH="$${ZSH_VERSION+.}$(PATH_SEPARATOR)" && cd
 INSTALL = @INSTALL@
 install_sh_DATA = $(install_sh) -c -m 644
@@ -55,7 +55,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-subdir = sysbench/drivers/mysql
+subdir = sysbench/scripting
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
@@ -67,10 +67,14 @@ CONFIG_HEADER = $(top_builddir)/config/config.h
 CONFIG_CLEAN_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 ARFLAGS = cru
-libsbmysql_a_AR = $(AR) $(ARFLAGS)
-libsbmysql_a_LIBADD =
-am_libsbmysql_a_OBJECTS = libsbmysql_a-drv_mysql.$(OBJEXT)
-libsbmysql_a_OBJECTS = $(am_libsbmysql_a_OBJECTS)
+libsbscript_a_AR = $(AR) $(ARFLAGS)
+libsbscript_a_LIBADD =
+am__libsbscript_a_SOURCES_DIST = sb_script.c ../sb_script.h \
+	script_lua.c script_lua.h
+@USE_LUA_TRUE@am__objects_1 = libsbscript_a-script_lua.$(OBJEXT)
+am_libsbscript_a_OBJECTS = libsbscript_a-sb_script.$(OBJEXT) \
+	$(am__objects_1)
+libsbscript_a_OBJECTS = $(am_libsbscript_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -82,8 +86,8 @@ LTCOMPILE = $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(libsbmysql_a_SOURCES)
-DIST_SOURCES = $(libsbmysql_a_SOURCES)
+SOURCES = $(libsbscript_a_SOURCES)
+DIST_SOURCES = $(am__libsbscript_a_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -223,9 +227,10 @@ target_alias = @target_alias@
 target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
-noinst_LIBRARIES = libsbmysql.a
-libsbmysql_a_SOURCES = drv_mysql.c
-libsbmysql_a_CPPFLAGS = $(MYSQL_CFLAGS) -I../.. $(AM_CPPFLAGS)
+@USE_LUA_TRUE@lua_sources = script_lua.c script_lua.h
+noinst_LIBRARIES = libsbscript.a
+libsbscript_a_SOURCES = sb_script.c ../sb_script.h $(lua_sources)
+libsbscript_a_CPPFLAGS = -I.. $(AM_CPPFLAGS) $(LUA_CPPFLAGS)
 all: all-am
 
 .SUFFIXES:
@@ -239,9 +244,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  sysbench/drivers/mysql/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  sysbench/scripting/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign  sysbench/drivers/mysql/Makefile
+	  $(AUTOMAKE) --foreign  sysbench/scripting/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -262,10 +267,10 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
-libsbmysql.a: $(libsbmysql_a_OBJECTS) $(libsbmysql_a_DEPENDENCIES) 
-	-rm -f libsbmysql.a
-	$(libsbmysql_a_AR) libsbmysql.a $(libsbmysql_a_OBJECTS) $(libsbmysql_a_LIBADD)
-	$(RANLIB) libsbmysql.a
+libsbscript.a: $(libsbscript_a_OBJECTS) $(libsbscript_a_DEPENDENCIES) 
+	-rm -f libsbscript.a
+	$(libsbscript_a_AR) libsbscript.a $(libsbscript_a_OBJECTS) $(libsbscript_a_LIBADD)
+	$(RANLIB) libsbscript.a
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -273,7 +278,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbmysql_a-drv_mysql.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbscript_a-sb_script.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbscript_a-script_lua.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
@@ -296,19 +302,33 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
-libsbmysql_a-drv_mysql.o: drv_mysql.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbmysql_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbmysql_a-drv_mysql.o -MD -MP -MF "$(DEPDIR)/libsbmysql_a-drv_mysql.Tpo" -c -o libsbmysql_a-drv_mysql.o `test -f 'drv_mysql.c' || echo '$(srcdir)/'`drv_mysql.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbmysql_a-drv_mysql.Tpo" "$(DEPDIR)/libsbmysql_a-drv_mysql.Po"; else rm -f "$(DEPDIR)/libsbmysql_a-drv_mysql.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='drv_mysql.c' object='libsbmysql_a-drv_mysql.o' libtool=no @AMDEPBACKSLASH@
+libsbscript_a-sb_script.o: sb_script.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbscript_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbscript_a-sb_script.o -MD -MP -MF "$(DEPDIR)/libsbscript_a-sb_script.Tpo" -c -o libsbscript_a-sb_script.o `test -f 'sb_script.c' || echo '$(srcdir)/'`sb_script.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbscript_a-sb_script.Tpo" "$(DEPDIR)/libsbscript_a-sb_script.Po"; else rm -f "$(DEPDIR)/libsbscript_a-sb_script.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sb_script.c' object='libsbscript_a-sb_script.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbmysql_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbmysql_a-drv_mysql.o `test -f 'drv_mysql.c' || echo '$(srcdir)/'`drv_mysql.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbscript_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbscript_a-sb_script.o `test -f 'sb_script.c' || echo '$(srcdir)/'`sb_script.c
 
-libsbmysql_a-drv_mysql.obj: drv_mysql.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbmysql_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbmysql_a-drv_mysql.obj -MD -MP -MF "$(DEPDIR)/libsbmysql_a-drv_mysql.Tpo" -c -o libsbmysql_a-drv_mysql.obj `if test -f 'drv_mysql.c'; then $(CYGPATH_W) 'drv_mysql.c'; else $(CYGPATH_W) '$(srcdir)/drv_mysql.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbmysql_a-drv_mysql.Tpo" "$(DEPDIR)/libsbmysql_a-drv_mysql.Po"; else rm -f "$(DEPDIR)/libsbmysql_a-drv_mysql.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='drv_mysql.c' object='libsbmysql_a-drv_mysql.obj' libtool=no @AMDEPBACKSLASH@
+libsbscript_a-sb_script.obj: sb_script.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbscript_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbscript_a-sb_script.obj -MD -MP -MF "$(DEPDIR)/libsbscript_a-sb_script.Tpo" -c -o libsbscript_a-sb_script.obj `if test -f 'sb_script.c'; then $(CYGPATH_W) 'sb_script.c'; else $(CYGPATH_W) '$(srcdir)/sb_script.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbscript_a-sb_script.Tpo" "$(DEPDIR)/libsbscript_a-sb_script.Po"; else rm -f "$(DEPDIR)/libsbscript_a-sb_script.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sb_script.c' object='libsbscript_a-sb_script.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbmysql_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbmysql_a-drv_mysql.obj `if test -f 'drv_mysql.c'; then $(CYGPATH_W) 'drv_mysql.c'; else $(CYGPATH_W) '$(srcdir)/drv_mysql.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbscript_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbscript_a-sb_script.obj `if test -f 'sb_script.c'; then $(CYGPATH_W) 'sb_script.c'; else $(CYGPATH_W) '$(srcdir)/sb_script.c'; fi`
+
+libsbscript_a-script_lua.o: script_lua.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbscript_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbscript_a-script_lua.o -MD -MP -MF "$(DEPDIR)/libsbscript_a-script_lua.Tpo" -c -o libsbscript_a-script_lua.o `test -f 'script_lua.c' || echo '$(srcdir)/'`script_lua.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbscript_a-script_lua.Tpo" "$(DEPDIR)/libsbscript_a-script_lua.Po"; else rm -f "$(DEPDIR)/libsbscript_a-script_lua.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='script_lua.c' object='libsbscript_a-script_lua.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbscript_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbscript_a-script_lua.o `test -f 'script_lua.c' || echo '$(srcdir)/'`script_lua.c
+
+libsbscript_a-script_lua.obj: script_lua.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbscript_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbscript_a-script_lua.obj -MD -MP -MF "$(DEPDIR)/libsbscript_a-script_lua.Tpo" -c -o libsbscript_a-script_lua.obj `if test -f 'script_lua.c'; then $(CYGPATH_W) 'script_lua.c'; else $(CYGPATH_W) '$(srcdir)/script_lua.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbscript_a-script_lua.Tpo" "$(DEPDIR)/libsbscript_a-script_lua.Po"; else rm -f "$(DEPDIR)/libsbscript_a-script_lua.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='script_lua.c' object='libsbscript_a-script_lua.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbscript_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbscript_a-script_lua.obj `if test -f 'script_lua.c'; then $(CYGPATH_W) 'script_lua.c'; else $(CYGPATH_W) '$(srcdir)/script_lua.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

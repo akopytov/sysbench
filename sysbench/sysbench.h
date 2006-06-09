@@ -52,7 +52,7 @@
 #define SB_THREAD_MUTEX_UNLOCK() pthread_mutex_unlock(&sb_globals.exec_mutex)
 
 #define SB_MAX_RND 0x3fffffffu
-#define sb_rnd() (random() % SB_MAX_RND)
+#define sb_rnd() (unsigned int)(random() % SB_MAX_RND)
 
 
 /* Sysbench commands */
@@ -75,7 +75,8 @@ typedef enum
   SB_REQ_TYPE_FILE,
   SB_REQ_TYPE_SQL,
   SB_REQ_TYPE_THREADS,
-  SB_REQ_TYPE_MUTEX
+  SB_REQ_TYPE_MUTEX,
+  SB_REQ_TYPE_SCRIPT
 } sb_request_type_t;
 
 /* Request structure definition */
@@ -196,5 +197,12 @@ int sb_get_value_int(char *);
 unsigned long long sb_get_value_size(char *);
 float sb_get_value_float(char *);
 char *sb_get_value_string(char *);
+
+/* Random number generators */
+int sb_rand(int, int);
+int sb_rand_uniform(int, int);
+int sb_rand_gaussian(int, int);
+int sb_rand_special(int, int);
+int sb_rand_uniq(int a, int b);
 
 #endif

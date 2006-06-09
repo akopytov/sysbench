@@ -25,9 +25,6 @@
 
 #define GET_RANDOM_ID() ((*rnd_func)())
 
-/* How many rows to insert in a single query (used for test DB creation) */
-#define INSERT_ROWS 10000
-
 /* How many rows to insert before COMMITs (used for test DB creation) */
 #define ROWS_BEFORE_COMMIT 1000
 
@@ -272,7 +269,14 @@ static int prepare_stmt_set_nontrx(oltp_stmt_set_t *, oltp_bind_set_t *, db_conn
 static int prepare_stmt_set_sp(oltp_stmt_set_t *, oltp_bind_set_t *, db_conn_t *);
 
 /* Close a set of statements */
-void close_stmt_set(oltp_stmt_set_t *set);
+static void close_stmt_set(oltp_stmt_set_t *set);
+
+/* Initialize connection with a given number */
+static int oltp_connection_init(unsigned int id);
+
+/* Close connection with a given number */
+int oltp_connection_done(unsigned int id);
+
 
 int register_test_oltp(sb_list_t *tests)
 {
@@ -298,15 +302,8 @@ int oltp_cmd_help(void)
 int oltp_cmd_prepare(void)
 {
   db_conn_t      *con;
-  char           *query = NULL;
-  unsigned int   query_len;
+  char           query[MAX_QUERY_LEN];
   unsigned int   i;
-  unsigned int   j;
-  unsigned int   n;
-  unsigned long  nrows;
-  unsigned long  commit_cntr = 0;
-  char           insert_str[MAX_QUERY_LEN];
-  char           *pos;
   char           *table_options_str;
   
   if (parse_arguments())
@@ -324,33 +321,10 @@ int oltp_cmd_prepare(void)
   if (con == NULL)
     return 1;
 
-  /* Determine if database supports multiple row inserts */
-  if (driver_caps.multi_rows_insert)
-    nrows = INSERT_ROWS;
-  else
-    nrows = 1;
-  
-  /* Prepare statement buffer */
-  if (args.auto_inc)
-    snprintf(insert_str, sizeof(insert_str),
-             "(0,' ','qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt')");
-  else
-    snprintf(insert_str, sizeof(insert_str),
-             "(%d,0,' ','qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt')",
-             args.table_size);
-  
-  query_len = MAX_QUERY_LEN + nrows * (strlen(insert_str) + 1);
-  query = (char *)malloc(query_len);
-  if (query == NULL)
-  {
-    log_text(LOG_FATAL, "memory allocation failure!");
-    goto error;
-  }
-  
   /* Create test table */
   log_text(LOG_NOTICE, "Creating table '%s'...", args.table_name);
   table_options_str = driver_caps.table_options_str;
-  snprintf(query, query_len,
+  snprintf(query, MAX_QUERY_LEN,
            "CREATE TABLE %s ("
            "id %s %s NOT NULL %s, "
            "k integer %s DEFAULT '0' NOT NULL, "
@@ -387,7 +361,7 @@ int oltp_cmd_prepare(void)
   }
   
   /* Create secondary index on 'k' */
-  snprintf(query, query_len,
+  snprintf(query, MAX_QUERY_LEN,
            "CREATE INDEX k on %s(k)",
            args.table_name);
   if (db_query(con, query) == NULL)
@@ -395,83 +369,39 @@ int oltp_cmd_prepare(void)
     log_text(LOG_FATAL, "failed to create secondary index on table!");
     goto error;
   }
+
   /* Fill test table with data */
   log_text(LOG_NOTICE, "Creating %d records in table '%s'...", args.table_size,
          args.table_name);
 
-  for (i = 0; i < args.table_size; i += nrows)
+  if (args.auto_inc)
+    snprintf(query, MAX_QUERY_LEN, "INSERT INTO %s(k, c, pad) VALUES",
+             args.table_name);
+  else
+    snprintf(query, MAX_QUERY_LEN, "INSERT INTO %s(id, k, c, pad) VALUES ",
+             args.table_name);
+
+  if (db_bulk_insert_init(con, query))
   {
-    /* Build query */
-    if (args.auto_inc)
-      n = snprintf(query, query_len, "INSERT INTO %s(k, c, pad) VALUES ",
-                   args.table_name);
-    else
-      n = snprintf(query, query_len, "INSERT INTO %s(id, k, c, pad) VALUES ",
-                   args.table_name);
-    if (n >= query_len)
-    {
-      log_text(LOG_FATAL, "query is too long!");
-      goto error;
-    }
-    pos = query + n;
-    for (j = 0; j < nrows; j++)
-    {
-      if ((unsigned)(pos - query) >= query_len)
-      {
-        log_text(LOG_FATAL, "query is too long!");
-        goto error;
-      }
-
-      /* Form the values string when if are not using auto_inc */
-      if (!args.auto_inc)
-        snprintf(insert_str, sizeof(insert_str),
-                 "(%d,0,' ','qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt')",
-                 i + j + 1);
-      
-      if (j == nrows - 1 || i+j == args.table_size -1)
-        n = snprintf(pos, query_len - (pos - query), "%s", insert_str);
-      else
-        n = snprintf(pos, query_len - (pos - query), "%s,", insert_str);
-      if (n >= query_len - (pos - query))
-      {
-        log_text(LOG_FATAL, "query is too long!");
-        goto error;
-      }
-      if (i+j == args.table_size - 1)
-        break;
-      pos += n;
-    }
-    
-    /* Execute query */
-    if (db_query(con, query) == NULL)
-    {
-      log_text(LOG_FATAL, "failed to create test table!");
-      goto error;
-    }
-
-    if (driver_caps.needs_commit)
-    {
-      commit_cntr += nrows;
-      if (commit_cntr >= ROWS_BEFORE_COMMIT)
-      {
-        if (db_query(con, "COMMIT") == NULL)
-        {
-          log_text(LOG_FATAL, "failed to commit inserted rows!");
-          goto error;
-        }
-        commit_cntr -= ROWS_BEFORE_COMMIT;
-      }
-    }
+    log_text(LOG_FATAL, "Failed to initialize insert operation");
+    return 1;
   }
 
-  if (driver_caps.needs_commit && db_query(con, "COMMIT") == NULL)
+  if (args.auto_inc)
+    snprintf(query, MAX_QUERY_LEN,
+             "(0,' ','qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt')");
+  
+  for (i = 0; i < args.table_size; i++)
   {
-    if (db_query(con, "COMMIT") == NULL)
-    {
-      log_text(LOG_FATAL, "failed to commit inserted rows!");
+    if (!args.auto_inc)
+      snprintf(query, MAX_QUERY_LEN,
+               "(%d,0,' ','qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt')",
+               i+1);
+    if (db_bulk_insert_next(con, query))
       return 1;
-    }
   }
+
+  db_bulk_insert_done(con);
 
   oltp_disconnect(con);
   
@@ -479,8 +409,6 @@ int oltp_cmd_prepare(void)
 
  error:
   oltp_disconnect(con);
-  if (query != NULL)
-    free(query);
 
   return 1;
 }

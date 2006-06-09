@@ -94,9 +94,25 @@ float sb_get_value_float(char *name);
 
 char *sb_get_value_string(char *name);
 
+sb_list_t *sb_get_value_list(char *name);
+
 char *sb_print_value_size(char *buf, unsigned int buflen, double value);
 
-sb_list_t *sb_get_value_list(char *name);
+int sb_opt_to_flag(option_t *);
+
+int sb_opt_to_int(option_t *);
+
+unsigned long long sb_opt_to_size(option_t *);
+
+float sb_opt_to_float(option_t *);
+
+char *sb_opt_to_string(option_t *);
+
+sb_list_t *sb_opt_to_list(option_t *);
+
+sb_list_item_t *sb_options_enum_start(void);
+
+sb_list_item_t *sb_options_enum_next(sb_list_item_t *, option_t **);
 
 value_t *new_value(void);
 

@@ -1,3 +1,7 @@
+2006-05-28  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* count fsync() time as request execution time in file-fsync-all mode
+
 2006-05-24  Alexey Kopytov  <alexeyk@mysql.com>
 
 	* Added --oltp-reconnect option

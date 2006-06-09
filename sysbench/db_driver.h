@@ -184,10 +184,21 @@ typedef enum {
 
 typedef struct db_conn
 {
-  db_driver_t    *driver;    /* DB driver for this connection */
+  db_driver_t    *driver;        /* DB driver for this connection */
   db_conn_type_t type;
   void           *ptr;
   db_error_t     db_errno;
+
+  /* Internal fields */
+  unsigned int   bulk_cnt;          /* Current number of rows in bulk insert buffer */
+  unsigned int   bulk_max_rows;     /* Maximum number of rows in bulk insert buffer */
+  char *         bulk_buffer;       /* Bulk insert query buffer */
+  unsigned int   bulk_buflen;       /* Current length of bulk_buffer */
+  unsigned int   bulk_ptr;          /* Current position in bulk_buffer */
+  unsigned int   bulk_ptr_orig;     /* Save value of bulk_ptr */
+  unsigned int   bulk_not_first;    /* Indicates if bulk insert buffer has some rows */
+  unsigned int   bulk_commit_cnt;   /* Current value of uncommitted rows */
+  unsigned int   bulk_commit_max;   /* Maximum value of uncommitted rows */
 } db_conn_t;
 
 /* Prepared statement definition */
@@ -261,5 +272,14 @@ int db_done(db_driver_t *);
 db_error_t db_errno(db_conn_t *);
 
 int db_print_value(db_bind_t *, char *, int);
+
+/* Initialize multi-row insert operation */
+int db_bulk_insert_init(db_conn_t *, const char *);
+
+/* Add row to multi-row insert operation */
+int db_bulk_insert_next(db_conn_t *, const char *);
+
+/* Finish multi-row insert operation */
+void db_bulk_insert_done(db_conn_t *);
 
 #endif /* DB_DRIVER_H */

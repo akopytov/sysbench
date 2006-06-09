@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-SUBDIRS = drivers tests .
+SUBDIRS = drivers tests scripting .
 
 bin_PROGRAMS = sysbench
 
@@ -32,11 +32,17 @@ if USE_PGSQL
 pgsql_ldadd = drivers/pgsql/libsbpgsql.a $(PGSQL_LIBS)
 endif
 
+if USE_LUA
+lua_ldflags = $(LUA_LDFLAGS)
+endif
+
 sysbench_SOURCES = sysbench.c sysbench.h sb_timer.c sb_timer.h \
 sb_options.c sb_options.h sb_logger.c sb_logger.h sb_list.h db_driver.h \
 db_driver.c
 
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     tests/memory/libsbmemory.a tests/cpu/libsbcpu.a tests/oltp/libsboltp.a \
-    tests/mutex/libsbmutex.a $(mysql_ldadd) $(pgsql_ldadd) $(ora_ldadd)
-sysbench_LDFLAGS = $(mysql_ldflags) $(pgsql_ldflags) $(ora_ldflags)
+    tests/mutex/libsbmutex.a scripting/libsbscript.a \
+    $(mysql_ldadd) $(pgsql_ldadd)  $(ora_ldadd)
+sysbench_LDFLAGS = $(mysql_ldflags) $(pgsql_ldflags) $(ora_ldflags) \
+    $(lua_ldflags)

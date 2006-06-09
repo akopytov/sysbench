@@ -96,7 +96,13 @@ struct sb_list_item
 ((type *)((char *)(ptr) - offsetof(type, member)))
 
 #define SB_LIST_FOR_EACH(pos_p, head_p) \
-    for (pos_p = (head_p)->next_p; pos_p != (head_p); pos_p = pos_p->next_p)
+  for (pos_p = (head_p)->next_p; pos_p != (head_p); pos_p = pos_p->next_p)
+
+#define SB_LIST_ENUM_START(head_p) \
+  (head_p)
+
+#define SB_LIST_ENUM_NEXT(pos_p, head_p)                         \
+  ((pos_p->next_p != (head_p)) ? (pos_p->next_p) : NULL)
 
 #define SB_LIST_FOR_EACH_SAFE(pos_p, temp_p, head_p) \
     for (pos_p = (head_p)->next_p, temp_p = (pos_p)->next_p; pos_p != (head_p); \
