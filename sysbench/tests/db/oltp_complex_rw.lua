@@ -190,7 +190,7 @@ end
 
 function set_vars()
    oltp_table_size = oltp_table_size or 10000
-   oltp_range_size = oltp_range_size or 10
+   oltp_range_size = oltp_range_size or 100
    
    if (oltp_auto_inc == 'off') then
       oltp_auto_inc = false
