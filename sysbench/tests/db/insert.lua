@@ -82,9 +82,10 @@ function event(thread_id)
       params[1] = sb_rand_uniq(1, oltp_table_size)
    end
    params[2]= sb_rand(1, oltp_table_size)
-   params[3] = sb_rnd() .. '-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd() .. '-' ..
-      sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()
-   params[4] = sb_rnd()..'-'.. sb_rnd()..'-'.. sb_rnd()..'-'.. sb_rnd()..'-'.. sb_rnd()
+   params[3] = sb_rand_str([[
+###########-###########-###########-###########-###########-###########-###########-###########-###########-###########]])
+   params[4] = sb_rand_str([[
+###########-###########-###########-###########-###########]])
    rs = db_execute(stmt)
 end
 

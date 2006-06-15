@@ -125,6 +125,7 @@ static int sb_lua_db_free_results(lua_State *);
 static int sb_lua_rand(lua_State *);
 static int sb_lua_rand_uniq(lua_State *);
 static int sb_lua_rnd(lua_State *);
+static int sb_lua_rand_str(lua_State *);
 
 /* Get a per-state interpreter context */
 static sb_lua_ctxt_t *sb_lua_get_context(lua_State *);
@@ -352,6 +353,9 @@ lua_State *sb_lua_new_state(const char *scriptname)
 
   lua_pushcfunction(state, sb_lua_rnd);
   lua_setglobal(state, "sb_rnd");
+
+  lua_pushcfunction(state, sb_lua_rand_str);
+  lua_setglobal(state, "sb_rand_str");
   
   lua_pushcfunction(state, sb_lua_db_connect);
   lua_setglobal(state, "db_connect");
@@ -849,6 +853,19 @@ int sb_lua_rand_uniq(lua_State *L)
 int sb_lua_rnd(lua_State *L)
 {
   lua_pushnumber(L, sb_rnd());
+
+  return 1;
+}
+
+int sb_lua_rand_str(lua_State *L)
+{
+  const char *fmt = luaL_checkstring(L, -1);
+  char *buf = strdup(fmt);
+
+  sb_rand_str(fmt, buf);
+  lua_pushstring(L, buf);
+
+  free(buf);
 
   return 1;
 }

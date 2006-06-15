@@ -85,7 +85,7 @@ function thread_init(thread_id)
    set_vars()
    
    stmt = db_prepare([[
-			   UPDATE %s set c=? where id=?
+			   UPDATE sbtest set c=? where id=?
 		     ]])
    params = {"", 0}
    db_bind_param(stmt, params)
@@ -93,8 +93,8 @@ end
 
 function event(thread_id)
    local rs
-   params[1] = sb_rnd() .. '-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd() .. '-' ..
-      sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()
+   params[1] = sb_rand_str([[
+###########-###########-###########-###########-###########-###########-###########-###########-###########-###########]])
    params[2] = sb_rand(1, oltp_table_size)
    rs = db_execute(stmt)
 end

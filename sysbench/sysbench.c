@@ -801,3 +801,20 @@ int sb_rand_uniq(int a, int b)
 }
 
 
+/* Generate random string */
+
+
+void sb_rand_str(const char *fmt, char *buf)
+{
+  unsigned int i;
+
+  for (i=0; fmt[i] != '\0'; i++)
+  {
+    if (fmt[i] == '#')
+      buf[i] = sb_rand_uniform('0', '9');
+    else if (fmt[i] == '@')
+      buf[i] = sb_rand_uniform('a', 'z');
+    else
+      buf[i] = fmt[i];
+  }
+}

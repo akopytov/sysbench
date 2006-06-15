@@ -170,8 +170,8 @@ function event(thread_id)
    update_idx_params[1] = sb_rand(1, oltp_table_size)
    rs = db_execute(update_idx_stmt)
    
-   update_nonidx_params[1] = sb_rnd() .. '-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd() .. '-' ..
-      sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()..'-'..sb_rnd()
+   update_nonidx_params[1] = sb_rand_str([[
+###########-###########-###########-###########-###########-###########-###########-###########-###########-###########]])
    update_nonidx_params[2] = sb_rand(1, oltp_table_size)
    rs = db_execute(update_nonidx_stmt)
    
