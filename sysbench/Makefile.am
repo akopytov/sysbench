@@ -33,7 +33,7 @@ pgsql_ldadd = drivers/pgsql/libsbpgsql.a $(PGSQL_LIBS)
 endif
 
 if USE_LUA
-lua_ldflags = $(LUA_LDFLAGS)
+lua_ldadd = $(LUA_LDFLAGS)
 endif
 
 sysbench_SOURCES = sysbench.c sysbench.h sb_timer.c sb_timer.h \
@@ -43,6 +43,4 @@ db_driver.c
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     tests/memory/libsbmemory.a tests/cpu/libsbcpu.a tests/oltp/libsboltp.a \
     tests/mutex/libsbmutex.a scripting/libsbscript.a \
-    $(mysql_ldadd) $(pgsql_ldadd)  $(ora_ldadd)
-sysbench_LDFLAGS = $(mysql_ldflags) $(pgsql_ldflags) $(ora_ldflags) \
-    $(lua_ldflags)
+    $(mysql_ldadd) $(pgsql_ldadd) $(ora_ldadd) $(lua_ldadd)

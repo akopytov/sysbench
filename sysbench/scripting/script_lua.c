@@ -43,7 +43,8 @@
 /* Interpreter context */
 
 typedef struct {
-  db_conn_t *con; /* Database connection */
+  int       thread_id; /* SysBench thread ID */
+  db_conn_t *con;      /* Database connection */
 } sb_lua_ctxt_t;
 
 typedef struct {
@@ -80,7 +81,7 @@ static sb_request_t sb_lua_get_request(void);
 static int sb_lua_op_execute_request(sb_request_t *, int);
 static int sb_lua_op_thread_init(int);
 static int sb_lua_op_thread_done(int);
-
+static void sb_lua_op_print_stats(void);
 
 static sb_operations_t lua_ops = {
   .init = &sb_lua_init,
@@ -90,11 +91,10 @@ static sb_operations_t lua_ops = {
 };
 
 /* Main (global) interpreter state */
-lua_State *gstate;
+static lua_State *gstate;
 
 /* Database driver */
-db_driver_t *db_driver;
-const char *db_driver_name;
+static db_driver_t *db_driver;
 
 /* Variable with unique address to store per-state data */
 static const char sb_lua_ctxt_key;
@@ -104,7 +104,7 @@ static int sb_lua_cmd_prepare(void);
 static int sb_lua_cmd_cleanup(void);
 
 /* Initialize interpreter state */
-static lua_State *sb_lua_new_state(const char *);
+static lua_State *sb_lua_new_state(const char *, int);
 
 /* Close interpretet state */
 static int sb_lua_close_state(lua_State *);
@@ -142,7 +142,7 @@ int script_load_lua(const char *testname, sb_test_t *test)
   unsigned int i;
 
   /* Initialize global interpreter state */
-  gstate = sb_lua_new_state(testname);
+  gstate = sb_lua_new_state(testname, -1);
   if (gstate == NULL)
     goto error;
 
@@ -166,6 +166,8 @@ int script_load_lua(const char *testname, sb_test_t *test)
   lua_getglobal(gstate, THREAD_DONE_FUNC);
   if (!lua_isnil(gstate, -1))
     test->ops.thread_done = &sb_lua_op_thread_done;
+
+  test->ops.print_stats = &sb_lua_op_print_stats;
   
   /* Initialize per-thread interpreters */
   states = (lua_State **)calloc(sb_globals.num_threads, sizeof(lua_State *));
@@ -173,7 +175,7 @@ int script_load_lua(const char *testname, sb_test_t *test)
     goto error;
   for (i = 0; i < sb_globals.num_threads; i++)
   {
-    states[i] = sb_lua_new_state(testname);
+    states[i] = sb_lua_new_state(testname, i);
     if (states[i] == NULL)
       goto error;
   }
@@ -284,6 +286,13 @@ int sb_lua_op_thread_done(int thread_id)
   return 0;
 }
 
+void sb_lua_op_print_stats(void)
+{
+  /* check if db driver has been initialized */
+  if (db_driver != NULL)
+    db_print_stats();
+}
+
 int sb_lua_done(void)
 {
   unsigned int i;
@@ -298,7 +307,7 @@ int sb_lua_done(void)
 
 /* Allocate and initialize new interpreter state */
 
-lua_State *sb_lua_new_state(const char *scriptname)
+lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
 {
   lua_State      *state;
   sb_lua_ctxt_t  *ctxt;
@@ -406,6 +415,7 @@ lua_State *sb_lua_new_state(const char *scriptname)
   ctxt = (sb_lua_ctxt_t *)calloc(1, sizeof(sb_lua_ctxt_t));
   if (ctxt == NULL)
     return NULL;
+  ctxt->thread_id = thread_id;
   sb_lua_set_context(state, ctxt);
   
   return state;
@@ -471,6 +481,7 @@ int sb_lua_db_connect(lua_State *L)
   ctxt->con = db_connect(db_driver);
   if (ctxt->con == NULL)
     lua_error(L);
+  db_set_thread(ctxt->con, ctxt->thread_id);
   
   return 0;
 }

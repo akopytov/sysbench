@@ -199,20 +199,29 @@ typedef struct db_conn
   unsigned int   bulk_not_first;    /* Indicates if bulk insert buffer has some rows */
   unsigned int   bulk_commit_cnt;   /* Current value of uncommitted rows */
   unsigned int   bulk_commit_max;   /* Maximum value of uncommitted rows */
+  int            thread_id;         /* Assiciated thread id (required to collect per-thread stats */
 } db_conn_t;
+
+typedef enum {
+  DB_QUERY_TYPE_READ,
+  DB_QUERY_TYPE_WRITE,
+  DB_QUERY_TYPE_COMMIT,
+  DB_QUERY_TYPE_OTHER
+} db_query_type_t;
 
 /* Prepared statement definition */
 
 typedef struct db_stmt
 {
-  db_conn_t    *connection;     /* Connection which this statement belongs to */
-  char         *query;          /* Query string for emulated PS */
-  db_bind_t    *bound_param;    /* Array of bound parameters for emulated PS */
-  unsigned int bound_param_len; /* Length of the bound_param array */
-  db_bind_t    *bound_res;      /* Array of bound results for emulated PS */ 
-  db_bind_t    *bound_res_len;  /* Length of the bound_res array */
-  void         *ptr;            /* Pointer to driver-specific data structure */
-  char         emulated;        /* Should this statement be emulated? */
+  db_conn_t       *connection;     /* Connection which this statement belongs to */
+  char            *query;          /* Query string for emulated PS */
+  db_bind_t       *bound_param;    /* Array of bound parameters for emulated PS */
+  unsigned int    bound_param_len; /* Length of the bound_param array */
+  db_bind_t       *bound_res;      /* Array of bound results for emulated PS */ 
+  db_bind_t       *bound_res_len;  /* Length of the bound_res array */
+  char            emulated;        /* Should this statement be emulated? */
+  db_query_type_t type;         /* Query type */
+  void            *ptr;            /* Pointer to driver-specific data structure */
 } db_stmt_t;
 
 /* Result set definition */
@@ -281,5 +290,11 @@ int db_bulk_insert_next(db_conn_t *, const char *);
 
 /* Finish multi-row insert operation */
 void db_bulk_insert_done(db_conn_t *);
+
+/* Print database-specific test stats */
+void db_print_stats(void);
+
+/* Associate connection with a thread (required only for statistics */
+void db_set_thread(db_conn_t *, int);
 
 #endif /* DB_DRIVER_H */

@@ -19,6 +19,10 @@
 # include "config.h"
 #endif
 
+#ifdef STDC_HEADERS
+# include <ctype.h>
+#endif
+
 #include "db_driver.h"
 #include "sb_list.h"
 
@@ -28,17 +32,26 @@
 /* How many rows to insert before COMMITs (used in bulk insert) */
 #define ROWS_BEFORE_COMMIT 1000
 
-/* Global variables */
+typedef struct {
+  unsigned long read_ops;
+  unsigned long write_ops;
+  unsigned long other_ops;
+  unsigned long transactions;
+  unsigned long deadlocks;
+} db_thread_stat_t;
 
+/* Global variables */
 db_globals_t db_globals;
 
-
 /* Static variables */
+static sb_list_t        drivers;          /* list of available DB drivers */
+static db_thread_stat_t *thread_stats; /* per-thread stats */
 
-static sb_list_t    drivers;          /* list of available DB drivers */
+/* Timers used in debug mode */
+static sb_timer_t *exec_timers;
+static sb_timer_t *fetch_timers;
 
 /* DB drivers registrars */
-
 #ifdef USE_MYSQL
 int register_driver_mysql(sb_list_t *);
 #endif
@@ -56,6 +69,8 @@ int register_driver_pgsql(sb_list_t *);
 static int db_parse_arguments(void);
 static void db_free_row(db_row_t *);
 static int db_bulk_do_insert(db_conn_t *, int);
+static db_query_type_t db_get_query_type(const char *);
+static void db_update_thread_stats(int, db_query_type_t);
 
 /* DB layer arguments */
 
@@ -70,7 +85,10 @@ static sb_arg_t db_args[] =
     "db-ps-mode", "prepared statements usage mode {auto, disable}",
     SB_ARG_TYPE_STRING, "auto"
   },
-  
+  {
+    "db-debug", "print database-specific debug information",
+    SB_ARG_TYPE_FLAG, "off"
+  },
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
 
@@ -148,6 +166,7 @@ db_driver_t *db_init(const char *name)
 {
   db_driver_t    *drv = NULL;
   sb_list_item_t *pos;
+  unsigned int   i;
   
   if (SB_LIST_IS_EMPTY(&drivers))
   {
@@ -190,14 +209,28 @@ db_driver_t *db_init(const char *name)
     return NULL;
   }
 
-  db_globals.debug = sb_globals.debug;
-  
   /* Initialize database driver */
   if (drv->ops.init())
-  {
     return NULL;
-  }
 
+  /* Initialize per-thread stats */
+  thread_stats = (db_thread_stat_t *)calloc(sb_globals.num_threads,
+                                            sizeof(db_thread_stat_t));
+  if (thread_stats == NULL)
+    return NULL;
+
+  /* Initialize timers if in debug mode */
+  if (db_globals.debug)
+  {
+    exec_timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
+    fetch_timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
+    for (i = 0; i < sb_globals.num_threads; i++)
+    {
+      sb_timer_init(exec_timers + i);
+      sb_timer_init(fetch_timers + i);
+    }
+  }
+  
   return drv;
 }
 
@@ -233,6 +266,14 @@ db_conn_t *db_connect(db_driver_t *drv)
   }
 
   return con;
+}
+
+
+/* Associate connection with a thread (required only for statistics */
+
+void db_set_thread(db_conn_t *con, int thread_id)
+{
+  con->thread_id = thread_id;
 }
 
 
@@ -273,6 +314,8 @@ db_stmt_t *db_prepare(db_conn_t *con, const char *query)
     free(stmt);
     return NULL;
   }
+
+  stmt->type = db_get_query_type(query);
   
   return stmt;
 }
@@ -323,9 +366,10 @@ db_result_set_t *db_execute(db_stmt_t *stmt)
     return NULL;
   }
 
+  db_update_thread_stats(con->thread_id, stmt->type);
+  
   return rs;
 }
-
 
 /* Fetch row into buffers bound by db_bind() */
 
@@ -494,6 +538,15 @@ int db_store_results(db_result_set_t *rs)
 
 int db_done(db_driver_t *drv)
 {
+  if (db_globals.debug)
+  {
+    free(exec_timers);
+    free(fetch_timers);
+  }
+  
+  if (thread_stats != NULL)
+    free(thread_stats);
+
   return drv->ops.done();
 }
 
@@ -527,6 +580,8 @@ int db_parse_arguments(void)
   }
 
   db_globals.driver = sb_get_value_string("db-driver");
+
+  db_globals.debug = sb_get_value_flag("db-debug");
   
   return 0;
 }
@@ -716,3 +771,135 @@ void db_bulk_insert_done(db_conn_t *con)
     con->bulk_buffer = NULL;
   }
 }
+
+/* Print database-specific test stats */
+
+void db_print_stats(void)
+{
+  double        total_time;
+  unsigned int  i;
+  sb_timer_t    exec_timer;
+  sb_timer_t    fetch_timer;
+  unsigned long read_ops;
+  unsigned long write_ops;
+  unsigned long other_ops;
+  unsigned long transactions;
+  unsigned long deadlocks;
+
+  /* Summarize per-thread counters */
+  read_ops = write_ops = other_ops = transactions = deadlocks = 0;
+  for (i = 0; i < sb_globals.num_threads; i++)
+  {
+    read_ops += thread_stats[i].read_ops;
+    write_ops += thread_stats[i].write_ops;
+    other_ops += thread_stats[i].other_ops;
+    transactions += thread_stats[i].transactions;
+    deadlocks += thread_stats[i].deadlocks;
+  }
+  
+  total_time = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
+  
+  log_text(LOG_NOTICE, "OLTP test statistics:");
+  log_text(LOG_NOTICE, "    queries performed:");
+  log_text(LOG_NOTICE, "        read:                            %d",
+           read_ops);
+  log_text(LOG_NOTICE, "        write:                           %d",
+           write_ops);
+  log_text(LOG_NOTICE, "        other:                           %d",
+           other_ops);
+  log_text(LOG_NOTICE, "        total:                           %d",
+           read_ops + write_ops + other_ops);
+  log_text(LOG_NOTICE, "    transactions:                        %-6d"
+           " (%.2f per sec.)", transactions, transactions / total_time);
+  log_text(LOG_NOTICE, "    deadlocks:                           %-6d"
+           " (%.2f per sec.)", deadlocks, deadlocks / total_time);
+  log_text(LOG_NOTICE, "    read/write requests:                 %-6d"
+           " (%.2f per sec.)", read_ops + write_ops,
+           (read_ops + write_ops) / total_time);  
+  log_text(LOG_NOTICE, "    other operations:                    %-6d"
+           " (%.2f per sec.)", other_ops, other_ops / total_time);
+
+  if (db_globals.debug)
+  {
+    sb_timer_init(&exec_timer);
+    sb_timer_init(&fetch_timer);
+
+    for (i = 0; i < sb_globals.num_threads; i++)
+    {
+      exec_timer = merge_timers(&exec_timer, exec_timers + i);
+      fetch_timer = merge_timers(&fetch_timer, fetch_timers + i);
+    }
+
+    log_text(LOG_DEBUG, "");
+    log_text(LOG_DEBUG, "Query execution statistics:");
+    log_text(LOG_DEBUG, "    min:                                %.4fs",
+             NS2SEC(get_min_time(&exec_timer)));
+    log_text(LOG_DEBUG, "    avg:                                %.4fs",
+             NS2SEC(get_avg_time(&exec_timer)));
+    log_text(LOG_DEBUG, "    max:                                %.4fs",
+             NS2SEC(get_max_time(&exec_timer)));
+    log_text(LOG_DEBUG, "  total:                                %.4fs",
+             NS2SEC(get_sum_time(&exec_timer)));
+
+    log_text(LOG_DEBUG, "Results fetching statistics:");
+    log_text(LOG_DEBUG, "    min:                                %.4fs",
+             NS2SEC(get_min_time(&fetch_timer)));
+    log_text(LOG_DEBUG, "    avg:                                %.4fs",
+             NS2SEC(get_avg_time(&fetch_timer)));
+    log_text(LOG_DEBUG, "    max:                                %.4fs",
+             NS2SEC(get_max_time(&fetch_timer)));
+    log_text(LOG_DEBUG, "  total:                                %.4fs",
+             NS2SEC(get_sum_time(&fetch_timer)));
+  }
+}
+
+/* Get query type */
+
+db_query_type_t db_get_query_type(const char *query)
+{
+  while (isspace(*query))
+    query++;
+
+  if (!strncasecmp(query, "select", 6))
+    return DB_QUERY_TYPE_READ;
+
+  if (!strncasecmp(query, "insert", 6) ||
+      !strncasecmp(query, "update", 6) ||
+      !strncasecmp(query, "delete", 6))
+    return DB_QUERY_TYPE_WRITE;
+
+  if (!strncasecmp(query, "commit", 6) ||
+      !strncasecmp(query, "unlock tables", 13))
+    return DB_QUERY_TYPE_COMMIT;
+    
+  
+  return DB_QUERY_TYPE_OTHER;
+}
+
+/* Update stats according to type */
+
+void db_update_thread_stats(int id, db_query_type_t type)
+{
+  if (id < 0)
+    return;
+
+  switch (type)
+  {
+    case DB_QUERY_TYPE_READ:
+      thread_stats[id].read_ops++;
+      break;
+    case DB_QUERY_TYPE_WRITE:
+      thread_stats[id].write_ops++;
+      break;
+    case DB_QUERY_TYPE_COMMIT:
+      thread_stats[id].transactions++;
+      break;
+    case DB_QUERY_TYPE_OTHER:
+      thread_stats[id].other_ops++;
+      break;
+    default:
+      log_text(LOG_WARNING, "Unknown query type: %d", type);
+  }
+}
+
+

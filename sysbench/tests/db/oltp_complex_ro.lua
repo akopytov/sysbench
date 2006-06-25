@@ -148,6 +148,8 @@ function event(thread_id)
    rs = db_execute(distinct_stmt)
    db_store_results(rs)
    db_free_results(rs)
+
+   db_execute(commit_stmt)
    
 end
 
