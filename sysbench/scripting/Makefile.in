@@ -70,8 +70,8 @@ LIBRARIES = $(noinst_LIBRARIES)
 ARFLAGS = cru
 libsbscript_a_AR = $(AR) $(ARFLAGS)
 libsbscript_a_LIBADD =
-am__libsbscript_a_SOURCES_DIST = sb_script.c ../sb_script.h \
-	script_lua.c script_lua.h
+am__libsbscript_a_SOURCES_DIST = sb_script.c sb_script.h script_lua.c \
+	script_lua.h
 @USE_LUA_TRUE@am__objects_1 = libsbscript_a-script_lua.$(OBJEXT)
 am_libsbscript_a_OBJECTS = libsbscript_a-sb_script.$(OBJEXT) \
 	$(am__objects_1)
@@ -235,7 +235,7 @@ target_vendor = @target_vendor@
 @USE_LUA_TRUE@SUBDIRS = lua .
 @USE_LUA_TRUE@lua_sources = script_lua.c script_lua.h
 noinst_LIBRARIES = libsbscript.a
-libsbscript_a_SOURCES = sb_script.c ../sb_script.h $(lua_sources)
+libsbscript_a_SOURCES = sb_script.c sb_script.h $(lua_sources)
 libsbscript_a_CPPFLAGS = -I.. $(AM_CPPFLAGS)
 all: all-recursive
 

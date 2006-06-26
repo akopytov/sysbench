@@ -234,7 +234,10 @@ liblua_a_SOURCES = lapi.c lcode.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c lm
         lobject.c lopcodes.c lparser.c lstate.c lstring.c ltable.c ltm.c  \
         lundump.c lvm.c lzio.c \
         lauxlib.c lbaselib.c ldblib.c liolib.c lmathlib.c loslib.c ltablib.c \
-        lstrlib.c loadlib.c linit.c
+        lstrlib.c loadlib.c linit.c \
+        lapi.h lcode.h ldo.h lgc.h llimits.h lobject.h lparser.h lstring.h ltm.h \
+        luaconf.h lundump.h lzio.h lauxlib.h ldebug.h lfunc.h llex.h lmem.h lopcodes.h \
+        lstate.h ltable.h lua.h lualib.h lvm.h
 
 all: all-am
 

@@ -22,7 +22,7 @@ endif
 
 noinst_LIBRARIES = libsbscript.a
 
-libsbscript_a_SOURCES = sb_script.c ../sb_script.h $(lua_sources)
+libsbscript_a_SOURCES = sb_script.c sb_script.h $(lua_sources)
 
 libsbscript_a_CPPFLAGS = -I.. $(AM_CPPFLAGS)
 
