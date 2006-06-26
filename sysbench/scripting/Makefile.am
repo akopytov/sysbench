@@ -15,12 +15,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 if USE_LUA
+SUBDIRS = lua .
 lua_sources = script_lua.c script_lua.h
+AM_CPPFLAGS += -I./lua/src
 endif
 
 noinst_LIBRARIES = libsbscript.a
 
 libsbscript_a_SOURCES = sb_script.c ../sb_script.h $(lua_sources)
 
-libsbscript_a_CPPFLAGS = -I.. $(AM_CPPFLAGS) $(LUA_CPPFLAGS)
+libsbscript_a_CPPFLAGS = -I.. $(AM_CPPFLAGS)
 

@@ -458,7 +458,6 @@ AC_LANG_RESTORE
 
 dnl ---------------------------------------------------------------------------
 dnl Macro: AC_LUA_DEVEL
-dnl Checks for Lua and provides the $(LUA_CPPFLAGS) and $(LUA_LDFLAGS) output variables.
 dnl ---------------------------------------------------------------------------
 AC_DEFUN([AC_LUA_DEVEL],[
 
@@ -469,49 +468,6 @@ AC_CACHE_CHECK([whether to compile with Lua support], [ac_cv_use_lua], [ac_cv_us
 
 if test "xac_cv_use_lua" != "xno"; then 
 
-if test "x$ac_cv_use_lua" != "xyes"; then
-    LUA_CPPFLAGS="-I$ac_cv_use_lua/include"
-    LUA_LDFLAGS="-L$ac_cv_use_lua/lib"
-fi
-
-AC_CHECK_PROGS(luaconfig, [lua-config lua-config51 luaconfig5.1], "")
-if test "x$luaconfig" != "x"; then
-    LUA_CPPFLAGS="$LUA_CPPFLAGS `[$luaconfig --include]`"
-    LUA_LDFLAGS="$LUA_LDFLAGS `[$luaconfig --libs]`"
-else
-    if test "$ARCH" = "linux"; then
-	LUA_LDFLAGS="$LUA_LDFLAGS -ldl"
-    fi
-
-    AC_CHECK_LIB(lua, lua_getfenv, tmp="-llua", , [$LUA_LDFLAGS -lm])
-    if test "x$tmp" = "x"; then
-        AC_CHECK_LIB(lua50, lua_setfenv, tmp="-llua50", , [$LUA_LDFLAGS -lm])
-    fi
-    if test "x$tmp" = "x"; then
-        AC_CHECK_LIB(lua5.0, lua_setfenv, tmp=="-llua5.0", , [$LUA_LDFLAGS -lm])
-    fi
-    if test "x$tmp" = "x"; then 
-        AC_MSG_ERROR([Cannot find Lua libraries])
-    fi
-    LUA_LDFLAGS="$LUA_LDFLAGS $tmp"
-    
-    tmp=""
-    AC_CHECK_LIB(lualib, luaopen_base, tmp="-llualib", , [$LUA_LDFLAGS -lm])
-    if test "x$tmp" = "x"; then
-        AC_CHECK_LIB(lualib50, luaopen_base, tmp="-llualib50", , [$LUA_LDFLAGS -lm])
-    fi
-    if test "x$tmp" = "x"; then
-        AC_CHECK_LIB(lualib5.0, luaopen_base, tmp="-llualib5.0", , [$LUA_LDFLAGS -lm])
-    fi
-    if test "x$tmp" = "x"; then
-        AC_MSG_ERROR([Cannot find Lua libraries])
-    fi
-    LUA_LDFLAGS="$LUA_LDFLAGS $tmp"
-fi
-
-LUA_LDFLAGS="$LUA_LDFLAGS -lm"
-AC_SUBST(LUA_CPPFLAGS)
-AC_SUBST(LUA_LDFLAGS)
 AC_DEFINE(HAVE_LUA, 1, [Define to 1 if you have Lua headers and libraries])
 AM_CONDITIONAL(USE_LUA, test "x$ac_cv_use_lua" != "x")
 

@@ -76,7 +76,7 @@ AX_CHECK_DOCBOOK
 
 ACX_PTHREAD
 
-AC_CHECK_LIB([m], [sqrt])
+AC_CHECK_LIB(m, sqrt)
 
 if test x$ac_cv_use_mysql != xno; then
     AC_CHECK_MYSQLR([$ac_cv_use_mysql])
@@ -158,10 +158,14 @@ AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_CHECK_FUNCS([ \
 fdatasync \
 gettimeofday \
+isatty \
 memalign \
 memset \
+mkstemp \
+popen \
 posix_memalign \
 pthread_yield \
+_setjmp \
 sqrt \
 strdup \
 thr_setconcurrency \
@@ -201,4 +205,6 @@ sysbench/tests/threads/Makefile
 sysbench/tests/mutex/Makefile
 sysbench/tests/oltp/Makefile
 sysbench/scripting/Makefile
+sysbench/scripting/lua/Makefile
+sysbench/scripting/lua/src/Makefile
 ])

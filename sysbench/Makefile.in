@@ -79,7 +79,7 @@ am__DEPENDENCIES_1 =
 @USE_PGSQL_TRUE@	$(am__DEPENDENCIES_1)
 @USE_ORACLE_TRUE@am__DEPENDENCIES_4 = drivers/oracle/libsboracle.a \
 @USE_ORACLE_TRUE@	$(am__DEPENDENCIES_1)
-@USE_LUA_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
+@USE_LUA_TRUE@am__DEPENDENCIES_5 = scripting/lua/src/liblua.a
 sysbench_DEPENDENCIES = tests/fileio/libsbfileio.a \
 	tests/threads/libsbthreads.a tests/memory/libsbmemory.a \
 	tests/cpu/libsbcpu.a tests/oltp/libsboltp.a \
@@ -154,8 +154,6 @@ LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
-LUA_CPPFLAGS = @LUA_CPPFLAGS@
-LUA_LDFLAGS = @LUA_LDFLAGS@
 MAKEINFO = @MAKEINFO@
 MYSQL_CFLAGS = @MYSQL_CFLAGS@
 MYSQL_LIBS = @MYSQL_LIBS@
@@ -229,7 +227,6 @@ install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
 localstatedir = @localstatedir@
-luaconfig = @luaconfig@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 mysqlconfig = @mysqlconfig@
@@ -252,7 +249,7 @@ SUBDIRS = drivers tests scripting .
 @USE_MYSQL_TRUE@mysql_ldflags = -static
 @USE_ORACLE_TRUE@ora_ldadd = drivers/oracle/libsboracle.a $(ORA_LIBS)
 @USE_PGSQL_TRUE@pgsql_ldadd = drivers/pgsql/libsbpgsql.a $(PGSQL_LIBS)
-@USE_LUA_TRUE@lua_ldadd = $(LUA_LDFLAGS)
+@USE_LUA_TRUE@lua_ldadd = scripting/lua/src/liblua.a -lm
 sysbench_SOURCES = sysbench.c sysbench.h sb_timer.c sb_timer.h \
 sb_options.c sb_options.h sb_logger.c sb_logger.h sb_list.h db_driver.h \
 db_driver.c

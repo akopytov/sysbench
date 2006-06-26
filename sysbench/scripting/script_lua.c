@@ -405,7 +405,7 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   luaL_newmetatable(state, "sysbench.stmt");
   luaL_newmetatable(state, "sysbench.rs");
   
-  if (lua_dofile(state, scriptname))
+  if (luaL_loadfile(state, scriptname) || lua_pcall(state, 0, 0, 0))
   {
     lua_error(state);
     return NULL;

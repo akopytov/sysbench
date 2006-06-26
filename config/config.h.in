@@ -36,6 +36,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if you have the `isatty' function. */
+#undef HAVE_ISATTY
+
 /* Define if you have large pages support */
 #undef HAVE_LARGE_PAGES
 
@@ -67,11 +70,17 @@
 /* Define to 1 if you have the `memset' function. */
 #undef HAVE_MEMSET
 
+/* Define to 1 if you have the `mkstemp' function. */
+#undef HAVE_MKSTEMP
+
 /* Define to 1 if you have a working `mmap' system call. */
 #undef HAVE_MMAP
 
 /* Define to 1 if libaio has older getevents() interface */
 #undef HAVE_OLD_GETEVENTS
+
+/* Define to 1 if you have the `popen' function. */
+#undef HAVE_POPEN
 
 /* Define to 1 if you have the `posix_memalign' function. */
 #undef HAVE_POSIX_MEMALIGN
@@ -144,6 +153,9 @@
 
 /* Define to 1 if you have the `valloc' function. */
 #undef HAVE_VALLOC
+
+/* Define to 1 if you have the `_setjmp' function. */
+#undef HAVE__SETJMP
 
 /* Define if /proc/meminfo shows the huge page size (Linux only) */
 #undef HUGETLB_USE_PROC_MEMINFO
