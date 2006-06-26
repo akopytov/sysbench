@@ -1,0 +1,25 @@
+# Copyright (C) 2006 MySQL AB
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+noinst_LIBRARIES = liblua.a
+
+liblua_a_SOURCES = lapi.c lcode.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c lmem.c \
+        lobject.c lopcodes.c lparser.c lstate.c lstring.c ltable.c ltm.c  \
+        lundump.c lvm.c lzio.c \
+        lauxlib.c lbaselib.c ldblib.c liolib.c lmathlib.c loslib.c ltablib.c \
+        lstrlib.c loadlib.c linit.c
+
+AM_CFLAGS += -Wno-bad-function-cast
