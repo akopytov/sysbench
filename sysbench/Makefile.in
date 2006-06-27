@@ -249,7 +249,7 @@ SUBDIRS = drivers tests scripting .
 @USE_MYSQL_TRUE@mysql_ldflags = -static
 @USE_ORACLE_TRUE@ora_ldadd = drivers/oracle/libsboracle.a $(ORA_LIBS)
 @USE_PGSQL_TRUE@pgsql_ldadd = drivers/pgsql/libsbpgsql.a $(PGSQL_LIBS)
-@USE_LUA_TRUE@lua_ldadd = scripting/lua/src/liblua.a -lm
+@USE_LUA_TRUE@lua_ldadd = scripting/lua/src/liblua.a -lm -ldl
 sysbench_SOURCES = sysbench.c sysbench.h sb_timer.c sb_timer.h \
 sb_options.c sb_options.h sb_logger.c sb_logger.h sb_list.h db_driver.h \
 db_driver.c

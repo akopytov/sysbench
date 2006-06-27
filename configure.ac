@@ -158,7 +158,6 @@ AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_CHECK_FUNCS([ \
 fdatasync \
 gettimeofday \
-isatty \
 memalign \
 memset \
 mkstemp \

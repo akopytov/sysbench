@@ -28623,11 +28623,9 @@ fi
 
 
 
-
 for ac_func in  \
 fdatasync \
 gettimeofday \
-isatty \
 memalign \
 memset \
 mkstemp \
