@@ -47,7 +47,7 @@
 # define ENGINE_CLAUSE "TYPE"
 #endif
 
-#define DEBUG(format, ...) do { if (db_globals.debug) log_text(LOG_DEBUG, format, __VA_ARGS__); } while (0)
+#define DEBUG(format, ...) do { if (args.debug) log_text(LOG_DEBUG, format, __VA_ARGS__); } while (0)
 
 /* MySQL driver arguments */
 
@@ -65,6 +65,7 @@ static sb_arg_t mysql_drv_args[] =
    SB_ARG_TYPE_STRING, "auto"},
   {"mysql-ssl", "use SSL connections, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
   {"myisam-max-rows", "max-rows parameter for MyISAM tables", SB_ARG_TYPE_INT, "1000000"},
+  {"mysql-debug", "dump all client library calls", SB_ARG_TYPE_FLAG, "off"},
   
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
@@ -87,6 +88,7 @@ typedef struct
   unsigned int       myisam_max_rows;
   mysql_drv_trx_t    engine_trx;
   unsigned int       use_ssl;
+  unsigned char      debug;
 } mysql_drv_args_t;
 
 #ifdef HAVE_PS
@@ -232,6 +234,9 @@ int mysql_drv_init(void)
   args.db = sb_get_value_string("mysql-db");
   args.myisam_max_rows = sb_get_value_int("myisam-max-rows");
   args.use_ssl = sb_get_value_flag("mysql-ssl");
+  args.debug = sb_get_value_flag("mysql-debug");
+  if (args.debug)
+    sb_globals.verbosity = LOG_DEBUG;
   
   use_ps = 0;
 #ifdef HAVE_PS

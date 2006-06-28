@@ -57,9 +57,6 @@ static sb_list_t handlers[LOG_MSG_TYPE_MAX];
 /* set after logger initialization */
 static unsigned char initialized; 
 
-/* verbosity of messages */
-static unsigned char verbosity; 
-
 /* whether each message must be timestamped */
 static unsigned char log_timestamp; 
 
@@ -345,11 +342,11 @@ void log_errno(log_msg_priority_t priority, const char *fmt, ...)
 
 int text_handler_init(void)
 {
-  verbosity = sb_get_value_int("verbosity");
+  sb_globals.verbosity = sb_get_value_int("verbosity");
 
-  if (verbosity > LOG_DEBUG)
+  if (sb_globals.verbosity > LOG_DEBUG)
   {
-    printf("Invalid value for verbosity: %d\n", verbosity);
+    printf("Invalid value for verbosity: %d\n", sb_globals.verbosity);
     return 1;
   }
 
@@ -369,7 +366,7 @@ int text_handler_process(log_msg_t *msg)
   char *prefix;
   log_msg_text_t *text_msg = (log_msg_text_t *)msg->data;
 
-  if (text_msg->priority > verbosity)
+  if (text_msg->priority > sb_globals.verbosity)
     return 0;
   
   pthread_mutex_lock(&text_mutex);

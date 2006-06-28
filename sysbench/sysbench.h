@@ -186,6 +186,7 @@ typedef struct
   unsigned int     max_time;     /* total execution time limit */
   unsigned char    debug;        /* debug flag */
   unsigned char    validate;     /* validation flag */
+  unsigned char    verbosity;    /* log verbosity */
 } sb_globals_t;
 
 extern sb_globals_t sb_globals;

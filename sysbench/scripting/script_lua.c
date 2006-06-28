@@ -206,7 +206,7 @@ sb_request_t sb_lua_get_request(void)
 {
   sb_request_t req;
 
-  if (nevents >= sb_globals.max_requests)
+  if (sb_globals.max_requests != 0 && nevents >= sb_globals.max_requests)
   {
     req.type = SB_REQ_TYPE_NULL;
     return req;
