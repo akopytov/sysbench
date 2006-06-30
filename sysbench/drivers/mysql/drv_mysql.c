@@ -70,13 +70,6 @@ static sb_arg_t mysql_drv_args[] =
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
 
-typedef enum
-{
-  ENGINE_TRX_YES,
-  ENGINE_TRX_NO,
-  ENGINE_TRX_AUTO
-} mysql_drv_trx_t;
-
 typedef struct
 {
   sb_list_t         *hosts;
@@ -86,7 +79,6 @@ typedef struct
   char               *password;
   char               *db;
   unsigned int       myisam_max_rows;
-  mysql_drv_trx_t    engine_trx;
   unsigned int       use_ssl;
   unsigned char      debug;
 } mysql_drv_args_t;
@@ -245,19 +237,6 @@ int mysql_drv_init(void)
     use_ps = 1;
 #endif
 
-  s = sb_get_value_string("mysql-engine-trx");
-  if (!strcasecmp(s, "yes"))
-    args.engine_trx = ENGINE_TRX_YES;
-  else if (!strcasecmp(s, "no"))
-    args.engine_trx = ENGINE_TRX_NO;
-  else if (!strcasecmp(s, "auto"))
-    args.engine_trx = ENGINE_TRX_AUTO;
-  else
-  {
-    log_text(LOG_FATAL, "Invalid value of mysql-engine-trx: %s", s);
-    return 1;
-  }
-  
   s = sb_get_value_string("mysql-table-engine");
 
   return parse_table_engine(s);
@@ -900,25 +879,20 @@ int mysql_drv_done(void)
 int parse_table_engine(const char *type)
 {
   /* Determine if the engine supports transactions */
-  if (args.engine_trx == ENGINE_TRX_AUTO)
-  {
-    if (!strcasecmp(type, "myisam") || !strcasecmp(type, "heap"))
-      mysql_drv_caps.transactions = 0;
-    else if (!strcasecmp(type, "innodb") ||
-             !strcasecmp(type, "bdb") || !strcasecmp(type, "berkeleydb") ||
-             !strcasecmp(type, "ndbcluster") ||
-             !strcasecmp(type, "federated"))
-      mysql_drv_caps.transactions = 1;
-    else
-    {
-      log_text(LOG_FATAL, "Failed to determine transactions support for "
-               "unknown storage engine '%s'", type);
-      log_text(LOG_FATAL, "Specify explicitly with --mysql-engine-trx option");
-      return 1;
-    }
-  }
+  if (!strcasecmp(type, "myisam") || !strcasecmp(type, "heap"))
+    mysql_drv_caps.transactions = 0;
+  else if (!strcasecmp(type, "innodb") ||
+           !strcasecmp(type, "bdb") || !strcasecmp(type, "berkeleydb") ||
+           !strcasecmp(type, "ndbcluster") ||
+           !strcasecmp(type, "federated"))
+    mysql_drv_caps.transactions = 1;
   else
-    mysql_drv_caps.transactions = (args.engine_trx == ENGINE_TRX_YES);
+  {
+    log_text(LOG_FATAL, "Failed to determine transactions support for "
+             "unknown storage engine '%s'", type);
+    log_text(LOG_FATAL, "Specify explicitly with --mysql-engine-trx option");
+    return 1;
+  }
 
   /* Get engine-specific options string */
   if (!strcasecmp(type, "myisam"))
