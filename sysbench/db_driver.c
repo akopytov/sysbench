@@ -906,6 +906,7 @@ void db_update_thread_stats(int id, db_query_type_t type)
       thread_stats[id].write_ops++;
       break;
     case DB_QUERY_TYPE_COMMIT:
+      thread_stats[id].other_ops++;
       thread_stats[id].transactions++;
       break;
     case DB_QUERY_TYPE_OTHER:
