@@ -335,6 +335,20 @@ int db_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 }
 
 
+/* Bind results for prepared statement */
+
+
+int db_bind_result(db_stmt_t *stmt, db_bind_t *results, unsigned int len)
+{
+  db_conn_t *con = stmt->connection;
+
+  if (con == NULL || con->driver == NULL)
+    return 1;
+
+  return con->driver->ops.bind_result(stmt, results, len);
+}
+
+
 /* Execute prepared statement */
 
 

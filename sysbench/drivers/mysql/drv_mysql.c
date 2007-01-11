@@ -49,6 +49,9 @@
 
 #define DEBUG(format, ...) do { if (args.debug) log_text(LOG_DEBUG, format, __VA_ARGS__); } while (0)
 
+/* FIXME */
+db_bind_t *gresults;
+
 /* MySQL driver arguments */
 
 static sb_arg_t mysql_drv_args[] =
@@ -580,6 +583,9 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
     bind[i].is_null = params[i].is_null;
   }
 
+  /* FIXME */
+  gresults = params;
+  
   rc = mysql_stmt_bind_result(stmt->ptr, bind);
   DEBUG("mysql_stmt_bind_result(%p, %p) = %u", stmt->ptr, bind, rc);
   if (rc)
@@ -623,7 +629,8 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
     {
       rc = mysql_errno(con->ptr);
       DEBUG("mysql_errno(%p) = %u", con->ptr, rc);
-      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT)
+      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
+          rc == ER_CHECKREAD)
         return SB_DB_ERROR_DEADLOCK;
       log_text(LOG_ALERT, "failed to execute mysql_stmt_execute(): Err%d %s",
                mysql_errno(con->ptr),
@@ -700,7 +707,8 @@ int mysql_drv_query(db_conn_t *sb_conn, const char *query,
   {
     rc = mysql_errno(con);
     DEBUG("mysql_errno(%p) = %u", con, rc);
-    if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT)
+    if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
+        rc == ER_CHECKREAD)
       return SB_DB_ERROR_DEADLOCK;
     log_text(LOG_ALERT, "failed to execute MySQL query: `%s`:", query);
     log_text(LOG_ALERT, "Error %d %s", mysql_errno(con), mysql_error(con));
@@ -717,8 +725,8 @@ int mysql_drv_query(db_conn_t *sb_conn, const char *query,
 int mysql_drv_fetch(db_result_set_t *rs)
 {
   /* NYI */
-  (void)rs;
-
+  (void)rs;  /* unused */
+  
   return 1;
 }
 
@@ -728,11 +736,16 @@ int mysql_drv_fetch(db_result_set_t *rs)
 
 int mysql_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
 {
-  /* NYI */
-  (void)rs;  /* unused */
-  (void)row; /* unused */
+  row->ptr = mysql_fetch_row(rs->ptr);
+  DEBUG("mysql_fetch_row(%p) = %p", rs->ptr, row->ptr);
+  if (row->ptr == NULL)
+  {
+    log_text(LOG_FATAL, "mysql_fetch_row() failed: %s",
+             mysql_error(rs->connection->ptr));
+    return 1;
+  }
   
-  return 1;
+  return 0;
 }
 
 
@@ -768,7 +781,8 @@ int mysql_drv_store_results(db_result_set_t *rs)
     {
       rc = mysql_errno(con);
       DEBUG("mysql_errno(%p) = %d", con, rc);
-      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT)
+      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
+          rc == ER_CHECKREAD)
       {
         log_text(LOG_WARNING,
                  "mysql_stmt_store_result() failed with error: (%d) %s", rc,
@@ -800,7 +814,8 @@ int mysql_drv_store_results(db_result_set_t *rs)
   {
       rc = mysql_errno(con);
       DEBUG("mysql_errno(%p) = %u", con, rc);
-      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT)
+      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
+          rc == ER_CHECKREAD)
       {
         log_text(LOG_WARNING,
                  "mysql_store_result() failed with error: (%u) %s", rc,
@@ -818,7 +833,6 @@ int mysql_drv_store_results(db_result_set_t *rs)
   /* just fetch result */
   while((row = mysql_fetch_row(res)))
     DEBUG("mysql_fetch_row(%p) = %p", res, row);
-
   return SB_DB_ERROR_NONE;
 }
 

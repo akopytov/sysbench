@@ -24,7 +24,7 @@ function prepare()
 	      id INTEGER NOT NULL,
 	      k INTEGER,
 	      c CHAR(120) DEFAULT '' NOT NULL,
-	      pad CHAR(60 DEFAULT '' NOT NULL,
+	      pad CHAR(60) DEFAULT '' NOT NULL,
 	      PRIMARY KEY (id)
 	   ) ]]
 	

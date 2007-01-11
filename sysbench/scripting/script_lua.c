@@ -59,7 +59,10 @@ typedef struct {
   db_stmt_t     *ptr;
   sb_lua_bind_t *params;
   unsigned int  nparams;
-  int           ref;
+  sb_lua_bind_t *results;
+  unsigned int  nresults;
+  int           param_ref;
+  int           result_ref;
 } sb_lua_db_stmt_t;
 
 typedef struct {
@@ -118,6 +121,7 @@ static int sb_lua_db_bulk_insert_next(lua_State *);
 static int sb_lua_db_bulk_insert_done(lua_State *);
 static int sb_lua_db_prepare(lua_State *);
 static int sb_lua_db_bind_param(lua_State *);
+static int sb_lua_db_bind_result(lua_State *);
 static int sb_lua_db_execute(lua_State *);
 static int sb_lua_db_close(lua_State *);
 static int sb_lua_db_store_results(lua_State *);
@@ -390,6 +394,9 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   lua_pushcfunction(state, sb_lua_db_bind_param);
   lua_setglobal(state, "db_bind_param");
 
+  lua_pushcfunction(state, sb_lua_db_bind_result);
+  lua_setglobal(state, "db_bind_result");
+
   lua_pushcfunction(state, sb_lua_db_execute);
   lua_setglobal(state, "db_execute");
   
@@ -660,9 +667,91 @@ int sb_lua_db_bind_param(lua_State *L)
   
   /* Create reference for the params table */
   lua_pushvalue(L, 2);
-  stmt->ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  stmt->param_ref = luaL_ref(L, LUA_REGISTRYINDEX);
   
   free(binds);
+  
+  return 0;
+
+ error:
+
+  free(binds);
+  lua_error(L);
+  
+  return 0;
+}
+
+int sb_lua_db_bind_result(lua_State *L)
+{
+  sb_lua_ctxt_t    *ctxt;
+  sb_lua_db_stmt_t *stmt;
+  unsigned int     i, n;
+  db_bind_t        *binds;
+  char             needs_rebind = 0; 
+
+  ctxt = sb_lua_get_context(L);
+
+  if (ctxt->con == NULL)
+    lua_error(L);
+
+  stmt = (sb_lua_db_stmt_t *)luaL_checkudata(L, 1, "sysbench.stmt");
+  luaL_argcheck(L, stmt != NULL, 1, "prepared statement expected");
+
+  if (!lua_istable(L, 2))
+  {
+    lua_pushstring(L, "table expected");
+    lua_error(L);
+  }
+  /* Get table size */
+  n = sb_lua_table_size(L, 2);
+  if (!n)
+  {
+    lua_pushstring(L, "table is empty");
+    lua_error(L);
+  }
+  binds = (db_bind_t *)calloc(n, sizeof(db_bind_t));
+  stmt->results = (sb_lua_bind_t *)calloc(n, sizeof(sb_lua_bind_t));
+  if (binds == NULL || stmt->results == NULL)
+    lua_error(L);
+
+  lua_pushnil(L);
+  for (i = 0; i < n; i++)
+  {
+    lua_next(L, 2);
+    switch(lua_type(L, -1))
+    {
+      case LUA_TNUMBER:
+        stmt->results[i].buf = malloc(sizeof(int));
+        stmt->results[i].id = luaL_checknumber(L, -2);
+        binds[i].type = DB_TYPE_BIGINT;
+        binds[i].buffer = stmt->results[i].buf;
+        break;
+      case LUA_TSTRING:
+        stmt->results[i].id = luaL_checknumber(L, -2);
+        stmt->results[i].buflen = (unsigned long *)malloc(sizeof(unsigned long));
+        binds[i].type = DB_TYPE_CHAR;
+        needs_rebind = 1;
+        break;
+      default:
+        lua_pushfstring(L, "Unsupported variable type: %s",
+                        lua_typename(L, lua_type(L, -1)));
+        goto error;
+    }
+    binds[i].is_null = &stmt->results[i].is_null;
+    stmt->results[i].type = binds[i].type;
+    lua_pop(L, 1);
+  }
+
+  if (!needs_rebind && db_bind_result(stmt->ptr, binds, n))
+    goto error;
+
+  stmt->nresults = n;
+  
+  /* Create reference for the params table */
+  lua_pushvalue(L, 2);
+  stmt->result_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  
+  //  free(binds);
   
   return 0;
 
@@ -692,7 +781,7 @@ int sb_lua_db_execute(lua_State *L)
   luaL_argcheck(L, stmt != NULL, 1, "prepared statement expected");
 
   /* Get params table */
-  lua_rawgeti(L, LUA_REGISTRYINDEX, stmt->ref);
+  lua_rawgeti(L, LUA_REGISTRYINDEX, stmt->param_ref);
   if (!lua_isnil(L, -1) && !lua_istable(L, -1))
   {
     lua_pushstring(L, "table expected");
@@ -796,7 +885,8 @@ int sb_lua_db_close(lua_State *L)
   free(stmt->params);
   stmt->params = NULL;
   
-  luaL_unref(L, LUA_REGISTRYINDEX, stmt->ref);
+  luaL_unref(L, LUA_REGISTRYINDEX, stmt->param_ref);
+  luaL_unref(L, LUA_REGISTRYINDEX, stmt->result_ref);
   
   return 0;
 }

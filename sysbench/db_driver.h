@@ -220,7 +220,7 @@ typedef struct db_stmt
   db_bind_t       *bound_res;      /* Array of bound results for emulated PS */ 
   db_bind_t       *bound_res_len;  /* Length of the bound_res array */
   char            emulated;        /* Should this statement be emulated? */
-  db_query_type_t type;         /* Query type */
+  db_query_type_t type;            /* Query type */
   void            *ptr;            /* Pointer to driver-specific data structure */
 } db_stmt_t;
 
@@ -230,6 +230,7 @@ typedef struct db_result_set
 {
   db_conn_t     *connection; /* Connection which this result set belongs to */
   db_stmt_t     *statement;  /* Statement for this result set (if any) */ 
+
   struct db_row *row;        /* Last row fetched by db_fetch_row */
   void          *ptr;        /* Pointer to driver-specific data */
   unsigned long long nrows;  /* Number of rows in a result set */
@@ -240,6 +241,7 @@ typedef struct db_result_set
 typedef struct db_row
 {
   db_result_set_t *result_set; /* Result set which this row belongs to */
+  void            *ptr;        /* Driver-specific row data */ 
 } db_row_t;
 
 /* Database abstraction layer calls */

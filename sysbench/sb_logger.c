@@ -566,7 +566,7 @@ int oper_handler_done(void)
            NS2SEC(sb_timer_value(&sb_globals.exec_timer)));
   log_text(LOG_NOTICE, "    total number of events:              %lld",
            t.events);
-  log_text(LOG_NOTICE, "    total time taken by event execution: %.4f",
+  log_text(LOG_NOTICE, "    total time taken by event execution: %.4fs",
            NS2SEC(get_sum_time(&t)));
 
   log_text(LOG_NOTICE, "    per-request statistics:");

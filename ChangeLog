@@ -1,3 +1,9 @@
+2006-10-10  Alexey Kopytov <alexeyk@mysql.com>
+
+	* Removed the debugging code in OLTP test which got into 0.4.7 by mistake
+	* Handle ER_CHECKREAD in the same way as deadlocks in the MySQL driver
+	* version 0.4.8
+	
 2006-05-28  Alexey Kopytov  <alexeyk@mysql.com>
 
 	* count fsync() time as request execution time in file-fsync-all mode
