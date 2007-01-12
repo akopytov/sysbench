@@ -190,13 +190,12 @@ typedef struct db_conn
   db_error_t     db_errno;
 
   /* Internal fields */
+  char           bulk_supported;    /* 1, if multi-row inserts are supported by the driver */
   unsigned int   bulk_cnt;          /* Current number of rows in bulk insert buffer */
-  unsigned int   bulk_max_rows;     /* Maximum number of rows in bulk insert buffer */
   char *         bulk_buffer;       /* Bulk insert query buffer */
   unsigned int   bulk_buflen;       /* Current length of bulk_buffer */
   unsigned int   bulk_ptr;          /* Current position in bulk_buffer */
   unsigned int   bulk_ptr_orig;     /* Save value of bulk_ptr */
-  unsigned int   bulk_not_first;    /* Indicates if bulk insert buffer has some rows */
   unsigned int   bulk_commit_cnt;   /* Current value of uncommitted rows */
   unsigned int   bulk_commit_max;   /* Maximum value of uncommitted rows */
   int            thread_id;         /* Assiciated thread id (required to collect per-thread stats */
