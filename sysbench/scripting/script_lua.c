@@ -33,6 +33,11 @@
 #define THREAD_INIT_FUNC "thread_init"
 #define THREAD_DONE_FUNC "thread_done"
 
+/* DB Error codes */
+
+#define SB_DB_OK                  0
+#define SB_DB_RESTART_TRANSACTION 1
+
 /* Macros to call Lua functions */
 #define CALL_ERROR(L, name)           \
   do {                                \
@@ -224,9 +229,10 @@ sb_request_t sb_lua_get_request(void)
 
 int sb_lua_op_execute_request(sb_request_t *sb_req, int thread_id)
 {
-  double rc;
   log_msg_t           msg;
   log_msg_oper_t      op_msg;
+  uint                restart;
+  lua_State           *L = states[thread_id];
 
   (void)sb_req; /* unused */
   
@@ -234,25 +240,37 @@ int sb_lua_op_execute_request(sb_request_t *sb_req, int thread_id)
   msg.type = LOG_MSG_TYPE_OPER;
   msg.data = &op_msg;
   
-  lua_getglobal(states[thread_id], EVENT_FUNC);
-
-  lua_pushnumber(states[thread_id], (double)thread_id);
-
   LOG_EVENT_START(msg, thread_id);
 
-  if (lua_pcall(states[thread_id], 1, 1, 0))
+  do
   {
-    CALL_ERROR(states[thread_id], EVENT_FUNC);
-    sb_globals.error = 1;
-    return 1;
-  }
+    restart = 0;
 
+    lua_getglobal(L, EVENT_FUNC);
+    
+    lua_pushnumber(L, thread_id);
+
+    if (lua_pcall(L, 1, 1, 0))
+    {
+      if (lua_gettop(L) && lua_isnumber(L, -1) &&
+          lua_tonumber(L, -1) == SB_DB_RESTART_TRANSACTION)
+      {
+        log_text(LOG_DEBUG, "Deadlock detected, restarting transaction");
+        restart = 1;
+      }
+      else
+      {
+        CALL_ERROR(L, EVENT_FUNC);
+        sb_globals.error = 1;
+        return 1;
+        
+      }
+    }
+  } while (restart);
+      
   LOG_EVENT_STOP(msg, thread_id);
 
-  rc = lua_tonumber(states[thread_id], -1);
-  lua_pop(states[thread_id], 1);
-  
-  return (int)rc;
+  return 0;
 }
 
 int sb_lua_op_thread_init(int thread_id)
@@ -409,6 +427,13 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   lua_pushcfunction(state, sb_lua_db_free_results);
   lua_setglobal(state, "db_free_results");
   
+  lua_pushnumber(state, SB_DB_ERROR_NONE);
+  lua_setglobal(state, "DB_ERROR_NONE");
+  lua_pushnumber(state, SB_DB_ERROR_DEADLOCK);
+  lua_setglobal(state, "DB_ERROR_DEADLOCK");
+  lua_pushnumber(state, SB_DB_ERROR_FAILED);
+  lua_setglobal(state, "DB_ERROR_FAILED");
+
   luaL_newmetatable(state, "sysbench.stmt");
   luaL_newmetatable(state, "sysbench.rs");
   
@@ -767,6 +792,7 @@ int sb_lua_db_execute(lua_State *L)
 {
   sb_lua_ctxt_t    *ctxt;
   sb_lua_db_stmt_t *stmt;
+  db_result_set_t  *ptr;
   sb_lua_db_rs_t   *rs;
   unsigned int     i;
   char             needs_rebind = 0;
@@ -850,13 +876,20 @@ int sb_lua_db_execute(lua_State *L)
     free(binds);
   }
   
-  rs = (sb_lua_db_rs_t *)lua_newuserdata(L, sizeof(sb_lua_db_rs_t));
-  luaL_getmetatable(L, "sysbench.rs");
-  lua_setmetatable(L, -2);
-
-  rs->ptr = db_execute(stmt->ptr);
-  if (rs->ptr == NULL)
+  ptr = db_execute(stmt->ptr);
+  if (ptr == NULL)
+  {
+    if (ctxt->con->db_errno == SB_DB_ERROR_DEADLOCK)
+      lua_pushnumber(L, SB_DB_RESTART_TRANSACTION);
     lua_error(L);
+  }
+  else
+  {
+    rs = (sb_lua_db_rs_t *)lua_newuserdata(L, sizeof(sb_lua_db_rs_t));
+    rs->ptr = ptr;
+    luaL_getmetatable(L, "sysbench.rs");
+    lua_setmetatable(L, -2);
+  }
 
   return 1;
 }

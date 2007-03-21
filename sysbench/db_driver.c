@@ -377,6 +377,10 @@ db_result_set_t *db_execute(db_stmt_t *stmt)
   {
     free(rs);
     log_text(LOG_DEBUG, "ERROR: exiting db_execute(), driver's execute method failed");
+
+    if (con->db_errno == SB_DB_ERROR_DEADLOCK)
+      thread_stats[con->thread_id].deadlocks++;
+    
     return NULL;
   }
 
