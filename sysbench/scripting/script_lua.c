@@ -56,23 +56,24 @@ typedef struct {
   int            id;
   db_bind_type_t type;
   void           *buf;
-  unsigned long  *buflen;
+  unsigned long  buflen;
   char           is_null;
 } sb_lua_bind_t;
 
 typedef struct {
-  db_stmt_t     *ptr;
-  sb_lua_bind_t *params;
-  unsigned int  nparams;
-  sb_lua_bind_t *results;
-  unsigned int  nresults;
-  int           param_ref;
-  int           result_ref;
-} sb_lua_db_stmt_t;
-
-typedef struct {
   db_result_set_t *ptr;
 } sb_lua_db_rs_t;
+
+typedef struct {
+  db_stmt_t      *ptr;
+  sb_lua_bind_t  *params;
+  unsigned int   nparams;
+  sb_lua_bind_t  *results;
+  unsigned int   nresults;
+  int            param_ref;
+  int            result_ref;
+  sb_lua_db_rs_t *rs;
+} sb_lua_db_stmt_t;
 
 /* Lua interpreter states */
 
@@ -335,6 +336,7 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   sb_lua_ctxt_t  *ctxt;
   sb_list_item_t *pos;
   option_t       *opt;
+  char           *tmp;
 
   state = luaL_newstate();
   
@@ -360,7 +362,8 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
         lua_pushnumber(state, sb_opt_to_size(opt));
         break;
       case SB_ARG_TYPE_STRING:
-        lua_pushstring(state, sb_opt_to_string(opt));
+        tmp = sb_opt_to_string(opt);
+        lua_pushstring(state, tmp ? tmp : "");
         break;
       case SB_ARG_TYPE_LIST:
         /*FIXME: should be exported as tables */
@@ -535,6 +538,7 @@ int sb_lua_db_query(lua_State *L)
 {
   sb_lua_ctxt_t *ctxt;
   const char *query;
+  db_result_set_t *rs;
 
   ctxt = sb_lua_get_context(L);
 
@@ -542,8 +546,12 @@ int sb_lua_db_query(lua_State *L)
     sb_lua_db_connect(L);
   
   query = luaL_checkstring(L, 1);
-  if (db_query(ctxt->con, query) == NULL)
+  rs = db_query(ctxt->con, query);
+  if (rs == NULL)
     lua_error(L);
+
+  db_store_results(rs);
+  db_free_results(rs);
   
   return 0;
 }
@@ -671,7 +679,7 @@ int sb_lua_db_bind_param(lua_State *L)
         break;
       case LUA_TSTRING:
         stmt->params[i].id = luaL_checknumber(L, -2);
-        stmt->params[i].buflen = (unsigned long *)malloc(sizeof(unsigned long));
+        stmt->params[i].buflen = 0;
         binds[i].type = DB_TYPE_CHAR;
         needs_rebind = 1;
         break;
@@ -753,7 +761,6 @@ int sb_lua_db_bind_result(lua_State *L)
         break;
       case LUA_TSTRING:
         stmt->results[i].id = luaL_checknumber(L, -2);
-        stmt->results[i].buflen = (unsigned long *)malloc(sizeof(unsigned long));
         binds[i].type = DB_TYPE_CHAR;
         needs_rebind = 1;
         break;
@@ -797,6 +804,9 @@ int sb_lua_db_execute(lua_State *L)
   unsigned int     i;
   char             needs_rebind = 0;
   db_bind_t        *binds;
+  size_t           length;
+  const char       *str;
+  sb_lua_bind_t    *param;
 
   ctxt = sb_lua_get_context(L);
 
@@ -816,22 +826,30 @@ int sb_lua_db_execute(lua_State *L)
 
   for (i = 0; i < stmt->nparams; lua_pop(L, 1), i++)
   {
-    lua_pushnumber(L, stmt->params[i].id);
+    param = stmt->params + i;
+    lua_pushnumber(L, param->id);
     lua_gettable(L, -2);
     if (lua_isnil(L, -1))
     {
-      stmt->params[i].is_null = 1;
+      param->is_null = 1;
       continue;
     }
-    stmt->params[i].is_null = 0;
-    switch (stmt->params[i].type)
+    param->is_null = 0;
+    switch (param->type)
     {
       case DB_TYPE_INT:
-        *((int *)stmt->params[i].buf) = luaL_checknumber(L, -1);
+        *((int *)param->buf) = luaL_checknumber(L, -1);
         break;
       case DB_TYPE_CHAR:
-        stmt->params[i].buf = strdup(luaL_checkstring(L, -1));
-        needs_rebind = 1;
+        str = luaL_checkstring(L, -1);
+        length = lua_objlen(L, -1);
+        if (length > param->buflen)
+        {
+          param->buf = realloc(param->buf, length);
+          needs_rebind = 1;
+        }
+        strncpy(param->buf, str, length);
+        param->buflen = length;
         break;
       default:
         lua_pushfstring(L, "Unsupported variable type: %s",
@@ -849,20 +867,19 @@ int sb_lua_db_execute(lua_State *L)
     
     for (i = 0; i < stmt->nparams; i++)
     {
-      binds[i].type = stmt->params[i].type;
-      binds[i].is_null = &stmt->params[i].is_null;
+      param = stmt->params + i;
+      binds[i].type = param->type;
+      binds[i].is_null = &param->is_null;
       if (*binds[i].is_null != 0)
         continue;
-      switch (stmt->params[i].type)
+      switch (param->type)
       {
         case DB_TYPE_INT:
-          binds[i].buffer = stmt->params[i].buf;
+          binds[i].buffer = param->buf;
           break;
         case DB_TYPE_CHAR:
-          binds[i].buffer = stmt->params[i].buf;
-          binds[i].data_len = stmt->params[i].buflen;
-          *stmt->params[i].buflen = strlen(stmt->params[i].buf);
-          binds[i].max_len = *stmt->params[i].buflen;
+          binds[i].buffer = param->buf;
+          binds[i].data_len = &stmt->params[i].buflen;
           binds[i].is_null = 0;
           break;
         default:
@@ -875,10 +892,13 @@ int sb_lua_db_execute(lua_State *L)
       lua_error(L);
     free(binds);
   }
-  
+
+  if (stmt->rs != NULL && stmt->rs->ptr != NULL)
+    free(stmt->rs->ptr);
   ptr = db_execute(stmt->ptr);
   if (ptr == NULL)
   {
+    stmt->rs = NULL;
     if (ctxt->con->db_errno == SB_DB_ERROR_DEADLOCK)
       lua_pushnumber(L, SB_DB_RESTART_TRANSACTION);
     lua_error(L);
@@ -889,6 +909,7 @@ int sb_lua_db_execute(lua_State *L)
     rs->ptr = ptr;
     luaL_getmetatable(L, "sysbench.rs");
     lua_setmetatable(L, -2);
+    stmt->rs = rs;
   }
 
   return 1;
@@ -912,8 +933,6 @@ int sb_lua_db_close(lua_State *L)
   {
     if (stmt->params[i].buf != NULL)
       free(stmt->params[i].buf);
-    if (stmt->params[i].buflen != NULL)
-      free(stmt->params[i].buflen);
   }
   free(stmt->params);
   stmt->params = NULL;
@@ -956,6 +975,7 @@ int sb_lua_db_free_results(lua_State *L)
   luaL_argcheck(L, rs != NULL, 1, "result set expected");
 
   db_free_results(rs->ptr);
+  rs->ptr = NULL;
   
   return 0;
 }
