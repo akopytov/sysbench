@@ -570,12 +570,12 @@ int oper_handler_done(void)
            NS2SEC(get_sum_time(&t)));
 
   log_text(LOG_NOTICE, "    per-request statistics:");
-  log_text(LOG_NOTICE, "         min:                            %.4fs",
-           NS2SEC(get_min_time(&t)));
-  log_text(LOG_NOTICE, "         avg:                            %.4fs",
-           NS2SEC(get_avg_time(&t)));
-  log_text(LOG_NOTICE, "         max:                            %.4fs",
-           NS2SEC(get_max_time(&t)));
+  log_text(LOG_NOTICE, "         min:                            %10.2fms",
+           NS2MS(get_min_time(&t)));
+  log_text(LOG_NOTICE, "         avg:                            %10.2fms",
+           NS2MS(get_avg_time(&t)));
+  log_text(LOG_NOTICE, "         max:                            %10.2fms",
+           NS2MS(get_max_time(&t)));
 
   /* Print approx. percentile value for event execution times */
   if (t.events > 0)
@@ -596,8 +596,8 @@ int oper_handler_done(void)
   
     /* Calculate response time corresponding to this element */
     optime = exp((double)i / oper_log_mult + oper_log_deduct);
-    log_text(LOG_NOTICE, "         approx. %3d percentile:         %.4fs",
-             oper_percentile, NS2SEC(optime));
+    log_text(LOG_NOTICE, "         approx. %3d percentile:         %10.2fms",
+             oper_percentile, NS2MS(optime));
   }
   log_text(LOG_NOTICE, "");
 
