@@ -136,6 +136,7 @@ static int sb_lua_rand(lua_State *);
 static int sb_lua_rand_uniq(lua_State *);
 static int sb_lua_rnd(lua_State *);
 static int sb_lua_rand_str(lua_State *);
+static int sb_lua_result_set_gc(lua_State *);
 
 /* Get a per-state interpreter context */
 static sb_lua_ctxt_t *sb_lua_get_context(lua_State *);
@@ -438,7 +439,11 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   lua_setglobal(state, "DB_ERROR_FAILED");
 
   luaL_newmetatable(state, "sysbench.stmt");
+
   luaL_newmetatable(state, "sysbench.rs");
+  lua_pushstring(state, "__gc");
+  lua_pushcfunction(state, sb_lua_result_set_gc);
+  lua_settable(state, -3);
   
   if (luaL_loadfile(state, scriptname) || lua_pcall(state, 0, 0, 0))
   {
@@ -893,8 +898,6 @@ int sb_lua_db_execute(lua_State *L)
     free(binds);
   }
 
-  if (stmt->rs != NULL && stmt->rs->ptr != NULL)
-    free(stmt->rs->ptr);
   ptr = db_execute(stmt->ptr);
   if (ptr == NULL)
   {
@@ -1054,4 +1057,17 @@ unsigned int sb_lua_table_size(lua_State *L, int index)
   }
 
   return i;
+}
+
+int sb_lua_result_set_gc(lua_State *L)
+{
+  sb_lua_db_rs_t *res = (sb_lua_db_rs_t *)lua_touserdata(L, 1);
+
+  if (res->ptr != NULL)
+  {
+    free(res->ptr);
+    res->ptr = NULL;
+  }
+  
+  return 0;
 }
