@@ -41,6 +41,6 @@ sb_options.c sb_options.h sb_logger.c sb_logger.h sb_list.h db_driver.h \
 db_driver.c
 
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
-    tests/memory/libsbmemory.a tests/cpu/libsbcpu.a tests/oltp/libsboltp.a \
+    tests/memory/libsbmemory.a tests/cpu/libsbcpu.a \
     tests/mutex/libsbmutex.a scripting/libsbscript.a \
     $(mysql_ldadd) $(pgsql_ldadd) $(ora_ldadd) $(lua_ldadd)

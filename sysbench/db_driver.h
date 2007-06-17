@@ -50,14 +50,11 @@ extern db_globals_t db_globals;
 typedef struct
 {
   char     multi_rows_insert;   /* 1 if database supports multi-row inserts */
-  char     transactions;        /* 1 if database supports transactions */
   char     prepared_statements; /* 1 if database supports prepared statements */
   char     auto_increment;      /* 1 if database supports AUTO_INCREMENT clause */
   char     needs_commit;        /* 1 if database needs explicit commit after INSERTs */
   char     serial;              /* 1 if database supports SERIAL clause */
   char     unsigned_int;        /* 1 if database supports UNSIGNED INTEGER types */
-  
-  char    *table_options_str;   /* additional table options provided by database driver */
 } drv_caps_t;
 
 /* Database errors definition */
@@ -124,7 +121,7 @@ struct db_row;
 /* Driver operations definition */
 
 typedef int drv_op_init(void);
-typedef int drv_op_describe(drv_caps_t *, const char *);
+typedef int drv_op_describe(drv_caps_t *);
 typedef int drv_op_connect(struct db_conn *);
 typedef int drv_op_disconnect(struct db_conn *);
 typedef int drv_op_prepare(struct db_stmt *, const char *);
@@ -251,7 +248,7 @@ void db_print_help(void);
 
 db_driver_t *db_init(const char *);
 
-int db_describe(db_driver_t *, drv_caps_t *, const char *);
+int db_describe(db_driver_t *, drv_caps_t *);
 
 db_conn_t *db_connect(db_driver_t *);
 

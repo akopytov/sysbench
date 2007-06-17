@@ -118,20 +118,15 @@ db_mysql_bind_map_t db_mysql_bind_map[] =
 static drv_caps_t mysql_drv_caps =
 {
   .multi_rows_insert = 1,
-  .transactions = 0,
   .prepared_statements = 0,
   .auto_increment = 1,
   .serial = 0,
   .unsigned_int = 1,
-  
-  .table_options_str = NULL
 };
 
 
 
 static mysql_drv_args_t args;          /* driver args */
-
-static char table_options_str[1024];   /* table options string */
 
 static char use_ps; /* whether server-side prepared statemens should be used */
 
@@ -142,7 +137,7 @@ static pthread_mutex_t hosts_mutex;
 /* MySQL driver operations */
 
 static int mysql_drv_init(void);
-static int mysql_drv_describe(drv_caps_t *, const char *);
+static int mysql_drv_describe(drv_caps_t *);
 static int mysql_drv_connect(db_conn_t *);
 static int mysql_drv_disconnect(db_conn_t *);
 static int mysql_drv_prepare(db_stmt_t *, const char *);
@@ -190,7 +185,6 @@ static db_driver_t mysql_driver =
 
 /* Local functions */
 
-static int parse_table_engine(const char *);
 #ifdef HAVE_PS
 static int get_mysql_bind_type(db_bind_type_t);
 #endif
@@ -211,8 +205,6 @@ int register_driver_mysql(sb_list_t *drivers)
 
 int mysql_drv_init(void)
 {
-  char *s;
-  
   args.hosts = sb_get_value_list("mysql-host");
   if (SB_LIST_IS_EMPTY(args.hosts))
   {
@@ -240,87 +232,18 @@ int mysql_drv_init(void)
     use_ps = 1;
 #endif
 
-  s = sb_get_value_string("mysql-table-engine");
-
-  return parse_table_engine(s);
+  return 0;
 }
 
 
-/* Describe database capabilities (possibly depending on table type) */
+/* Describe database capabilities */
 
 
-int mysql_drv_describe(drv_caps_t *caps, const char * table_name)
+int mysql_drv_describe(drv_caps_t *caps)
 {
-  db_conn_t    con;
-  char         query[1024];
-  MYSQL_RES    *res = NULL;
-  MYSQL_ROW    row;
-  MYSQL_FIELD  *fields;
-  unsigned int num_fields;
-  unsigned int i;
-  int          connected = 0;
-  int          rc = 0;
-  
   *caps = mysql_drv_caps;
   
-  if (table_name == NULL)
-    goto exit;
-
-  /* Try to determine table type */
-  if (mysql_drv_connect(&con))
-    goto error;
-
-  /* Fix the hosts list */
-  hosts_pos = args.hosts;
-  
-  connected = 1;
-  snprintf(query, sizeof(query), "SHOW TABLE STATUS LIKE '%s'", table_name);
-  
-  rc = mysql_real_query(con.ptr, query, strlen(query)); 
-  DEBUG("mysql_real_query(%p, \"%s\", %d) = %d", con.ptr, query, strlen(query), rc);
-  if (rc)
-    goto error;
-  
-  res = mysql_store_result(con.ptr);
-  DEBUG("mysql_store_result(%p) = %p", con.ptr, res);
-  if (res == NULL)
-    goto error;
-
-  num_fields = mysql_num_fields(res);
-  DEBUG("mysql_num_fields(%p) = %d", res, num_fields);
-  fields = mysql_fetch_fields(res);
-  DEBUG("mysql_fetch_fields(%p) = %p", res, fields);
-  for (i = 0; i < num_fields; i++)
-    if (!strcasecmp(fields[i].name, "type") ||
-        !strcasecmp(fields[i].name, "engine"))
-      break;
-  if (i >= num_fields)
-    goto error;
-  
-  row = mysql_fetch_row(res);
-  DEBUG("mysql_fetch_row(%p) = %p", res, row);
-  if (row == NULL || row[i] == NULL)
-    goto error;
-  
-  rc = parse_table_engine(row[i]);
-  *caps = mysql_drv_caps;
-  goto exit;
-
- error:
-  log_text(LOG_ALERT, "Error: failed to determine table '%s' type!", table_name);
-  log_text(LOG_ALERT, "MySQL error: %s", mysql_error(con.ptr));
-  rc = 1;
-  
- exit:
-  if (res != NULL)
-  {
-    mysql_free_result(res);
-    DEBUG("mysql_free_result(%p)", res);
-  }
-  if (connected)
-    mysql_drv_disconnect(&con);
-
-  return rc;
+  return 0;
 }
 
 
@@ -822,8 +745,8 @@ int mysql_drv_store_results(db_result_set_t *rs)
                  mysql_error(con));
         return SB_DB_ERROR_DEADLOCK;
       }
-    log_text(LOG_ALERT, "MySQL error: %s", mysql_error(con));
-    return SB_DB_ERROR_FAILED; 
+      log_text(LOG_ALERT, "MySQL error: %s", mysql_error(con));
+      return SB_DB_ERROR_FAILED; 
   }
   rs->ptr = (void *)res;
 
@@ -883,62 +806,6 @@ int mysql_drv_close(db_stmt_t *stmt)
 /* Uninitialize driver */
 int mysql_drv_done(void)
 {
-  return 0;
-}
-
-
-/* Parse table type and set driver capabilities */
-
-
-int parse_table_engine(const char *type)
-{
-  /* Determine if the engine supports transactions */
-  if (!strcasecmp(type, "myisam") || !strcasecmp(type, "heap"))
-    mysql_drv_caps.transactions = 0;
-  else if (!strcasecmp(type, "innodb") ||
-           !strcasecmp(type, "bdb") || !strcasecmp(type, "berkeleydb") ||
-           !strcasecmp(type, "ndbcluster") ||
-           !strcasecmp(type, "federated"))
-    mysql_drv_caps.transactions = 1;
-  else
-  {
-    log_text(LOG_FATAL, "Failed to determine transactions support for "
-             "unknown storage engine '%s'", type);
-    log_text(LOG_FATAL, "Specify explicitly with --mysql-engine-trx option");
-    return 1;
-  }
-
-  /* Get engine-specific options string */
-  if (!strcasecmp(type, "myisam"))
-  {
-    if (args.myisam_max_rows > 0)
-      snprintf(table_options_str, sizeof(table_options_str),
-               "/*! "ENGINE_CLAUSE"=MyISAM MAX_ROWS=%u */", args.myisam_max_rows);
-    else
-      snprintf(table_options_str, sizeof(table_options_str),
-             "/*! "ENGINE_CLAUSE"=MyISAM */");
-  }
-  else if (!strcasecmp(type, "innodb"))
-    snprintf(table_options_str, sizeof(table_options_str),
-             "/*! "ENGINE_CLAUSE"=InnoDB */");
-  else if (!strcasecmp(type, "bdb") || !strcasecmp(type, "berkeleydb"))
-    snprintf(table_options_str, sizeof(table_options_str),
-             "/*! "ENGINE_CLAUSE"=BerkeleyDB */");
-  else if (!strcasecmp(type, "heap"))
-    snprintf(table_options_str, sizeof(table_options_str),
-             "/*! "ENGINE_CLAUSE"=HEAP */");
-  else if (!strcasecmp(type, "ndbcluster"))
-    snprintf(table_options_str, sizeof(table_options_str),
-             "/*! "ENGINE_CLAUSE"=NDB */");
-  else if (!strcasecmp(type, "federated"))
-    snprintf(table_options_str, sizeof(table_options_str),
-             "/*! "ENGINE_CLAUSE"=FEDERATED */");
-  else
-    snprintf(table_options_str, sizeof(table_options_str),
-             "/*! "ENGINE_CLAUSE"=%s */", type);
-
-  mysql_drv_caps.table_options_str = table_options_str;
-  
   return 0;
 }
 

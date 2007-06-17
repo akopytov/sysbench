@@ -45,7 +45,6 @@
 #include "tests/sb_memory.h"
 #include "tests/sb_threads.h"
 #include "tests/sb_mutex.h"
-#include "tests/sb_oltp.h"
 
 /* Macros to control global execution mutex */
 #define SB_THREAD_MUTEX_LOCK() pthread_mutex_lock(&sb_globals.exec_mutex) 
@@ -95,7 +94,6 @@ typedef struct
     sb_mem_request_t     mem_request;
     sb_threads_request_t threads_request;
     sb_mutex_request_t   mutex_request;
-    sb_sql_request_t     sql_request;
   } u;
 } sb_request_t;
 

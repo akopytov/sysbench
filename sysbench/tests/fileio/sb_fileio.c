@@ -235,8 +235,8 @@ static sb_request_t file_get_rnd_request(void);
 static void check_seq_req(sb_file_request_t *, sb_file_request_t *);
 static const char *get_io_mode_str(file_io_mode_t mode);
 static const char *get_test_mode_str(file_test_mode_t mode);
-static void file_fill_buffer(char *, unsigned int, unsigned long);
-static int file_validate_buffer(char  *, unsigned int, unsigned long);
+static void file_fill_buffer(unsigned char *, unsigned int, unsigned long);
+static int file_validate_buffer(unsigned char  *, unsigned int, unsigned long);
 
 /* File operation wrappers */
 static int file_fsync(unsigned int, int);
@@ -1608,7 +1608,8 @@ void *sb_memalign(size_t size)
 /* Fill buffer with random values and write checksum */
 
 
-void file_fill_buffer(char *buf, unsigned int len, unsigned long offset)
+void file_fill_buffer(unsigned char *buf, unsigned int len,
+                      unsigned long offset)
 {
   unsigned int i;
 
@@ -1626,7 +1627,7 @@ void file_fill_buffer(char *buf, unsigned int len, unsigned long offset)
 /* Validate checksum and offset of block read from disk */
 
 
-int file_validate_buffer(char  *buf, unsigned int len, unsigned long offset)
+int file_validate_buffer(unsigned char  *buf, unsigned int len, unsigned long offset)
 {
   unsigned int checksum;
   unsigned int cs_offset;

@@ -238,12 +238,12 @@ db_driver_t *db_init(const char *name)
 /* Describe database capabilities */
 
 
-int db_describe(db_driver_t *drv, drv_caps_t *caps, const char *table)
+int db_describe(db_driver_t *drv, drv_caps_t *caps)
 {
   if (drv->ops.describe == NULL)
     return 1;
 
-  return drv->ops.describe(caps, table);
+  return drv->ops.describe(caps);
 }
 
 
@@ -687,7 +687,7 @@ int db_bulk_insert_init(db_conn_t *con, const char *query)
     return 1;
   
   /* Get database capabilites */
-  if (db_describe(con->driver, &driver_caps, NULL))
+  if (db_describe(con->driver, &driver_caps))
   {
     log_text(LOG_FATAL, "failed to get database capabilities!");
     return 1;
