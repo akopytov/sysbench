@@ -32,6 +32,7 @@
 #define CLEANUP_FUNC "cleanup"
 #define THREAD_INIT_FUNC "thread_init"
 #define THREAD_DONE_FUNC "thread_done"
+#define HELP_FUNC "help"
 
 /* DB Error codes */
 
@@ -111,6 +112,7 @@ static const char sb_lua_ctxt_key;
 /* Lua test commands */
 static int sb_lua_cmd_prepare(void);
 static int sb_lua_cmd_cleanup(void);
+static int sb_lua_cmd_help(void);
 
 /* Initialize interpreter state */
 static lua_State *sb_lua_new_state(const char *, int);
@@ -167,6 +169,10 @@ int script_load_lua(const char *testname, sb_test_t *test)
   if (!lua_isnil(gstate, -1))
     test->cmds.cleanup = &sb_lua_cmd_cleanup;
 
+  lua_getglobal(gstate, HELP_FUNC);
+  if (!lua_isnil(gstate, -1))
+    test->cmds.help = &sb_lua_cmd_help;
+
   /* Test operations */
   test->ops = lua_ops;
 
@@ -177,6 +183,7 @@ int script_load_lua(const char *testname, sb_test_t *test)
   lua_getglobal(gstate, THREAD_DONE_FUNC);
   if (!lua_isnil(gstate, -1))
     test->ops.thread_done = &sb_lua_op_thread_done;
+
 
   test->ops.print_stats = &sb_lua_op_print_stats;
   
@@ -496,6 +503,22 @@ int sb_lua_cmd_cleanup(void)
   if (lua_pcall(gstate, 0, 1, 0) != 0)
   {
     log_text(LOG_FATAL, "failed to execute function `"CLEANUP_FUNC"': %s",
+             lua_tostring(gstate, -1));
+    return 1;
+  }
+
+  return 0;
+}
+
+/* Help command */
+
+int sb_lua_cmd_help(void)
+{
+  lua_getglobal(gstate, HELP_FUNC);
+
+  if (lua_pcall(gstate, 0, 1, 0) != 0)
+  {
+    log_text(LOG_FATAL, "failed to execute function `"HELP_FUNC"': %s",
              lua_tostring(gstate, -1));
     return 1;
   }

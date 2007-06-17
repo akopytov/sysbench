@@ -651,10 +651,16 @@ int main(int argc, char *argv[])
       print_usage();
     else
     {
-      printf("%s options:\n", test->sname);
-      sb_print_options(test->args);
+      if (test->args != NULL)
+      {
+        printf("%s options:\n", test->sname);
+        sb_print_options(test->args);
+      }
       if (test->cmds.help != NULL)
         test->cmds.help();
+      else
+        fprintf(stderr, "No help is available for test '%s'.\n",
+                test->sname);
     }
     exit(0);
   }
