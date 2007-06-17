@@ -659,7 +659,7 @@ int main(int argc, char *argv[])
       if (test->cmds.help != NULL)
         test->cmds.help();
       else
-        fprintf(stderr, "No help is available for test '%s'.\n",
+        fprintf(stderr, "No help available for test '%s'.\n",
                 test->sname);
     }
     exit(0);

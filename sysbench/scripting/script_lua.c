@@ -170,7 +170,7 @@ int script_load_lua(const char *testname, sb_test_t *test)
     test->cmds.cleanup = &sb_lua_cmd_cleanup;
 
   lua_getglobal(gstate, HELP_FUNC);
-  if (!lua_isnil(gstate, -1))
+  if (!lua_isnil(gstate, -1) && lua_isfunction(gstate, -1))
     test->cmds.help = &sb_lua_cmd_help;
 
   /* Test operations */

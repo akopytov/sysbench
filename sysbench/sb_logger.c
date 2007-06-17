@@ -101,7 +101,7 @@ static int oper_handler_done(void);
 static sb_arg_t text_handler_args[] =
 {
   {"verbosity", "verbosity level {5 - debug, 0 - only critical messages}",
-   SB_ARG_TYPE_INT, "4"},
+   SB_ARG_TYPE_INT, "3"},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
   

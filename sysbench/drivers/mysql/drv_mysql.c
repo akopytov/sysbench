@@ -371,9 +371,9 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query)
       DEBUG("mysql_errno(%p) = %u", con, rc);
       if (rc == ER_UNSUPPORTED_PS)
       {
-        log_text(LOG_WARNING,
-                 "Preparing of \"%s\" is unsupported, using emulation",
-                 query);
+        log_text(LOG_INFO,
+                 "Failed to prepare query \"%s\" (%d: %s), using emulation",
+                 query, rc, mysql_error(con));
         goto emulate;
       }
       else
@@ -712,7 +712,8 @@ int mysql_drv_store_results(db_result_set_t *rs)
                  mysql_error(con));
         return SB_DB_ERROR_DEADLOCK;
       }
-
+      else if (mysql_stmt_field_count(rs->statement->ptr) == 0)
+        return SB_DB_ERROR_NONE;
       log_text(LOG_ALERT, "MySQL error: %s\n", mysql_error(con));
       return SB_DB_ERROR_FAILED;
     }
@@ -745,6 +746,8 @@ int mysql_drv_store_results(db_result_set_t *rs)
                  mysql_error(con));
         return SB_DB_ERROR_DEADLOCK;
       }
+      else if (mysql_field_count(con) == 0)
+        return SB_DB_ERROR_NONE;
       log_text(LOG_ALERT, "MySQL error: %s", mysql_error(con));
       return SB_DB_ERROR_FAILED; 
   }
