@@ -120,7 +120,7 @@ typedef struct
 {
   char               *user;
   char               *password;
-  char               *db;
+  unsigned char      *db;
 } ora_drv_args_t;
 
 /* Structure used for DB-to-Oracle bind types map */
@@ -154,10 +154,8 @@ db_oracle_bind_map_t db_oracle_bind_map[] =
 static drv_caps_t ora_drv_caps =
 {
   .multi_rows_insert = 0,
-  .transactions = 1,
   .prepared_statements = 1,
   .needs_commit = 1,
-  .table_options_str = NULL
 };
 
 
@@ -168,7 +166,7 @@ static ora_drv_args_t args;          /* driver args */
 /* Oracle driver operations */
 
 static int ora_drv_init(void);
-static int ora_drv_describe(drv_caps_t *, const char *);
+static int ora_drv_describe(drv_caps_t *);
 static int ora_drv_connect(db_conn_t *);
 static int ora_drv_disconnect(db_conn_t *);
 static int ora_drv_prepare(db_stmt_t *, const char *);
@@ -259,9 +257,8 @@ int ora_drv_init(void)
 /* Describe database capabilities  */
 
 
-int ora_drv_describe(drv_caps_t *caps, const char * table_name)
+int ora_drv_describe(drv_caps_t *caps)
 {
-  (void)table_name;
   *caps = ora_drv_caps;
   
   return 0;

@@ -85,13 +85,10 @@ db_pgsql_bind_map_t db_pgsql_bind_map[] =
 static drv_caps_t pgsql_drv_caps =
 {
   .multi_rows_insert = 0,
-  .transactions = 1,
   .prepared_statements = 1,
   .auto_increment = 0,
   .serial = 1,
   .unsigned_int = 0,
-  
-  .table_options_str = NULL
 };
 
 /* Describes the PostgreSQL prepared statement */
@@ -111,7 +108,7 @@ static char use_ps; /* whether server-side prepared statemens should be used */
 /* PgSQL driver operations */
 
 static int pgsql_drv_init(void);
-static int pgsql_drv_describe(drv_caps_t *, const char *);
+static int pgsql_drv_describe(drv_caps_t *);
 static int pgsql_drv_connect(db_conn_t *);
 static int pgsql_drv_disconnect(db_conn_t *);
 static int pgsql_drv_prepare(db_stmt_t *, const char *);
@@ -196,10 +193,8 @@ int pgsql_drv_init(void)
 /* Describe database capabilities */
 
 
-int pgsql_drv_describe(drv_caps_t *caps, const char * table_name)
+int pgsql_drv_describe(drv_caps_t *caps)
 {
-  (void)table_name; /* unused */
-  
   *caps = pgsql_drv_caps;
   
   return 0;
