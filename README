@@ -1,7 +1,5 @@
 SysBench:  System evaluation benchmark
 
-
-Why ?
 The idea is to quickly get an impression about system performance for MySQL
 usage without setting up complex benchmark and even without installing MySQL.
 In some cases this is very helpful. This is also the reason for having
