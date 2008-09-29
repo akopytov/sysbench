@@ -19,6 +19,10 @@
 # include "config.h"
 #endif
 
+#ifdef _WIN32
+# include "sb_win.h"
+#endif
+
 #ifdef HAVE_PTHREAD_H
 # include <pthread.h>
 #endif
@@ -52,27 +56,26 @@ static int mutex_done(void);
 
 static sb_test_t mutex_test =
 {
-  .sname = "mutex",
-  .lname = "Mutex performance test",
-  .ops = {
-    .init = mutex_init,
-    .prepare = NULL,
-    .thread_init = NULL,
-    .thread_done = NULL,
-    .print_mode = mutex_print_mode,
-    .print_stats = NULL,
-    .get_request = mutex_get_request,
-    .execute_request = mutex_execute_request,
-    .cleanup = NULL,
-    .done = mutex_done
+  "mutex",
+  "Mutex performance test",
+  {
+     mutex_init,
+     NULL,
+     NULL,
+     mutex_print_mode,
+     mutex_get_request,
+     mutex_execute_request,
+	 NULL,
+     NULL,
+     mutex_done
   },
-  .cmds = {
-    .help = NULL,
-    .prepare = NULL,
-    .run = NULL,
-    .cleanup = NULL
+  {
+     NULL,
+     NULL,
+     NULL,
+     NULL
   },
-  .args = mutex_args,
+  mutex_args,
   {NULL, NULL}
 };
 
@@ -141,7 +144,7 @@ sb_request_t mutex_get_request(void)
 int mutex_execute_request(sb_request_t *sb_req, int thread_id)
 {
   unsigned int         i;
-  unsigned int         c;
+  unsigned int         c=0;
   unsigned int         current_lock;
   sb_mutex_request_t   *mutex_req = &sb_req->u.mutex_request;
   log_msg_t            msg;

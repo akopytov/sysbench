@@ -19,14 +19,16 @@
 
 #define SB_LIST_H
 
-typedef struct sb_list_item sb_list_t;
-typedef struct sb_list_item sb_list_item_t;
-
-struct sb_list_item
+typedef struct sb_list_item_t
 {
-    sb_list_item_t *next_p;
-    sb_list_item_t *prev_p;
-};
+//    char c;
+    struct sb_list_item_t *next_p;
+    struct sb_list_item_t *prev_p;
+}
+sb_list_item_t;
+
+typedef sb_list_item_t sb_list_item;
+typedef sb_list_item_t sb_list_t ;
 
 #ifndef offsetof
 # define offsetof(type, member) ((size_t) &((type *)0)->member)

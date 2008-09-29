@@ -19,6 +19,10 @@
 # include "config.h"
 #endif
 
+#ifdef _WIN32
+#include "sb_win.h"
+#endif
+
 #ifdef STDC_HEADERS
 # include <stdio.h>
 /* Required for memalign to be declared on Solaris */
@@ -45,6 +49,14 @@
 #ifdef HAVE_SYS_MMAN_H
 # include <sys/mman.h>
 #endif
+#ifdef _WIN32
+# include <io.h>
+# include <fcntl.h>
+# include <sys/stat.h>
+# define S_IRUSR _S_IREAD
+# define S_IWUSR _S_IWRITE
+# define HAVE_MMAP
+#endif
 
 #include "sysbench.h"
 #include "crc32.h"
@@ -52,6 +64,24 @@
 /* Lengths of the checksum and the offset fields in a block */
 #define FILE_CHECKSUM_LENGTH sizeof(int)
 #define FILE_OFFSET_LENGTH sizeof(long)
+
+#ifdef _WIN32
+typedef HANDLE FILE_DESCRIPTOR;
+#define VALID_FILE(fd) (fd != INVALID_HANDLE_VALUE)
+#define FD_FMT "%p"
+#define MAP_SHARED 0
+#define PROT_READ  1
+#define PROT_WRITE 2
+#define MAP_FAILED NULL
+
+void *mmap(void *addr, size_t len, int prot, int flags,
+            FILE_DESCRIPTOR fd, long long off);
+int munmap(void *addr, size_t size);
+#else
+typedef int FILE_DESCRIPTOR;
+#define VALID_FILE(fd) (fd >= 0)
+#define FD_FMT "%d"
+#endif
 
 /* Supported operations in request */
 typedef enum
@@ -102,8 +132,8 @@ static sb_aio_context_t *aio_ctxts;
 
 /* Test options */
 static unsigned int      num_files;
-static off_t             total_size;
-static off_t             file_size;
+static long long         total_size;
+static long long         file_size;
 static int               file_block_size;
 static int               file_extra_flags;
 static int               file_fsync_freq;
@@ -112,7 +142,7 @@ static int               file_fsync_end;
 static file_fsync_mode_t file_fsync_mode;
 static float             file_rw_ratio;
 static int               file_merged_requests;
-static off_t             file_max_request_size;
+static long long         file_max_request_size;
 static file_io_mode_t    file_io_mode;
 #ifdef HAVE_LIBAIO
 static unsigned int      file_async_backlog;
@@ -137,12 +167,12 @@ static unsigned long long  bytes_written;
 
 #ifdef HAVE_MMAP
 /* Array of file mappings */
-static void          **mmaps; 
+static void          **mmaps;
 static unsigned long file_page_mask;
 #endif
 
 /* Array of file descriptors */
-static int *files;
+static FILE_DESCRIPTOR *files;
 
 /* Buffer for all I/O operations */
 static void *buffer;
@@ -196,33 +226,31 @@ static void file_print_stats(void);
 
 static sb_test_t fileio_test =
 {
-  .sname = "fileio",
-  .lname = "File I/O test",
-  .ops =
+  "fileio",
+  "File I/O test",  
   {
-    .init = file_init,
-    .thread_init = NULL,
+    file_init,
+    file_prepare,
+    NULL,
+    file_print_mode,
+    file_get_request,
+    file_execute_request,
+    file_print_stats,
 #ifdef HAVE_LIBAIO
-    .thread_done = file_thread_done,
+     file_thread_done,
 #else
-    .thread_done = NULL,
+     NULL,
 #endif
-    .prepare = file_prepare,
-    .cleanup = NULL,
-    .print_mode = file_print_mode,
-    .get_request = file_get_request,
-    .execute_request = file_execute_request,
-    .print_stats = file_print_stats,
-    .done = file_done
+    file_done
   },
-  .cmds = {
-    .prepare = file_cmd_prepare,
-    .help = NULL,
-    .run = NULL,
-    .cleanup = file_cmd_cleanup
+  {
+   NULL,
+   file_cmd_prepare,
+   NULL,
+   file_cmd_cleanup
   },
-  .args = fileio_args,
-  {NULL, NULL}
+  fileio_args,
+  {0,0}
 };
 
 
@@ -235,13 +263,13 @@ static sb_request_t file_get_rnd_request(void);
 static void check_seq_req(sb_file_request_t *, sb_file_request_t *);
 static const char *get_io_mode_str(file_io_mode_t mode);
 static const char *get_test_mode_str(file_test_mode_t mode);
-static void file_fill_buffer(unsigned char *, unsigned int, unsigned long);
-static int file_validate_buffer(unsigned char  *, unsigned int, unsigned long);
+static void file_fill_buffer(unsigned char *, unsigned int, size_t);
+static int file_validate_buffer(unsigned char  *, unsigned int, size_t);
 
 /* File operation wrappers */
 static int file_fsync(unsigned int, int);
-static ssize_t file_pread(unsigned int, void *, ssize_t, off_t, int);
-static ssize_t file_pwrite(unsigned int, void *, ssize_t, off_t, int);
+static ssize_t file_pread(unsigned int, void *, ssize_t, long long, int);
+static ssize_t file_pwrite(unsigned int, void *, ssize_t, long long, int);
 #ifdef HAVE_LIBAIO
 static int file_async_init(void);
 static int file_async_done(void);
@@ -255,7 +283,9 @@ static int file_mmap_done(void);
 
 /* Portability wrappers */
 static unsigned long sb_getpagesize(void);
+static unsigned long sb_get_allocation_granularity(void);
 static void *sb_memalign(size_t size);
+static void sb_free_memaligned(void *buf);
 
 int register_test_fileio(sb_list_t *tests)
 {
@@ -270,7 +300,7 @@ int file_init(void)
   if (parse_arguments())
     return 1;
   
-  files = (int *)malloc(num_files * sizeof(int));
+  files = (FILE_DESCRIPTOR *)malloc(num_files * sizeof(FILE_DESCRIPTOR));
   if (files == NULL)
   {
     log_text(LOG_FATAL, "Memory allocation failure.");
@@ -301,10 +331,15 @@ int file_prepare(void)
       unlink(file_name);
 
     log_text(LOG_DEBUG, "Opening file: %s",file_name);
-
+#ifndef _WIN32
     files[i] = open(file_name, O_CREAT | O_RDWR | file_extra_flags,
                     S_IRUSR | S_IWUSR);
-    if (files[i] < 0)
+#else
+    files[i] = CreateFile(file_name, GENERIC_READ|GENERIC_WRITE, 0, NULL,
+      OPEN_ALWAYS, file_extra_flags? file_extra_flags : FILE_ATTRIBUTE_NORMAL,
+      NULL);
+#endif
+    if (!VALID_FILE(files[i]))
     {
       log_errno(LOG_FATAL, "Cannot open file");
       return 1; 
@@ -327,7 +362,11 @@ int file_done(void)
   unsigned int  i;
   
   for (i = 0; i < num_files; i++)
+#ifndef _WIN32
     close(files[i]);
+#else
+    CloseHandle(files[i]);
+#endif
 
 #ifdef HAVE_LIBAIO
   if (file_async_done())
@@ -340,7 +379,7 @@ int file_done(void)
 #endif
 
   if (buffer != NULL)
-    free(buffer);
+    sb_free_memaligned(buffer);
 
   pthread_mutex_destroy(&fsync_mutex);
   
@@ -378,7 +417,7 @@ sb_request_t file_get_seq_request(void)
     if (position + file_max_request_size <= file_size)
       file_req->size = file_max_request_size;
     else
-      file_req->size = file_size - position;    
+      file_req->size = file_size - position;
     file_req->file_id = current_file;
     file_req->pos = position;
   }
@@ -445,7 +484,7 @@ sb_request_t file_get_rnd_request(void)
 {
   sb_request_t         sb_req;
   sb_file_request_t    *file_req = &sb_req.u.file_request;
-  unsigned int         rand;
+  unsigned int         randnum;
   unsigned long long   tmppos;
   int                  real_mode = test_mode;
   int                  mode = test_mode;
@@ -515,16 +554,16 @@ sb_request_t file_get_rnd_request(void)
     }
   }
 
-  rand=sb_rnd();
+  randnum=sb_rnd();
   if (mode==MODE_RND_WRITE) /* mode shall be WRITE or RND_WRITE only */
     file_req->operation = FILE_OP_TYPE_WRITE;
   else     
     file_req->operation = FILE_OP_TYPE_READ;
 
-  tmppos = (long long)((double)rand / (double)SB_MAX_RND * (double)(total_size));
+  tmppos = (long long)((double)randnum / (double)SB_MAX_RND * (double)(total_size));
   tmppos = tmppos - (tmppos % (long long)file_block_size);
   file_req->file_id = (int)(tmppos / (long long)file_size);
-  file_req->pos = (off_t)(tmppos % (long long)file_size);
+  file_req->pos = (long long)(tmppos % (long long)file_size);
   file_req->size = file_block_size;
 
   req_performed++;
@@ -537,12 +576,11 @@ sb_request_t file_get_rnd_request(void)
 
 int file_execute_request(sb_request_t *sb_req, int thread_id)
 {
-  int fd;
+  FILE_DESCRIPTOR    fd;
   sb_file_request_t *file_req = &sb_req->u.file_request;
   log_msg_t          msg;
   log_msg_oper_t     op_msg;
-  
-  fd = files[file_req->file_id];
+
   if (sb_globals.debug)
   {
     log_text(LOG_DEBUG,
@@ -565,7 +603,7 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
     log_text(LOG_FATAL, "Too large position discovered in request!");
     return 1;
   }
-  
+  fd = files[file_req->file_id];
   /* Prepare log message */
   msg.type = LOG_MSG_TYPE_OPER;
   msg.data = &op_msg;
@@ -585,7 +623,7 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
                      thread_id)
          != (ssize_t)file_req->size)
       {
-        log_errno(LOG_FATAL, "Failed to write file! file: %d pos: %lld", 
+        log_errno(LOG_FATAL, "Failed to write file! file: " FD_FMT " pos: %lld", 
                   fd, (long long)file_req->pos);
         return 1;
       }
@@ -595,7 +633,7 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
       {
         if (file_fsync(file_req->file_id, thread_id))
         {
-          log_errno(LOG_FATAL, "Failed to fsync file! file: %d", fd);
+          log_errno(LOG_FATAL, "Failed to fsync file! file: " FD_FMT, fd);
           return 1;
         }
       }
@@ -617,7 +655,7 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
                     thread_id)
          != (ssize_t)file_req->size)
       {
-        log_errno(LOG_FATAL, "Failed to read file! file: %d pos: %lld",
+        log_errno(LOG_FATAL, "Failed to read file! file: " FD_FMT " pos: %lld",
                   fd, (long long)file_req->pos);
         return 1;
       }
@@ -628,8 +666,8 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
           file_validate_buffer(buffer, file_req->size, file_req->pos))
       {
         log_text(LOG_FATAL,
-                 "Validation failed on file %d, block offset 0x%x, exiting...",
-                 file_req->file_id, file_req->pos);
+          "Validation failed on file " FD_FMT ", block offset 0x%x, exiting...",
+           file_req->file_id, file_req->pos);
         return 1;
       }
       
@@ -647,7 +685,7 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
         break;
       if(file_fsync(file_req->file_id, thread_id))
       {
-        log_errno(LOG_FATAL, "Failed to fsync file! file: %d", fd);
+        log_errno(LOG_FATAL, "Failed to fsync file! file: " FD_FMT, fd);
         return 1;
       }
     
@@ -803,7 +841,7 @@ int create_files(void)
   unsigned int       i;
   int                fd;
   char               file_name[512];
-  off_t              offset;
+  long long          offset;
 
   log_text(LOG_INFO, "%d files, %ldKb each, %ldMb total", num_files,
            (long)(file_size / 1024),
@@ -812,7 +850,6 @@ int create_files(void)
   for (i=0; i < num_files; i++) {
     snprintf(file_name, sizeof(file_name), "test_file.%d",i);
     unlink(file_name);
-
     fd = open(file_name, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
     if (fd < 0)
     {
@@ -833,7 +870,11 @@ int create_files(void)
     }
     
     /* fsync files to prevent cache flush from affecting test results */
+#ifndef _WIN32
     fsync(fd);
+#else
+    _commit(fd);
+#endif
     close(fd);
   }
   return 0; 
@@ -1111,18 +1152,37 @@ int file_mmap_prepare(void)
   if (file_io_mode != FILE_IO_MODE_MMAP)
     return 0;
 
-  file_page_mask = ~(sb_getpagesize() - 1);
+  file_page_mask = ~(sb_get_allocation_granularity() - 1);
   
   /* Extend file sizes for sequential write test */
   if (test_mode == MODE_WRITE)
     for (i = 0; i < num_files; i++)
+    {
+#ifdef _WIN32
+      HANDLE hFile = files[i];
+      LARGE_INTEGER offset;
+      offset.QuadPart = file_size;
+      if (!SetFilePointerEx(hFile ,offset ,NULL, FILE_BEGIN))
+      {
+        log_errno(LOG_FATAL, "SetFilePointerEx() failed on file %d", i);
+        return 1;
+      }
+      if (!SetEndOfFile(hFile))
+      {
+        log_errno(LOG_FATAL, "SetEndOfFile() failed on file %d", i);
+        return 1;
+      }
+      offset.QuadPart = 0;
+      SetFilePointerEx(hFile ,offset ,NULL, FILE_BEGIN);
+#else
       if (ftruncate(files[i], file_size))
       {
         log_errno(LOG_FATAL, "ftruncate() failed on file %d", i);
         return 1;
       }
-    
-    
+#endif 
+    }
+
 #if SIZEOF_SIZE_T > 4
   mmaps = (void **)malloc(num_files * sizeof(void *));
   for (i = 0; i < num_files; i++)
@@ -1168,7 +1228,7 @@ int file_mmap_done(void)
 
 int file_fsync(unsigned int file_id, int thread_id)
 {
-  int         fd = files[file_id];
+  FILE_DESCRIPTOR fd = files[file_id];
 #ifdef HAVE_LIBAIO
   struct iocb iocb;
 #else
@@ -1188,7 +1248,11 @@ int file_fsync(unsigned int file_id, int thread_id)
       )
   {
     if (file_fsync_mode == FSYNC_ALL)
+#ifndef _WIN32
       return fsync(fd);
+#else
+      return !FlushFileBuffers(fd);
+#endif
 
 #ifdef HAVE_FDATASYNC    
     return fdatasync(fd);
@@ -1214,22 +1278,128 @@ int file_fsync(unsigned int file_id, int thread_id)
   /* Use msync on file on 64-bit architectures */
   else if (file_io_mode == FILE_IO_MODE_MMAP)
   {
+#ifndef _WIN32
     msync(mmaps[file_id], file_size, MS_SYNC | MS_INVALIDATE);
+#else
+    FlushViewOfFile(mmaps[file_id], (size_t)file_size);
+#endif
   }
 #endif
-  
+
   return 1; /* Unknown I/O mode */
 }
 
+#ifdef _WIN32
+ssize_t pread(HANDLE hFile, void *buf, ssize_t count, long long offset)
+{
+  DWORD         nBytesRead;
+  OVERLAPPED    ov = {0};
+  LARGE_INTEGER li;
+
+  if(!count)
+	  return 0;
+#ifdef _WIN64
+  if(count > UINT_MAX)
+    count= UINT_MAX;
+#endif
+
+  li.QuadPart   = offset;
+  ov.Offset     = li.LowPart;
+  ov.OffsetHigh = li.HighPart;
+
+  if(!ReadFile(hFile, buf, (DWORD)count, &nBytesRead, &ov))
+  {
+    DWORD lastError = GetLastError();
+    if(lastError == ERROR_HANDLE_EOF)
+     return 0;
+    return -1;
+  }
+  return nBytesRead;
+}
+ssize_t pwrite(HANDLE hFile, const void *buf, size_t count, 
+                     long long  offset)
+{
+  DWORD         nBytesWritten;
+  OVERLAPPED    ov = {0};
+  LARGE_INTEGER li;
+
+  if(!count)
+    return 0;
+
+#ifdef _WIN64
+  if(count > UINT_MAX)
+    count= UINT_MAX;
+#endif
+
+  li.QuadPart  = offset;
+  ov.Offset    = li.LowPart;
+  ov.OffsetHigh= li.HighPart;
+
+  if(!WriteFile(hFile, buf, (DWORD)count, &nBytesWritten, &ov))
+  {
+    return -1;
+  }
+  else
+    return nBytesWritten;
+}
+
+#define MAP_SHARED 0
+#define PROT_READ  1
+#define PROT_WRITE 2
+#define MAP_FAILED NULL
+
+void *mmap(void *addr, size_t len, int prot, int flags,
+            FILE_DESCRIPTOR fd, long long off)
+{
+  DWORD flProtect;
+  DWORD flMap;
+  void *retval;
+  LARGE_INTEGER li;
+  HANDLE hMap;
+
+  switch(prot)
+  {
+  case PROT_READ:
+    flProtect = PAGE_READONLY;
+    flMap     = FILE_MAP_READ;
+    break;
+  case PROT_READ|PROT_WRITE:
+    flProtect = PAGE_READWRITE;
+    flMap     = FILE_MAP_ALL_ACCESS;
+    break;
+  default:
+    return MAP_FAILED;
+  }
+  hMap = CreateFileMapping(fd, NULL, flProtect, 0 , 0, NULL);
+
+  if(hMap == INVALID_HANDLE_VALUE)
+    return MAP_FAILED;
+
+  li.QuadPart = off;
+  retval = MapViewOfFileEx(hMap, flMap, li.HighPart, li.LowPart, len, NULL);
+
+  CloseHandle(hMap);
+  return retval;
+}
+
+int munmap(void *start, size_t len)
+{
+  (void) len; /* unused */
+  if(UnmapViewOfFile(start))
+    return 0;
+  return -1;
+}
+#endif
+
 
 ssize_t file_pread(unsigned int file_id, void *buf, ssize_t count,
-                   off_t offset, int thread_id)
+                   long long offset, int thread_id)
 {
-  int         fd = files[file_id];
+  FILE_DESCRIPTOR fd = files[file_id];
 #ifdef HAVE_MMAP
   void        *start;
-  off_t       page_addr;
-  off_t       page_offset;
+  long long    page_addr;
+  long long    page_offset;
 #endif
 #ifdef HAVE_LIBAIO
   struct iocb iocb;
@@ -1264,7 +1434,6 @@ ssize_t file_pread(unsigned int file_id, void *buf, ssize_t count,
       return 0;
     memcpy(buffer, (char *)start + page_offset, count);
     munmap(start, count + page_offset);
-
     return count;
 # else
     (void)start; /* unused */
@@ -1284,9 +1453,9 @@ ssize_t file_pread(unsigned int file_id, void *buf, ssize_t count,
 
 
 ssize_t file_pwrite(unsigned int file_id, void *buf, ssize_t count,
-                    off_t offset, int thread_id)
+                    long long offset, int thread_id)
 {
-  int         fd = files[file_id];
+  FILE_DESCRIPTOR fd = files[file_id];
 #ifdef HAVE_MMAP
   void        *start;
   size_t       page_addr;
@@ -1321,6 +1490,7 @@ ssize_t file_pwrite(unsigned int file_id, void *buf, ssize_t count,
     page_offset = offset - page_addr;
     start = mmap(NULL, count + page_offset, PROT_READ | PROT_WRITE, MAP_SHARED,
                  fd, page_addr);
+
     if (start == MAP_FAILED)
       return 0;
     memcpy((char *)start + page_offset, buffer, count);
@@ -1453,7 +1623,13 @@ int parse_arguments(void)
   if (mode == NULL || !strlen(mode))
     file_extra_flags = 0;
   else if (!strcmp(mode, "sync"))
+  {
+#ifdef _WIN32
+    file_extra_flags = FILE_FLAG_WRITE_THROUGH;
+#else
     file_extra_flags = O_SYNC;
+#endif
+  }
   else if (!strcmp(mode, "dsync"))
   {
 #ifdef O_DSYNC
@@ -1465,7 +1641,9 @@ int parse_arguments(void)
   }
   else if (!strcmp(mode, "direct"))
   {
-#ifdef O_DIRECT
+#ifdef _WIN32
+    file_extra_flags = FILE_FLAG_NO_BUFFERING;
+#elif defined(O_DIRECT)
     file_extra_flags = O_DIRECT;
 #else
     log_text(LOG_FATAL, "O_DIRECT is not supported on this platform.");
@@ -1572,15 +1750,34 @@ unsigned long sb_getpagesize(void)
 {
 #ifdef _SC_PAGESIZE
   return sysconf(_SC_PAGESIZE);
+#elif defined _WIN32
+  SYSTEM_INFO info;
+  GetSystemInfo(&info);
+  return info.dwPageSize;
 #else
   return getpagesize();
 #endif
 }
 
+/* 
+  Alignment requirement for mmap(). The same as page size, except on Windows
+  (on Windows it has to be 64KB, even if pagesize is only 4 or 8KB)
+*/
+unsigned long sb_get_allocation_granularity(void)
+{
+#ifdef _WIN32
+  SYSTEM_INFO info;
+  GetSystemInfo(&info);
+  return info.dwAllocationGranularity;
+#else
+  return sb_getpagesize();
+#endif
+}
 
-/* Allocate a buffer of a specified size and align it to the page size */
-
-
+/*
+  Allocate a buffer of a specified size and align it to the allocation
+  granularity
+*/
 void *sb_memalign(size_t size)
 {
   unsigned long page_size;
@@ -1595,6 +1792,9 @@ void *sb_memalign(size_t size)
 #elif defined(HAVE_VALLOC)
   (void)page_size; /* unused */
   buffer = valloc(size);
+#elif defined (_WIN32)
+  (void)page_size; /* unused */
+  buffer = VirtualAlloc(NULL, size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 #else
   (void)page_size; /* unused */
   log_text(LOG_WARNING, "None of valloc(), memalign and posix_memalign() is available, doing unaligned IO!");
@@ -1604,12 +1804,20 @@ void *sb_memalign(size_t size)
   return buffer;
 }
 
+static void sb_free_memaligned(void *buf)
+{
+#ifdef _WIN32
+  VirtualFree(buf,0,MEM_FREE);
+#else
+  free(buf);
+#endif
+}
 
 /* Fill buffer with random values and write checksum */
 
 
 void file_fill_buffer(unsigned char *buf, unsigned int len,
-                      unsigned long offset)
+                      size_t offset)
 {
   unsigned int i;
 
@@ -1627,7 +1835,7 @@ void file_fill_buffer(unsigned char *buf, unsigned int len,
 /* Validate checksum and offset of block read from disk */
 
 
-int file_validate_buffer(unsigned char  *buf, unsigned int len, unsigned long offset)
+int file_validate_buffer(unsigned char  *buf, unsigned int len, size_t offset)
 {
   unsigned int checksum;
   unsigned int cs_offset;
@@ -1644,11 +1852,11 @@ int file_validate_buffer(unsigned char  *buf, unsigned int len, unsigned long of
     return 1;
   }
 
-  if (offset != *(unsigned long *)(buf + cs_offset + FILE_CHECKSUM_LENGTH))
+  if (offset != *(size_t *)(buf + cs_offset + FILE_CHECKSUM_LENGTH))
   {
     log_text(LOG_FATAL, "Offset mismatch in block:");
     log_text(LOG_FATAL, "   Actual offset: %ld    Stored offset: %ld",
-             offset, *(unsigned long *)(buf + cs_offset + FILE_CHECKSUM_LENGTH));
+             offset, *(size_t *)(buf + cs_offset + FILE_CHECKSUM_LENGTH));
     return 1;
   }
 

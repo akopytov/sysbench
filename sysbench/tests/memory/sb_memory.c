@@ -18,6 +18,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#ifdef _WIN32
+#include "sb_win.h"
+#endif
 
 #include "sysbench.h"
 
@@ -58,35 +61,34 @@ static void memory_print_stats(void);
 
 static sb_test_t memory_test =
 {
-  .sname = "memory",
-  .lname = "Memory functions speed test",
-  .ops =
+  "memory",
+  "Memory functions speed test",
   {
-    .init = memory_init,
-    .prepare = NULL,
-    .thread_init = NULL,
-    .thread_done = NULL,
-    .cleanup = NULL,
-    .print_mode = memory_print_mode,
-    .get_request = memory_get_request,
-    .execute_request = memory_execute_request,
-    .print_stats = memory_print_stats,
-    .done = NULL
+    memory_init,
+    NULL,
+    NULL,
+    memory_print_mode,
+    memory_get_request,
+    memory_execute_request,
+    memory_print_stats,
+    NULL,
+    NULL,
+    NULL
   },
-  .cmds = {
-    .help = NULL,
-    .prepare = NULL,
-    .run = NULL,
-    .cleanup = NULL
+  {
+    NULL,
+    NULL,
+    NULL,
+    NULL
   },
-  .args = memory_args,
+  memory_args,
   {NULL, NULL}
 };
 
 /* Test arguments */
 
 static ssize_t memory_block_size;
-static off_t   memory_total_size;
+static size_t   memory_total_size;
 static unsigned int memory_scope;
 static unsigned int memory_oper;
 static unsigned int memory_access_rnd;
@@ -96,7 +98,7 @@ static unsigned int memory_hugetlb;
 
 /* Statistics */
 static unsigned int total_ops;
-static off_t        total_bytes;
+static size_t        total_bytes;
 
 /* Array of per-thread buffers */
 static int **buffers;

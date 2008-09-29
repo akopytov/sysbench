@@ -32,7 +32,9 @@
 #define LUA_ANSI
 #endif
 
+#ifndef _WIN32
 #define LUA_USE_DLOPEN
+#endif
 
 /*
 @@ LUA_PATH and LUA_CPATH are the names of the environment variables that

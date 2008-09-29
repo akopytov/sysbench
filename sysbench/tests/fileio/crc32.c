@@ -26,7 +26,11 @@
 #define OF(args) args
 #include "crc32.h"
 
+#ifndef _WIN32
 #define ptrdiff_t long
+#else
+#include <stdlib.h>
+#endif
 
 /* Find a four-byte integer type for crc32_little() and crc32_big(). */
 #ifndef NOBYFOUR

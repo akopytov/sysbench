@@ -23,9 +23,7 @@
 #include "config.h"
 #endif
 
-#ifdef STDC_HEADERS
 #include <stdio.h>
-#endif
 
 #include "sb_list.h"
 

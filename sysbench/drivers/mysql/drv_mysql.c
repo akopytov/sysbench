@@ -21,6 +21,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
 
 #ifdef HAVE_STRING_H
 # include <string.h>
@@ -117,11 +120,11 @@ db_mysql_bind_map_t db_mysql_bind_map[] =
 
 static drv_caps_t mysql_drv_caps =
 {
-  .multi_rows_insert = 1,
-  .prepared_statements = 0,
-  .auto_increment = 1,
-  .serial = 0,
-  .unsigned_int = 1,
+  1,
+  0,
+  1,
+  0,
+  1,
 };
 
 
@@ -157,10 +160,9 @@ static int mysql_drv_done(void);
 
 static db_driver_t mysql_driver =
 {
-  .sname = "mysql",
-  .lname = "MySQL driver",
-  .args = mysql_drv_args,
-  .ops =
+  "mysql",
+  "MySQL driver",
+  mysql_drv_args,
   {
     mysql_drv_init,
     mysql_drv_describe,
@@ -179,7 +181,7 @@ static db_driver_t mysql_driver =
     mysql_drv_store_results,
     mysql_drv_done
   },
-  .listitem = {NULL, NULL}
+  {0,0}
 };
 
 
@@ -232,6 +234,8 @@ int mysql_drv_init(void)
     use_ps = 1;
 #endif
 
+  mysql_library_init(-1, NULL, NULL);
+  
   return 0;
 }
 
@@ -809,6 +813,8 @@ int mysql_drv_close(db_stmt_t *stmt)
 /* Uninitialize driver */
 int mysql_drv_done(void)
 {
+  mysql_library_end();
+  
   return 0;
 }
 

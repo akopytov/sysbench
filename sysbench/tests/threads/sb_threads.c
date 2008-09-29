@@ -19,6 +19,10 @@
 # include "config.h"
 #endif
 
+#ifdef _WIN32
+# include "sb_win.h"
+#endif
+
 #ifdef HAVE_PTHREAD_H
 # include <pthread.h>
 #endif
@@ -28,6 +32,8 @@
 /* How to test scheduler pthread_yield or sched_yield */
 #ifdef HAVE_PTHREAD_YIELD
 #define YIELD pthread_yield 
+#elif defined (_WIN32)
+#define YIELD SwitchToThread
 #else
 #define YIELD sched_yield
 #endif
@@ -53,27 +59,27 @@ static int threads_cleanup(void);
 
 static sb_test_t threads_test =
 {
-  .sname = "threads",
-  .lname = "Threads subsystem performance test",
-  .ops = {
-    .init = threads_init,
-    .prepare = threads_prepare,
-    .thread_init = NULL,
-    .thread_done = NULL,
-    .print_mode = threads_print_mode,
-    .print_stats = NULL,
-    .get_request = threads_get_request,
-    .execute_request = threads_execute_request,
-    .cleanup = threads_cleanup,
-    .done = NULL
+  "threads",
+  "Threads subsystem performance test",
+  {
+    threads_init,
+    threads_prepare,
+    NULL,
+    threads_print_mode,
+    threads_get_request,
+    threads_execute_request,
+    NULL,
+    NULL,
+    NULL,
+    threads_cleanup,
   },
-  .cmds = {
-    .help = NULL,
-    .prepare = NULL,
-    .run = NULL,
-    .cleanup = NULL
+  {
+    NULL,
+    NULL,
+    NULL,
+    NULL
   },
-  .args = threads_args,
+  threads_args,
   {NULL, NULL}
 };
 

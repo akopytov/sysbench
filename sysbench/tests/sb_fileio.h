@@ -18,6 +18,10 @@
 #ifndef SB_FILEIO_H
 #define SB_FILEIO_H
 
+#ifdef _WIN32
+#include "sb_win.h" /* ssize_t defined*/
+#endif
+
 /* File operation types */
 typedef enum
 {
@@ -32,7 +36,7 @@ typedef enum
 typedef struct
 {
   unsigned int    file_id;
-  off_t           pos;
+  long long       pos;
   ssize_t         size;
   sb_file_op_t    operation; 
 } sb_file_request_t;

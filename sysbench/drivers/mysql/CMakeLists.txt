@@ -1,0 +1,2 @@
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
+ADD_LIBRARY(sbmysql drv_mysql.c)

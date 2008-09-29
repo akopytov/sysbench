@@ -18,6 +18,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#ifdef _WIN32
+# include "sb_win.h"
+#endif
 
 #ifdef STDC_HEADERS
 # include <stdio.h>

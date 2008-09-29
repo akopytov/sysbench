@@ -442,7 +442,9 @@ int run_test(sb_test_t *test)
   
   /* initialize attr */
   pthread_attr_init(&thread_attr);
+#ifdef PTHREAD_SCOPE_SYSTEM
   pthread_attr_setscope(&thread_attr,PTHREAD_SCOPE_SYSTEM);
+#endif
   pthread_attr_setstacksize(&thread_attr, thread_stack_size);
 
 #ifdef HAVE_THR_SETCONCURRENCY
@@ -468,7 +470,7 @@ int run_test(sb_test_t *test)
   }
   pthread_mutex_unlock(&thread_start_mutex);
   
-  log_text(LOG_INFO, "Threads started!");  
+  log_text(LOG_NOTICE, "Threads started!\n");  
   for(i = 0; i < sb_globals.num_threads; i++)
   {
     if(pthread_join(threads[i].thread, NULL))
@@ -545,7 +547,7 @@ int init(void)
     return 1;
   }
 
-  thread_stack_size = sb_get_value_int("thread-stack-size");
+  thread_stack_size = sb_get_value_size("thread-stack-size");
   if (thread_stack_size <= 0)
   {
     log_text(LOG_FATAL, "Invalid value for thread-stack-size: %d.\n", thread_stack_size);

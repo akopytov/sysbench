@@ -18,7 +18,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-
+#ifdef _WIN32
+#include "sb_win.h"
+#endif
 #ifdef STDC_HEADERS
 # include <ctype.h>
 #endif
@@ -681,7 +683,7 @@ void db_free_row(db_row_t *row)
 int db_bulk_insert_init(db_conn_t *con, const char *query)
 {
   drv_caps_t driver_caps;
-  unsigned int query_len;
+  size_t query_len;
 
   if (con->driver == NULL)
     return 1;

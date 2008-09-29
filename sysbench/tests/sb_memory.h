@@ -40,7 +40,7 @@ typedef enum
 typedef struct
 {
   sb_mem_op_t    type;
-  unsigned long  block_size;
+  size_t  block_size;
   sb_mem_scope_t scope;
 } sb_mem_request_t;
 

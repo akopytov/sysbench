@@ -18,6 +18,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#ifdef _WIN32
+# include "sb_win.h"
+#endif
 
 #ifdef HAVE_MATH_H
 # include <math.h>
@@ -42,27 +45,24 @@ static int cpu_done(void);
 
 static sb_test_t cpu_test =
 {
-  .sname = "cpu",
-  .lname = "CPU performance test",
-  .ops = {
-    .init = cpu_init,
-    .prepare = NULL,
-    .thread_init = NULL,
-    .thread_done = NULL,
-    .cleanup = NULL,
-    .print_mode = cpu_print_mode,
-    .get_request = cpu_get_request,
-    .execute_request = cpu_execute_request,
-    .print_stats = cpu_print_stats,
-    .done = cpu_done
+"cpu",
+ "CPU performance test",
+  {
+    cpu_init,
+    NULL,
+    NULL,
+    cpu_print_mode,
+    cpu_get_request,
+    cpu_execute_request,
+    cpu_print_stats,
+    NULL,
+    NULL,
+    cpu_done
   },
-  .cmds = {
-    .prepare = NULL,
-    .help = NULL,
-    .run = NULL,
-    .cleanup = NULL
+  {
+    NULL,NULL,NULL,NULL
   },
-  .args = cpu_args,
+  cpu_args,
   {NULL, NULL}
 };
 

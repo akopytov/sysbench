@@ -94,10 +94,16 @@ static int sb_lua_op_thread_done(int);
 static void sb_lua_op_print_stats(void);
 
 static sb_operations_t lua_ops = {
-  .init = &sb_lua_init,
-  .get_request = &sb_lua_get_request,
-  .execute_request = &sb_lua_op_execute_request,
-  .done = &sb_lua_done
+   &sb_lua_init,
+   NULL,
+   NULL,
+   NULL,
+   &sb_lua_get_request,
+   &sb_lua_op_execute_request,
+   NULL,
+   NULL,
+   NULL,
+   &sb_lua_done
 };
 
 /* Main (global) interpreter state */
@@ -240,7 +246,7 @@ int sb_lua_op_execute_request(sb_request_t *sb_req, int thread_id)
 {
   log_msg_t           msg;
   log_msg_oper_t      op_msg;
-  uint                restart;
+  unsigned int         restart;
   lua_State           *L = states[thread_id];
 
   (void)sb_req; /* unused */

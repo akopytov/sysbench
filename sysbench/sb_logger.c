@@ -18,6 +18,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#ifdef _WIN32
+#include "sb_win.h"
+#endif
 
 #ifdef STDC_HEADERS
 # include <stdio.h>
@@ -107,13 +110,13 @@ static sb_arg_t text_handler_args[] =
   
 
 static log_handler_t text_handler = {
-  .ops = {
-    .init = &text_handler_init,
-    .process = &text_handler_process,
-    .done = NULL,
+  {
+    &text_handler_init,
+    &text_handler_process,
+    NULL,
   },
-  .args = text_handler_args,
-  .listitem = {NULL, NULL}
+  text_handler_args,
+  {0,0}
 };
 
 /* Operation start/stop messages handler */
@@ -131,13 +134,13 @@ static sb_arg_t oper_handler_args[] =
 };
 
 static log_handler_t oper_handler = {
-  .ops = {
-    .init = oper_handler_init,
-    .process = &oper_handler_process,
-    .done = oper_handler_done,
+  {
+    oper_handler_init,
+    &oper_handler_process,
+    oper_handler_done,
   },
-  .args = oper_handler_args,
-  .listitem = {NULL, NULL}
+  oper_handler_args,
+  {0,0}
 };
 
 
@@ -310,19 +313,30 @@ void log_errno(log_msg_priority_t priority, const char *fmt, ...)
   int            n;
   int            old_errno;
   char           *tmp;
-  
+
+#ifdef _WIN32
+  LPVOID         lpMsgBuf;
+  old_errno = GetLastError();
+  FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
+                FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                FORMAT_MESSAGE_IGNORE_INSERTS,
+                NULL, old_errno,
+                0, (LPTSTR)&lpMsgBuf, 0, NULL);
+  tmp = (char *)lpMsgBuf;
+#else
   old_errno = errno;
 #ifdef HAVE_STRERROR_R
 #ifdef STRERROR_R_CHAR_P
-  tmp = strerror_r(old_errno, errbuf, ERROR_BUFFER_SIZE);
+  tmp = strerror_r(old_errno, errbuf, sizeof(errbuf));
 #else
-  strerror_r(old_errno, errbuf, ERROR_BUFFER_SIZE);
+  strerror_r(old_errno, errbuf, sizeof(errbuf));
   tmp = errbuf;
 #endif /* STRERROR_R_CHAR_P */
 #else /* !HAVE_STRERROR_P */
   strncpy(errbuf, strerror(old_errno), sizeof(errbuf));
   tmp = errbuf;
-#endif
+#endif /* HAVE_STRERROR_P */
+#endif /* WIN32 */
   
   va_start(ap, fmt);
   n = vsnprintf(buf, TEXT_BUFFER_SIZE, fmt, ap);
@@ -331,6 +345,10 @@ void log_errno(log_msg_priority_t priority, const char *fmt, ...)
     return;
   snprintf(buf + n, TEXT_BUFFER_SIZE - n, " errno = %d (%s)", old_errno,
            tmp);
+
+#ifdef _WIN32
+  LocalFree(lpMsgBuf);
+#endif
   
   log_text(priority, "%s", buf);
 }
@@ -406,7 +424,8 @@ int text_handler_process(log_msg_t *msg)
   }
   
   printf("%s%s", prefix, text_msg->text);
-
+  fflush(stdout);
+  
   return 0;
 }
 

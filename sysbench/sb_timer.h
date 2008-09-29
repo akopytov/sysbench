@@ -22,6 +22,10 @@
 # include "config.h"
 #endif
 
+#ifdef _WIN32
+#include "sb_win.h"
+#endif
+
 #ifdef TIME_WITH_SYS_TIME
 # include <sys/time.h>
 # include <time.h>
