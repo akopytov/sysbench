@@ -65,7 +65,8 @@ static sb_test_t mutex_test =
      mutex_print_mode,
      mutex_get_request,
      mutex_execute_request,
-	 NULL,
+     NULL,
+     NULL,
      NULL,
      mutex_done
   },

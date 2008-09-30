@@ -241,6 +241,7 @@ static sb_test_t fileio_test =
 #else
      NULL,
 #endif
+    NULL,
     file_done
   },
   {

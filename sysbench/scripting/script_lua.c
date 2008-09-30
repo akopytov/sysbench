@@ -223,6 +223,9 @@ int script_load_lua(const char *testname, sb_test_t *test)
 
 int sb_lua_init(void)
 {
+  db_driver = db_init(NULL);
+  if (db_driver == NULL)
+    return 1;
   return 0;
 }
 
@@ -392,6 +395,13 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
     lua_setglobal(state, opt->name);
   }
   
+  /* Export DB driver name */
+  if (db_driver)
+  {
+    lua_pushstring(state, db_driver->sname);
+    lua_setglobal(state, "db_driver");
+  }
+
   /* Export functions */
   lua_pushcfunction(state, sb_lua_rand);
   lua_setglobal(state, "sb_rand");
@@ -537,15 +547,6 @@ int sb_lua_db_connect(lua_State *L)
   sb_lua_ctxt_t *ctxt;
   
   ctxt = sb_lua_get_context(L);
-
-  if (db_driver == NULL)
-  {
-    db_driver = db_init(NULL);
-    if (db_driver == NULL)
-      lua_error(L);
-    lua_pushstring(L, db_driver->sname);
-    lua_setglobal(L, "db_driver");
-  }
 
   ctxt->con = db_connect(db_driver);
   if (ctxt->con == NULL)

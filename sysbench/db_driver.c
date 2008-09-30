@@ -24,6 +24,12 @@
 #ifdef STDC_HEADERS
 # include <ctype.h>
 #endif
+#ifdef HAVE_STRING_H
+# include <string.h>
+#endif
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif
 
 #include "db_driver.h"
 #include "sb_list.h"

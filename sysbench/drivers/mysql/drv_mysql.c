@@ -124,7 +124,8 @@ static drv_caps_t mysql_drv_caps =
   0,
   1,
   0,
-  1,
+  0,
+  1
 };
 
 
