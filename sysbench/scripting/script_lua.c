@@ -115,6 +115,9 @@ static db_driver_t *db_driver;
 /* Variable with unique address to store per-state data */
 static const char sb_lua_ctxt_key;
 
+/* Control variable for sb_lua_db_init_once() */
+static pthread_once_t db_init_control = PTHREAD_ONCE_INIT;
+
 /* Lua test commands */
 static int sb_lua_cmd_prepare(void);
 static int sb_lua_cmd_cleanup(void);
@@ -223,9 +226,6 @@ int script_load_lua(const char *testname, sb_test_t *test)
 
 int sb_lua_init(void)
 {
-  db_driver = db_init(NULL);
-  if (db_driver == NULL)
-    return 1;
   return 0;
 }
 
@@ -395,13 +395,6 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
     lua_setglobal(state, opt->name);
   }
   
-  /* Export DB driver name */
-  if (db_driver)
-  {
-    lua_pushstring(state, db_driver->sname);
-    lua_setglobal(state, "db_driver");
-  }
-
   /* Export functions */
   lua_pushcfunction(state, sb_lua_rand);
   lua_setglobal(state, "sb_rand");
@@ -542,12 +535,29 @@ int sb_lua_cmd_help(void)
   return 0;
 }
 
+
+/* init_routine for pthread_once() */
+
+
+static void sb_lua_db_init_once(void)
+{
+  if (db_driver == NULL)
+    db_driver = db_init(NULL);
+}
+
 int sb_lua_db_connect(lua_State *L)
 {
   sb_lua_ctxt_t *ctxt;
   
   ctxt = sb_lua_get_context(L);
 
+  /* Initialize the DB driver once for all threads */
+  pthread_once(&db_init_control, sb_lua_db_init_once);
+  if (db_driver == NULL)
+    lua_error(L);
+  lua_pushstring(L, db_driver->sname);
+  lua_setglobal(L, "db_driver");
+  
   ctxt->con = db_connect(db_driver);
   if (ctxt->con == NULL)
     lua_error(L);

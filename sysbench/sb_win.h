@@ -70,6 +70,16 @@ typedef struct
 	char unused;
 }pthread_mutexattr_t;
 
+
+typedef volatile LONG pthread_once_t;
+extern int pthread_once(pthread_once_t *once_control, 
+    void (*init_routine)(void));
+
+#define PTHREAD_ONCE_INIT  0
+#define PTHREAD_ONCE_INPROGRESS 1
+#define PTHREAD_ONCE_DONE 2
+
+
 extern int pthread_attr_init(pthread_attr_t *attr);
 extern int pthread_cond_destroy(pthread_cond_t *cond);
 extern int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr);

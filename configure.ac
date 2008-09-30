@@ -171,6 +171,10 @@ thr_setconcurrency \
 valloc \
 ])
 
+AC_CHECK_FUNC(pthread_once, , 
+              AC_MSG_ERROR([*** pthread_once() is not available on this platform ***])
+)
+
 if test "x$GCC" = "xyes"; then
     AM_CFLAGS="-W -Wall -Wpointer-arith -Wbad-function-cast \
 -Wstrict-prototypes -Wnested-externs -Winline \

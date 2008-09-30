@@ -216,6 +216,37 @@ int pthread_join(pthread_t pthread, void **value_ptr)
 
 }
 
+/*
+ One time initialization. For simplicity, we assume initializer thread
+ does not exit within init_routine().
+*/
+int pthread_once(pthread_once_t *once_control, 
+    void (*init_routine)(void))
+{
+  LONG state = InterlockedCompareExchange(once_control, PTHREAD_ONCE_INPROGRESS,
+                                          PTHREAD_ONCE_INIT);
+  switch(state)
+  {
+  case PTHREAD_ONCE_INIT:
+    /* This is initializer thread */
+    (*init_routine)();
+    *once_control = PTHREAD_ONCE_DONE;
+    break;
+
+  case PTHREAD_ONCE_INPROGRESS:
+    /* init_routine in progress. Wait for its completion */
+    while(*once_control == PTHREAD_ONCE_INPROGRESS)
+    {
+      Sleep(1);
+    }
+    break;
+  case PTHREAD_ONCE_DONE:
+    /* Nothing to do */
+    break;
+  }
+  return 0;
+}
+
 #include <time.h>
 int gettimeofday(struct timeval * tp, void * tzp)
 {
