@@ -249,7 +249,7 @@ unsigned long long sb_opt_to_size(option_t *opt)
     if (rc == 2)
     {
       for (n = 0; sizemods[n] != '\0'; n++)
-        if (mult == sizemods[n])
+        if (toupper(mult) == sizemods[n])
           break;
       if (sizemods[n] != '\0')
       {

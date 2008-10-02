@@ -235,8 +235,8 @@ int mysql_drv_init(void)
     use_ps = 1;
 #endif
 
-  DEBUG("mysql_library_init(%d, %p, %p)", -1, NULL, NULL);
-  mysql_library_init(-1, NULL, NULL);
+  DEBUG("mysql_library_init(%d, %p, %p)", 0, NULL, NULL);
+  mysql_library_init(0, NULL, NULL);
   
   return 0;
 }

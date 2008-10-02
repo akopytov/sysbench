@@ -95,7 +95,7 @@ sb_arg_t general_args[] =
   {"num-threads", "number of threads to use", SB_ARG_TYPE_INT, "1"},
   {"max-requests", "limit for total number of requests", SB_ARG_TYPE_INT, "10000"},
   {"max-time", "limit for total execution time in seconds", SB_ARG_TYPE_INT, "0"},
-  {"thread-stack-size", "size of stack per thread", SB_ARG_TYPE_SIZE, "32K"},
+  {"thread-stack-size", "size of stack per thread", SB_ARG_TYPE_SIZE, "64K"},
   {"test", "test to run", SB_ARG_TYPE_STRING, NULL},
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
