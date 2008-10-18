@@ -17,4 +17,4 @@
 noinst_LIBRARIES = libsboracle.a
 
 libsboracle_a_SOURCES = drv_oracle.c
-libsboracle_a_CPPFLAGS = $(ORA_CFLAGS) -I../.. $(AM_CPPFLAGS)
+libsboracle_a_CPPFLAGS = $(ORA_CFLAGS) $(AM_CPPFLAGS)

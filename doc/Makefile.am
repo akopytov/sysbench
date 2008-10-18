@@ -2,12 +2,14 @@ XSLTPROC=xsltproc
 XSLTPROC_FLAGS=@XSLTPROC_FLAGS@
 XHTML_STYLESHEET=$(srcdir)/xsl/xhtml.xsl
 CHUNK_XHTML_STYLESHEET=$(srcdir)/xsl/xhtml-chunk.xsl
-XML_CATALOG_FILES=xsl/catalog.xml
+XML_CATALOG_FILES=$(srcdir)/xsl/catalog.xml
 
 htmldir = $(prefix)/share/doc/sysbench
 dist_html_DATA = manual.html
 
 EXTRA_DIST=manual.xml xsl/catalog.xml.in xsl/xhtml-chunk.xsl xsl/xhtml-common.xsl xsl/xhtml.xsl
+
+SUBDIRS = xsl
 
 if have_xsltproc
 

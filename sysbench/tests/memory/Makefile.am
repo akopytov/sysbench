@@ -18,4 +18,4 @@ noinst_LIBRARIES = libsbmemory.a
 
 libsbmemory_a_SOURCES = sb_memory.c ../sb_memory.h
 
-libsbmemory_a_CPPFLAGS = -I../.. $(AM_CPPFLAGS)
+libsbmemory_a_CPPFLAGS = $(AM_CPPFLAGS)

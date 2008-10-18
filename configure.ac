@@ -183,7 +183,7 @@ fi
 
 AM_CFLAGS="$AM_CFLAGS $PTHREAD_CFLAGS"
 
-AM_CPPFLAGS="-D_REENTRANT -D_XOPEN_SOURCE=500 -D_GNU_SOURCE"
+AM_CPPFLAGS='-D_REENTRANT -D_XOPEN_SOURCE=500 -D_GNU_SOURCE -I$(top_srcdir)/sysbench'
 AM_LDFLAGS="$PTHREAD_LIBS"
 
 AC_SUBST(AM_CFLAGS)
@@ -192,6 +192,7 @@ AC_SUBST(AM_LDFLAGS)
 
 AC_OUTPUT([
 Makefile
+doc/xsl/Makefile
 doc/xsl/catalog.xml
 doc/Makefile
 scripts/Makefile
@@ -206,6 +207,7 @@ sysbench/tests/fileio/Makefile
 sysbench/tests/memory/Makefile
 sysbench/tests/threads/Makefile
 sysbench/tests/mutex/Makefile
+sysbench/tests/db/Makefile
 sysbench/scripting/Makefile
 sysbench/scripting/lua/Makefile
 sysbench/scripting/lua/src/Makefile

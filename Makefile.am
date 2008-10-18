@@ -16,4 +16,4 @@
 
 SUBDIRS = doc scripts sysbench
 
-EXTRA_DIST = autogen.sh README ChangeLog
+EXTRA_DIST = autogen.sh README README-WIN.txt ChangeLog

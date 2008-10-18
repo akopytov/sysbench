@@ -17,4 +17,4 @@
 noinst_LIBRARIES = libsbpgsql.a
 
 libsbpgsql_a_SOURCES = drv_pgsql.c
-libsbpgsql_a_CPPFLAGS = $(PGSQL_CFLAGS) -I../.. $(AM_CPPFLAGS)
+libsbpgsql_a_CPPFLAGS = $(PGSQL_CFLAGS) $(AM_CPPFLAGS)

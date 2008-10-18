@@ -1,4 +1,4 @@
-# Copyright (C) 2006 MySQL AB
+# Copyright (C) 2008 MySQL AB
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,15 +14,4 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-if USE_LUA
-SUBDIRS = lua .
-lua_sources = script_lua.c script_lua.h
-AM_CPPFLAGS += -I$(srcdir)/lua/src
-endif
-
-noinst_LIBRARIES = libsbscript.a
-
-libsbscript_a_SOURCES = sb_script.c sb_script.h $(lua_sources)
-
-libsbscript_a_CPPFLAGS = $(AM_CPPFLAGS)
-
+EXTRA_DIST=catalog.xml.in xhtml-chunk.xsl xhtml-common.xsl xhtml.xsl

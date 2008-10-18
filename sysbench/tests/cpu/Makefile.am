@@ -18,4 +18,4 @@ noinst_LIBRARIES = libsbcpu.a
 
 libsbcpu_a_SOURCES = sb_cpu.c ../sb_cpu.h
 
-libsbcpu_a_CPPFLAGS = -I../.. $(AM_CPPFLAGS)
+libsbcpu_a_CPPFLAGS = $(AM_CPPFLAGS)
