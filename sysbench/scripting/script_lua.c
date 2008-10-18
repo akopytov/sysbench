@@ -41,10 +41,17 @@
 
 /* Macros to call Lua functions */
 #define CALL_ERROR(L, name)           \
-  do {                                \
-    log_text(LOG_FATAL, "failed to execute function `%s': %s", \
-             name, lua_tostring(L, -1));                       \
+  do { \
+    const char *err = lua_tostring(L, -1); \
+    log_text(LOG_FATAL, "failed to execute function `%s': %s",   \
+             name, err ? err : "(null)");                               \
   } while (0)
+
+#define CHECK_CONNECTION(L, ctxt) \
+  do { \
+    if (ctxt->con == NULL) \
+      luaL_error(L, "Uninitialized database connection"); \
+  } while(0);
 
 /* Interpreter context */
 
@@ -554,13 +561,13 @@ int sb_lua_db_connect(lua_State *L)
   /* Initialize the DB driver once for all threads */
   pthread_once(&db_init_control, sb_lua_db_init_once);
   if (db_driver == NULL)
-    lua_error(L);
+    luaL_error(L, "DB initialization failed");
   lua_pushstring(L, db_driver->sname);
   lua_setglobal(L, "db_driver");
   
   ctxt->con = db_connect(db_driver);
   if (ctxt->con == NULL)
-    lua_error(L);
+    luaL_error(L, "Failed to connect to the database");
   db_set_thread(ctxt->con, ctxt->thread_id);
   
   return 0;
@@ -593,7 +600,7 @@ int sb_lua_db_query(lua_State *L)
   query = luaL_checkstring(L, 1);
   rs = db_query(ctxt->con, query);
   if (rs == NULL)
-    lua_error(L);
+    luaL_error(L, "Database query failed");
 
   db_store_results(rs);
   db_free_results(rs);
@@ -613,10 +620,7 @@ int sb_lua_db_bulk_insert_init(lua_State *L)
     
   query = luaL_checkstring(L, 1);
   if (db_bulk_insert_init(ctxt->con, query))
-  {
-    lua_pushstring(L, "db_bulk_insert_init() failed");
-    lua_error(L);
-  }
+    luaL_error(L, "db_bulk_insert_init() failed");
   
   return 0;
 }
@@ -628,12 +632,11 @@ int sb_lua_db_bulk_insert_next(lua_State *L)
 
   ctxt = sb_lua_get_context(L);
 
-  if (ctxt->con == NULL)
-    lua_error(L);
+  CHECK_CONNECTION(L, ctxt);
     
   query = luaL_checkstring(L, 1);
   if (db_bulk_insert_next(ctxt->con, query))
-    lua_error(L);
+    luaL_error(L, "db_bulk_insert_next() failed");
   
   return 0;
 }
@@ -644,8 +647,7 @@ int sb_lua_db_bulk_insert_done(lua_State *L)
 
   ctxt = sb_lua_get_context(L);
 
-  if (ctxt->con == NULL)
-    lua_error(L);
+  CHECK_CONNECTION(L, ctxt);
     
   db_bulk_insert_done(ctxt->con);
   
@@ -672,7 +674,7 @@ int sb_lua_db_prepare(lua_State *L)
   
   stmt->ptr = db_prepare(ctxt->con, query);
   if (stmt->ptr == NULL)
-    lua_error(L);
+    luaL_error(L, "db_prepare() failed");
 
   return 1;
 }
@@ -687,28 +689,21 @@ int sb_lua_db_bind_param(lua_State *L)
 
   ctxt = sb_lua_get_context(L);
 
-  if (ctxt->con == NULL)
-    lua_error(L);
+  CHECK_CONNECTION(L, ctxt);
 
   stmt = (sb_lua_db_stmt_t *)luaL_checkudata(L, 1, "sysbench.stmt");
   luaL_argcheck(L, stmt != NULL, 1, "prepared statement expected");
 
   if (!lua_istable(L, 2))
-  {
-    lua_pushstring(L, "table expected");
-    lua_error(L);
-  }
+    luaL_error(L, "table was expected");
   /* Get table size */
   n = sb_lua_table_size(L, 2);
   if (!n)
-  {
-    lua_pushstring(L, "table is empty");
-    lua_error(L);
-  }
+    luaL_error(L, "table is empty");
   binds = (db_bind_t *)calloc(n, sizeof(db_bind_t));
   stmt->params = (sb_lua_bind_t *)calloc(n, sizeof(sb_lua_bind_t));
   if (binds == NULL || stmt->params == NULL)
-    lua_error(L);
+    luaL_error(L, "memory allocation failure");
 
   lua_pushnil(L);
   for (i = 0; i < n; i++)
@@ -769,28 +764,21 @@ int sb_lua_db_bind_result(lua_State *L)
 
   ctxt = sb_lua_get_context(L);
 
-  if (ctxt->con == NULL)
-    lua_error(L);
+  CHECK_CONNECTION(L, ctxt);
 
   stmt = (sb_lua_db_stmt_t *)luaL_checkudata(L, 1, "sysbench.stmt");
   luaL_argcheck(L, stmt != NULL, 1, "prepared statement expected");
 
   if (!lua_istable(L, 2))
-  {
-    lua_pushstring(L, "table expected");
-    lua_error(L);
-  }
+    luaL_error(L, "table was expected");
   /* Get table size */
   n = sb_lua_table_size(L, 2);
   if (!n)
-  {
-    lua_pushstring(L, "table is empty");
-    lua_error(L);
-  }
+    luaL_error(L, "table is empty");
   binds = (db_bind_t *)calloc(n, sizeof(db_bind_t));
   stmt->results = (sb_lua_bind_t *)calloc(n, sizeof(sb_lua_bind_t));
   if (binds == NULL || stmt->results == NULL)
-    lua_error(L);
+    luaL_error(L, "memory allocation failure");
 
   lua_pushnil(L);
   for (i = 0; i < n; i++)
@@ -855,8 +843,7 @@ int sb_lua_db_execute(lua_State *L)
 
   ctxt = sb_lua_get_context(L);
 
-  if (ctxt->con == NULL)
-    lua_error(L);
+  CHECK_CONNECTION(L, ctxt);
 
   stmt = (sb_lua_db_stmt_t *)luaL_checkudata(L, 1, "sysbench.stmt");
   luaL_argcheck(L, stmt != NULL, 1, "prepared statement expected");
@@ -864,10 +851,7 @@ int sb_lua_db_execute(lua_State *L)
   /* Get params table */
   lua_rawgeti(L, LUA_REGISTRYINDEX, stmt->param_ref);
   if (!lua_isnil(L, -1) && !lua_istable(L, -1))
-  {
-    lua_pushstring(L, "table expected");
-    lua_error(L);
-  }
+    luaL_error(L, "table expected");
 
   for (i = 0; i < stmt->nparams; lua_pop(L, 1), i++)
   {
@@ -897,9 +881,8 @@ int sb_lua_db_execute(lua_State *L)
         param->buflen = length;
         break;
       default:
-        lua_pushfstring(L, "Unsupported variable type: %s",
-                        lua_typename(L, lua_type(L, -1)));
-        lua_error(L);
+        luaL_error(L, "Unsupported variable type: %s",
+                   lua_typename(L, lua_type(L, -1)));
     }
   }
   
@@ -908,7 +891,7 @@ int sb_lua_db_execute(lua_State *L)
   {
     binds = (db_bind_t *)calloc(stmt->nparams, sizeof(db_bind_t));
     if (binds == NULL)
-      lua_error(L);
+      luaL_error(L, "Memory allocation failure");
     
     for (i = 0; i < stmt->nparams; i++)
     {
@@ -928,13 +911,12 @@ int sb_lua_db_execute(lua_State *L)
           binds[i].is_null = 0;
           break;
         default:
-          lua_pushstring(L, "Unsupported variable type");
-          lua_error(L);
+          luaL_error(L, "Unsupported variable type");
       }
     }
     
     if (db_bind_param(stmt->ptr, binds, stmt->nparams))
-      lua_error(L);
+      luaL_error(L, "db_bind_param() failed");
     free(binds);
   }
 
@@ -966,8 +948,7 @@ int sb_lua_db_close(lua_State *L)
   
   ctxt = sb_lua_get_context(L);
 
-  if (ctxt->con == NULL)
-    lua_error(L);
+  CHECK_CONNECTION(L, ctxt);
 
   stmt = (sb_lua_db_stmt_t *)luaL_checkudata(L, 1, "sysbench.stmt");
   luaL_argcheck(L, stmt != NULL, 1, "prepared statement expected");
@@ -993,8 +974,7 @@ int sb_lua_db_store_results(lua_State *L)
 
   ctxt = sb_lua_get_context(L);
 
-  if (ctxt->con == NULL)
-    lua_error(L);
+  CHECK_CONNECTION(L, ctxt);
 
   rs = (sb_lua_db_rs_t *)luaL_checkudata(L, 1, "sysbench.rs");
   luaL_argcheck(L, rs != NULL, 1, "result set expected");
@@ -1011,8 +991,7 @@ int sb_lua_db_free_results(lua_State *L)
 
   ctxt = sb_lua_get_context(L);
 
-  if (ctxt->con == NULL)
-    lua_error(L);
+  CHECK_CONNECTION(L, ctxt);
 
   rs = (sb_lua_db_rs_t *)luaL_checkudata(L, 1, "sysbench.rs");
   luaL_argcheck(L, rs != NULL, 1, "result set expected");

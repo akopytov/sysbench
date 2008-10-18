@@ -52,6 +52,8 @@
 
 #define DEBUG(format, ...) do { if (args.debug) log_text(LOG_DEBUG, format, __VA_ARGS__); } while (0)
 
+#define SAFESTR(s) ((s != NULL) ? (s) : "(null)")
+
 /* FIXME */
 db_bind_t *gresults;
 
@@ -295,13 +297,17 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",
         con,
-        host,
-        args.user,
-        args.password,
-        args.db,
+        SAFESTR(host),
+        SAFESTR(args.user),
+        SAFESTR(args.password),
+        SAFESTR(args.db),
         args.port,
-        args.socket,
-        (MYSQL_VERSION_ID >= 50000) ? "CLIENT_MULTI_STATEMENTS" : "0"
+        SAFESTR(args.socket),
+#if MYSQL_VERSION_ID >= 50000
+        "CLIENT_MULTI_STATEMENTS"
+#else
+        "0"
+#endif
         );
   if (!mysql_real_connect(con,
                          host,
