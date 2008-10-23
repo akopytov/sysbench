@@ -303,11 +303,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
         SAFESTR(args.db),
         args.port,
         SAFESTR(args.socket),
-#if MYSQL_VERSION_ID >= 50000
-        "CLIENT_MULTI_STATEMENTS"
-#else
-        "0"
-#endif
+        (MYSQL_VERSION_ID >= 50000) ? "CLIENT_MULTI_STATEMENTS" : "0"
         );
   if (!mysql_real_connect(con,
                          host,
