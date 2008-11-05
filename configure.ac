@@ -156,6 +156,7 @@ AC_CHECK_DECL([clock_gettime],
 AC_SEARCH_LIBS([clock_gettime], [rt]) 
 
 AC_CHECK_FUNCS([ \
+directio \
 fdatasync \
 gettimeofday \
 memalign \

@@ -68,6 +68,7 @@
 #ifdef _WIN32
 typedef HANDLE FILE_DESCRIPTOR;
 #define VALID_FILE(fd) (fd != INVALID_HANDLE_VALUE)
+#define SB_INVALID_FILE INVALID_HANDLE_VALUE
 #define FD_FMT "%p"
 #define MAP_SHARED 0
 #define PROT_READ  1
@@ -80,6 +81,7 @@ int munmap(void *addr, size_t size);
 #else
 typedef int FILE_DESCRIPTOR;
 #define VALID_FILE(fd) (fd >= 0)
+#define SB_INVALID_FILE (-1)
 #define FD_FMT "%d"
 #endif
 
@@ -110,6 +112,13 @@ typedef enum
   FILE_IO_MODE_MMAP
 } file_io_mode_t;
 
+typedef enum {
+  SB_FILE_FLAG_NORMAL,
+  SB_FILE_FLAG_SYNC,
+  SB_FILE_FLAG_DSYNC,
+  SB_FILE_FLAG_DIRECTIO
+} file_flags_t;
+
 #ifdef HAVE_LIBAIO
 /* Per-thread async I/O context */
 typedef struct
@@ -135,7 +144,7 @@ static unsigned int      num_files;
 static long long         total_size;
 static long long         file_size;
 static int               file_block_size;
-static int               file_extra_flags;
+static file_flags_t      file_extra_flags;
 static int               file_fsync_freq;
 static int               file_fsync_all;
 static int               file_fsync_end;
@@ -287,6 +296,7 @@ static unsigned long sb_getpagesize(void);
 static unsigned long sb_get_allocation_granularity(void);
 static void *sb_memalign(size_t size);
 static void sb_free_memaligned(void *buf);
+static FILE_DESCRIPTOR sb_open(const char *name);
 
 int register_test_fileio(sb_list_t *tests)
 {
@@ -331,15 +341,8 @@ int file_prepare(void)
     if (test_mode == MODE_WRITE)  
       unlink(file_name);
 
-    log_text(LOG_DEBUG, "Opening file: %s",file_name);
-#ifndef _WIN32
-    files[i] = open(file_name, O_CREAT | O_RDWR | file_extra_flags,
-                    S_IRUSR | S_IWUSR);
-#else
-    files[i] = CreateFile(file_name, GENERIC_READ|GENERIC_WRITE, 0, NULL,
-      OPEN_ALWAYS, file_extra_flags? file_extra_flags : FILE_ATTRIBUTE_NORMAL,
-      NULL);
-#endif
+    log_text(LOG_DEBUG, "Opening file: %s", file_name);
+    files[i] = sb_open(file_name);
     if (!VALID_FILE(files[i]))
     {
       log_errno(LOG_FATAL, "Cannot open file");
@@ -1622,35 +1625,13 @@ int parse_arguments(void)
 
   mode = sb_get_value_string("file-extra-flags");
   if (mode == NULL || !strlen(mode))
-    file_extra_flags = 0;
+    file_extra_flags = SB_FILE_FLAG_NORMAL;
   else if (!strcmp(mode, "sync"))
-  {
-#ifdef _WIN32
-    file_extra_flags = FILE_FLAG_WRITE_THROUGH;
-#else
-    file_extra_flags = O_SYNC;
-#endif
-  }
+    file_extra_flags = SB_FILE_FLAG_SYNC;
   else if (!strcmp(mode, "dsync"))
-  {
-#ifdef O_DSYNC
-    file_extra_flags = O_DSYNC;
-#else
-    log_text(LOG_FATAL, "O_DSYNC is not supported on this platform.");
-    return 1;
-#endif
-  }
+    file_extra_flags = SB_FILE_FLAG_DSYNC;
   else if (!strcmp(mode, "direct"))
-  {
-#ifdef _WIN32
-    file_extra_flags = FILE_FLAG_NO_BUFFERING;
-#elif defined(O_DIRECT)
-    file_extra_flags = O_DIRECT;
-#else
-    log_text(LOG_FATAL, "O_DIRECT is not supported on this platform.");
-    return 1;
-#endif
-  }
+    file_extra_flags = SB_FILE_FLAG_DIRECTIO;
   else
   {
     log_text(LOG_FATAL, "Invalid value for file-extra-flags: %s", mode);
@@ -1813,6 +1794,71 @@ static void sb_free_memaligned(void *buf)
   free(buf);
 #endif
 }
+
+static FILE_DESCRIPTOR sb_open(const char *name)
+{
+  FILE_DESCRIPTOR file;
+  int flags = 0;
+
+  switch (file_extra_flags) {
+  case SB_FILE_FLAG_NORMAL:
+#ifdef _WIN32
+    flags = FILE_ATTRIBUTE_NORMAL;
+#endif
+    break;
+  case SB_FILE_FLAG_SYNC:
+#ifdef _WIN32
+    flags = FILE_FLAG_WRITE_THROUGH;
+#else
+    flags = O_SYNC;
+#endif
+    break;
+  case SB_FILE_FLAG_DSYNC:
+#ifdef O_DSYNC
+    flags = O_DSYNC;
+#else
+    log_text(LOG_FATAL,
+             "--file-extra-flags=dsync is not supported on this platform.");
+    return SB_INVALID_FILE;
+#endif
+    break;
+  case SB_FILE_FLAG_DIRECTIO:
+#ifdef HAVE_DIRECTIO
+    /* Will call directio(3) later */
+#elif defined(O_DIRECT)
+    flags = O_DIRECT;
+#elif defined _WIN32
+    flags = FILE_FLAG_NO_BUFFERING;
+#else
+    log_text(LOG_FATAL,
+             "--file-extra-flags=direct is not supported on this platform.");
+    return SB_INVALID_FILE;
+#endif
+    break;
+  default:
+    log_text(LOG_FATAL, "Unknown extra flags value: %d", file_extra_flags);
+    return SB_INVALID_FILE;
+  }
+
+#ifndef _WIN32
+  file = open(name, O_CREAT | O_RDWR | flags,
+              S_IRUSR | S_IWUSR);
+#else
+  file = CreateFile(name, GENERIC_READ|GENERIC_WRITE, 0, NULL,
+                    OPEN_ALWAYS, flags, NULL);
+#endif
+
+#ifdef HAVE_DIRECTIO
+  if (VALID_FILE(file) && directio(file, DIRECTIO_ON))
+  {
+    log_errno(LOG_FATAL, "directio() failed");
+    return SB_INVALID_FILE;
+  }
+#endif
+
+  return file;
+}
+
 
 /* Fill buffer with random values and write checksum */
 

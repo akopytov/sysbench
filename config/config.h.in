@@ -15,6 +15,9 @@
    don't. */
 #undef HAVE_DECL_STRERROR_R
 
+/* Define to 1 if you have the `directio' function. */
+#undef HAVE_DIRECTIO
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
