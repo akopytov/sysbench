@@ -7,7 +7,7 @@ XML_CATALOG_FILES=$(srcdir)/xsl/catalog.xml
 htmldir = $(prefix)/share/doc/sysbench
 dist_html_DATA = manual.html
 
-EXTRA_DIST=manual.xml xsl/catalog.xml.in xsl/xhtml-chunk.xsl xsl/xhtml-common.xsl xsl/xhtml.xsl
+EXTRA_DIST=manual.xml
 
 SUBDIRS = xsl
 
