@@ -579,7 +579,8 @@ int sb_lua_db_disconnect(lua_State *L)
   
   ctxt = sb_lua_get_context(L);
 
-  db_disconnect(ctxt->con);
+  if (ctxt->con)
+    db_disconnect(ctxt->con);
 
   ctxt->con = NULL;
   

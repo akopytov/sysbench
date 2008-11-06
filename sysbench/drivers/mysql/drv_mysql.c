@@ -271,6 +271,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
     return 1;
   sb_conn->ptr = con;
   
+  DEBUG("mysql_init(%p)", con);
   mysql_init(con);
 
   pthread_mutex_lock(&hosts_mutex);
@@ -280,7 +281,6 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   host = SB_LIST_ENTRY(hosts_pos, value_t, listitem)->data;
   pthread_mutex_unlock(&hosts_mutex);
   
-  DEBUG("mysql_init(%p)", con);
   mysql_options(con, MYSQL_READ_DEFAULT_GROUP, "sysbench");
   DEBUG("mysql_options(%p, MYSQL_READ_DEFAULT_GROUP, \"sysbench\")", con);
 
