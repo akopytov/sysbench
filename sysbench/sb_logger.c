@@ -360,6 +360,11 @@ void log_errno(log_msg_priority_t priority, const char *fmt, ...)
 
 int text_handler_init(void)
 {
+#ifdef HAVE_SETVBUF
+  /* Set stdout to unbuffered mode */
+  setvbuf(stdout, NULL, _IONBF, 0);
+#endif
+  
   sb_globals.verbosity = sb_get_value_int("verbosity");
 
   if (sb_globals.verbosity > LOG_DEBUG)
@@ -424,7 +429,6 @@ int text_handler_process(log_msg_t *msg)
   }
   
   printf("%s%s", prefix, text_msg->text);
-  fflush(stdout);
   
   return 0;
 }
