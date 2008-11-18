@@ -416,6 +416,54 @@ sb_request_t file_get_seq_request(void)
     file_req->operation = FILE_OP_TYPE_WRITE;
   else     
     file_req->operation = FILE_OP_TYPE_READ;
+
+  pthread_mutex_lock(&fsync_mutex);
+
+  /* Do final fsync on all files and quit if we are done */
+  if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
+  {
+    /* no fsync for reads */
+    if (file_fsync_end && file_req->operation == FILE_OP_TYPE_WRITE &&
+        fsynced_file < num_files)
+    {
+      file_req->file_id = fsynced_file2;
+      file_req->pos = 0;
+      file_req->size = 0;
+      file_req->operation = FILE_OP_TYPE_FSYNC;
+      fsynced_file2++;
+    }
+    else 
+      sb_req.type = SB_REQ_TYPE_NULL;
+
+    pthread_mutex_unlock(&fsync_mutex);
+    return sb_req;
+  }
+
+  req_performed++;
+
+  /* See whether it's time to fsync file(s) */
+  if (file_fsync_freq != 0 && file_req->operation == FILE_OP_TYPE_WRITE &&
+      req_performed % file_fsync_freq == 0)
+  {
+    file_req->operation = FILE_OP_TYPE_FSYNC;
+    file_req->file_id = fsynced_file;
+    file_req->pos = 0;
+    file_req->size = 0;
+    fsynced_file++;
+    if (fsynced_file == num_files)
+      fsynced_file = 0;
+
+    pthread_mutex_unlock(&fsync_mutex);
+    return sb_req;
+  }
+  
+  /* Rewind to the first file if all files are processed */
+  if (current_file == num_files)
+  {
+    position= 0;
+    current_file= 0;
+  }
+  
   if (file_merged_requests > 0)
   {
     if (position + file_max_request_size <= file_size)
@@ -432,12 +480,8 @@ sb_request_t file_get_seq_request(void)
     file_req->pos = position;
   }
   
-  /* Advance pointers, if we're not in the fsync phase */ 
-  pthread_mutex_lock(&fsync_mutex);
-  if(current_file != num_files)
-    position += file_req->size;
   /* scroll to the next file if not already out of bound */
-  if (position == file_size && current_file != num_files)
+  if (position == file_size)
   {
     current_file++;
     position=0;
@@ -453,22 +497,6 @@ sb_request_t file_get_seq_request(void)
     return sb_req; /* This request is valid even for last file */
   }      
   
-  /* if we've done with all files stop */
-  if (current_file == num_files)
-  {
-    /* no fsync for reads */
-    if (file_fsync_end && file_req->operation == FILE_OP_TYPE_WRITE &&
-        fsynced_file < num_files)
-    {
-      file_req->file_id = fsynced_file;
-      file_req->pos = 0;
-      file_req->size = 0;
-      file_req->operation = FILE_OP_TYPE_FSYNC;
-      fsynced_file++;
-    }
-    else 
-      sb_req.type = SB_REQ_TYPE_NULL;
-  }  
   pthread_mutex_unlock(&fsync_mutex);
 
   if (sb_globals.validate)
@@ -510,7 +538,7 @@ sb_request_t file_get_rnd_request(void)
   }
 
   /* fsync all files (if requested by user) as soon as we are done */
-  if (req_performed == sb_globals.max_requests && sb_globals.max_requests > 0)
+  if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
   {
     if (file_fsync_end != 0 &&
         (real_mode == MODE_RND_WRITE || real_mode == MODE_RND_RW ||
@@ -539,23 +567,21 @@ sb_request_t file_get_rnd_request(void)
     is_dirty is only set if writes are done and cleared after all files
     are synced
   */
-  if(file_fsync_freq != 0 && is_dirty)
+  if(file_fsync_freq != 0 && is_dirty &&
+     req_performed % file_fsync_freq == 0)
   {
-    if (req_performed % file_fsync_freq == 0)
+    file_req->operation = FILE_OP_TYPE_FSYNC;  
+    file_req->file_id = fsynced_file;
+    file_req->pos = 0;
+    file_req->size = 0;
+    fsynced_file++;
+    if (fsynced_file == num_files)
     {
-      file_req->operation = FILE_OP_TYPE_FSYNC;  
-      file_req->file_id = fsynced_file;
-      file_req->pos = 0;
-      file_req->size = 0;
-      fsynced_file++;
-      if (fsynced_file == num_files)
-      {
-        fsynced_file = 0;
-        is_dirty = 0;
-      }
-      
-      return sb_req;
+      fsynced_file = 0;
+      is_dirty = 0;
     }
+      
+    return sb_req;
   }
 
   randnum=sb_rnd();
@@ -730,7 +756,7 @@ void file_print_mode(void)
     case MODE_RND_WRITE:
     case MODE_RND_READ:
     case MODE_RND_RW:
-      log_text(LOG_INFO, "Number of random requests for random IO: %d",
+      log_text(LOG_INFO, "Number of IO requests: %d",
                sb_globals.max_requests);
       log_text(LOG_INFO,
                "Read/Write ratio for combined random IO test: %2.2f",
