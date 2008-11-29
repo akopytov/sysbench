@@ -394,7 +394,8 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query)
         return 1;
       }
     }
-
+    stmt->query = strdup(query);
+    
     return 0;
   }
 
@@ -563,7 +564,8 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
       if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
           rc == ER_CHECKREAD)
         return SB_DB_ERROR_DEADLOCK;
-      log_text(LOG_ALERT, "failed to execute mysql_stmt_execute(): Err%d %s",
+      log_text(LOG_ALERT, "mysql_stmt_execute() for query '%s' failed: %d %s",
+               stmt->query,
                mysql_errno(con->ptr),
                mysql_error(con->ptr));
       return SB_DB_ERROR_FAILED;
@@ -801,6 +803,11 @@ int mysql_drv_free_results(db_result_set_t *rs)
 
 int mysql_drv_close(db_stmt_t *stmt)
 {
+  if (stmt->query)
+  {
+    free(stmt->query);
+    stmt->query = NULL;
+  }
 #ifdef HAVE_PS
   if (stmt->ptr == NULL)
     return 1;
