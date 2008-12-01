@@ -166,6 +166,7 @@ popen \
 posix_memalign \
 pthread_yield \
 _setjmp \
+setvbuf \
 sqrt \
 strdup \
 thr_setconcurrency \
