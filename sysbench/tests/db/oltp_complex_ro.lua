@@ -84,7 +84,7 @@ function thread_init(thread_id)
 
    if (db_driver == "mysql" and mysql_table_engine == "myisam") then
       begin_stmt = db_prepare("LOCK TABLES sbtest READ")
-      commit_stmt = db_prepare("LOCK TABLES sbtest READ")
+      commit_stmt = db_prepare("UNLOCK TABLES")
    else
       begin_stmt = db_prepare("BEGIN")
       commit_stmt = db_prepare("COMMIT")
