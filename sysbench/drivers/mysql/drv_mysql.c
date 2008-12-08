@@ -281,7 +281,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   host = SB_LIST_ENTRY(hosts_pos, value_t, listitem)->data;
   pthread_mutex_unlock(&hosts_mutex);
   
-#ifdef 0
+#if 0
   /*
     FIXME: the following leads to crash in the client lib.
     http://bugs.mysql.com/?id=40552
