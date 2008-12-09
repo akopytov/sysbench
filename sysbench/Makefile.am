@@ -21,7 +21,6 @@ bin_PROGRAMS = sysbench
 # The following check will be extended as new database drivers will be added
 if USE_MYSQL
 mysql_ldadd = drivers/mysql/libsbmysql.a $(MYSQL_LIBS)
-mysql_ldflags = -static
 endif
 
 if USE_ORACLE
@@ -43,4 +42,4 @@ db_driver.c
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     tests/memory/libsbmemory.a tests/cpu/libsbcpu.a \
     tests/mutex/libsbmutex.a scripting/libsbscript.a \
-    $(mysql_ldadd) $(pgsql_ldadd) $(ora_ldadd) $(lua_ldadd)
+    $(mysql_ldadd) $(pgsql_ldadd) $(ora_ldadd) $(lua_ldadd) $(EXTRA_LDFLAGS)

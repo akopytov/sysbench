@@ -10,6 +10,13 @@ AM_CONFIG_HEADER([config/config.h])
 
 # Checks for user arguments
 
+# Additional linker flags
+AC_ARG_WITH([extra-ldflags],
+              AC_HELP_STRING([--with-extra-ldflags], [additional linker flags, e.g. -all-static]),
+              EXTRA_LDFLAGS=$withval
+)
+AC_SUBST(EXTRA_LDFLAGS)
+
 # Check if we should compile with MySQL support
 AC_ARG_WITH([mysql], 
             AC_HELP_STRING([--with-mysql], [compile with MySQL support (default is enabled)]),
