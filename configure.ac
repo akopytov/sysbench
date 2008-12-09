@@ -204,7 +204,6 @@ Makefile
 doc/xsl/Makefile
 doc/xsl/catalog.xml
 doc/Makefile
-scripts/Makefile
 sysbench/Makefile
 sysbench/drivers/Makefile
 sysbench/drivers/mysql/Makefile

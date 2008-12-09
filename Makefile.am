@@ -14,6 +14,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-SUBDIRS = doc scripts sysbench
+SUBDIRS = doc sysbench
 
 EXTRA_DIST = autogen.sh README README-WIN.txt ChangeLog
