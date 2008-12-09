@@ -461,15 +461,17 @@ int oper_handler_init(void)
 
   if (batch_mode)
   {
+    int err;
     pthread_mutex_init(&batch_mutex, NULL);
     pthread_cond_init(&batch_cond, NULL);
 
     /* Create batch thread */
     pthread_attr_init(&batch_attr);
-    if (pthread_create(&batch_thread, &batch_attr, &batch_runner_proc, NULL)
+    if ((err = pthread_create(&batch_thread, &batch_attr, &batch_runner_proc, NULL))
         != 0)
     {
-      log_errno(LOG_FATAL, "Batch thread creation failed");
+      log_text(LOG_FATAL, "Batch thread creation failed, errno = %d (%s)",
+                err, strerror(err));
       return 1;
     }
     batch_status = BATCH_STATUS_STOP;
@@ -561,15 +563,17 @@ int oper_handler_done(void)
 
   if (batch_mode)
   {
+    int err;
     /* Stop the batch thread */
     pthread_mutex_lock(&batch_mutex);
     batch_status = BATCH_STATUS_STOP;
     pthread_cond_signal(&batch_cond);
     pthread_mutex_unlock(&batch_mutex);
 
-    if (pthread_join(batch_thread, NULL))
+    if ((err = pthread_join(batch_thread, NULL)))
     {
-      log_errno(LOG_FATAL, "Batch thread join failed");
+      log_text(LOG_FATAL, "Batch thread join failed, errno = %d (%s)",
+               err, strerror(err));
       return 1;
     }
 

@@ -412,7 +412,8 @@ void *runner_thread(void *arg)
 int run_test(sb_test_t *test)
 {
   unsigned int i;
-
+  int err;
+  
   /* initialize test */
   if (test->ops.init != NULL && test->ops.init() != 0)
     return 1;
@@ -461,10 +462,11 @@ int run_test(sb_test_t *test)
   {
     if (sb_globals.error)
       return 1;
-    if (pthread_create(&(threads[i].thread), &thread_attr, &runner_thread, 
-                       (void*)&(threads[i])) != 0)
+    if ((err = pthread_create(&(threads[i].thread), &thread_attr, &runner_thread, 
+                              (void*)&(threads[i]))) != 0)
     {
-      log_errno(LOG_FATAL, "Thread #%d creation failed", i);
+      log_text(LOG_FATAL, "Thread #%d creation failed, errno = %d (%s)",
+               i, err, strerror(err));
       return 1;
     }
   }
@@ -473,9 +475,10 @@ int run_test(sb_test_t *test)
   log_text(LOG_NOTICE, "Threads started!\n");  
   for(i = 0; i < sb_globals.num_threads; i++)
   {
-    if(pthread_join(threads[i].thread, NULL))
+    if((err = pthread_join(threads[i].thread, NULL)) != 0)
     {
-      log_errno(LOG_FATAL, "Thread #%d join failed", i);
+      log_text(LOG_FATAL, "Thread #%d join failed, errno = %d (%s)",
+               i, err, strerror(err));
       return 1;    
     }
   }
