@@ -42,4 +42,4 @@ db_driver.c
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     tests/memory/libsbmemory.a tests/cpu/libsbcpu.a \
     tests/mutex/libsbmutex.a scripting/libsbscript.a \
-    $(mysql_ldadd) $(pgsql_ldadd) $(ora_ldadd) $(lua_ldadd) $(EXTRA_LDFLAGS)
+    $(EXTRA_LDFLAGS) $(mysql_ldadd) $(pgsql_ldadd) $(ora_ldadd) $(lua_ldadd)
