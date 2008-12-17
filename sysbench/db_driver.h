@@ -177,25 +177,38 @@ typedef enum {
   DB_CONN_TYPE_MYSQL
 } db_conn_type_t;
 
+/* Result set definition */
+
+typedef struct db_result_set
+{
+  struct db_conn *connection; /* Connection which this result set belongs to */
+  struct db_stmt *statement;  /* Statement for this result set (if any) */ 
+
+  struct db_row  *row;        /* Last row fetched by db_fetch_row */
+  void           *ptr;        /* Pointer to driver-specific data */
+  unsigned long long nrows;   /* Number of rows in a result set */
+} db_result_set_t;
+
 /* Database connection structure */
 
 typedef struct db_conn
 {
-  db_driver_t    *driver;        /* DB driver for this connection */
-  db_conn_type_t type;
-  void           *ptr;
-  db_error_t     db_errno;
+  db_driver_t     *driver;        /* DB driver for this connection */
+  db_conn_type_t  type;
+  void            *ptr;
+  db_error_t      db_errno;
 
   /* Internal fields */
-  char           bulk_supported;    /* 1, if multi-row inserts are supported by the driver */
-  unsigned int   bulk_cnt;          /* Current number of rows in bulk insert buffer */
-  char *         bulk_buffer;       /* Bulk insert query buffer */
-  unsigned int   bulk_buflen;       /* Current length of bulk_buffer */
-  unsigned int   bulk_ptr;          /* Current position in bulk_buffer */
-  unsigned int   bulk_ptr_orig;     /* Save value of bulk_ptr */
-  unsigned int   bulk_commit_cnt;   /* Current value of uncommitted rows */
-  unsigned int   bulk_commit_max;   /* Maximum value of uncommitted rows */
-  int            thread_id;         /* Assiciated thread id (required to collect per-thread stats */
+  char            bulk_supported;    /* 1, if multi-row inserts are supported by the driver */
+  unsigned int    bulk_cnt;          /* Current number of rows in bulk insert buffer */
+  char *          bulk_buffer;       /* Bulk insert query buffer */
+  unsigned int    bulk_buflen;       /* Current length of bulk_buffer */
+  unsigned int    bulk_ptr;          /* Current position in bulk_buffer */
+  unsigned int    bulk_ptr_orig;     /* Save value of bulk_ptr */
+  unsigned int    bulk_commit_cnt;   /* Current value of uncommitted rows */
+  unsigned int    bulk_commit_max;   /* Maximum value of uncommitted rows */
+  int             thread_id;         /* Assiciated thread id (required to collect per-thread stats */
+  db_result_set_t rs;                /* Result set */
 } db_conn_t;
 
 typedef enum {
@@ -219,18 +232,6 @@ typedef struct db_stmt
   db_query_type_t type;            /* Query type */
   void            *ptr;            /* Pointer to driver-specific data structure */
 } db_stmt_t;
-
-/* Result set definition */
-
-typedef struct db_result_set
-{
-  db_conn_t     *connection; /* Connection which this result set belongs to */
-  db_stmt_t     *statement;  /* Statement for this result set (if any) */ 
-
-  struct db_row *row;        /* Last row fetched by db_fetch_row */
-  void          *ptr;        /* Pointer to driver-specific data */
-  unsigned long long nrows;  /* Number of rows in a result set */
-} db_result_set_t;
 
 /* Result set row definition */
 

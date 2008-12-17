@@ -363,7 +363,7 @@ int db_bind_result(db_stmt_t *stmt, db_bind_t *results, unsigned int len)
 db_result_set_t *db_execute(db_stmt_t *stmt)
 {
   db_conn_t       *con = stmt->connection;
-  db_result_set_t *rs;
+  db_result_set_t *rs = &con->rs;
 
   if (con == NULL || con->driver == NULL)
   {
@@ -371,19 +371,14 @@ db_result_set_t *db_execute(db_stmt_t *stmt)
     return NULL;
   }
 
-  rs = (db_result_set_t *)calloc(1, sizeof(db_result_set_t));
-  if (rs == NULL)
-  {
-    log_text(LOG_DEBUG, "ERROR: exiting db_execute(), memory allocation failure");
-    return NULL;
-  }
+  memset(rs, 0, sizeof(db_result_set_t));
+
   rs->statement = stmt;
   rs->connection = con;
 
   con->db_errno = con->driver->ops.execute(stmt, rs);
   if (con->db_errno != SB_DB_ERROR_NONE)
   {
-    free(rs);
     log_text(LOG_DEBUG, "ERROR: exiting db_execute(), driver's execute method failed");
 
     if (con->db_errno == SB_DB_ERROR_DEADLOCK)
@@ -469,22 +464,18 @@ db_row_t *db_fetch_row(db_result_set_t *rs)
 
 db_result_set_t *db_query(db_conn_t *con, const char *query)
 {
-  db_result_set_t *rs;
+  db_result_set_t *rs = &con->rs;
   
   if (con->driver == NULL)
     return NULL;
 
-  rs = (db_result_set_t *)calloc(1, sizeof(db_result_set_t));
-  if (rs == NULL)
-    return NULL;
+  memset(rs, 0, sizeof(db_result_set_t));
+  
   rs->connection = con;
 
   con->db_errno = con->driver->ops.query(con, query, rs);
   if (con->db_errno != SB_DB_ERROR_NONE)
-  {
-    free(rs);
     return NULL;
-  }
 
   return rs;
 }
@@ -505,7 +496,6 @@ int db_free_results(db_result_set_t *rs)
 
   if (rs->row != NULL)
     db_free_row(rs->row);
-  free(rs);
 
   return rc;
 }
