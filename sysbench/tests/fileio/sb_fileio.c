@@ -1895,7 +1895,7 @@ void file_fill_buffer(unsigned char *buf, unsigned int len,
   unsigned int i;
 
   for (i = 0; i < len - (FILE_CHECKSUM_LENGTH + FILE_OFFSET_LENGTH); i++)
-    buf[i] = random() & 0xFF;
+    buf[i] = sb_rnd() & 0xFF;
 
   /* Store the checksum */
   *(int *)(buf + i) = (int)crc32(0, buf, len -

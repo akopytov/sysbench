@@ -114,12 +114,18 @@ AM_CONDITIONAL(USE_PGSQL, test x$ac_cv_use_pgsql != xno)
 AC_CHECK_AIO
 AM_CONDITIONAL(USE_AIO, test x$enable_aio = xyes)
 
+# Check for advanced memory allocation libraries 
+AC_CHECK_LIB([umem], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lumem"], 
+ AC_CHECK_LIB([mtmalloc], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lmtmalloc"]) 
+) 
+
 # Checks for header files.
 AC_HEADER_STDC
 
 AC_CHECK_HEADERS([ \
 errno.h \
 fcntl.h \
+lrand48 \
 math.h \
 pthread.h \
 sched.h \

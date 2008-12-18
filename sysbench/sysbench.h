@@ -50,9 +50,14 @@
 #define SB_THREAD_MUTEX_LOCK() pthread_mutex_lock(&sb_globals.exec_mutex) 
 #define SB_THREAD_MUTEX_UNLOCK() pthread_mutex_unlock(&sb_globals.exec_mutex)
 
-#define SB_MAX_RND 0x3fffffffu
-#define sb_rnd() (unsigned int)(random() % SB_MAX_RND)
-
+/* random() is not thread-safe on most platforms, use lrand48() if available */
+#ifdef HAVE_LRAND48
+#define sb_rnd() (lrand48() % SB_MAX_RND)
+#define sb_srnd(seed) srand48(seed)
+#else
+#define sb_rnd() (random() % SB_MAX_RND)
+#define sb_srnd(seed) srandom((unsigned int)seed)
+#endif
 
 /* Sysbench commands */
 typedef enum

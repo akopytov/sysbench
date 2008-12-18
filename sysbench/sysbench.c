@@ -340,7 +340,7 @@ void print_run_mode(sb_test_t *test)
   if (rand_init)
   {
     log_text(LOG_NOTICE, "Initializing random number generator from timer.\n");
-    srandom(time(NULL));
+    sb_srnd(time(NULL));
   }   
   
   log_text(LOG_NOTICE, "");
