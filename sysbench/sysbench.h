@@ -50,6 +50,8 @@
 #define SB_THREAD_MUTEX_LOCK() pthread_mutex_lock(&sb_globals.exec_mutex) 
 #define SB_THREAD_MUTEX_UNLOCK() pthread_mutex_unlock(&sb_globals.exec_mutex)
 
+#define SB_MAX_RND 0x3fffffffu
+
 /* random() is not thread-safe on most platforms, use lrand48() if available */
 #ifdef HAVE_LRAND48
 #define sb_rnd() (lrand48() % SB_MAX_RND)
