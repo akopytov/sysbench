@@ -290,6 +290,7 @@ int sb_lua_op_execute_request(sb_request_t *sb_req, int thread_id)
         
       }
     }
+    lua_pop(L, 1);
   } while (restart);
       
   LOG_EVENT_STOP(msg, thread_id);
