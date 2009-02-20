@@ -961,6 +961,8 @@ int sb_lua_db_close(lua_State *L)
   
   luaL_unref(L, LUA_REGISTRYINDEX, stmt->param_ref);
   luaL_unref(L, LUA_REGISTRYINDEX, stmt->result_ref);
+
+  db_close(stmt->ptr);
   
   return 0;
 }
