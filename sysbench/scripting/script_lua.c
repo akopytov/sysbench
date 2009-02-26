@@ -674,6 +674,8 @@ int sb_lua_db_prepare(lua_State *L)
   if (stmt->ptr == NULL)
     luaL_error(L, "db_prepare() failed");
 
+  stmt->param_ref = LUA_REFNIL;
+  
   return 1;
 }
 
