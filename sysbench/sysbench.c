@@ -56,6 +56,9 @@
 #ifdef HAVE_SCHED_H
 # include <sched.h>
 #endif
+#ifdef HAVE_SIGNAL_H
+# include <signal.h>
+#endif
 
 #include "sysbench.h"
 #include "sb_options.h"
@@ -119,6 +122,7 @@ sb_list_t        tests;
 
 /* Global variables */
 sb_globals_t     sb_globals;
+sb_test_t        *current_test;
 
 /* Mutexes */
 
@@ -130,6 +134,21 @@ static void print_header(void);
 static void print_usage(void);
 static void print_run_mode(sb_test_t *);
 
+#ifdef HAVE_ALARM
+static void sigalrm_handler(int sig)
+{
+  if (sig == SIGALRM)
+  {
+    sb_timer_stop(&sb_globals.exec_timer);
+    log_text(LOG_WARNING,
+             "The --max-time limit has expired, forcing shutdown...");
+    if (current_test && current_test->ops.print_stats)
+      current_test->ops.print_stats();
+    log_done();
+    exit(1);
+  }
+}
+#endif
 
 /* Main request provider function */ 
 
@@ -470,6 +489,16 @@ int run_test(sb_test_t *test)
       return 1;
     }
   }
+
+  /* Set the alarm to force exit */
+#ifdef HAVE_ALARM
+  unsigned int grace = sb_globals.max_time / 20;
+
+  if (!grace)
+    grace = 1;
+  alarm(sb_globals.max_time + grace);
+#endif
+  
   pthread_mutex_unlock(&thread_start_mutex);
   
   log_text(LOG_NOTICE, "Threads started!\n");  
@@ -710,6 +739,10 @@ int main(int argc, char *argv[])
   }
   
   /* 'run' command */
+  current_test = test;
+#ifdef HAVE_ALARM
+  signal(SIGALRM, sigalrm_handler);
+#endif
   if (run_test(test))
     exit(1);
 
