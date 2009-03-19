@@ -98,6 +98,8 @@ sb_arg_t general_args[] =
   {"num-threads", "number of threads to use", SB_ARG_TYPE_INT, "1"},
   {"max-requests", "limit for total number of requests", SB_ARG_TYPE_INT, "10000"},
   {"max-time", "limit for total execution time in seconds", SB_ARG_TYPE_INT, "0"},
+  {"forced-shutdown", "amount of time to wait after --max-time before forcing shutdown",
+   SB_ARG_TYPE_STRING, "off"},
   {"thread-stack-size", "size of stack per thread", SB_ARG_TYPE_SIZE, "64K"},
   {"test", "test to run", SB_ARG_TYPE_STRING, NULL},
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
@@ -140,12 +142,12 @@ static void sigalrm_handler(int sig)
   if (sig == SIGALRM)
   {
     sb_timer_stop(&sb_globals.exec_timer);
-    log_text(LOG_WARNING,
+    log_text(LOG_FATAL,
              "The --max-time limit has expired, forcing shutdown...");
     if (current_test && current_test->ops.print_stats)
       current_test->ops.print_stats();
     log_done();
-    exit(1);
+    exit(2);
   }
 }
 #endif
@@ -360,7 +362,11 @@ void print_run_mode(sb_test_t *test)
   {
     log_text(LOG_NOTICE, "Initializing random number generator from timer.\n");
     sb_srnd(time(NULL));
-  }   
+  }
+
+  if (sb_globals.force_shutdown)
+    log_text(LOG_NOTICE, "Forcing shutdown in %u seconds",
+             sb_globals.max_time + sb_globals.timeout);
   
   log_text(LOG_NOTICE, "");
 
@@ -490,13 +496,10 @@ int run_test(sb_test_t *test)
     }
   }
 
-  /* Set the alarm to force exit */
+  /* Set the alarm to force shutdown */
 #ifdef HAVE_ALARM
-  unsigned int grace = sb_globals.max_time / 20;
-
-  if (!grace)
-    grace = 1;
-  alarm(sb_globals.max_time + grace);
+  if (sb_globals.force_shutdown)
+    alarm(sb_globals.max_time + sb_globals.timeout);
 #endif
   
   pthread_mutex_unlock(&thread_start_mutex);
@@ -557,6 +560,7 @@ int init(void)
 {
   option_t *opt;
   char     *s;
+  char     *tmp;
   
   sb_globals.num_threads = sb_get_value_int("num-threads");
   if (sb_globals.num_threads <= 0)
@@ -568,6 +572,34 @@ int init(void)
   sb_globals.max_time = sb_get_value_int("max-time");
   if (!sb_globals.max_requests && !sb_globals.max_time)
     log_text(LOG_WARNING, "WARNING: Both max-requests and max-time are 0, running endless test");
+
+  if (sb_globals.max_time > 0)
+  {
+    /* Parse the --forced-shutdown value */
+    tmp = sb_get_value_string("forced-shutdown");
+    if (tmp == NULL)
+    {
+      sb_globals.force_shutdown = 1;
+      sb_globals.timeout = sb_globals.max_time / 20;
+    }
+    else if (strcasecmp(tmp, "off"))
+    {
+      char *endptr;
+    
+      sb_globals.force_shutdown = 1;
+      sb_globals.timeout = (unsigned int)strtol(tmp, &endptr, 10);
+      if (*endptr == '%')
+        sb_globals.timeout = (unsigned int)(sb_globals.timeout *
+                                            (double)sb_globals.max_time / 100);
+      else if (*tmp == '\0' || *endptr != '\0')
+      {
+        log_text(LOG_FATAL, "Invalid value for --forced-shutdown: '%s'", tmp);
+        return 1;
+      }
+    }
+    else
+      sb_globals.force_shutdown = 0;
+  }
   
   sb_globals.op_timers = (sb_timer_t *)malloc(sb_globals.num_threads * 
                                               sizeof(sb_timer_t));

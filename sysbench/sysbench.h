@@ -181,17 +181,19 @@ typedef struct
 
 typedef struct
 {
-  sb_cmd_t         command;      /* command passed from command line */
-  int              error;        /* global error - everyone exit */
-  pthread_mutex_t  exec_mutex;   /* execution mutex */
-  sb_timer_t       *op_timers;   /* timers to measure each thread's run time */
-  sb_timer_t       exec_timer;   /* total execution timer */
-  unsigned int     num_threads;  /* number of threads to use */
-  unsigned int     max_requests; /* maximum number of requests */
-  unsigned int     max_time;     /* total execution time limit */
-  unsigned char    debug;        /* debug flag */
-  unsigned char    validate;     /* validation flag */
-  unsigned char    verbosity;    /* log verbosity */
+  sb_cmd_t         command;        /* command passed from command line */
+  int              error;          /* global error - everyone exit */
+  pthread_mutex_t  exec_mutex;     /* execution mutex */
+  sb_timer_t       *op_timers;     /* timers to measure each thread's run time */
+  sb_timer_t       exec_timer;     /* total execution timer */
+  unsigned int     num_threads;    /* number of threads to use */
+  unsigned int     max_requests;   /* maximum number of requests */
+  unsigned int     max_time;       /* total execution time limit */
+  unsigned char    debug;          /* debug flag */
+  int              force_shutdown; /* whether we must force test shutdown */
+  unsigned int     timeout;        /* forced shutdown timeout */
+  unsigned char    validate;       /* validation flag */
+  unsigned char    verbosity;      /* log verbosity */
 } sb_globals_t;
 
 extern sb_globals_t sb_globals;
