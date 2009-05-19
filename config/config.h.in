@@ -1,5 +1,8 @@
 /* config/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define to 1 if you have the `alarm' function. */
+#undef HAVE_ALARM
+
 /* Define if you have clock_gettime() declared in <time.h> */
 #undef HAVE_CLOCK_GETTIME
 
@@ -50,6 +53,9 @@
 
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
+
+/* Define to 1 if you have the <lrand48> header file. */
+#undef HAVE_LRAND48
 
 /* Define to 1 if you have Lua headers and libraries */
 #undef HAVE_LUA
