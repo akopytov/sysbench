@@ -50,7 +50,7 @@ static sb_arg_t mutex_args[] =
 /* Mutex test operations */
 static int mutex_init(void);
 static void mutex_print_mode(void);
-static sb_request_t mutex_get_request(void);
+static sb_request_t mutex_get_request(int tid);
 static int mutex_execute_request(sb_request_t *, int);
 static int mutex_done(void);
 
@@ -59,22 +59,22 @@ static sb_test_t mutex_test =
   "mutex",
   "Mutex performance test",
   {
-     mutex_init,
-     NULL,
-     NULL,
-     mutex_print_mode,
-     mutex_get_request,
-     mutex_execute_request,
-     NULL,
-     NULL,
-     NULL,
-     mutex_done
+    mutex_init,
+    NULL,
+    NULL,
+    mutex_print_mode,
+    mutex_get_request,
+    mutex_execute_request,
+    NULL,
+    NULL,
+    NULL,
+    mutex_done
   },
   {
-     NULL,
-     NULL,
-     NULL,
-     NULL
+    NULL,
+    NULL,
+    NULL,
+    NULL
   },
   mutex_args,
   {NULL, NULL}
@@ -129,10 +129,12 @@ int mutex_done(void)
 }
 
 
-sb_request_t mutex_get_request(void)
+sb_request_t mutex_get_request(int tid)
 {
   sb_request_t         sb_req;
   sb_mutex_request_t   *mutex_req = &sb_req.u.mutex_request;
+
+  (void)tid; /* unused */
   
   sb_req.type = SB_REQ_TYPE_MUTEX;
   mutex_req->nlocks = mutex_locks;

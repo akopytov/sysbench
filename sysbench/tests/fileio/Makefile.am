@@ -19,3 +19,5 @@ noinst_LIBRARIES = libsbfileio.a
 libsbfileio_a_SOURCES = sb_fileio.c ../sb_fileio.h crc32.c crc32.h crc32tbl.h
 
 libsbfileio_a_CPPFLAGS = $(AM_CPPFLAGS)
+
+EXTRA_DIST = CMakeLists.txt

@@ -15,4 +15,4 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/tests)
-ADD_LIBRARY(sbfileio sb_fileio.c crc32.c)
+ADD_LIBRARY(sbfileio sb_fileio.c crc32.c crc32.h crc32tbl.h)

@@ -41,9 +41,8 @@
 #define NS2SEC(nsec) ((nsec)/1000000000.)
 #define SEC2NS(sec)  ((sec)*1000000000ULL)
 
-/* Convert nanoseconds to milliseconds and vice versa */
 #define NS2MS(nsec) ((nsec)/1000000.)
-#define MS2NS(sec)  ((sec)*1000000ULL)
+#define MS2NS(msec)  ((msec)*1000000ULL)
 
 /* Wrapper over various *gettime* functions */
 #ifdef HAVE_CLOCK_GETTIME

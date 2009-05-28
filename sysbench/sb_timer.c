@@ -21,7 +21,6 @@
 
 #ifdef STDC_HEADERS
 # include <stdlib.h>
-# include <string.h>
 #endif
 
 #include "sb_logger.h"
@@ -176,9 +175,6 @@ unsigned long long  get_max_time(sb_timer_t *t)
 sb_timer_t merge_timers(sb_timer_t *t1, sb_timer_t *t2)
 {
   sb_timer_t t;
-
-  /* Initialize to avoid warnings */
-  memset(&t, 0, sizeof(sb_timer_t));
 
   t.my_time = t1->my_time+t2->my_time;
   t.sum_time = t1->sum_time+t2->sum_time;

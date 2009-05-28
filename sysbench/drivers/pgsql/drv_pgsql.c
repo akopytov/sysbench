@@ -84,11 +84,15 @@ db_pgsql_bind_map_t db_pgsql_bind_map[] =
 
 static drv_caps_t pgsql_drv_caps =
 {
-  .multi_rows_insert = 0,
-  .prepared_statements = 1,
-  .auto_increment = 0,
-  .serial = 1,
-  .unsigned_int = 0,
+  0,
+  1,
+  1,
+  0,
+  0,
+  1,
+  0,
+  
+  NULL
 };
 
 /* Describes the PostgreSQL prepared statement */
@@ -108,7 +112,7 @@ static char use_ps; /* whether server-side prepared statemens should be used */
 /* PgSQL driver operations */
 
 static int pgsql_drv_init(void);
-static int pgsql_drv_describe(drv_caps_t *);
+static int pgsql_drv_describe(drv_caps_t *, const char *);
 static int pgsql_drv_connect(db_conn_t *);
 static int pgsql_drv_disconnect(db_conn_t *);
 static int pgsql_drv_prepare(db_stmt_t *, const char *);
@@ -128,10 +132,9 @@ static int pgsql_drv_done(void);
 
 static db_driver_t pgsql_driver =
 {
-  .sname = "pgsql",
-  .lname = "PostgreSQL driver",
-  .args = pgsql_drv_args,
-  .ops =
+  "pgsql",
+  "PostgreSQL driver",
+  pgsql_drv_args,
   {
     pgsql_drv_init,
     pgsql_drv_describe,
@@ -150,7 +153,7 @@ static db_driver_t pgsql_driver =
     pgsql_drv_store_results,
     pgsql_drv_done
   },
-  .listitem = {NULL, NULL}
+  {NULL, NULL}
 };
 
 
@@ -193,8 +196,10 @@ int pgsql_drv_init(void)
 /* Describe database capabilities */
 
 
-int pgsql_drv_describe(drv_caps_t *caps)
+int pgsql_drv_describe(drv_caps_t *caps, const char * table_name)
 {
+  (void)table_name; /* unused */
+  
   *caps = pgsql_drv_caps;
   
   return 0;

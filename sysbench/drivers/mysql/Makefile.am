@@ -18,3 +18,5 @@ noinst_LIBRARIES = libsbmysql.a
 
 libsbmysql_a_SOURCES = drv_mysql.c
 libsbmysql_a_CPPFLAGS = $(MYSQL_CFLAGS) $(AM_CPPFLAGS)
+
+EXTRA_DIST = CMakeLists.txt

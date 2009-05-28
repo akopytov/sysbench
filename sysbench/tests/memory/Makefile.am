@@ -19,3 +19,5 @@ noinst_LIBRARIES = libsbmemory.a
 libsbmemory_a_SOURCES = sb_memory.c ../sb_memory.h
 
 libsbmemory_a_CPPFLAGS = $(AM_CPPFLAGS)
+
+EXTRA_DIST = CMakeLists.txt

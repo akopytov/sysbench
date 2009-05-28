@@ -50,11 +50,14 @@ extern db_globals_t db_globals;
 typedef struct
 {
   char     multi_rows_insert;   /* 1 if database supports multi-row inserts */
+  char     transactions;        /* 1 if database supports transactions */
   char     prepared_statements; /* 1 if database supports prepared statements */
   char     auto_increment;      /* 1 if database supports AUTO_INCREMENT clause */
   char     needs_commit;        /* 1 if database needs explicit commit after INSERTs */
   char     serial;              /* 1 if database supports SERIAL clause */
   char     unsigned_int;        /* 1 if database supports UNSIGNED INTEGER types */
+  
+  char    *table_options_str;   /* additional table options provided by database driver */
 } drv_caps_t;
 
 /* Database errors definition */
@@ -121,7 +124,7 @@ struct db_row;
 /* Driver operations definition */
 
 typedef int drv_op_init(void);
-typedef int drv_op_describe(drv_caps_t *);
+typedef int drv_op_describe(drv_caps_t *, const char *);
 typedef int drv_op_connect(struct db_conn *);
 typedef int drv_op_disconnect(struct db_conn *);
 typedef int drv_op_prepare(struct db_stmt *, const char *);
@@ -183,7 +186,6 @@ typedef struct db_result_set
 {
   struct db_conn *connection; /* Connection which this result set belongs to */
   struct db_stmt *statement;  /* Statement for this result set (if any) */ 
-
   struct db_row  *row;        /* Last row fetched by db_fetch_row */
   void           *ptr;        /* Pointer to driver-specific data */
   unsigned long long nrows;   /* Number of rows in a result set */
@@ -193,44 +195,25 @@ typedef struct db_result_set
 
 typedef struct db_conn
 {
-  db_driver_t     *driver;        /* DB driver for this connection */
+  db_driver_t     *driver;    /* DB driver for this connection */
   db_conn_type_t  type;
   void            *ptr;
   db_error_t      db_errno;
-
-  /* Internal fields */
-  char            bulk_supported;    /* 1, if multi-row inserts are supported by the driver */
-  unsigned int    bulk_cnt;          /* Current number of rows in bulk insert buffer */
-  char *          bulk_buffer;       /* Bulk insert query buffer */
-  unsigned int    bulk_buflen;       /* Current length of bulk_buffer */
-  unsigned int    bulk_ptr;          /* Current position in bulk_buffer */
-  unsigned int    bulk_ptr_orig;     /* Save value of bulk_ptr */
-  unsigned int    bulk_commit_cnt;   /* Current value of uncommitted rows */
-  unsigned int    bulk_commit_max;   /* Maximum value of uncommitted rows */
-  int             thread_id;         /* Assiciated thread id (required to collect per-thread stats */
-  db_result_set_t rs;                /* Result set */
+  db_result_set_t rs;   /* Result set */
 } db_conn_t;
-
-typedef enum {
-  DB_QUERY_TYPE_READ,
-  DB_QUERY_TYPE_WRITE,
-  DB_QUERY_TYPE_COMMIT,
-  DB_QUERY_TYPE_OTHER
-} db_query_type_t;
 
 /* Prepared statement definition */
 
 typedef struct db_stmt
 {
-  db_conn_t       *connection;     /* Connection which this statement belongs to */
-  char            *query;          /* Query string for emulated PS */
-  db_bind_t       *bound_param;    /* Array of bound parameters for emulated PS */
-  unsigned int    bound_param_len; /* Length of the bound_param array */
-  db_bind_t       *bound_res;      /* Array of bound results for emulated PS */ 
-  db_bind_t       *bound_res_len;  /* Length of the bound_res array */
-  char            emulated;        /* Should this statement be emulated? */
-  db_query_type_t type;            /* Query type */
-  void            *ptr;            /* Pointer to driver-specific data structure */
+  db_conn_t    *connection;     /* Connection which this statement belongs to */
+  char         *query;          /* Query string for emulated PS */
+  db_bind_t    *bound_param;    /* Array of bound parameters for emulated PS */
+  unsigned int bound_param_len; /* Length of the bound_param array */
+  db_bind_t    *bound_res;      /* Array of bound results for emulated PS */ 
+  db_bind_t    *bound_res_len;  /* Length of the bound_res array */
+  void         *ptr;            /* Pointer to driver-specific data structure */
+  char         emulated;        /* Should this statement be emulated? */
 } db_stmt_t;
 
 /* Result set row definition */
@@ -238,7 +221,6 @@ typedef struct db_stmt
 typedef struct db_row
 {
   db_result_set_t *result_set; /* Result set which this row belongs to */
-  void            *ptr;        /* Driver-specific row data */ 
 } db_row_t;
 
 /* Database abstraction layer calls */
@@ -249,7 +231,7 @@ void db_print_help(void);
 
 db_driver_t *db_init(const char *);
 
-int db_describe(db_driver_t *, drv_caps_t *);
+int db_describe(db_driver_t *, drv_caps_t *, const char *);
 
 db_conn_t *db_connect(db_driver_t *);
 
@@ -280,20 +262,5 @@ int db_done(db_driver_t *);
 db_error_t db_errno(db_conn_t *);
 
 int db_print_value(db_bind_t *, char *, int);
-
-/* Initialize multi-row insert operation */
-int db_bulk_insert_init(db_conn_t *, const char *);
-
-/* Add row to multi-row insert operation */
-int db_bulk_insert_next(db_conn_t *, const char *);
-
-/* Finish multi-row insert operation */
-void db_bulk_insert_done(db_conn_t *);
-
-/* Print database-specific test stats */
-void db_print_stats(void);
-
-/* Associate connection with a thread (required only for statistics */
-void db_set_thread(db_conn_t *, int);
 
 #endif /* DB_DRIVER_H */

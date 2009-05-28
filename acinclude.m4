@@ -211,7 +211,7 @@ do
 	fi
 done
 
-if test -z "$XML_CATALOG"; then
+if test -z "$XML_CATALOG" ; then
 	for i in /usr/share/sgml/docbook/stylesheet/xsl/nwalsh /usr/share/sgml/docbook/xsl-stylesheets/ /opt/local/share/xsl/docbook-xsl/xhtml/ ;
 	do
 		if test -d "$i"; then
@@ -238,7 +238,7 @@ if test -n "$XSLTPROC"; then
 	else
 		DB_FILE="$DOCBOOK_ROOT/docbook.xsl"
 	fi
-
+	
 	$XSLTPROC $XSLTPROC_FLAGS $DB_FILE >/dev/null 2>&1 << END
 <?xml version="1.0" encoding='ISO-8859-1'?>
 <!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
@@ -460,23 +460,4 @@ else
         $2
 fi
 AC_LANG_RESTORE
-])
-
-
-dnl ---------------------------------------------------------------------------
-dnl Macro: AC_LUA_DEVEL
-dnl ---------------------------------------------------------------------------
-AC_DEFUN([AC_LUA_DEVEL],[
-
-AC_ARG_WITH(lua, 
-    AC_HELP_STRING([--with-lua],[Compile with Lua scripting support (default is enabled)]), 
-                   [ac_cv_use_lua="$with_lua"], [ac_cv_use_lua="yes"])
-AC_CACHE_CHECK([whether to compile with Lua support], [ac_cv_use_lua], [ac_cv_use_lua=no])
-
-if test "xac_cv_use_lua" != "xno"; then 
-
-AC_DEFINE(HAVE_LUA, 1, [Define to 1 if you have Lua headers and libraries])
-AM_CONDITIONAL(USE_LUA, test "x$ac_cv_use_lua" != "x")
-
-fi
 ])

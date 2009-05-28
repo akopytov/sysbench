@@ -18,6 +18,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
 
 #ifdef HAVE_STRING_H
 # include <string.h>
@@ -120,7 +123,7 @@ typedef struct
 {
   char               *user;
   char               *password;
-  unsigned char      *db;
+  char               *db;
 } ora_drv_args_t;
 
 /* Structure used for DB-to-Oracle bind types map */
@@ -153,9 +156,14 @@ db_oracle_bind_map_t db_oracle_bind_map[] =
 
 static drv_caps_t ora_drv_caps =
 {
-  .multi_rows_insert = 0,
-  .prepared_statements = 1,
-  .needs_commit = 1,
+  0,
+  1,
+  1,
+  0,
+  1,
+  0,
+  0,
+  NULL
 };
 
 
@@ -166,7 +174,7 @@ static ora_drv_args_t args;          /* driver args */
 /* Oracle driver operations */
 
 static int ora_drv_init(void);
-static int ora_drv_describe(drv_caps_t *);
+static int ora_drv_describe(drv_caps_t *, const char *);
 static int ora_drv_connect(db_conn_t *);
 static int ora_drv_disconnect(db_conn_t *);
 static int ora_drv_prepare(db_stmt_t *, const char *);
@@ -186,10 +194,9 @@ static int ora_drv_done(void);
 
 static db_driver_t oracle_driver =
 {
-  .sname = "oracle",
-  .lname = "Oracle driver",
-  .args = ora_drv_args,
-  .ops =
+  "oracle",
+  "Oracle driver",
+  ora_drv_args,
   {
     ora_drv_init,
     ora_drv_describe,
@@ -208,7 +215,7 @@ static db_driver_t oracle_driver =
     ora_drv_store_results,
     ora_drv_done
   },
-  .listitem = {NULL, NULL}
+  {NULL, NULL}
 };
 
 
@@ -257,8 +264,9 @@ int ora_drv_init(void)
 /* Describe database capabilities  */
 
 
-int ora_drv_describe(drv_caps_t *caps)
+int ora_drv_describe(drv_caps_t *caps, const char * table_name)
 {
+  (void)table_name;
   *caps = ora_drv_caps;
   
   return 0;

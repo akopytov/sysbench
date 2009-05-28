@@ -16,7 +16,7 @@
     </authorgroup>
     
     <copyright>
-      <year>2004-2006</year>
+      <year>2004-2009</year>
       <holder>MySQL AB</holder>
     </copyright></bookinfo>
   
@@ -204,6 +204,15 @@
 	    <row><entry><option>--num-threads</option></entry><entry>The total number of worker threads to create</entry><entry>1</entry></row>
 	    <row><entry><option>--max-requests</option></entry><entry>Limit for total number of requests. 0 means unlimited</entry><entry>10000</entry></row>
 	    <row><entry><option>--max-time</option></entry><entry>Limit for total execution time in seconds. 0 (default) means unlimited</entry><entry>0</entry></row>
+	    <row><entry><option>--forced-shutdown</option></entry><entry>
+               <para>
+               Amount of time to wait after --max-time before forcing shutdown. The value can be either an absolute number of seconds or
+               as a percentage of the <option>--max-time</option> value by specifying a number of percents followed by the '%' sign.
+               </para>
+               <para>
+               "<option>off</option>" (the default value) means that no forced shutdown will be performed.
+               </para>
+             </entry><entry>off</entry></row>
 	    <row><entry><option>--thread-stack-size</option></entry><entry>Size of stack for each thread</entry><entry>32K</entry></row>
 	    <row><entry><option>--init-rnd</option></entry><entry>Specifies if random numbers generator should be initialized from timer before the test start</entry><entry>off</entry></row>
 	    <row><entry><option>--test</option></entry><entry>Name of the test mode to run</entry><entry><emphasis>Required</emphasis></entry></row>
@@ -634,9 +643,31 @@
 	      <row><entry><option>--oltp-read-only</option></entry><entry>
 		  Read-only mode. No <option>UPDATE</option>, <option>DELETE</option> or <option>INSERT</option> queries will be performed.
 		</entry><entry>off</entry></row>
-	      <row><entry><option>--oltp-reconnect</option></entry><entry>
-		  Re-connect to serveron each transaction.
+	      <row><entry><option>--oltp-skip-trx</option></entry><entry>
+                  Omit <option>BEGIN</option>/<option>COMMIT</option> statements, i.e. run the same queries as the test would normally run but without using transactions.
 		</entry><entry>off</entry></row>
+	      <row><entry><option>--oltp-reconnect-mode</option></entry><entry>
+                  Reconnect mode. Possible values:
+                  <informaltable frame="sides">
+                  <tgroup cols='2'>
+                  <tbody>
+                    <row><entry><option>session</option></entry>
+                         <entry>Don't reconnect (i.e. each thread disconnects only at the end of the test)</entry>
+                    </row>
+                    <row><entry><option>query</option></entry>
+                         <entry>Reconnect after each SQL query</entry>
+                    </row>
+                    <row><entry><option>transaction</option></entry>
+                         <entry>Reconnect after each transaction (if transactions are used in the selected DB test)</entry>
+                    </row>
+                    <row><entry><option>random</option></entry>
+                         <entry>One of the above modes is randomly chosen for each transaction</entry>
+                    </row>
+                  </tbody>
+                   </tgroup> 
+                  </informaltable>
+		</entry><entry><option>session</option></entry>
+              </row>
 	      <row><entry><option>--oltp-range-size</option></entry><entry>Range size for range queries</entry><entry>100</entry></row>
 	      <row><entry><option>--oltp-point-selects</option></entry><entry>
 		  Number of point select queries in a single transaction
@@ -734,13 +765,19 @@
 		  MySQL database name. Note SysBench will not automatically create this database. You should create it manually and grant
 		  the appropriate privileges to a user which will be used to access the test table.
 		</entry><entry>sbtest</entry></row>
-	      <row><entry><option>--mysql-table-type</option></entry><entry>
+	      <row><entry><option>--mysql-table-engine</option></entry><entry>
 		  Type of the test table. Possible values: <option>myisam</option>, <option>innodb</option>, <option>heap</option>,
-		  <option>ndbcluster</option>, <option>bdb</option>. 
-		</entry><entry>innodb</entry></row>
+		  <option>ndbcluster</option>, <option>bdb</option>, <option>maria</option>, <option>falcon</option>, <option>pbxt</option>
+		</entry><entry>innodb</entry>, </row>
+              <row><entry><option>--mysql-ssl</option></entry><entry>
+                  Use SSL connections.
+		</entry><entry>no</entry>, </row>
 	      <row><entry><option>--myisam-max-rows</option></entry><entry>
 		  MAX_ROWS option for MyISAM tables (required for big tables)  
 		</entry><entry>1000000</entry></row>
+	      <row><entry><option>--mysql-create-options</option></entry><entry>
+                  Additional options passed to CREATE TABLE.
+		</entry><entry></entry></row>
 	    </tbody>
 	  </tgroup>
 	</informaltable>

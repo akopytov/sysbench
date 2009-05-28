@@ -38,15 +38,15 @@ static sb_arg_t cpu_args[] =
 /* CPU test operations */
 static int cpu_init(void);
 static void cpu_print_mode(void);
-static sb_request_t cpu_get_request(void);
+static sb_request_t cpu_get_request(int);
 static int cpu_execute_request(sb_request_t *, int);
 static void cpu_print_stats(void);
 static int cpu_done(void);
 
 static sb_test_t cpu_test =
 {
-"cpu",
- "CPU performance test",
+  "cpu",
+  "CPU performance test",
   {
     cpu_init,
     NULL,
@@ -60,7 +60,10 @@ static sb_test_t cpu_test =
     cpu_done
   },
   {
-    NULL,NULL,NULL,NULL
+    NULL,
+    NULL,
+    NULL,
+    NULL
   },
   cpu_args,
   {NULL, NULL}
@@ -97,9 +100,11 @@ int cpu_init(void)
 }
 
 
-sb_request_t cpu_get_request(void)
+sb_request_t cpu_get_request(int tid)
 {
   sb_request_t req;
+
+  (void)tid; /* unused */
   
   if (req_performed >= sb_globals.max_requests)
   {

@@ -60,6 +60,9 @@ static sb_list_t handlers[LOG_MSG_TYPE_MAX];
 /* set after logger initialization */
 static unsigned char initialized; 
 
+/* verbosity of messages */
+static unsigned char verbosity; 
+
 /* whether each message must be timestamped */
 static unsigned char log_timestamp; 
 
@@ -104,7 +107,7 @@ static int oper_handler_done(void);
 static sb_arg_t text_handler_args[] =
 {
   {"verbosity", "verbosity level {5 - debug, 0 - only critical messages}",
-   SB_ARG_TYPE_INT, "3"},
+   SB_ARG_TYPE_INT, "4"},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
   
@@ -365,11 +368,11 @@ int text_handler_init(void)
   setvbuf(stdout, NULL, _IONBF, 0);
 #endif
   
-  sb_globals.verbosity = sb_get_value_int("verbosity");
+  verbosity = sb_get_value_int("verbosity");
 
-  if (sb_globals.verbosity > LOG_DEBUG)
+  if (verbosity > LOG_DEBUG)
   {
-    printf("Invalid value for verbosity: %d\n", sb_globals.verbosity);
+    printf("Invalid value for verbosity: %d\n", verbosity);
     return 1;
   }
 
@@ -389,7 +392,7 @@ int text_handler_process(log_msg_t *msg)
   char *prefix;
   log_msg_text_t *text_msg = (log_msg_text_t *)msg->data;
 
-  if (text_msg->priority > sb_globals.verbosity)
+  if (text_msg->priority > verbosity)
     return 0;
   
   pthread_mutex_lock(&text_mutex);
@@ -429,6 +432,7 @@ int text_handler_process(log_msg_t *msg)
   }
   
   printf("%s%s", prefix, text_msg->text);
+  fflush(stdout);
   
   return 0;
 }
@@ -593,7 +597,7 @@ int oper_handler_done(void)
            NS2SEC(sb_timer_value(&sb_globals.exec_timer)));
   log_text(LOG_NOTICE, "    total number of events:              %lld",
            t.events);
-  log_text(LOG_NOTICE, "    total time taken by event execution: %.4fs",
+  log_text(LOG_NOTICE, "    total time taken by event execution: %.4f",
            NS2SEC(get_sum_time(&t)));
 
   log_text(LOG_NOTICE, "    per-request statistics:");

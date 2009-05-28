@@ -1,16 +1,63 @@
-2006-10-10  Alexey Kopytov <alexeyk@mysql.com>
+2009-03-19  Alexey Kopytov  <alexeyk@mysql.com>
 
-	* Removed the debugging code in OLTP test which got into 0.4.7 by mistake
+	* Made forced shutdown introduced in 0.4.11 optional via the --forced-shutdown
+	  switch and off by default.
+	* Updated the manual.
+	* Version 0.4.12.
+
+2009-03-15  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Added --oltp-reconnect-mode to the OLTP test.
+	* Minor fixes to remove compiler warnings and DocBook processing on Mac OS X.
+	* Added forced test shutdown to avoid endless execution when DB server freezes
+	* Backport of Windows support from the 0.5 branch 
+	  (patch contributed by John Lewis).
+	* Version 0.4.11.
+
+2008-12-18  Alexey Kopytov  <alexeyk@mysql.com>
+	    
+	* Fixed the bug with empty --mysql-create-options
+	* Merge two patches from Tim Cook:
+	- use lrand48() as random() is not thread-safe on most platforms
+	- use libumem/mtmalloc for memory allocation if available on the target platform
+	* Got rid of some unnecessary malloc() calls in drv_mysql.c
+	* version 0.4.10
+
+2008-12-09  Alexey Kopytov  <alexeyk@mysql.com>
+
+	* Some Makefile cleanups to fix 'make distcheck'
+	* Set stdout to non-buffered mode to get error messages in case of a fatal 
+	  error.
+	* New --with-extra-ldflags switch in configure. One example where it might be 
+	  useful:
+	  './configure --with-extra-ldflags=-all-static' will instruct libtool to try 
+	  to create a static binary if supported by the target platform.
+	* New option in the mysql driver --mysql-create-options. Allows to pass
+	  an additional string to CREATE TABLE.
+	* Fixed the crash with an empty --mysql-engine-trx
+	* Temporarily disabled the call to mysql_options() due to MySQL bug #40552
+	* Added Maria, PBXT and Falcon to the list of "known" storage engines.
+	* Patch from Philip Guenther that fixes the following issues:
+	  1) wrong call to read the thread-stack-size config variable,
+	   such that the stack size was set to 32 *bytes* instead of 32 kilobytes
+	  2) assumed that pthread_create() and pthread_join() set errno.  They
+	   don't: they return the error value instead
+	* 2 patches from Jeremy Cole:
+	  1) File I/O test: moves the timer stop after fsync so that --file-fsync-all 
+	    timings are useful in the fileio test.  Before the patch, the timings are 
+	    garbage, but after they reflect theoretical disk performance quite nicely,
+	    as they should.
+	  2) Changed the per-request statistics to show milliseconds instead of 
+	     seconds, which is quite often more interesting.
+	* Patch from Hakan Kuecuekyilmaz that adds the 'version' command
+	* version 0.4.9	
+	
+
+2006-10-10  Alexey Kopytov <alexeyk@mysql.com>
+        
+        * Removed the debugging code in OLTP test which got into 0.4.7 by mistake
 	* Handle ER_CHECKREAD in the same way as deadlocks in the MySQL driver
 	* version 0.4.8
-	
-2006-05-28  Alexey Kopytov  <alexeyk@mysql.com>
-
-	* count fsync() time as request execution time in file-fsync-all mode
-
-2006-05-24  Alexey Kopytov  <alexeyk@mysql.com>
-
-	* Added --oltp-reconnect option
 
 2006-05-18  Alexey Kopytov  <alexeyk@mysql.com>
 

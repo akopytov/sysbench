@@ -17,7 +17,7 @@
 #define PACKAGE "sysbench"
 #endif
 #ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION "0.5"
+#define PACKAGE_VERSION "0.4"
 #endif
 
 #define snprintf(buffer, count,  format,...)  \
@@ -33,6 +33,11 @@ typedef intptr_t ssize_t;
 #define SIZEOF_SIZE_T 4
 #endif
 
+#ifndef __cplusplus
+#ifndef inline
+#define inline __inline
+#endif
+#endif
 
 struct  timespec
 {

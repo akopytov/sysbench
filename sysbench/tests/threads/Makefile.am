@@ -19,3 +19,5 @@ noinst_LIBRARIES = libsbthreads.a
 libsbthreads_a_SOURCES = sb_threads.c ../sb_threads.h
 
 libsbthreads_a_CPPFLAGS = $(AM_CPPFLAGS)
+
+EXTRA_DIST = CMakeLists.txt

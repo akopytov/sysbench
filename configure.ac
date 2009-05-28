@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(sysbench, 0.5, alexeyk@mysql.com)
+AC_INIT(sysbench, 0.4.12, alexeyk@mysql.com)
 AC_CONFIG_AUX_DIR([config])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE()
@@ -37,9 +37,6 @@ AC_ARG_WITH([pgsql],
             [ac_cv_use_pgsql=$withval], [ac_cv_use_pgsql=no]
 )
 AC_CACHE_CHECK([whether to compile with PostgreSQL support], [ac_cv_use_pgsql], [ac_cv_use_pgsql=yes])
-
-# Check if we should compile with Lua interpreter support
-AC_LUA_DEVEL
 
 # Check if we should enable large files support
 AC_ARG_ENABLE(largefile,
@@ -83,7 +80,7 @@ AX_CHECK_DOCBOOK
 
 ACX_PTHREAD
 
-AC_CHECK_LIB(m, sqrt)
+AC_CHECK_LIB([m], [sqrt])
 
 if test x$ac_cv_use_mysql != xno; then
     AC_CHECK_MYSQLR([$ac_cv_use_mysql])
@@ -114,10 +111,10 @@ AM_CONDITIONAL(USE_PGSQL, test x$ac_cv_use_pgsql != xno)
 AC_CHECK_AIO
 AM_CONDITIONAL(USE_AIO, test x$enable_aio = xyes)
 
-# Check for advanced memory allocation libraries 
-AC_CHECK_LIB([umem], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lumem"], 
- AC_CHECK_LIB([mtmalloc], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lmtmalloc"]) 
-) 
+# Check for advanced memory allocation libraries
+AC_CHECK_LIB([umem], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lumem"],
+ AC_CHECK_LIB([mtmalloc], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lmtmalloc"])
+)
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -125,7 +122,6 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([ \
 errno.h \
 fcntl.h \
-lrand48 \
 math.h \
 pthread.h \
 sched.h \
@@ -170,16 +166,13 @@ AC_SEARCH_LIBS([clock_gettime], [rt])
 
 AC_CHECK_FUNCS([ \
 alarm \
-directio \
 fdatasync \
 gettimeofday \
+lrand48 \
 memalign \
 memset \
-mkstemp \
-popen \
 posix_memalign \
 pthread_yield \
-_setjmp \
 setvbuf \
 sqrt \
 strdup \
@@ -187,11 +180,7 @@ thr_setconcurrency \
 valloc \
 ])
 
-AC_CHECK_FUNC(pthread_once, , 
-              AC_MSG_ERROR([*** pthread_once() is not available on this platform ***])
-)
-
-if test "x$GCC" = "xyes"; then
+if test "$GCC" = "xyes"; then
     AM_CFLAGS="-W -Wall -Wpointer-arith -Wbad-function-cast \
 -Wstrict-prototypes -Wnested-externs -Winline \
 -funroll-loops"
@@ -222,8 +211,5 @@ sysbench/tests/fileio/Makefile
 sysbench/tests/memory/Makefile
 sysbench/tests/threads/Makefile
 sysbench/tests/mutex/Makefile
-sysbench/tests/db/Makefile
-sysbench/scripting/Makefile
-sysbench/scripting/lua/Makefile
-sysbench/scripting/lua/src/Makefile
+sysbench/tests/oltp/Makefile
 ])

@@ -45,6 +45,7 @@
 #include "tests/sb_memory.h"
 #include "tests/sb_threads.h"
 #include "tests/sb_mutex.h"
+#include "tests/sb_oltp.h"
 
 /* Macros to control global execution mutex */
 #define SB_THREAD_MUTEX_LOCK() pthread_mutex_lock(&sb_globals.exec_mutex) 
@@ -68,7 +69,8 @@ typedef enum
   SB_COMMAND_PREPARE,
   SB_COMMAND_RUN,
   SB_COMMAND_CLEANUP,
-  SB_COMMAND_HELP
+  SB_COMMAND_HELP,
+  SB_COMMAND_VERSION
 } sb_cmd_t;
 
 /* Request types definition */
@@ -81,8 +83,7 @@ typedef enum
   SB_REQ_TYPE_FILE,
   SB_REQ_TYPE_SQL,
   SB_REQ_TYPE_THREADS,
-  SB_REQ_TYPE_MUTEX,
-  SB_REQ_TYPE_SCRIPT
+  SB_REQ_TYPE_MUTEX
 } sb_request_type_t;
 
 /* Request structure definition */
@@ -101,6 +102,7 @@ typedef struct
     sb_mem_request_t     mem_request;
     sb_threads_request_t threads_request;
     sb_mutex_request_t   mutex_request;
+    sb_sql_request_t     sql_request;
   } u;
 } sb_request_t;
 
@@ -118,7 +120,7 @@ typedef int sb_op_init(void);
 typedef int sb_op_prepare(void);
 typedef int sb_op_thread_init(int);
 typedef void sb_op_print_mode(void);
-typedef sb_request_t sb_op_get_request(void);
+typedef sb_request_t sb_op_get_request(int);
 typedef int sb_op_execute_request(sb_request_t *, int);
 typedef void sb_op_print_stats(void);
 typedef int sb_op_thread_done(int);
@@ -189,11 +191,10 @@ typedef struct
   unsigned int     num_threads;    /* number of threads to use */
   unsigned int     max_requests;   /* maximum number of requests */
   unsigned int     max_time;       /* total execution time limit */
-  unsigned char    debug;          /* debug flag */
   int              force_shutdown; /* whether we must force test shutdown */
   unsigned int     timeout;        /* forced shutdown timeout */
+  unsigned char    debug;          /* debug flag */
   unsigned char    validate;       /* validation flag */
-  unsigned char    verbosity;      /* log verbosity */
 } sb_globals_t;
 
 extern sb_globals_t sb_globals;
@@ -205,13 +206,5 @@ int sb_get_value_int(char *);
 unsigned long long sb_get_value_size(char *);
 float sb_get_value_float(char *);
 char *sb_get_value_string(char *);
-
-/* Random number generators */
-int sb_rand(int, int);
-int sb_rand_uniform(int, int);
-int sb_rand_gaussian(int, int);
-int sb_rand_special(int, int);
-int sb_rand_uniq(int a, int b);
-void sb_rand_str(const char *, char *);
 
 #endif

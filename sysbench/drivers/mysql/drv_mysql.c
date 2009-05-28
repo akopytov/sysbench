@@ -50,12 +50,7 @@
 # define ENGINE_CLAUSE "TYPE"
 #endif
 
-#define DEBUG(format, ...) do { if (args.debug) log_text(LOG_DEBUG, format, __VA_ARGS__); } while (0)
-
-#define SAFESTR(s) ((s != NULL) ? (s) : "(null)")
-
-/* FIXME */
-db_bind_t *gresults;
+#define DEBUG(format, ...) do { if (db_globals.debug) log_text(LOG_DEBUG, format, __VA_ARGS__); } while (0)
 
 /* MySQL driver arguments */
 
@@ -73,10 +68,17 @@ static sb_arg_t mysql_drv_args[] =
    SB_ARG_TYPE_STRING, "auto"},
   {"mysql-ssl", "use SSL connections, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
   {"myisam-max-rows", "max-rows parameter for MyISAM tables", SB_ARG_TYPE_INT, "1000000"},
-  {"mysql-debug", "dump all client library calls", SB_ARG_TYPE_FLAG, "off"},
+  {"mysql-create-options", "additional options passed to CREATE TABLE", SB_ARG_TYPE_STRING, ""},
   
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
+
+typedef enum
+{
+  ENGINE_TRX_YES,
+  ENGINE_TRX_NO,
+  ENGINE_TRX_AUTO
+} mysql_drv_trx_t;
 
 typedef struct
 {
@@ -87,8 +89,9 @@ typedef struct
   char               *password;
   char               *db;
   unsigned int       myisam_max_rows;
+  mysql_drv_trx_t    engine_trx;
   unsigned int       use_ssl;
-  unsigned char      debug;
+  char               *create_options;
 } mysql_drv_args_t;
 
 #ifdef HAVE_PS
@@ -124,15 +127,20 @@ static drv_caps_t mysql_drv_caps =
 {
   1,
   0,
+  0,
   1,
   0,
   0,
-  1
+  1,
+  
+  NULL
 };
 
 
 
 static mysql_drv_args_t args;          /* driver args */
+
+static char table_options_str[1024];   /* table options string */
 
 static char use_ps; /* whether server-side prepared statemens should be used */
 
@@ -143,7 +151,7 @@ static pthread_mutex_t hosts_mutex;
 /* MySQL driver operations */
 
 static int mysql_drv_init(void);
-static int mysql_drv_describe(drv_caps_t *);
+static int mysql_drv_describe(drv_caps_t *, const char *);
 static int mysql_drv_connect(db_conn_t *);
 static int mysql_drv_disconnect(db_conn_t *);
 static int mysql_drv_prepare(db_stmt_t *, const char *);
@@ -184,12 +192,13 @@ static db_driver_t mysql_driver =
     mysql_drv_store_results,
     mysql_drv_done
   },
-  {0,0}
+  {NULL, NULL}
 };
 
 
 /* Local functions */
 
+static int parse_table_engine(const char *);
 #ifdef HAVE_PS
 static int get_mysql_bind_type(db_bind_type_t);
 #endif
@@ -210,6 +219,8 @@ int register_driver_mysql(sb_list_t *drivers)
 
 int mysql_drv_init(void)
 {
+  char *s;
+  
   args.hosts = sb_get_value_list("mysql-host");
   if (SB_LIST_IS_EMPTY(args.hosts))
   {
@@ -226,9 +237,9 @@ int mysql_drv_init(void)
   args.db = sb_get_value_string("mysql-db");
   args.myisam_max_rows = sb_get_value_int("myisam-max-rows");
   args.use_ssl = sb_get_value_flag("mysql-ssl");
-  args.debug = sb_get_value_flag("mysql-debug");
-  if (args.debug)
-    sb_globals.verbosity = LOG_DEBUG;
+  args.create_options = sb_get_value_string("mysql-create-options");
+  if (args.create_options == NULL)
+    args.create_options = "";
   
   use_ps = 0;
 #ifdef HAVE_PS
@@ -237,21 +248,107 @@ int mysql_drv_init(void)
     use_ps = 1;
 #endif
 
-  DEBUG("mysql_library_init(%d, %p, %p)", 0, NULL, NULL);
+  s = sb_get_value_string("mysql-engine-trx");
+  if (s == NULL)
+  {
+    log_text(LOG_FATAL, "--mysql-engine-trx requires an argument");
+    return 1;
+  }
+  if (!strcasecmp(s, "yes"))
+    args.engine_trx = ENGINE_TRX_YES;
+  else if (!strcasecmp(s, "no"))
+    args.engine_trx = ENGINE_TRX_NO;
+  else if (!strcasecmp(s, "auto"))
+    args.engine_trx = ENGINE_TRX_AUTO;
+  else
+  {
+    log_text(LOG_FATAL, "Invalid value for mysql-engine-trx: %s", s);
+    return 1;
+  }
+  
+  s = sb_get_value_string("mysql-table-engine");
+
   mysql_library_init(0, NULL, NULL);
   
-  return 0;
+  return parse_table_engine(s);
 }
 
 
-/* Describe database capabilities */
+/* Describe database capabilities (possibly depending on table type) */
 
 
-int mysql_drv_describe(drv_caps_t *caps)
+int mysql_drv_describe(drv_caps_t *caps, const char * table_name)
 {
+  db_conn_t    con;
+  char         query[1024];
+  MYSQL_RES    *res = NULL;
+  MYSQL_ROW    row;
+  MYSQL_FIELD  *fields;
+  unsigned int num_fields;
+  unsigned int i;
+  int          connected = 0;
+  int          rc = 0;
+  
   *caps = mysql_drv_caps;
   
-  return 0;
+  if (table_name == NULL)
+    goto exit;
+
+  /* Try to determine table type */
+  if (mysql_drv_connect(&con))
+    goto error;
+
+  /* Fix the hosts list */
+  hosts_pos = args.hosts;
+  
+  connected = 1;
+  snprintf(query, sizeof(query), "SHOW TABLE STATUS LIKE '%s'", table_name);
+  
+  rc = mysql_real_query(con.ptr, query, strlen(query)); 
+  DEBUG("mysql_real_query(%p, \"%s\", %d) = %d", con.ptr, query, strlen(query), rc);
+  if (rc)
+    goto error;
+  
+  res = mysql_store_result(con.ptr);
+  DEBUG("mysql_store_result(%p) = %p", con.ptr, res);
+  if (res == NULL)
+    goto error;
+
+  num_fields = mysql_num_fields(res);
+  DEBUG("mysql_num_fields(%p) = %d", res, num_fields);
+  fields = mysql_fetch_fields(res);
+  DEBUG("mysql_fetch_fields(%p) = %p", res, fields);
+  for (i = 0; i < num_fields; i++)
+    if (!strcasecmp(fields[i].name, "type") ||
+        !strcasecmp(fields[i].name, "engine"))
+      break;
+  if (i >= num_fields)
+    goto error;
+  
+  row = mysql_fetch_row(res);
+  DEBUG("mysql_fetch_row(%p) = %p", res, row);
+  if (row == NULL || row[i] == NULL)
+    goto error;
+  
+  rc = parse_table_engine(row[i]);
+  *caps = mysql_drv_caps;
+  goto exit;
+
+ error:
+  log_text(LOG_ALERT, "Error: failed to determine table '%s' type!", table_name);
+  log_text(LOG_ALERT, "MySQL error: %s", mysql_error(con.ptr));
+  rc = 1;
+  
+ exit:
+  if (res != NULL)
+  {
+    mysql_free_result(res);
+    DEBUG("mysql_free_result(%p)", res);
+  }
+  if (connected)
+    mysql_drv_disconnect(&con);
+
+  return rc;
 }
 
 
@@ -271,8 +368,8 @@ int mysql_drv_connect(db_conn_t *sb_conn)
     return 1;
   sb_conn->ptr = con;
   
-  DEBUG("mysql_init(%p)", con);
   mysql_init(con);
+  DEBUG("mysql_init(%p)", con);
 
   pthread_mutex_lock(&hosts_mutex);
   hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
@@ -289,7 +386,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   mysql_options(con, MYSQL_READ_DEFAULT_GROUP, "sysbench");
   DEBUG("mysql_options(%p, MYSQL_READ_DEFAULT_GROUP, \"sysbench\")", con);
 #endif
-
+  
   if (args.use_ssl)
   {
     ssl_key= "client-key.pem";
@@ -303,12 +400,12 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",
         con,
-        SAFESTR(host),
-        SAFESTR(args.user),
-        SAFESTR(args.password),
-        SAFESTR(args.db),
+        host,
+        args.user,
+        args.password,
+        args.db,
         args.port,
-        SAFESTR(args.socket),
+        args.socket,
         (MYSQL_VERSION_ID >= 50000) ? "CLIENT_MULTI_STATEMENTS" : "0"
         );
   if (!mysql_real_connect(con,
@@ -385,9 +482,9 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query)
       DEBUG("mysql_errno(%p) = %u", con, rc);
       if (rc == ER_UNSUPPORTED_PS)
       {
-        log_text(LOG_INFO,
-                 "Failed to prepare query \"%s\" (%d: %s), using emulation",
-                 query, rc, mysql_error(con));
+        log_text(LOG_DEBUG,
+                 "Failed to prepare query \"%s\", using emulation",
+                 query);
         goto emulate;
       }
       else
@@ -400,8 +497,7 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query)
         return 1;
       }
     }
-    stmt->query = strdup(query);
-    
+
     return 0;
   }
 
@@ -440,10 +536,8 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
     rc = mysql_stmt_param_count(stmt->ptr);
     DEBUG("mysql_stmt_param_count(%p) = %u", stmt->ptr, rc);
     if (rc != len)
-    {
-      log_text(LOG_FATAL, "Wrong number of parameters to mysql_stmt_bind_param");
       return 1;
-    }
+
     /* Convert SysBench bind structures to MySQL ones */
     bind = (MYSQL_BIND *)calloc(len, sizeof(MYSQL_BIND));
     if (bind == NULL)
@@ -521,9 +615,6 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
     bind[i].is_null = params[i].is_null;
   }
 
-  /* FIXME */
-  gresults = params;
-  
   rc = mysql_stmt_bind_result(stmt->ptr, bind);
   DEBUG("mysql_stmt_bind_result(%p, %p) = %u", stmt->ptr, bind, rc);
   if (rc)
@@ -567,11 +658,10 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
     {
       rc = mysql_errno(con->ptr);
       DEBUG("mysql_errno(%p) = %u", con->ptr, rc);
-      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
+      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT || 
           rc == ER_CHECKREAD)
         return SB_DB_ERROR_DEADLOCK;
-      log_text(LOG_ALERT, "mysql_stmt_execute() for query '%s' failed: %d %s",
-               stmt->query,
+      log_text(LOG_ALERT, "failed to execute mysql_stmt_execute(): Err%d %s",
                mysql_errno(con->ptr),
                mysql_error(con->ptr));
       return SB_DB_ERROR_FAILED;
@@ -646,8 +736,7 @@ int mysql_drv_query(db_conn_t *sb_conn, const char *query,
   {
     rc = mysql_errno(con);
     DEBUG("mysql_errno(%p) = %u", con, rc);
-    if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
-        rc == ER_CHECKREAD)
+    if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT || rc == ER_CHECKREAD)
       return SB_DB_ERROR_DEADLOCK;
     log_text(LOG_ALERT, "failed to execute MySQL query: `%s`:", query);
     log_text(LOG_ALERT, "Error %d %s", mysql_errno(con), mysql_error(con));
@@ -664,8 +753,8 @@ int mysql_drv_query(db_conn_t *sb_conn, const char *query,
 int mysql_drv_fetch(db_result_set_t *rs)
 {
   /* NYI */
-  (void)rs;  /* unused */
-  
+  (void)rs;
+
   return 1;
 }
 
@@ -675,16 +764,11 @@ int mysql_drv_fetch(db_result_set_t *rs)
 
 int mysql_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
 {
-  row->ptr = mysql_fetch_row(rs->ptr);
-  DEBUG("mysql_fetch_row(%p) = %p", rs->ptr, row->ptr);
-  if (row->ptr == NULL)
-  {
-    log_text(LOG_FATAL, "mysql_fetch_row() failed: %s",
-             mysql_error(rs->connection->ptr));
-    return 1;
-  }
+  /* NYI */
+  (void)rs;  /* unused */
+  (void)row; /* unused */
   
-  return 0;
+  return 1;
 }
 
 
@@ -720,16 +804,14 @@ int mysql_drv_store_results(db_result_set_t *rs)
     {
       rc = mysql_errno(con);
       DEBUG("mysql_errno(%p) = %d", con, rc);
-      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
-          rc == ER_CHECKREAD)
+      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT)
       {
         log_text(LOG_WARNING,
                  "mysql_stmt_store_result() failed with error: (%d) %s", rc,
                  mysql_error(con));
         return SB_DB_ERROR_DEADLOCK;
       }
-      else if (mysql_stmt_field_count(rs->statement->ptr) == 0)
-        return SB_DB_ERROR_NONE;
+
       log_text(LOG_ALERT, "MySQL error: %s\n", mysql_error(con));
       return SB_DB_ERROR_FAILED;
     }
@@ -754,18 +836,15 @@ int mysql_drv_store_results(db_result_set_t *rs)
   {
       rc = mysql_errno(con);
       DEBUG("mysql_errno(%p) = %u", con, rc);
-      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
-          rc == ER_CHECKREAD)
+      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT)
       {
         log_text(LOG_WARNING,
                  "mysql_store_result() failed with error: (%u) %s", rc,
                  mysql_error(con));
         return SB_DB_ERROR_DEADLOCK;
       }
-      else if (mysql_field_count(con) == 0)
-        return SB_DB_ERROR_NONE;
-      log_text(LOG_ALERT, "MySQL error: %s", mysql_error(con));
-      return SB_DB_ERROR_FAILED; 
+    log_text(LOG_ALERT, "MySQL error: %s", mysql_error(con));
+    return SB_DB_ERROR_FAILED; 
   }
   rs->ptr = (void *)res;
 
@@ -775,6 +854,7 @@ int mysql_drv_store_results(db_result_set_t *rs)
   /* just fetch result */
   while((row = mysql_fetch_row(res)))
     DEBUG("mysql_fetch_row(%p) = %p", res, row);
+
   return SB_DB_ERROR_NONE;
 }
 
@@ -809,11 +889,6 @@ int mysql_drv_free_results(db_result_set_t *rs)
 
 int mysql_drv_close(db_stmt_t *stmt)
 {
-  if (stmt->query)
-  {
-    free(stmt->query);
-    stmt->query = NULL;
-  }
 #ifdef HAVE_PS
   if (stmt->ptr == NULL)
     return 1;
@@ -831,6 +906,63 @@ int mysql_drv_close(db_stmt_t *stmt)
 int mysql_drv_done(void)
 {
   mysql_library_end();
+  
+  return 0;
+}
+
+
+/* Parse table type and set driver capabilities */
+
+
+int parse_table_engine(const char *type)
+{
+  /* Determine if the engine supports transactions */
+  if (args.engine_trx == ENGINE_TRX_AUTO)
+  {
+    if (!strcasecmp(type, "myisam") || !strcasecmp(type, "heap") ||
+        !strcasecmp(type, "maria"))
+      mysql_drv_caps.transactions = 0;
+    else if (!strcasecmp(type, "innodb") ||
+             !strcasecmp(type, "bdb") || !strcasecmp(type, "berkeleydb") ||
+             !strcasecmp(type, "ndbcluster") ||
+             !strcasecmp(type, "federated") ||
+             !strcasecmp(type, "pbxt") ||
+             !strcasecmp(type, "falcon"))
+      mysql_drv_caps.transactions = 1;
+    else
+    {
+      log_text(LOG_FATAL, "Failed to determine transactions support for "
+               "unknown storage engine '%s'", type);
+      log_text(LOG_FATAL, "Specify explicitly with --mysql-engine-trx option");
+      return 1;
+    }
+  }
+  else
+    mysql_drv_caps.transactions = (args.engine_trx == ENGINE_TRX_YES);
+
+  /* Get engine-specific options string */
+  if (!strcasecmp(type, "myisam"))
+  {
+    if (args.myisam_max_rows > 0)
+      snprintf(table_options_str, sizeof(table_options_str),
+               "%s /*! "ENGINE_CLAUSE"=MyISAM MAX_ROWS=%u */",
+               args.create_options,
+               args.myisam_max_rows);
+    else
+      snprintf(table_options_str, sizeof(table_options_str),
+               "%s /*! "ENGINE_CLAUSE"=MyISAM */", args.create_options);
+  }
+  else if (!strcasecmp(type, "bdb") || !strcasecmp(type, "berkeleydb"))
+    snprintf(table_options_str, sizeof(table_options_str),
+             "%s /*! "ENGINE_CLAUSE"=BerkeleyDB */", args.create_options);
+  else if (!strcasecmp(type, "ndbcluster"))
+    snprintf(table_options_str, sizeof(table_options_str),
+             "%s /*! "ENGINE_CLAUSE"=NDB */", args.create_options);
+  else
+    snprintf(table_options_str, sizeof(table_options_str),
+             "%s /*! "ENGINE_CLAUSE"=%s */", args.create_options, type);
+
+  mysql_drv_caps.table_options_str = table_options_str;
   
   return 0;
 }

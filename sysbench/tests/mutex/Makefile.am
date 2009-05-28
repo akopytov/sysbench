@@ -19,3 +19,5 @@ noinst_LIBRARIES = libsbmutex.a
 libsbmutex_a_SOURCES = sb_mutex.c ../sb_mutex.h
 
 libsbmutex_a_CPPFLAGS = $(AM_CPPFLAGS)
+
+EXTRA_DIST = CMakeLists.txt
