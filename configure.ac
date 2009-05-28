@@ -125,7 +125,6 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([ \
 errno.h \
 fcntl.h \
-lrand48 \
 math.h \
 pthread.h \
 sched.h \
@@ -173,6 +172,7 @@ alarm \
 directio \
 fdatasync \
 gettimeofday \
+lrand48 \
 memalign \
 memset \
 mkstemp \
