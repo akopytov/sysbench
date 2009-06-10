@@ -22,6 +22,8 @@
 # include "config.h"
 #endif
 
+#include <stdbool.h>
+
 #include "sysbench.h"
 #include "sb_list.h"
 
@@ -50,11 +52,15 @@ extern db_globals_t db_globals;
 typedef struct
 {
   char     multi_rows_insert;   /* 1 if database supports multi-row inserts */
+  bool     transactions;        /* 1 if database supports transactions */
   char     prepared_statements; /* 1 if database supports prepared statements */
   char     auto_increment;      /* 1 if database supports AUTO_INCREMENT clause */
   char     needs_commit;        /* 1 if database needs explicit commit after INSERTs */
   char     serial;              /* 1 if database supports SERIAL clause */
   char     unsigned_int;        /* 1 if database supports UNSIGNED INTEGER types */
+  char     all_need_fetch;      /* 1 if database requires all queries to fetch results */
+
+  char    *table_options_str;   /* additional table options provided by database driver */
 } drv_caps_t;
 
 /* Database errors definition */
@@ -295,5 +301,27 @@ void db_print_stats(void);
 
 /* Associate connection with a thread (required only for statistics */
 void db_set_thread(db_conn_t *, int);
+
+/* DB drivers registrars */
+
+#ifdef USE_MYSQL
+int register_driver_mysql(sb_list_t *);
+#endif
+
+#ifdef USE_DRIZZLE
+int register_driver_drizzle(sb_list_t *);
+#endif
+
+#ifdef USE_DRIZZLECLIENT
+int register_driver_drizzleclient(sb_list_t *);
+#endif
+
+#ifdef USE_ORACLE
+int register_driver_oracle(sb_list_t *);
+#endif
+
+#ifdef USE_PGSQL
+int register_driver_pgsql(sb_list_t *);
+#endif
 
 #endif /* DB_DRIVER_H */

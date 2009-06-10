@@ -194,5 +194,10 @@ sb_timer_t merge_timers(sb_timer_t *t1, sb_timer_t *t2)
   else 
     t.min_time = t2->min_time;
      
+  t.state= TIMER_UNINITIALIZED;
+  t.time_end.tv_nsec= 0;
+  t.time_end.tv_sec= 0;
+  t.time_start.tv_nsec= 0;
+  t.time_start.tv_sec= 0;
   return t;       
 }

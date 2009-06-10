@@ -252,7 +252,7 @@ LUALIB_API int luaopen_math (lua_State *L) {
   luaL_register(L, LUA_MATHLIBNAME, mathlib);
   lua_pushnumber(L, PI);
   lua_setfield(L, -2, "pi");
-  lua_pushnumber(L, HUGE_VAL);
+  lua_pushnumber(L, (long)HUGE_VAL);
   lua_setfield(L, -2, "huge");
 #if defined(LUA_COMPAT_MOD)
   lua_getfield(L, -1, "fmod");

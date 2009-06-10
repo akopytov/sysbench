@@ -19,6 +19,7 @@
 # include "config.h"
 #endif
 
+#include "script_lua.h"
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"

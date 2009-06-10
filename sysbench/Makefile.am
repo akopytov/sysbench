@@ -18,11 +18,13 @@ SUBDIRS = drivers tests scripting .
 
 bin_PROGRAMS = sysbench
 
-EXTRA_LDFLAGS = @EXTRA_LDFLAGS@
-
 # The following check will be extended as new database drivers will be added
 if USE_MYSQL
 mysql_ldadd = drivers/mysql/libsbmysql.a $(MYSQL_LIBS)
+endif
+
+if USE_DRIZZLE
+drizzle_ldadd = drivers/drizzle/libsbdrizzle.a $(LIBDRIZZLE)
 endif
 
 if USE_ORACLE
@@ -44,7 +46,7 @@ db_driver.c
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     tests/memory/libsbmemory.a tests/cpu/libsbcpu.a \
     tests/mutex/libsbmutex.a scripting/libsbscript.a \
-    $(mysql_ldadd) $(pgsql_ldadd) $(ora_ldadd) $(lua_ldadd)
+    $(mysql_ldadd) $(drizzle_ldadd) $(pgsql_ldadd) $(ora_ldadd) $(lua_ldadd)
 
 sysbench_LDFLAGS = $(EXTRA_LDFLAGS) $(mysql_ldflags) $(pgsql_ldflags) $(ora_ldflags) $(lua_ldflags)
 

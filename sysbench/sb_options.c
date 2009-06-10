@@ -30,6 +30,7 @@
 #endif
 
 #include "sb_options.h"
+#include "sysbench.h"
 
 #define VALUE_DELIMITER '='
 #define VALUE_SEPARATOR ','
@@ -192,7 +193,8 @@ int sb_opt_to_int(option_t *opt)
   value_t        *val;
   sb_list_item_t *pos;
 
-  SB_LIST_FOR_EACH(pos, &opt->values)
+
+  SB_LIST_ONCE(pos, &opt->values)
   {
     val = SB_LIST_ENTRY(pos, value_t, listitem);
     return atoi(val->data);
@@ -200,6 +202,12 @@ int sb_opt_to_int(option_t *opt)
 
   return 0;
 }  
+
+bool sb_get_value_bool(char *name)
+{
+  return (sb_get_value_flag(name)) ? true : false;
+}
+
 
 int sb_get_value_int(char *name)
 {
@@ -223,7 +231,7 @@ unsigned long long sb_opt_to_size(option_t *opt)
   unsigned int        i, n;
   char                *c;
 
-  SB_LIST_FOR_EACH(pos, &opt->values)
+  SB_LIST_ONCE(pos, &opt->values)
   {
     val = SB_LIST_ENTRY(pos, value_t, listitem);
     /*
@@ -259,7 +267,6 @@ unsigned long long sb_opt_to_size(option_t *opt)
       else
         res = 0; /* Unknown size modifier */
     }
-    break;
   }
 
   return res;
@@ -312,7 +319,7 @@ char *sb_opt_to_string(option_t *opt)
   value_t        *val;
   sb_list_item_t *pos;
 
-  SB_LIST_FOR_EACH(pos, &opt->values)
+  SB_LIST_ONCE(pos, &opt->values)
   {
     val = SB_LIST_ENTRY(pos, value_t, listitem);
     return val->data;

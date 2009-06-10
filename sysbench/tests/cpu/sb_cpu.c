@@ -82,12 +82,13 @@ int register_test_cpu(sb_list_t * tests)
 
 int cpu_init(void)
 {
-  max_prime = sb_get_value_int("cpu-max-prime");
-  if (max_prime <= 0)
+  int prime_option= sb_get_value_int("cpu-max-prime");
+  if (prime_option <= 0)
   {
-    log_text(LOG_FATAL, "Invalid value of cpu-max-prime: %d.", max_prime);
+    log_text(LOG_FATAL, "Invalid value of cpu-max-prime: %d.", prime_option);
     return 1;
   }
+  max_prime= (unsigned int)prime_option;
 
   req_performed = 0;
 
@@ -117,7 +118,8 @@ sb_request_t cpu_get_request(void)
 int cpu_execute_request(sb_request_t *r, int thread_id)
 {
   unsigned long long c;
-  unsigned long long l,t;
+  unsigned long long l;
+  double t;
   unsigned long long n=0;
   log_msg_t           msg;
   log_msg_oper_t      op_msg;
@@ -133,7 +135,7 @@ int cpu_execute_request(sb_request_t *r, int thread_id)
 
   for(c=3; c < max_prime; c++)  
   {
-    t = sqrt(c);
+    t = sqrt((double)c);
     for(l = 2; l <= t; l++)
       if (c % l == 0)
         break;

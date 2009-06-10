@@ -34,6 +34,7 @@
 #ifdef HAVE_PTHREAD_H
 # include <pthread.h>
 #endif
+#include <stdbool.h>
 
 #include "sb_list.h"
 #include "sb_options.h"
@@ -201,6 +202,7 @@ extern sb_globals_t sb_globals;
 /* used to get options passed from command line */
 
 int sb_get_value_flag(char *);
+bool sb_get_value_bool(char *);
 int sb_get_value_int(char *);
 unsigned long long sb_get_value_size(char *);
 float sb_get_value_float(char *);

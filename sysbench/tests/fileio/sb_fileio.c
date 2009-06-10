@@ -25,8 +25,6 @@
 
 #ifdef STDC_HEADERS
 # include <stdio.h>
-/* Required for memalign to be declared on Solaris */
-#define __EXTENSIONS__
 # include <stdlib.h>
 #endif
 
@@ -1793,7 +1791,9 @@ void *sb_memalign(size_t size)
   
 #ifdef HAVE_POSIX_MEMALIGN
   page_size = sb_getpagesize();
-  posix_memalign((void **)&buffer, page_size, size);
+  int ret= posix_memalign(&buffer, page_size, size);
+  if (ret != 0)
+    buffer=NULL; 
 #elif defined(HAVE_MEMALIGN)
   page_size = sb_getpagesize();
   buffer = memalign(page_size, size);
@@ -1898,7 +1898,7 @@ void file_fill_buffer(unsigned char *buf, unsigned int len,
     buf[i] = sb_rnd() & 0xFF;
 
   /* Store the checksum */
-  *(int *)(buf + i) = (int)crc32(0, buf, len -
+  *(int *)(buf + i) = (int)crc32(0, (unsigned char *)buf, len -
                                  (FILE_CHECKSUM_LENGTH + FILE_OFFSET_LENGTH));
   /* Store the offset */
   *(long *)(buf + i + FILE_CHECKSUM_LENGTH) = offset;
@@ -1915,7 +1915,7 @@ int file_validate_buffer(unsigned char  *buf, unsigned int len, size_t offset)
 
   cs_offset = len - (FILE_CHECKSUM_LENGTH + FILE_OFFSET_LENGTH);
   
-  checksum = (unsigned int)crc32(0, buf, cs_offset);
+  checksum = (unsigned int)crc32(0, (unsigned char *)buf, cs_offset);
 
   if (checksum != *(unsigned int *)(buf + cs_offset))
   {
