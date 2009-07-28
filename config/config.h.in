@@ -154,6 +154,10 @@
 /* Define if /proc/meminfo shows the huge page size (Linux only) */
 #undef HUGETLB_USE_PROC_MEMINFO
 
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
+
 /* Define to the appropriate value for O_SYNC on your platform */
 #undef O_SYNC
 

@@ -123,6 +123,10 @@
       <title>Installation</title>
 
       <para>
+        If you are building SysBench from a Bazaar repository rather than from a release tarball,
+        you should run <command>./autogen.sh</command> before building.
+      </para>
+      <para>
 	The following standart procedure will be sufficient to build SysBench in most cases:
 	<synopsis>
 	  <command>./configure</command>

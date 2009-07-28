@@ -25,6 +25,7 @@ scheduler
 Installing:
 See the file INSTALL for generic installation instructions.
 In most cases you will need the following steps:
+    ./autogen.sh (unnecessary if you are building from a release tarball)
     ./configure (or ./configure --without-mysql to compile w/o MySQL support)
     make
     make install
