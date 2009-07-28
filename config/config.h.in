@@ -54,7 +54,7 @@
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
 
-/* Define to 1 if you have the <lrand48> header file. */
+/* Define to 1 if you have the `lrand48' function. */
 #undef HAVE_LRAND48
 
 /* Define to 1 if you have Lua headers and libraries */
@@ -168,6 +168,10 @@
 
 /* Define if /proc/meminfo shows the huge page size (Linux only) */
 #undef HUGETLB_USE_PROC_MEMINFO
+
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
 
 /* Define to the appropriate value for O_SYNC on your platform */
 #undef O_SYNC
