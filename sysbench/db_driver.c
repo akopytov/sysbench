@@ -59,19 +59,6 @@ static db_thread_stat_t *thread_stats; /* per-thread stats */
 static sb_timer_t *exec_timers;
 static sb_timer_t *fetch_timers;
 
-/* DB drivers registrars */
-#ifdef USE_MYSQL
-int register_driver_mysql(sb_list_t *);
-#endif
-
-#ifdef USE_ORACLE
-int register_driver_oracle(sb_list_t *);
-#endif
-
-#ifdef USE_PGSQL
-int register_driver_pgsql(sb_list_t *);
-#endif
-
 /* Static functions */
 
 static int db_parse_arguments(void);
@@ -113,6 +100,12 @@ int db_register(void)
   SB_LIST_INIT(&drivers);
 #ifdef USE_MYSQL
   register_driver_mysql(&drivers);
+#endif
+#ifdef USE_DRIZZLE
+  register_driver_drizzle(&drivers);
+#endif
+#ifdef USE_DRIZZLECLIENT
+  register_driver_drizzleclient(&drivers);
 #endif
 #ifdef USE_ORACLE
   register_driver_oracle(&drivers);
@@ -391,29 +384,6 @@ db_result_set_t *db_execute(db_stmt_t *stmt)
   
   return rs;
 }
-
-/* Fetch row into buffers bound by db_bind() */
-
-
-int db_fetch(db_result_set_t *rs)
-{
-  db_conn_t *con;
-
-  /* Is this a result set from a prepared statement? */
-  if (rs->statement == NULL)
-    return 1;
-
-  con = rs->connection;
-  if (con == NULL || con->driver == NULL)
-    return 1;
-
-  if (!rs->statement->emulated)
-    return con->driver->ops.fetch(rs);
-
-  /* NYI: Use emulation */
-  return 1;
-}
-
 
 /* Return the number of rows in a result set */
 

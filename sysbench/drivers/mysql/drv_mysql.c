@@ -31,6 +31,7 @@
 #ifdef HAVE_STRINGS_H
 # include <strings.h>
 #endif
+#include <stdio.h>
 
 #include <mysql.h>
 #include <mysqld_error.h>
@@ -80,14 +81,13 @@ static sb_arg_t mysql_drv_args[] =
 
 typedef struct
 {
-  sb_list_t         *hosts;
+  sb_list_t          *hosts;
   unsigned int       port;
   char               *socket;
   char               *user;
   char               *password;
   char               *db;
-  unsigned int       myisam_max_rows;
-  unsigned int       use_ssl;
+  unsigned char      use_ssl;
   unsigned char      debug;
 } mysql_drv_args_t;
 
@@ -219,12 +219,11 @@ int mysql_drv_init(void)
   hosts_pos = args.hosts;
   pthread_mutex_init(&hosts_mutex, NULL);
   
-  args.port = sb_get_value_int("mysql-port");
+  args.port = (unsigned int)sb_get_value_int("mysql-port");
   args.socket = sb_get_value_string("mysql-socket");
   args.user = sb_get_value_string("mysql-user");
   args.password = sb_get_value_string("mysql-password");
   args.db = sb_get_value_string("mysql-db");
-  args.myisam_max_rows = sb_get_value_int("myisam-max-rows");
   args.use_ssl = sb_get_value_flag("mysql-ssl");
   args.debug = sb_get_value_flag("mysql-debug");
   if (args.debug)
@@ -312,12 +311,12 @@ int mysql_drv_connect(db_conn_t *sb_conn)
         (MYSQL_VERSION_ID >= 50000) ? "CLIENT_MULTI_STATEMENTS" : "0"
         );
   if (!mysql_real_connect(con,
-                         host,
-                         args.user,
-                         args.password,
-                         args.db,
-                         args.port,
-                         args.socket,
+                          host,
+                          args.user,
+                          args.password,
+                          args.db,
+                          args.port,
+                          args.socket,
 #if MYSQL_VERSION_ID >= 50000
                           CLIENT_MULTI_STATEMENTS)
 #else
@@ -425,7 +424,8 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 #ifdef HAVE_PS
   MYSQL_BIND   *bind;
   unsigned int i;
-  unsigned int rc;
+  my_bool rc;
+  unsigned long param_count;
 #endif
   
   if (con == NULL)
@@ -437,9 +437,9 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
     if (stmt->ptr == NULL)
       return 1;
     /* Validate parameters count */
-    rc = mysql_stmt_param_count(stmt->ptr);
-    DEBUG("mysql_stmt_param_count(%p) = %u", stmt->ptr, rc);
-    if (rc != len)
+    param_count = mysql_stmt_param_count(stmt->ptr);
+    DEBUG("mysql_stmt_param_count(%p) = %lu", stmt->ptr, param_count);
+    if (param_count != len)
     {
       log_text(LOG_FATAL, "Wrong number of parameters to mysql_stmt_bind_param");
       return 1;
@@ -458,7 +458,7 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
     }
 
     rc = mysql_stmt_bind_param(stmt->ptr, bind);
-    DEBUG("mysql_stmt_bind_param(%p, %p) = %u", stmt->ptr, bind, rc);
+    DEBUG("mysql_stmt_bind_param(%p, %p) = %d", stmt->ptr, bind, rc);
     if (rc)
     {
       log_text(LOG_FATAL, "mysql_stmt_bind_param() failed");
@@ -503,7 +503,7 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
   MYSQL        *con = (MYSQL *)stmt->connection->ptr;
   MYSQL_BIND   *bind;
   unsigned int i;
-  unsigned int rc;
+  my_bool rc;
   
   if (con == NULL || stmt->ptr == NULL)
     return 1;
@@ -525,7 +525,7 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
   gresults = params;
   
   rc = mysql_stmt_bind_result(stmt->ptr, bind);
-  DEBUG("mysql_stmt_bind_result(%p, %p) = %u", stmt->ptr, bind, rc);
+  DEBUG("mysql_stmt_bind_result(%p, %p) = %d", stmt->ptr, bind, rc);
   if (rc)
   {
     free(bind);
@@ -561,7 +561,7 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
       log_text(LOG_DEBUG, "ERROR: exiting mysql_drv_execute(), uninitialized statement");
       return SB_DB_ERROR_FAILED;
     }
-    rc = mysql_stmt_execute(stmt->ptr);
+    rc = (unsigned int)mysql_stmt_execute(stmt->ptr);
     DEBUG("mysql_stmt_execute(%p) = %u", stmt->ptr, rc);
     if (rc)
     {
@@ -607,13 +607,13 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
       continue;
     }
 
-    n = db_print_value(stmt->bound_param + vcnt, buf + j, buflen - j);
+    n = db_print_value(stmt->bound_param + vcnt, buf + j, (int)(buflen - j));
     if (n < 0)
     {
       need_realloc = 1;
       goto again;
     }
-    j += n;
+    j += (unsigned int)n;
     vcnt++;
   }
   buf[j] = '\0';
@@ -640,7 +640,7 @@ int mysql_drv_query(db_conn_t *sb_conn, const char *query,
   unsigned int rc;
 
   (void)rs; /* unused */
-  rc = mysql_real_query(con, query, strlen(query));
+  rc = (unsigned int)mysql_real_query(con, query, strlen(query));
   DEBUG("mysql_real_query(%p, \"%s\", %u) = %u", con, query, strlen(query), rc);
   if (rc)
   {
@@ -705,7 +705,7 @@ int mysql_drv_store_results(db_result_set_t *rs)
   MYSQL        *con = rs->connection->ptr;
   MYSQL_RES    *res;
   MYSQL_ROW    row;
-  int rc;
+  unsigned int rc;
 
 #ifdef HAVE_PS
   /* Is this result set from prepared statement? */
@@ -714,7 +714,7 @@ int mysql_drv_store_results(db_result_set_t *rs)
     if (rs->statement->ptr == NULL)
       return 1;
 
-    rc = mysql_stmt_store_result(rs->statement->ptr);
+    rc = (unsigned int)mysql_stmt_store_result(rs->statement->ptr);
     DEBUG("mysql_stmt_store_result(%p) = %d", rs->statement->ptr, rc);
     if (rc)
     {
@@ -736,7 +736,7 @@ int mysql_drv_store_results(db_result_set_t *rs)
     rs->nrows = mysql_stmt_num_rows(rs->statement->ptr);
     DEBUG("mysql_stmt_num_rows(%p) = %d", rs->statement->ptr, rs->nrows);
     do {
-      rc = mysql_stmt_fetch(rs->statement->ptr);
+      rc = (unsigned int)mysql_stmt_fetch(rs->statement->ptr);
       DEBUG("mysql_stmt_fetch(%p) = %d", rs->statement->ptr, rc);
     } while(rc == 0);
 

@@ -38,6 +38,17 @@ function prepare()
 	      pad CHAR(60) DEFAULT '' NOT NULL, 
 	      PRIMARY KEY (id)
 	    ) ]]
+
+   elseif (db_driver == "drizzle") then
+      query = [[
+	    CREATE TABLE sbtest (
+	      id INTEGER NOT NULL ]] .. ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
+	      k INTEGER DEFAULT '0' NOT NULL,
+	      c CHAR(120) DEFAULT '' NOT NULL,
+              pad CHAR(60) DEFAULT '' NOT NULL,
+              PRIMARY KEY (id)
+	    ) ]]
+
    else
       print("Unknown database driver: " .. db_driver)
       return 1

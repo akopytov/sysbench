@@ -1,39 +1,118 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(sysbench, 0.5, alexeyk@mysql.com)
+AC_INIT([sysbench],[0.5],[sysbench-developers@lists.launchpad.net])
 AC_CONFIG_AUX_DIR([config])
+# Setting CFLAGS here prevents AC_CANONICAL_TARGET from injecting them
+SAVE_CFLAGS=${CFLAGS}
+SAVE_CXXFLAGS=${CXXFLAGS}
+CFLAGS=
+CXXFLAGS=
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE()
+
+CFLAGS=${SAVE_CFLAGS}
+CXXFLAGS=${SAVE_CXXFLAGS}
+ 
+AM_INIT_AUTOMAKE(-Wall -Werror)
 AC_CONFIG_SRCDIR([sysbench/sysbench.c])
-AM_CONFIG_HEADER([config/config.h])
+AC_CONFIG_HEADER([config/config.h])
+AC_CONFIG_MACRO_DIR([m4])
+
+AC_PROG_CC
+AC_PROG_CPP
+AM_PROG_CC_C_O
+
+ACX_USE_SYSTEM_EXTENSIONS
+
+AC_PROG_LIBTOOL
+
+AC_CHECK_DECL([__SUNPRO_C], [SUNCC="yes"], [SUNCC="no"])
+
+AC_MSG_CHECKING("C Compiler version")
+if test "$GCC" = "yes"
+then
+  CC_VERSION=`$CC --version | sed 1q`
+elif test "$SUNCC" = "yes"
+then
+  CC_VERSION=`$CC -V 2>&1 | sed 1q`
+else
+  CC_VERSION=""
+fi
+AC_MSG_RESULT("$CC_VERSION")
+AC_SUBST(CC_VERSION)
 
 # Checks for user arguments
 
+AC_LIB_PREFIX()
 # Additional linker flags
 AC_ARG_WITH([extra-ldflags],
-              AC_HELP_STRING([--with-extra-ldflags], [additional linker flags, e.g. -all-static]),
+              AS_HELP_STRING([--with-extra-ldflags],[additional linker flags, e.g. -all-static]),
               EXTRA_LDFLAGS=$withval
 )
 AC_SUBST(EXTRA_LDFLAGS)
 
+CPPFLAGS="-D_XOPEN_SOURCE=500 -D_GNU_SOURCE ${CPPFLAGS}"
+
+# Mac OS X requires _DARWIN_C_SOURCE for valloc(3) to be visible
+case "${host_cpu}-${host_os}" in
+	*-darwin*) CPPFLAGS="-D_DARWIN_C_SOURCE ${CPPFLAGS}";;
+esac
+
+# Build optimized or debug version ?
+# First check for gcc and g++
+if test "$GCC" = "yes"
+then
+  CFLAGS="-ggdb3 ${CFLAGS}"
+  DEBUG_CFLAGS="-O0"
+  OPTIMIZE_CFLAGS="-O2"
+fi
+if test "$SUNCC" = "yes"
+then
+  isainfo_k=`isainfo -k`
+  if test "$target_cpu" = "sparc"
+  then
+    MEMALIGN_FLAGS="-xmemalign=8s"
+    IS_64="-m64"
+    LDFLAGS="${LDFLAGS} -L/usr/lib/${isainfo_k} -L/usr/local/lib/${isainfo_k}"
+  else
+    if test "$isainfo_k" = "amd64"
+    then
+      IS_64="-m64"
+      LDFLAGS="${LDFLAGS} -L/usr/lib/${isainfo_k} -L/usr/local/lib/${isainfo_k}"
+    fi
+  fi
+  CPPFLAGS="${CPPFLAGS} -I/usr/local/include"
+
+  CFLAGS="-g -mt ${IS_64} ${MEMALIGN_FLAGS} ${CFLAGS}"
+  DEBUG_CFLAGS="-xO0"
+  OPTIMIZE_CFLAGS="-xO2 -xlibmil -xdepend -Xa -mt -xstrconst"
+fi
+
+
 # Check if we should compile with MySQL support
 AC_ARG_WITH([mysql], 
-            AC_HELP_STRING([--with-mysql], [compile with MySQL support (default is enabled)]),
+            AS_HELP_STRING([--with-mysql],[compile with MySQL support (default is enabled)]),
             [ac_cv_use_mysql=$withval], [ac_cv_use_mysql=yes]
 )
 AC_CACHE_CHECK([whether to compile with MySQL support], [ac_cv_use_mysql], [ac_cv_use_mysql=no])
 
+# Check if we should compile with Drizzle support
+AC_ARG_WITH([drizzle], 
+            AS_HELP_STRING([--with-drizzle],[compile with Drizzle support (default is enabled)]),
+            [ac_cv_use_drizzle=$withval], [ac_cv_use_drizzle=yes]
+)
+AC_CACHE_CHECK([whether to compile with Drizzle support], [ac_cv_use_drizzle], [ac_cv_use_drizzle=no])
+
 # Check if we should compile with Oracle support
 AC_ARG_WITH([oracle],
-            AC_HELP_STRING([--with-oracle], [compile with Oracle support (default is disabled)]),
+            AS_HELP_STRING([--with-oracle],[compile with Oracle support (default is disabled)]),
             [ac_cv_use_oracle=$withval], [ac_cv_use_oracle=no]
 )
 AC_CACHE_CHECK([whether to compile with Oracle support], [ac_cv_use_oracle], [ac_cv_use_oracle=yes])
 
 # Check if we should compile with PostgreSQL support
 AC_ARG_WITH([pgsql],
-            AC_HELP_STRING([--with-pgsql], [compile with PostgreSQL support (default is disabled)]),
+            AS_HELP_STRING([--with-pgsql],[compile with PostgreSQL support (default is disabled)]),
             [ac_cv_use_pgsql=$withval], [ac_cv_use_pgsql=no]
 )
 AC_CACHE_CHECK([whether to compile with PostgreSQL support], [ac_cv_use_pgsql], [ac_cv_use_pgsql=yes])
@@ -43,7 +122,7 @@ AC_LUA_DEVEL
 
 # Check if we should enable large files support
 AC_ARG_ENABLE(largefile,
-    AC_HELP_STRING([--enable-largefile],[enable large files support (default is enabled)]), ,
+    AS_HELP_STRING([--enable-largefile],[enable large files support (default is enabled)]), ,
     enable_largefile=yes
 )
 
@@ -61,7 +140,7 @@ AC_CHECK_DECLS(SHM_HUGETLB,
 
 # Check if we should enable Linux AIO support
 AC_ARG_ENABLE(aio,
-   AC_HELP_STRING([--enable-aio],[enable Linux asynchronous I/O support (default is enabled)]), ,
+   AS_HELP_STRING([--enable-aio],[enable Linux asynchronous I/O support (default is enabled)]), ,
    enable_aio=yes
 )
 
@@ -73,10 +152,8 @@ AC_CHECK_DECLS(O_SYNC, ,
    ]
 )
 
-# Checks for programs.
-AC_PROG_CC
-AC_PROG_LIBTOOL
 
+# Checks for programs.
 AX_CHECK_DOCBOOK
 
 # Checks for libraries.
@@ -92,6 +169,20 @@ if test x$ac_cv_use_mysql != xno; then
     AC_SUBST([MYSQL_CFLAGS])
 fi
 AM_CONDITIONAL(USE_MYSQL, test x$ac_cv_use_mysql != xno)
+
+if test x$ac_cv_use_drizzle != xno; then
+  AC_LIB_HAVE_LINKFLAGS(drizzle,,
+    [#include <libdrizzle/drizzle.h>],
+    [
+     int x= DRIZZLE_RETURN_ERROR_CODE;
+     const char *version= drizzle_version();
+    ])
+fi
+if test "x$ac_cv_libdrizzle" = "xyes"
+then
+    AC_DEFINE(USE_DRIZZLE,1,[Define to 1 if you want to compile with Drizzle support])
+fi
+AM_CONDITIONAL(USE_DRIZZLE, test x$ac_cv_libdrizzle = xyes)
 
 AM_CONDITIONAL(USE_ORACLE, test x$ac_cv_use_oracle != xno)
 if test x$ac_cv_use_oracle != xno; then
@@ -191,22 +282,128 @@ AC_CHECK_FUNC(pthread_once, ,
               AC_MSG_ERROR([*** pthread_once() is not available on this platform ***])
 )
 
-if test "x$GCC" = "xyes"; then
-    AM_CFLAGS="-W -Wall -Wpointer-arith -Wbad-function-cast \
--Wstrict-prototypes -Wnested-externs -Winline \
--funroll-loops"
+AC_ARG_WITH([debug],
+    [AS_HELP_STRING([--with-debug],
+       [Add debug code/turns off optimizations (yes|no) @<:@default=no@:>@])],
+    [with_debug=$withval],
+    [with_debug=no])
+if test "$with_debug" = "yes"
+then
+  # Debugging. No optimization.
+  CFLAGS="${DEBUG_CFLAGS} -DDEBUG ${CFLAGS}"
+else
+  # Optimized version. No debug
+  CFLAGS="${OPTIMIZE_CFLAGS} ${CFLAGS}"
 fi
 
-AM_CFLAGS="$AM_CFLAGS $PTHREAD_CFLAGS"
+AC_ARG_ENABLE([profiling],
+    [AS_HELP_STRING([--enable-profiling],
+       [Toggle profiling @<:@default=off@:>@])],
+    [ac_profiling="$enableval"],
+    [ac_profiling="no"])
+ 
+AC_ARG_ENABLE([coverage],
+    [AS_HELP_STRING([--enable-coverage],
+       [Toggle coverage @<:@default=off@:>@])],
+    [ac_coverage="$enableval"],
+    [ac_coverage="no"])
 
-AM_CPPFLAGS='-D_REENTRANT -D_XOPEN_SOURCE=500 -D_GNU_SOURCE -I$(top_srcdir)/sysbench'
+AC_ARG_ENABLE([pedantic-warnings],
+    [AS_HELP_STRING([--disable-pedantic-warnings],
+       [Toggle pedanticness @<:@default=on@:>@])],
+    [ac_warn_pedantic="$enableval"],
+    [ac_warn_pedantic="yes"])
+
+AC_ARG_ENABLE([iso-pedantic-warnings],
+    [AS_HELP_STRING([--enable-iso-pedantic-warnings],
+       [Toggle iso pedanticness @<:@default=off@:>@])],
+    [ac_warn_iso_pedantic="$enableval"],
+    [ac_warn_iso_pedantic="no"])
+
+AC_ARG_ENABLE([unreachable],
+  [AS_HELP_STRING([--enable-unreachable],
+    [Enable warnings about unreachable code @<:@default=no@:>@])],
+  [ac_warn_unreachable="$enableval"],
+  [ac_warn_unreachable="no"])
+
+
+AC_ARG_ENABLE([fail],
+    [AS_HELP_STRING([--disable-fail],
+       [Turn warnings into failures @<:@default=no@:>@])],
+    [ac_warn_fail="$enableval"],
+    [ac_warn_fail="no"])
+
+AC_ARG_ENABLE([go-crazy],
+    [AS_HELP_STRING([--disable-go-crazy],
+       [Enables extra little warnings that might be too much @<:@default=on@:>@])],
+    [ac_warn_go_crazy="$enableval"],
+    [ac_warn_go_crazy="no"])
+
+if test "$GCC" = "yes"
+then
+  if test "$ac_warn_fail" = "yes"
+  then
+    W_FAIL="-Werror"
+  fi
+  BASE_WARNINGS="-W -Wall -Wextra -Wpointer-arith -Wbad-function-cast \
+  -Wstrict-prototypes -Wnested-externs -Winline \
+  -funroll-loops ${W_FAIL}"
+
+  if test "$ac_profiling" = "yes"
+  then
+    GPROF_PROFILING="-pg"
+  else
+    GPROF_PROFILING=" "
+  fi
+
+  if test "$ac_coverage" = "yes"
+  then
+    GPROF_COVERAGE="-fprofile-arcs -ftest-coverage"
+  else
+    GPROF_COVERAGE=" "
+  fi
+
+  if test "$ac_warn_pedantic" = "yes"
+  then
+    W_PEDANTIC="-Wundef -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wcast-align"
+  fi
+
+  if test "$ac_warn_iso_pedantic" = "yes"
+  then
+    W_PEDANTIC="-pedantic ${W_PEDANTIC}"
+  fi
+
+  if test "$ac_warn_unreachable" = "yes"
+  then
+    W_UNREACHABLE="-Wunreachable-code"
+  fi
+
+  if test "$ac_warn_go_crazy" = "yes"
+  then
+    W_CRAZY="-Wshadow -Wconversion"
+  fi
+
+  CC_WARNINGS="${BASE_WARNINGS} ${W_PEDANTIC} ${W_UNREACHABLE} ${GPROF_PROFILING} ${GPROF_COVERAGE} ${W_CRAZY}"
+
+  NO_REDUNDANT_DECLS="-Wno-redundant-decls"
+  CPPFLAGS="${CPPFLAGS}"
+fi
+if test "$SUNCC" = "yes"
+then
+  CC_WARNINGS="-v -errtags=yes -errwarn=%all -erroff=E_INTEGER_OVERFLOW_DETECTED"
+fi
+
+AM_CFLAGS="${CC_WARNINGS} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
+
+AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/sysbench"
+
 AM_LDFLAGS="$PTHREAD_LIBS"
 
 AC_SUBST(AM_CFLAGS)
 AC_SUBST(AM_CPPFLAGS)
 AC_SUBST(AM_LDFLAGS)
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
 Makefile
 doc/xsl/Makefile
 doc/xsl/catalog.xml
@@ -214,6 +411,7 @@ doc/Makefile
 sysbench/Makefile
 sysbench/drivers/Makefile
 sysbench/drivers/mysql/Makefile
+sysbench/drivers/drizzle/Makefile
 sysbench/drivers/oracle/Makefile
 sysbench/drivers/pgsql/Makefile
 sysbench/tests/Makefile
@@ -227,3 +425,4 @@ sysbench/scripting/Makefile
 sysbench/scripting/lua/Makefile
 sysbench/scripting/lua/src/Makefile
 ])
+AC_OUTPUT

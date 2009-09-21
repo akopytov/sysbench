@@ -25,8 +25,6 @@
 
 #ifdef STDC_HEADERS
 # include <stdio.h>
-/* Required for memalign to be declared on Solaris */
-#define __EXTENSIONS__
 # include <stdlib.h>
 #endif
 
@@ -1793,7 +1791,9 @@ void *sb_memalign(size_t size)
   
 #ifdef HAVE_POSIX_MEMALIGN
   page_size = sb_getpagesize();
-  posix_memalign((void **)&buffer, page_size, size);
+  int ret= posix_memalign(&buffer, page_size, size);
+  if (ret != 0)
+    buffer = NULL; 
 #elif defined(HAVE_MEMALIGN)
   page_size = sb_getpagesize();
   buffer = memalign(page_size, size);
@@ -1805,7 +1805,8 @@ void *sb_memalign(size_t size)
   buffer = VirtualAlloc(NULL, size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 #else
   (void)page_size; /* unused */
-  log_text(LOG_WARNING, "None of valloc(), memalign and posix_memalign() is available, doing unaligned IO!");
+  log_text(LOG_WARNING, "None of valloc(), memalign() and posix_memalign() "
+           "is available, doing unaligned IO!");
   buffer = malloc(size);
 #endif
 

@@ -97,6 +97,9 @@ typedef sb_list_item_t sb_list_t ;
 #define SB_LIST_ENTRY(ptr, type, member)            \
 ((type *)((char *)(ptr) - offsetof(type, member)))
 
+#define SB_LIST_ONCE(pos_p, head_p) \
+    pos_p= (head_p)->next_p; if (pos_p != (head_p))
+
 #define SB_LIST_FOR_EACH(pos_p, head_p) \
   for (pos_p = (head_p)->next_p; pos_p != (head_p); pos_p = pos_p->next_p)
 

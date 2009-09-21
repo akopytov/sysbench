@@ -16,12 +16,7 @@
 */
 
 #ifndef OPTIONS_H
-
 #define OPTIONS_H
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 #include <stdio.h>
 
@@ -82,15 +77,15 @@ option_t *sb_find_option(char *name);
 /* Print list of options specified by 'opts' */
 void sb_print_options(sb_arg_t *opts);
 
-int sb_get_value_flag(char *name);
+int sb_get_value_flag(char *);
 
-int sb_get_value_int(char *name);
+int sb_get_value_int(char *);
 
-unsigned long long sb_get_value_size(char *name);
+unsigned long long sb_get_value_size(char *);
 
-float sb_get_value_float(char *name);
+float sb_get_value_float(char *);
 
-char *sb_get_value_string(char *name);
+char *sb_get_value_string(char *);
 
 sb_list_t *sb_get_value_list(char *name);
 

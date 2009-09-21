@@ -198,14 +198,6 @@ typedef struct
 
 extern sb_globals_t sb_globals;
 
-/* used to get options passed from command line */
-
-int sb_get_value_flag(char *);
-int sb_get_value_int(char *);
-unsigned long long sb_get_value_size(char *);
-float sb_get_value_float(char *);
-char *sb_get_value_string(char *);
-
 /* Random number generators */
 int sb_rand(int, int);
 int sb_rand_uniform(int, int);

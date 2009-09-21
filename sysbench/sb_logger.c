@@ -39,7 +39,7 @@
 #include "sb_logger.h"
 
 /* Format of the timestamp string */
-#define TIMESTAMP_FMT "[%s] "
+#define TIMESTAMP_FMT "[%ld] "
 
 #define TEXT_BUFFER_SIZE 4096
 #define ERROR_BUFFER_SIZE 256
@@ -258,7 +258,6 @@ void log_text(log_msg_priority_t priority, const char *fmt, ...)
   char           buf[TEXT_BUFFER_SIZE];
   va_list        ap;
   int            n, clen, maxlen;
-  struct tm      tm_now;
   time_t         t_now;
 
   maxlen = TEXT_BUFFER_SIZE;
@@ -267,8 +266,7 @@ void log_text(log_msg_priority_t priority, const char *fmt, ...)
   if (log_timestamp)
   {
     time(&t_now);
-    gmtime_r((const time_t *)&t_now, &tm_now);
-    n = strftime(buf, maxlen, TIMESTAMP_FMT, &tm_now);
+    n = snprintf(buf, maxlen, TIMESTAMP_FMT, (long)t_now);
     clen += n;
     maxlen -= n;
   }
