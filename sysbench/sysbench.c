@@ -68,6 +68,9 @@
 /* If we should initialize random numbers generator */
 static int init_rng;
 
+/* seed for random number generator */
+static int seed_rng;
+
 /* Stack size for each thread */
 static int thread_stack_size;
 
@@ -81,6 +84,7 @@ sb_arg_t general_args[] =
    SB_ARG_TYPE_STRING, "off"},
   {"thread-stack-size", "size of stack per thread", SB_ARG_TYPE_SIZE, "32K"},
   {"init-rng", "initialize random number generator", SB_ARG_TYPE_FLAG, "off"},
+  {"seed-rng", "seed for random number generator, ignored when 0", SB_ARG_TYPE_INT, "0"},
   {"test", "test to run", SB_ARG_TYPE_STRING, NULL},
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
@@ -345,6 +349,16 @@ void print_run_mode(sb_test_t *test)
     sb_srnd(time(NULL));
   }
 
+  if (seed_rng)
+  {
+    log_text(LOG_NOTICE, "Initializing random number generator from seed (%d).\n", seed_rng);
+    sb_srnd(seed_rng);
+  }
+  else
+  {
+    log_text(LOG_NOTICE, "Random number generator seed is 0 and will be ignored\n");
+  }
+
   if (sb_globals.force_shutdown)
     log_text(LOG_NOTICE, "Forcing shutdown in %u seconds",
              sb_globals.max_time + sb_globals.timeout);
@@ -604,6 +618,12 @@ int init(void)
   
   sb_globals.validate = sb_get_value_flag("validate");
   init_rng = sb_get_value_flag("init-rng"); 
+  seed_rng = sb_get_value_flag("seed-rng");
+  if (init_rng && seed_rng)
+  {
+    log_text(LOG_FATAL, "Cannot set both --init_rng and --seed_rng\n");
+    return 1;
+  }
   
   return 0;
 }
