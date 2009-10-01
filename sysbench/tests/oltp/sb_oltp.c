@@ -75,7 +75,9 @@ static sb_arg_t oltp_args[] =
    SB_ARG_TYPE_INT, "1"},
   {"oltp-dist-res", "percentage of 'special' values to use (for special distribution)",
    SB_ARG_TYPE_INT, "75"},
-  
+  {"oltp-point-select-mysql-handler", "Use MySQL HANDLER for point select", SB_ARG_TYPE_FLAG, "off"},
+  {"oltp-point-select-all-cols", "select all columns for the point-select query", SB_ARG_TYPE_FLAG, "off"},
+  {"oltp-secondary", "Use a secondary index in place of the PRIMARY index", SB_ARG_TYPE_FLAG, "off"},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
 
@@ -144,6 +146,9 @@ typedef struct
   unsigned int     dist_iter;
   unsigned int     dist_pct;
   unsigned int     dist_res;
+  unsigned int     point_select_mysql_handler;
+  unsigned int     point_select_all_cols;
+  unsigned int     secondary;
 } oltp_args_t;
 
 /* Test statements structure */
@@ -374,13 +379,14 @@ int oltp_cmd_prepare(void)
            "k integer %s DEFAULT '0' NOT NULL, "
            "c char(120) DEFAULT '' NOT NULL, "
            "pad char(60) DEFAULT '' NOT NULL, "
-           "PRIMARY KEY  (id) "
+           "%s (id) "
            ") %s",
            args.table_name,
            (args.auto_inc && driver_caps.serial) ? "SERIAL" : "INTEGER",
            driver_caps.unsigned_int ? "UNSIGNED" : "",
            (args.auto_inc && driver_caps.auto_increment) ? "AUTO_INCREMENT" : "",
            driver_caps.unsigned_int ? "UNSIGNED" : "",
+           args.secondary ? "KEY xid" : "PRIMARY KEY",
            (table_options_str != NULL) ? table_options_str : ""
            );
   if (db_query(con, query) == NULL)
@@ -1506,7 +1512,6 @@ int parse_arguments(void)
   args.distinct_ranges = sb_get_value_int("oltp-distinct-ranges");
   args.index_updates = sb_get_value_int("oltp-index-updates");
   args.non_index_updates = sb_get_value_int("oltp-non-index-updates");
-
   s = sb_get_value_string("oltp-nontrx-mode");
   if (!strcmp(s, "select"))
     args.nontrx_mode = NONTRX_MODE_SELECT;
@@ -1564,6 +1569,16 @@ int parse_arguments(void)
     return 1;
   }
   
+  args.point_select_mysql_handler = sb_get_value_flag("oltp-point-select-mysql-handler");
+  args.point_select_all_cols = sb_get_value_flag("oltp-point-select-all-cols");
+  args.secondary = sb_get_value_flag("oltp-secondary");
+
+  if (args.auto_inc && args.secondary)
+  {
+    log_text(LOG_FATAL, "Cannot set both --oltp-auto-inc and --oltp-secondary");
+    return 1;
+  }
+
   return 0;
 }
 
@@ -1589,7 +1604,18 @@ void close_stmt_set(oltp_stmt_set_t *set)
 {
   db_close(set->lock);
   db_close(set->unlock);
+
+  if  (args.point_select_mysql_handler)
+  {
+    char      query[MAX_QUERY_LEN];
+    snprintf(query, MAX_QUERY_LEN, "HANDLER %s CLOSE", args.table_name);
+    if (db_query(set->point->connection, query) == NULL)
+    {
+      log_text(LOG_FATAL, "failed to close handler");
+    }
+  }
   db_close(set->point);
+
   db_close(set->call);
   db_close(set->range);
   db_close(set->range_sum);
@@ -1653,8 +1679,32 @@ int prepare_stmt_set_trx(oltp_stmt_set_t *set, oltp_bind_set_t *bufs, db_conn_t 
   char      query[MAX_QUERY_LEN];
 
   /* Prepare the point statement */
-  snprintf(query, MAX_QUERY_LEN, "SELECT c from %s where id=?",
-           args.table_name);
+  if  (args.point_select_mysql_handler)
+  {
+    snprintf(query, MAX_QUERY_LEN, "HANDLER %s OPEN", args.table_name);
+    if (db_query(conn, query) == NULL)
+    {
+      log_text(LOG_FATAL, "failed to open handler");
+      return 1;
+    }
+
+    snprintf(query, MAX_QUERY_LEN, "HANDLER %s READ `%s` = (?)",
+             args.table_name,
+             args.secondary ? "xid" : "PRIMARY");
+  }
+  else
+  {
+    if (args.point_select_all_cols)
+    {
+      snprintf(query, MAX_QUERY_LEN, "SELECT id, k, c, pad from %s where id=?",
+               args.table_name);
+    }
+    else
+    {
+      snprintf(query, MAX_QUERY_LEN, "SELECT c from %s where id=?",
+               args.table_name);
+    }
+  }
   set->point = db_prepare(conn, query);
   if (set->point == NULL)
     return 1;
