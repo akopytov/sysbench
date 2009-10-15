@@ -619,7 +619,7 @@ static int init(void)
   sb_globals.validate = sb_get_value_flag("validate");
 
   rand_init = sb_get_value_flag("rand-init"); 
-  rand_seed = sb_get_value_flag("rand-seed"); 
+  rand_seed = sb_get_value_int("rand-seed"); 
   if (rand_init && rand_seed)
   {
     log_text(LOG_FATAL, "Cannot set both --rand-init and --rand-seed");
