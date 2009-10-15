@@ -618,7 +618,7 @@ int init(void)
   
   sb_globals.validate = sb_get_value_flag("validate");
   init_rng = sb_get_value_flag("init-rng"); 
-  seed_rng = sb_get_value_flag("seed-rng");
+  seed_rng = sb_get_value_int("seed-rng");
   if (init_rng && seed_rng)
   {
     log_text(LOG_FATAL, "Cannot set both --init_rng and --seed_rng\n");
