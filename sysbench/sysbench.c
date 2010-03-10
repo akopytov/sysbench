@@ -65,6 +65,8 @@
 #include "scripting/sb_script.h"
 #include "db_driver.h"
 
+#define VERSION_STRING PACKAGE" "PACKAGE_VERSION
+
 /* Large prime number to generate unique random IDs */
 #define LARGE_PRIME 2147483647
 
@@ -105,6 +107,7 @@ sb_arg_t general_args[] =
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
   {"help", "print help and exit", SB_ARG_TYPE_FLAG, NULL},
+  {"version", "print version and exit", SB_ARG_TYPE_FLAG, NULL},
   {"rand-init", "initialize random number generator", SB_ARG_TYPE_FLAG, "off"},
   {"rand-type", "random numbers distribution {uniform,gaussian,special}", SB_ARG_TYPE_STRING,
    "special"},
@@ -211,7 +214,7 @@ static int register_tests(void)
 
 void print_header(void)
 {
-  log_text(LOG_NOTICE, PACKAGE" v"PACKAGE_VERSION
+  log_text(LOG_NOTICE, VERSION_STRING
          ":  multi-threaded system evaluation benchmark\n");
 }
 
@@ -236,7 +239,7 @@ void print_usage(void)
     printf("  %s - %s\n", test->sname, test->lname);
   }
   printf("\n");
-  printf("Commands: prepare run cleanup help\n\n");
+  printf("Commands: prepare run cleanup help version\n\n");
   printf("See 'sysbench --test=<name> help' for a list of options for each test.\n\n");
 }
 
@@ -251,6 +254,8 @@ static sb_cmd_t parse_command(char *cmd)
     return SB_COMMAND_HELP;
   else if (!strcmp(cmd, "cleanup"))
     return SB_COMMAND_CLEANUP;
+  else if (!strcmp(cmd, "version"))
+    return SB_COMMAND_VERSION;
 
   return SB_COMMAND_NULL;
 }
@@ -306,8 +311,10 @@ static int parse_arguments(int argc, char *argv[])
     } else
       value = NULL;
 
-    if (!strcmp(name, "help"))
+    if (sb_globals.command == SB_COMMAND_HELP)
       return 1;
+    if (sb_globals.command == SB_COMMAND_VERSION)
+      return 0;
     
     /* Search available options */
     opt = sb_find_option(name);
@@ -664,13 +671,19 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
+  if (sb_globals.command == SB_COMMAND_VERSION || sb_get_value_flag("version"))
+  {
+    printf("%s\n", VERSION_STRING);
+    exit(0);
+  }
+  
   if (sb_globals.command == SB_COMMAND_NULL)
   {
     fprintf(stderr, "Missing required command argument.\n");
     print_usage();
     exit(1);
   }
-  
+
   /* Initialize global variables and logger */
   if (init() || log_init())
     exit(1);

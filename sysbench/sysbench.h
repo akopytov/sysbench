@@ -68,7 +68,8 @@ typedef enum
   SB_COMMAND_PREPARE,
   SB_COMMAND_RUN,
   SB_COMMAND_CLEANUP,
-  SB_COMMAND_HELP
+  SB_COMMAND_HELP,
+  SB_COMMAND_VERSION
 } sb_cmd_t;
 
 /* Request types definition */
