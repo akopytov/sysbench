@@ -85,6 +85,7 @@ static int (*rand_func)(int, int); /* pointer to random numbers generator */
 static unsigned int rand_iter;
 static unsigned int rand_pct;
 static unsigned int rand_res;
+static int rand_seed; /* optional seed set on the command line */
 
 /* Random seed used to generate unique random numbers */
 static unsigned long long rnd_seed;
@@ -116,6 +117,7 @@ sb_arg_t general_args[] =
    SB_ARG_TYPE_INT, "1"},
   {"rand-spec-res", "percentage of 'special' values to use (for special distribution)",
    SB_ARG_TYPE_INT, "75"},
+  {"rand-seed", "seed for random number generator, ignored when 0", SB_ARG_TYPE_INT, "0"},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
 
@@ -346,6 +348,16 @@ void print_run_mode(sb_test_t *test)
   {
     log_text(LOG_NOTICE, "Initializing random number generator from timer.\n");
     sb_srnd(time(NULL));
+  }
+
+  if (rand_seed)
+  {
+    log_text(LOG_NOTICE, "Initializing random number generator from seed (%d).\n", rand_seed);
+    sb_srnd(rand_seed);
+  }
+  else
+  {
+    log_text(LOG_NOTICE, "Random number generator seed is 0 and will be ignored\n");
   }
 
   if (sb_globals.force_shutdown)
@@ -614,6 +626,13 @@ static int init(void)
   sb_globals.validate = sb_get_value_flag("validate");
 
   rand_init = sb_get_value_flag("rand-init"); 
+  rand_seed = sb_get_value_int("rand-seed"); 
+  if (rand_init && rand_seed)
+  {
+    log_text(LOG_FATAL, "Cannot set both --rand-init and --rand-seed");
+    return 1;
+  }
+
   s = sb_get_value_string("rand-type");
   if (!strcmp(s, "uniform"))
   {
