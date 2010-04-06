@@ -108,7 +108,7 @@ sb_arg_t general_args[] =
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
   {"help", "print help and exit", SB_ARG_TYPE_FLAG, NULL},
-  {"version", "print version and exit", SB_ARG_TYPE_FLAG, NULL},
+  {"version", "print version and exit", SB_ARG_TYPE_FLAG, "off"},
   {"rand-init", "initialize random number generator", SB_ARG_TYPE_FLAG, "off"},
   {"rand-type", "random numbers distribution {uniform,gaussian,special}", SB_ARG_TYPE_STRING,
    "special"},
