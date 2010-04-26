@@ -197,7 +197,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 }
 
 /* Minimal size of thread stack on Windows*/
-#define PTHREAD_STACK_MIN 65536
+#define PTHREAD_STACK_MIN 65536*2
 
 int pthread_attr_setstacksize( pthread_attr_t *attr, size_t stacksize)
 {
