@@ -85,6 +85,9 @@ sb_arg_t general_args[] =
   {"thread-stack-size", "size of stack per thread", SB_ARG_TYPE_SIZE, "32K"},
   {"init-rng", "initialize random number generator", SB_ARG_TYPE_FLAG, "off"},
   {"seed-rng", "seed for random number generator, ignored when 0", SB_ARG_TYPE_INT, "0"},
+  {"tx-rate", "target transaction rate (tps)", SB_ARG_TYPE_INT, "0"},
+  {"tx-jitter", "target transaction variation, in microseconds",
+    SB_ARG_TYPE_INT, "0"},
   {"test", "test to run", SB_ARG_TYPE_STRING, NULL},
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
@@ -337,6 +340,13 @@ void print_run_mode(sb_test_t *test)
   log_text(LOG_NOTICE, "Running the test with following options:");
   log_text(LOG_NOTICE, "Number of threads: %d", sb_globals.num_threads);
 
+  if (sb_globals.tx_rate > 0)
+  {
+    log_text(LOG_NOTICE,
+            "Target transaction rate: %d/sec, with jitter %d usec",
+             sb_globals.tx_rate, sb_globals.tx_jitter);
+  }
+
   if (sb_globals.debug)
     log_text(LOG_NOTICE, "Debug mode enabled.\n");
   
@@ -377,6 +387,8 @@ void *runner_thread(void *arg)
   sb_thread_ctxt_t *ctxt;
   sb_test_t        *test;
   unsigned int     thread_id;
+  long long        period_ns, pause_ns, jitter_ns;
+  struct timespec  target_tv, now_tv, wakeup_tv;
   
   ctxt = (sb_thread_ctxt_t *)arg;
   test = ctxt->test;
@@ -388,13 +400,36 @@ void *runner_thread(void *arg)
     sb_globals.error = 1;
     return NULL; /* thread initialization failed  */
   }
-  
+
+  if (sb_globals.tx_rate > 0)
+  {
+    /* initialize tx_rate variables */
+    period_ns = (long long) round(1000000000.0 / sb_globals.tx_rate *
+                                  sb_globals.num_threads);
+    if (sb_globals.tx_jitter > 0)
+      jitter_ns = sb_globals.tx_jitter * 1000;
+    else
+      /* Default jitter is 1/10th of the period */
+      jitter_ns = period_ns / 10;
+  }
+ 
   /* 
     We do this to make sure all threads get to this barrier 
     about the same time 
   */
   pthread_mutex_lock(&thread_start_mutex);
   pthread_mutex_unlock(&thread_start_mutex);
+
+  if (sb_globals.tx_rate > 0)
+  {
+    /* we are time-rating transactions */
+    SB_GETTIME(&target_tv);
+    /* For the first transaction - ramp up */
+    pause_ns = period_ns / sb_globals.num_threads * thread_id;
+    add_ns_to_timespec(&target_tv, period_ns);
+    usleep(pause_ns / 1000);
+  }
+
   do
   {
     request = get_request(test, thread_id);
@@ -412,6 +447,18 @@ void *runner_thread(void *arg)
       log_text(LOG_INFO, "Time limit exceeded, exiting...");
       break;
     }
+
+    /* check if we are time-rating transactions and need to pause */
+    if (sb_globals.tx_rate > 0)
+    {
+      add_ns_to_timespec(&target_tv, period_ns);
+      SB_GETTIME(&now_tv);
+      diff_tv(&pause_ns, &now_tv, &target_tv);
+      pause_ns = pause_ns - (jitter_ns / 2) + (lrand48() % jitter_ns);
+      if (pause_ns > 5000)
+        usleep(pause_ns / 1000);
+    }
+
   } while ((request.type != SB_REQ_TYPE_NULL) && (!sb_globals.error) );
 
   if (test->ops.thread_done != NULL)
@@ -624,6 +671,8 @@ int init(void)
     log_text(LOG_FATAL, "Cannot set both --init_rng and --seed_rng\n");
     return 1;
   }
+  sb_globals.tx_rate = sb_get_value_int("tx-rate");
+  sb_globals.tx_jitter = sb_get_value_int("tx-jitter");
   
   return 0;
 }

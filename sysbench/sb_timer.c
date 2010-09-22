@@ -192,3 +192,38 @@ sb_timer_t merge_timers(sb_timer_t *t1, sb_timer_t *t2)
      
   return t;       
 }
+
+/* Subtract *before from *after.  Result given via pointer *diff. */
+void
+diff_tv(long long *diff, struct timespec *before, struct timespec *after)
+{
+  time_t sec;
+
+  sec = after->tv_sec - before->tv_sec;
+  if (sec != 0)
+    *diff = sec * 1000000000LL + after->tv_nsec - before->tv_nsec;
+  else
+    *diff = after->tv_nsec - before->tv_nsec;
+}
+
+/* Add a number of nanoseconds to a struct timespec */
+void
+add_ns_to_timespec(struct timespec *dest, long long delta)
+{
+  long long x;
+  time_t sec;
+
+  x = dest->tv_nsec + delta;
+  if (x > 1000000000) {
+    /* Future second */
+    dest->tv_sec += x / 1000000000;
+    dest->tv_nsec = x % 1000000000;
+  } else if (x < 0) {
+    /* Past second */
+    dest->tv_sec = dest->tv_sec - 1 + (x / 1000000000);
+    dest->tv_nsec = (x % 1000000000) + 1000000000;
+  } else {
+    /* Within the same second */
+    dest->tv_nsec = x;
+  }
+}
