@@ -59,6 +59,7 @@ void sb_timer_start(sb_timer_t *t)
   }
   
   SB_GETTIME(&t->time_start);
+  t->time_last_intermediate = t->time_start;
   t->state = TIMER_RUNNING;
 }
 
@@ -130,6 +131,28 @@ unsigned long long  sb_timer_current(sb_timer_t *t)
     (time_end.tv_nsec - t->time_start.tv_nsec);
 }
 
+/* get current time without stopping timer AND update structure */
+void sb_timer_intermediate(sb_timer_t *t)
+{
+  switch (t->state) {
+    case TIMER_INITIALIZED:
+      log_text(LOG_WARNING, "timer was never started");
+      break;
+    case TIMER_STOPPED:
+      log_text(LOG_WARNING, "timer was already stopped");
+      break;
+    case TIMER_RUNNING:
+      break;
+    default:
+      log_text(LOG_FATAL, "uninitialized timer stopped");
+      abort();
+  }
+
+  SB_GETTIME(&t->time_end);
+  t->my_time = SEC2NS(t->time_end.tv_sec - t->time_last_intermediate.tv_sec) +
+    (t->time_end.tv_nsec - t->time_last_intermediate.tv_nsec);
+  t->time_last_intermediate = t->time_end;
+}
 
 /* get average time per event */
 

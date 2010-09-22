@@ -88,6 +88,8 @@ sb_arg_t general_args[] =
   {"tx-rate", "target transaction rate (tps)", SB_ARG_TYPE_INT, "0"},
   {"tx-jitter", "target transaction variation, in microseconds",
     SB_ARG_TYPE_INT, "0"},
+  {"intermediate-result-timer", "intermediate result timer, 0 is off",
+    SB_ARG_TYPE_INT, "0"},
   {"test", "test to run", SB_ARG_TYPE_STRING, NULL},
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
@@ -121,11 +123,17 @@ static void sigalrm_handler(int sig)
 {
   if (sig == SIGALRM)
   {
-    sb_timer_stop(&sb_globals.exec_timer);
+    pthread_mutex_lock(&thread_start_mutex);
+    if (!sb_globals.stopped)
+    {
+      sb_globals.stopped = 1;
+      sb_timer_stop(&sb_globals.exec_timer);
+    }
+    pthread_mutex_unlock(&thread_start_mutex);
     log_text(LOG_FATAL,
              "The --max-time limit has expired, forcing shutdown...");
     if (current_test && current_test->ops.print_stats)
-      current_test->ops.print_stats();
+      current_test->ops.print_stats(0);
     log_done();
     exit(2);
   }
@@ -347,6 +355,12 @@ void print_run_mode(sb_test_t *test)
              sb_globals.tx_rate, sb_globals.tx_jitter);
   }
 
+  if (sb_globals.intermediate_result_timer)
+  {
+    log_text(LOG_NOTICE, "Report intermediate results every %d second",
+             sb_globals.intermediate_result_timer);
+  }
+
   if (sb_globals.debug)
     log_text(LOG_NOTICE, "Debug mode enabled.\n");
   
@@ -418,6 +432,7 @@ void *runner_thread(void *arg)
     about the same time 
   */
   pthread_mutex_lock(&thread_start_mutex);
+  sb_globals.num_running++;
   pthread_mutex_unlock(&thread_start_mutex);
 
   if (sb_globals.tx_rate > 0)
@@ -463,6 +478,15 @@ void *runner_thread(void *arg)
 
   if (test->ops.thread_done != NULL)
     test->ops.thread_done(thread_id);
+
+  pthread_mutex_lock(&thread_start_mutex);
+  sb_globals.num_running--;
+  if (sb_globals.num_running == 0 && !sb_globals.stopped)
+  {
+    sb_globals.stopped = 1;
+    sb_timer_stop(&sb_globals.exec_timer);
+  }
+  pthread_mutex_unlock(&thread_start_mutex);
     
   return NULL; 
 }
@@ -477,6 +501,7 @@ int run_test(sb_test_t *test)
 {
   unsigned int i;
   int err;
+  int loop_count;
 
   /* initialize test */
   if (test->ops.init != NULL && test->ops.init() != 0)
@@ -493,7 +518,6 @@ int run_test(sb_test_t *test)
     threads[i].id = i;
     threads[i].test = test;
   }    
-  sb_timer_start(&sb_globals.exec_timer);
 
   /* prepare test */
   if (test->ops.prepare != NULL && test->ops.prepare() != 0)
@@ -503,8 +527,10 @@ int run_test(sb_test_t *test)
 
   /* start mutex used for barrier */
   pthread_mutex_init(&thread_start_mutex,NULL);    
-  pthread_mutex_lock(&thread_start_mutex);    
-  
+  pthread_mutex_lock(&thread_start_mutex);
+  sb_globals.num_running = 0;
+  sb_globals.stopped = 0;
+
   /* initialize attr */
   pthread_attr_init(&thread_attr);
 #ifdef PTHREAD_SCOPE_SYSTEM
@@ -531,6 +557,8 @@ int run_test(sb_test_t *test)
     }
   }
 
+  sb_timer_start(&sb_globals.exec_timer); /* Start benchmark time */
+
   /* Set the alarm to force shutdown */
 #ifdef HAVE_ALARM
   if (sb_globals.force_shutdown)
@@ -540,6 +568,25 @@ int run_test(sb_test_t *test)
   pthread_mutex_unlock(&thread_start_mutex);
   
   log_text(LOG_NOTICE, "Threads started!");  
+
+  if (test->ops.print_stats != NULL &&
+      sb_globals.intermediate_result_timer)
+  {
+    loop_count = 0;
+    do
+    {
+      loop_count++;
+      sleep(1);
+      if (sb_globals.num_running == 0)
+        break;
+      if (loop_count < sb_globals.intermediate_result_timer)
+        continue;
+      loop_count = 0;
+      /* print test-specific stats */
+      sb_timer_intermediate(&sb_globals.exec_timer);
+      test->ops.print_stats(1);
+    } while(1);
+  }
 
   for(i = 0; i < sb_globals.num_threads; i++)
   {
@@ -559,11 +606,9 @@ int run_test(sb_test_t *test)
   if (test->ops.cleanup != NULL && test->ops.cleanup() != 0)
     return 1;
   
-  sb_timer_stop(&sb_globals.exec_timer);
-
   /* print test-specific stats */
   if (test->ops.print_stats != NULL && !sb_globals.error)
-    test->ops.print_stats();
+    test->ops.print_stats(0);
 
   pthread_mutex_destroy(&sb_globals.exec_mutex);
 
@@ -673,6 +718,8 @@ int init(void)
   }
   sb_globals.tx_rate = sb_get_value_int("tx-rate");
   sb_globals.tx_jitter = sb_get_value_int("tx-jitter");
+  sb_globals.intermediate_result_timer =
+    sb_get_value_int("intermediate-result-timer");
   
   return 0;
 }

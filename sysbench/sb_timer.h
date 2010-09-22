@@ -66,6 +66,7 @@ typedef struct
 {
   struct timespec    time_start;
   struct timespec    time_end;
+  struct timespec    time_last_intermediate;
   unsigned long long my_time;
   unsigned long long min_time;
   unsigned long long max_time;

@@ -122,7 +122,7 @@ typedef int sb_op_thread_init(int);
 typedef void sb_op_print_mode(void);
 typedef sb_request_t sb_op_get_request(int);
 typedef int sb_op_execute_request(sb_request_t *, int);
-typedef void sb_op_print_stats(void);
+typedef void sb_op_print_stats(int);
 typedef int sb_op_thread_done(int);
 typedef int sb_op_cleanup(void);
 typedef int sb_op_done(void);
@@ -189,6 +189,9 @@ typedef struct
   sb_timer_t       *op_timers;     /* timers to measure each thread's run time */
   sb_timer_t       exec_timer;     /* total execution timer */
   unsigned int     num_threads;    /* number of threads to use */
+  unsigned int     num_running;    /* number of threads currently active */
+  unsigned int     intermediate_result_timer; /* Intermediate result timer */
+  int              stopped;        /* Has test been stopped yet */
   unsigned int     tx_rate;        /* target transaction rate */
   unsigned int     tx_jitter;      /* target transaction variation (us) */
   unsigned int     max_requests;   /* maximum number of requests */

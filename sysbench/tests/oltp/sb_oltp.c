@@ -199,7 +199,7 @@ static int oltp_init(void);
 static void oltp_print_mode(void);
 static sb_request_t oltp_get_request(int);
 static int oltp_execute_request(sb_request_t *, int);
-static void oltp_print_stats(void);
+static void oltp_print_stats(int);
 static db_conn_t *oltp_connect(void);
 static int oltp_disconnect(db_conn_t *);
 static int oltp_reconnect(int thread_id);
@@ -247,6 +247,7 @@ static int read_ops;
 static int write_ops;
 static int other_ops;
 static int transactions;
+static int last_transactions;
 static int deadlocks;
 
 static sb_timer_t *exec_timers;
@@ -498,7 +499,13 @@ int oltp_cmd_prepare(void)
   }
 
   oltp_disconnect(con);
-  
+
+  read_ops = 0;
+  write_ops = 0;
+  other_ops = 0;
+  transactions = last_transactions = 0;
+  deadlocks = 0;
+ 
   return 0;
 
  error:
@@ -1349,14 +1356,27 @@ int oltp_execute_request(sb_request_t *sb_req, int thread_id)
 }
 
 
-void oltp_print_stats(void)
+void oltp_print_stats(int intermediate)
 {
   double       total_time;
   unsigned int i;
   sb_timer_t   exec_timer;
   sb_timer_t   fetch_timer;
+  int trans_per_sec;
+  int curr_transactions, num_transactions;
 
   total_time = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
+
+  if (intermediate)
+  {
+    curr_transactions = transactions;
+    num_transactions = curr_transactions - last_transactions;
+    last_transactions = curr_transactions;
+    trans_per_sec = (int)(((double)num_transactions) / total_time);
+    log_text(LOG_NOTICE, "Intermediate results: %d threads, %d tps",
+             sb_globals.num_threads, trans_per_sec);
+    return;
+  }
   
   log_text(LOG_NOTICE, "OLTP test statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
