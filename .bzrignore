@@ -23,3 +23,8 @@ autom4te.cache
 ./sysbench/tests/mutex/.deps
 ./sysbench/tests/oltp/.deps
 ./sysbench/tests/threads/.deps
+./TAGS
+./backup.bzr
+./config/config.guess
+./config/config.h.in
+./config/config.sub
