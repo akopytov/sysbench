@@ -108,4 +108,10 @@ unsigned long long  get_max_time(sb_timer_t *);
 /* sum data from two timers. used in summing data from multiple threads */
 sb_timer_t merge_timers(sb_timer_t *, sb_timer_t *);
 
+/* subtract *after from *before */
+void diff_tv(long long *diff, struct timespec *before, struct timespec *after);
+
+/* add a number of nanoseconds to a struct timespec */
+void add_ns_to_timespec(struct timespec *dest, long long delta);
+
 #endif /* SB_TIMER_H */

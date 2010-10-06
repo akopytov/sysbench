@@ -188,6 +188,8 @@ typedef struct
   sb_timer_t       *op_timers;     /* timers to measure each thread's run time */
   sb_timer_t       exec_timer;     /* total execution timer */
   unsigned int     num_threads;    /* number of threads to use */
+  unsigned int     tx_rate;        /* target transaction rate */
+  unsigned int     tx_jitter;      /* target transaction variation (us) */
   unsigned int     max_requests;   /* maximum number of requests */
   unsigned int     max_time;       /* total execution time limit */
   unsigned char    debug;          /* debug flag */
