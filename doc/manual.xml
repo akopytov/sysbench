@@ -209,7 +209,7 @@
 	    <row><entry><option>--max-requests</option></entry><entry>Limit for total number of requests. 0 means unlimited</entry><entry>10000</entry></row>
 	    <row><entry><option>--max-time</option></entry><entry>Limit for total execution time in seconds. 0 (default) means unlimited</entry><entry>0</entry></row>
 	    <row><entry><option>--thread-stack-size</option></entry><entry>Size of stack for each thread</entry><entry>32K</entry></row>
-	    <row><entry><option>--init-rnd</option></entry><entry>Specifies if random numbers generator should be initialized from timer before the test start</entry><entry>off</entry></row>
+	    <row><entry><option>--init-rng</option></entry><entry>Specifies if random numbers generator should be initialized from timer before the test start</entry><entry>off</entry></row>
 	    <row><entry><option>--test</option></entry><entry>Name of the test mode to run</entry><entry><emphasis>Required</emphasis></entry></row>
 	    <row><entry><option>--debug</option></entry><entry>Print more debug info</entry><entry>off</entry></row>
 	    <row><entry><option>--validate</option></entry><entry>Perform
