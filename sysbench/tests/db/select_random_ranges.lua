@@ -1,3 +1,9 @@
+-- This test is designed for testing MariaDB's key_cache_segments for MyISAM,
+-- and should work with other storage engines as well.
+--
+-- For details about key_cache_segments please refer to:
+-- http://kb.askmonty.org/v/segmented-key-cache
+--
 function prepare()
    local query
    local i
@@ -108,9 +114,8 @@ function thread_init(thread_id)
         ]])
 
    params = {}
-   for j = 1,number_of_ranges do
+   for j = 1,number_of_ranges * 2 do
       params[j] = 1
-      params[j + 1] = 1
    end
 
    db_bind_param(stmt, params)
@@ -120,8 +125,10 @@ end
 function event(thread_id)
    local rs
 
-   for i = 1,random_points do
-      params[i] = sb_rand(thread_id, oltp_table_size)
+   -- To prevent overlapping of our range queries we need to partition the whole table
+   -- into num_threads segments and then make each thread work with its own segment.
+   for i = 1,number_of_ranges * 2,2 do
+      params[i] = sb_rand(oltp_table_size / num_threads * thread_id, oltp_table_size / num_threads * (thread_id + 1))
       params[i + 1] = params[i] + delta
    end
 
@@ -134,7 +141,7 @@ function set_vars()
    oltp_table_size = oltp_table_size or 10000
    number_of_ranges = number_of_ranges or 10
    delta = random_ranges_delta or 5
-   
+
    if (oltp_auto_inc == 'off') then
       oltp_auto_inc = false
    else
