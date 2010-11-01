@@ -92,6 +92,7 @@ extern int pthread_mutex_unlock(pthread_mutex_t *mutex);
 extern int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);
 extern int pthread_mutex_destroy(pthread_mutex_t *mutex);
 extern int pthread_create(pthread_t *thread, const pthread_attr_t *attr,  void *(*start_routine)(void*), void *arg);
+extern int pthread_cancel(pthread_t thread);
 extern int pthread_attr_setstacksize( pthread_attr_t *attr, size_t stacksize);
 extern int pthread_join(pthread_t thread, void **value_ptr);
 extern int gettimeofday(struct timeval * tp, void * tzp);

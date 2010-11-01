@@ -40,7 +40,6 @@ static int cpu_init(void);
 static void cpu_print_mode(void);
 static sb_request_t cpu_get_request(void);
 static int cpu_execute_request(sb_request_t *, int);
-static void cpu_print_stats(void);
 static int cpu_done(void);
 
 static sb_test_t cpu_test =
@@ -54,7 +53,7 @@ static sb_test_t cpu_test =
     cpu_print_mode,
     cpu_get_request,
     cpu_execute_request,
-    cpu_print_stats,
+    NULL,
     NULL,
     NULL,
     cpu_done
@@ -151,12 +150,7 @@ int cpu_execute_request(sb_request_t *r, int thread_id)
 void cpu_print_mode(void)
 {
   log_text(LOG_INFO, "Doing CPU performance benchmark\n");  
-}
-
-void cpu_print_stats(void)
-{
-  log_text(LOG_NOTICE, "Maximum prime number checked in CPU test: %d\n",
-           max_prime);
+  log_text(LOG_NOTICE, "Primer numbers limit: %d\n", max_prime);
 }
 
 int cpu_done(void)

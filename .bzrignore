@@ -28,3 +28,13 @@ autom4te.cache
 ./config/config.guess
 ./config/config.h.in
 ./config/config.sub
+./sysbench/TAGS
+./sysbench/drivers/TAGS
+./sysbench/drivers/mysql/TAGS
+./sysbench/tests/TAGS
+./sysbench/tests/cpu/TAGS
+./sysbench/tests/fileio/TAGS
+./sysbench/tests/memory/TAGS
+./sysbench/tests/mutex/TAGS
+./sysbench/tests/oltp/TAGS
+./sysbench/tests/threads/TAGS

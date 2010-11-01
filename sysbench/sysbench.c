@@ -107,6 +107,9 @@ sb_arg_t general_args[] =
   {"tx-rate", "target transaction rate (tps)", SB_ARG_TYPE_INT, "0"},
   {"tx-jitter", "target transaction variation, in microseconds",
     SB_ARG_TYPE_INT, "0"},
+  {"report-interval", "periodically report intermediate statistics "
+   "with a specified interval in seconds. 0 disables intermediate reports",
+    SB_ARG_TYPE_INT, "0"},
   {"test", "test to run", SB_ARG_TYPE_STRING, NULL},
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
@@ -153,7 +156,7 @@ static void sigalrm_handler(int sig)
     log_text(LOG_FATAL,
              "The --max-time limit has expired, forcing shutdown...");
     if (current_test && current_test->ops.print_stats)
-      current_test->ops.print_stats();
+      current_test->ops.print_stats(SB_STAT_CUMULATIVE);
     log_done();
     exit(2);
   }
@@ -237,6 +240,10 @@ void print_usage(void)
          "[test-options]... command\n\n");
   printf("General options:\n");
   sb_print_options(general_args);
+
+  printf("Log options:\n");
+  log_usage();
+
   printf("Compiled-in tests:\n");
   SB_LIST_FOR_EACH(pos, &tests)
   {
@@ -348,6 +355,12 @@ void print_run_mode(sb_test_t *test)
              sb_globals.tx_rate, sb_globals.tx_jitter);
   }
 
+  if (sb_globals.report_interval)
+  {
+    log_text(LOG_NOTICE, "Report intermediate results every %d second(s)",
+             sb_globals.report_interval);
+  }
+
   if (sb_globals.debug)
     log_text(LOG_NOTICE, "Debug mode enabled.\n");
   
@@ -421,6 +434,7 @@ static void *runner_thread(void *arg)
     about the same time 
   */
   pthread_mutex_lock(&thread_start_mutex);
+  sb_globals.num_running++;
   pthread_mutex_unlock(&thread_start_mutex);
 
   if (sb_globals.tx_rate > 0)
@@ -444,8 +458,7 @@ static void *runner_thread(void *arg)
     }
     /* Check if we have a time limit */
     if (sb_globals.max_time != 0 &&
-        NS2SEC(sb_timer_current(&sb_globals.exec_timer))
-        >= sb_globals.max_time)
+        sb_timer_value(&sb_globals.exec_timer) >= SEC2NS(sb_globals.max_time))
     {
       log_text(LOG_INFO, "Time limit exceeded, exiting...");
       break;
@@ -456,8 +469,8 @@ static void *runner_thread(void *arg)
     {
       add_ns_to_timespec(&target_tv, period_ns);
       SB_GETTIME(&now_tv);
-      diff_tv(&pause_ns, &now_tv, &target_tv);
-      pause_ns = pause_ns - (jitter_ns / 2) + (sb_rnd() % jitter_ns);
+      pause_ns = TIMESPEC_DIFF(target_tv, now_tv) - (jitter_ns / 2) +
+	(sb_rnd() % jitter_ns);
       if (pause_ns > 5000)
         usleep(pause_ns / 1000);
     }
@@ -466,8 +479,55 @@ static void *runner_thread(void *arg)
 
   if (test->ops.thread_done != NULL)
     test->ops.thread_done(thread_id);
+
+  pthread_mutex_lock(&thread_start_mutex);
+  sb_globals.num_running--;
+  pthread_mutex_unlock(&thread_start_mutex);
   
   return NULL; 
+}
+
+
+/* Intermediate reports thread */
+
+void *report_thread_proc(void *arg)
+{
+  unsigned long long       pause_ns;
+  unsigned long long       prev_ns;
+  unsigned long long       next_ns;
+  unsigned long long       curr_ns;
+  const unsigned long long interval_ns = SEC2NS(sb_globals.report_interval);
+
+  (void)arg; /* unused */
+
+  if (current_test->ops.print_stats == NULL)
+  {
+    log_text(LOG_DEBUG, "Reporting not supported by the current test, ",
+             "terminating the reporting thread");
+    return NULL;
+  }
+
+  log_text(LOG_DEBUG, "Reporting thread started");
+
+  pthread_mutex_lock(&thread_start_mutex);
+  pthread_mutex_unlock(&thread_start_mutex);
+
+  pause_ns = interval_ns;
+  prev_ns = sb_timer_value(&sb_globals.exec_timer) + interval_ns;
+  for (;;)
+  {
+    usleep(pause_ns / 1000);
+    current_test->ops.print_stats(SB_STAT_INTERMEDIATE);
+    curr_ns = sb_timer_value(&sb_globals.exec_timer);
+    do
+    {
+      next_ns = prev_ns + interval_ns;
+      prev_ns = next_ns;
+    } while (curr_ns >= next_ns);
+    pause_ns = next_ns - curr_ns;
+  }
+
+  return NULL;
 }
 
 
@@ -480,8 +540,9 @@ static void *runner_thread(void *arg)
 static int run_test(sb_test_t *test)
 {
   unsigned int i;
-  int err;
-  
+  int          err;
+  pthread_t    report_thread;
+
   /* initialize test */
   if (test->ops.init != NULL && test->ops.init() != 0)
     return 1;
@@ -497,7 +558,6 @@ static int run_test(sb_test_t *test)
     threads[i].id = i;
     threads[i].test = test;
   }    
-  sb_timer_start(&sb_globals.exec_timer);
 
   /* prepare test */
   if (test->ops.prepare != NULL && test->ops.prepare() != 0)
@@ -507,8 +567,9 @@ static int run_test(sb_test_t *test)
 
   /* start mutex used for barrier */
   pthread_mutex_init(&thread_start_mutex,NULL);    
-  pthread_mutex_lock(&thread_start_mutex);    
-  
+  pthread_mutex_lock(&thread_start_mutex);
+  sb_globals.num_running = 0;
+
   /* initialize attr */
   pthread_attr_init(&thread_attr);
 #ifdef PTHREAD_SCOPE_SYSTEM
@@ -525,22 +586,34 @@ static int run_test(sb_test_t *test)
   rnd_seed = LARGE_PRIME;
   pthread_mutex_init(&rnd_mutex, NULL);
 
+  if (sb_globals.report_interval > 0)
+  {
+    /* Create a thread for intermediate statistic reports */
+    if ((err = pthread_create(&report_thread, &thread_attr, &report_thread_proc,
+                              NULL)) != 0)
+    {
+      log_errno(LOG_FATAL, "pthread_create() for the reporting thread failed.");
+      return 1;
+    }
+  }
+
   /* Starting the test threads */
   for(i = 0; i < sb_globals.num_threads; i++)
   {
     if (sb_globals.error)
       return 1;
-    if ((err = pthread_create(&(threads[i].thread), &thread_attr, &runner_thread, 
-                              (void*)&(threads[i]))) != 0)
+    if ((err = pthread_create(&(threads[i].thread), &thread_attr,
+                              &runner_thread, (void*)(threads + i))) != 0)
     {
-      log_text(LOG_FATAL, "Thread #%d creation failed, errno = %d (%s)",
-               i, err, strerror(err));
+      log_errno(LOG_FATAL, "pthread_create() for thread #%d failed.", i);
       return 1;
     }
   }
 
-  /* Set the alarm to force shutdown */
+  sb_timer_start(&sb_globals.exec_timer); /* Start benchmark timer */
+
 #ifdef HAVE_ALARM
+  /* Set the alarm to force shutdown */
   if (sb_globals.force_shutdown)
     alarm(sb_globals.max_time + sb_globals.timeout);
 #endif
@@ -551,23 +624,30 @@ static int run_test(sb_test_t *test)
   for(i = 0; i < sb_globals.num_threads; i++)
   {
     if((err = pthread_join(threads[i].thread, NULL)) != 0)
-    {
-      log_text(LOG_FATAL, "Thread #%d join failed, errno = %d (%s)",
-               i, err, strerror(err));
-      return 1;    
-    }
+      log_errno(LOG_FATAL, "pthread_join() for thread #%d failed.", i);
   }
+
+  sb_timer_stop(&sb_globals.exec_timer);
+
+  if (sb_globals.report_interval > 0)
+  {
+    if (pthread_cancel(report_thread) || pthread_join(report_thread, NULL))
+      log_errno(LOG_FATAL, "Terminating the reporting thread failed.");
+  }
+
+#ifdef HAVE_ALARM
+  alarm(0);
+#endif
+
   log_text(LOG_INFO, "Done.\n");
 
   /* cleanup test */
   if (test->ops.cleanup != NULL && test->ops.cleanup() != 0)
     return 1;
   
-  sb_timer_stop(&sb_globals.exec_timer);
-
   /* print test-specific stats */
   if (test->ops.print_stats != NULL && !sb_globals.error)
-    test->ops.print_stats();
+    test->ops.print_stats(SB_STAT_CUMULATIVE);
 
   pthread_mutex_destroy(&rnd_mutex);
 
@@ -708,6 +788,8 @@ static int init(void)
 
   sb_globals.tx_rate = sb_get_value_int("tx-rate");
   sb_globals.tx_jitter = sb_get_value_int("tx-jitter");
+  sb_globals.report_interval =
+    sb_get_value_int("report-interval");
   
   return 0;
 }

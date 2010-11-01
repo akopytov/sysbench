@@ -261,9 +261,9 @@ int mysql_drv_connect(db_conn_t *sb_conn)
 {
   MYSQL          *con;
   char           *host;
-  char           *ssl_key;
-  char           *ssl_cert;
-  char           *ssl_ca;
+  const char     *ssl_key;
+  const char     *ssl_cert;
+  const char     *ssl_ca;
   
   con = (MYSQL *)malloc(sizeof(MYSQL));
   if (con == NULL)

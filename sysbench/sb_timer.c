@@ -29,6 +29,14 @@
 
 /* Some functions for simple time operations */
 
+static inline void sb_timer_update(sb_timer_t *t)
+{
+  struct timespec time_end;
+
+  SB_GETTIME(&time_end);
+  t->elapsed = TIMESPEC_DIFF(time_end, t->time_start);
+}
+
 /* initialize timer */
 
 
@@ -60,6 +68,7 @@ void sb_timer_start(sb_timer_t *t)
   }
   
   SB_GETTIME(&t->time_start);
+  t->time_split = t->time_start;
   t->state = TIMER_RUNNING;
 }
 
@@ -83,54 +92,77 @@ void sb_timer_stop(sb_timer_t *t)
       abort();
   }
 
-  SB_GETTIME(&t->time_end);
-  t->my_time = SEC2NS(t->time_end.tv_sec - t->time_start.tv_sec) +
-    (t->time_end.tv_nsec - t->time_start.tv_nsec);
+  sb_timer_update(t);
   t->events++;
-  t->sum_time += t->my_time;
-  if (t->my_time < t->min_time)
-    t->min_time = t->my_time;
-  if (t->my_time > t->max_time)
-    t->max_time = t->my_time;
+  t->sum_time += t->elapsed;
+  if (t->elapsed < t->min_time)
+    t->min_time = t->elapsed;
+  if (t->elapsed > t->max_time)
+    t->max_time = t->elapsed;
 
   t->state = TIMER_STOPPED;
 }
 
 
-/* get timer's value in nanoseconds */
+/* get the current timer value in nanoseconds */
 
 
 unsigned long long  sb_timer_value(sb_timer_t *t)
-{
-  return t->my_time;
-}
-
-
-/* get current time without stopping timer */
-
-
-unsigned long long  sb_timer_current(sb_timer_t *t)
 {
   struct timespec time_end;
 
   switch (t->state) {
     case TIMER_INITIALIZED:
+      log_text(LOG_WARNING, "timer was never started");
       return 0;
     case TIMER_STOPPED:
-      return t->my_time;
+      return t->elapsed;
     case TIMER_RUNNING:
       break;
     default:
-      log_text(LOG_FATAL, "uninitialized timer examined");
+      log_text(LOG_FATAL, "uninitialized timer queried");
       abort();
   }
-  
-  SB_GETTIME(&time_end);
 
-  return SEC2NS(time_end.tv_sec - t->time_start.tv_sec) +
-    (time_end.tv_nsec - t->time_start.tv_nsec);
+  sb_timer_update(t);
+
+  return t->elapsed;
 }
 
+
+/*
+  get time elapsed since the previos call to sb_timer_split() for the specified
+  timer without stopping it.  The first call returns time elapsed since the
+  timer was started.
+*/
+
+
+unsigned long long sb_timer_split(sb_timer_t *t)
+{
+  struct timespec    tmp;
+  unsigned long long res;
+
+  switch (t->state) {
+    case TIMER_INITIALIZED:
+      log_text(LOG_WARNING, "timer was never started");
+      return 0;
+    case TIMER_STOPPED:
+      log_text(LOG_WARNING, "timer was already stopped");
+      return 0;;
+    case TIMER_RUNNING:
+      break;
+    default:
+      log_text(LOG_FATAL, "uninitialized timer queried");
+      abort();
+  }
+
+  SB_GETTIME(&tmp);
+  t->elapsed = TIMESPEC_DIFF(tmp, t->time_start);
+  res = TIMESPEC_DIFF(tmp, t->time_split);
+  t->time_split = tmp;
+
+  return res;
+}
 
 /* get average time per event */
 
@@ -180,7 +212,7 @@ sb_timer_t merge_timers(sb_timer_t *t1, sb_timer_t *t2)
   /* Initialize to avoid warnings */
   memset(&t, 0, sizeof(sb_timer_t));
 
-  t.my_time = t1->my_time+t2->my_time;
+  t.elapsed = t1->elapsed + t2->elapsed;
   t.sum_time = t1->sum_time+t2->sum_time;
   t.events = t1->events+t2->events;
 
@@ -195,18 +227,6 @@ sb_timer_t merge_timers(sb_timer_t *t1, sb_timer_t *t2)
     t.min_time = t2->min_time;
      
   return t;       
-}
-
-
-/* Subtract *before from *after.  Result given via pointer *diff. */
-
-
-void diff_tv(long long *diff, struct timespec *before, struct timespec *after)
-{
-  time_t sec;
-
-  sec = after->tv_sec - before->tv_sec;
-  *diff = sec * 1000000000LL + after->tv_nsec - before->tv_nsec;
 }
 
 
