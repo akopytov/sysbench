@@ -99,7 +99,7 @@ static sb_request_t sb_lua_get_request(void);
 static int sb_lua_op_execute_request(sb_request_t *, int);
 static int sb_lua_op_thread_init(int);
 static int sb_lua_op_thread_done(int);
-static void sb_lua_op_print_stats(void);
+static void sb_lua_op_print_stats(sb_stat_t type);
 
 static sb_operations_t lua_ops = {
    &sb_lua_init,
@@ -334,11 +334,11 @@ int sb_lua_op_thread_done(int thread_id)
   return 0;
 }
 
-void sb_lua_op_print_stats(void)
+void sb_lua_op_print_stats(sb_stat_t type)
 {
   /* check if db driver has been initialized */
   if (db_driver != NULL)
-    db_print_stats();
+    db_print_stats(type);
 }
 
 int sb_lua_done(void)

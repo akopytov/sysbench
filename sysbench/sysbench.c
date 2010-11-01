@@ -147,6 +147,8 @@ static void print_header(void);
 static void print_usage(void);
 static void print_run_mode(sb_test_t *);
 
+static void *report_thread_proc(void *arg);
+
 #ifdef HAVE_ALARM
 static void sigalrm_handler(int sig)
 {
@@ -403,8 +405,10 @@ static void *runner_thread(void *arg)
   sb_thread_ctxt_t *ctxt;
   sb_test_t        *test;
   unsigned int     thread_id;
-  long long        period_ns, pause_ns, jitter_ns;
-  struct timespec  target_tv, now_tv, wakeup_tv;
+  long long        pause_ns;
+  long long        period_ns = 0;
+  long long        jitter_ns = 0;
+  struct timespec  target_tv, now_tv;
   
   ctxt = (sb_thread_ctxt_t *)arg;
   test = ctxt->test;

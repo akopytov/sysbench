@@ -291,7 +291,7 @@ int db_bulk_insert_next(db_conn_t *, const char *);
 void db_bulk_insert_done(db_conn_t *);
 
 /* Print database-specific test stats */
-void db_print_stats(void);
+void db_print_stats(sb_stat_t type);
 
 /* Associate connection with a thread (required only for statistics */
 void db_set_thread(db_conn_t *, int);

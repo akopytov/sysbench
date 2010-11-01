@@ -41,15 +41,19 @@
 #define ROWS_BEFORE_COMMIT 1000
 
 typedef struct {
-  unsigned long read_ops;
-  unsigned long write_ops;
-  unsigned long other_ops;
-  unsigned long transactions;
-  unsigned long deadlocks;
+  unsigned long   read_ops;
+  unsigned long   write_ops;
+  unsigned long   other_ops;
+  unsigned long   transactions;
+  unsigned long   deadlocks;
+  pthread_mutex_t stat_mutex;
 } db_thread_stat_t;
 
 /* Global variables */
 db_globals_t db_globals;
+
+/* Used in intermediate reports */
+unsigned long last_transactions;
 
 /* Static variables */
 static sb_list_t        drivers;          /* list of available DB drivers */
@@ -219,6 +223,9 @@ db_driver_t *db_init(const char *name)
                                             sizeof(db_thread_stat_t));
   if (thread_stats == NULL)
     return NULL;
+
+  for (i = 0; i < sb_globals.num_threads; i++)
+    pthread_mutex_init(&thread_stats[i].stat_mutex, NULL);
 
   /* Initialize timers if in debug mode */
   if (db_globals.debug)
@@ -531,7 +538,12 @@ int db_done(db_driver_t *drv)
   }
   
   if (thread_stats != NULL)
+  {
+    unsigned int i;
+    for (i = 0; i < sb_globals.num_threads; i++)
+      pthread_mutex_destroy(&thread_stats[i].stat_mutex);
     free(thread_stats);
+  }
 
   return drv->ops.done();
 }
@@ -769,9 +781,9 @@ void db_bulk_insert_done(db_conn_t *con)
 
 /* Print database-specific test stats */
 
-void db_print_stats(void)
+void db_print_stats(sb_stat_t type)
 {
-  double        total_time;
+  double        seconds;
   unsigned int  i;
   sb_timer_t    exec_timer;
   sb_timer_t    fetch_timer;
@@ -785,14 +797,31 @@ void db_print_stats(void)
   read_ops = write_ops = other_ops = transactions = deadlocks = 0;
   for (i = 0; i < sb_globals.num_threads; i++)
   {
+    pthread_mutex_lock(&thread_stats[i].stat_mutex);
     read_ops += thread_stats[i].read_ops;
     write_ops += thread_stats[i].write_ops;
     other_ops += thread_stats[i].other_ops;
     transactions += thread_stats[i].transactions;
     deadlocks += thread_stats[i].deadlocks;
+    pthread_mutex_unlock(&thread_stats[i].stat_mutex);
   }
-  
-  total_time = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
+
+  if (type == SB_STAT_INTERMEDIATE)
+  {
+    seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
+
+    log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
+                  "threads: %d, tps: %4.2f",
+                  sb_globals.num_threads,
+                  (transactions - last_transactions) / seconds);
+    last_transactions = transactions;
+
+    return;
+  }
+  else if (type != SB_STAT_CUMULATIVE)
+    return;
+
+  seconds = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
   
   log_text(LOG_NOTICE, "OLTP test statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
@@ -805,14 +834,14 @@ void db_print_stats(void)
   log_text(LOG_NOTICE, "        total:                           %d",
            read_ops + write_ops + other_ops);
   log_text(LOG_NOTICE, "    transactions:                        %-6d"
-           " (%.2f per sec.)", transactions, transactions / total_time);
+           " (%.2f per sec.)", transactions, transactions / seconds);
   log_text(LOG_NOTICE, "    deadlocks:                           %-6d"
-           " (%.2f per sec.)", deadlocks, deadlocks / total_time);
+           " (%.2f per sec.)", deadlocks, deadlocks / seconds);
   log_text(LOG_NOTICE, "    read/write requests:                 %-6d"
            " (%.2f per sec.)", read_ops + write_ops,
-           (read_ops + write_ops) / total_time);  
+           (read_ops + write_ops) / seconds);  
   log_text(LOG_NOTICE, "    other operations:                    %-6d"
-           " (%.2f per sec.)", other_ops, other_ops / total_time);
+           " (%.2f per sec.)", other_ops, other_ops / seconds);
 
   if (db_globals.debug)
   {
@@ -878,6 +907,8 @@ void db_update_thread_stats(int id, db_query_type_t type)
   if (id < 0)
     return;
 
+  pthread_mutex_lock(&thread_stats[id].stat_mutex);
+
   switch (type)
   {
     case DB_QUERY_TYPE_READ:
@@ -896,6 +927,6 @@ void db_update_thread_stats(int id, db_query_type_t type)
     default:
       log_text(LOG_WARNING, "Unknown query type: %d", type);
   }
+
+  pthread_mutex_unlock(&thread_stats[id].stat_mutex);
 }
-
-

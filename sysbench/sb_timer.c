@@ -109,8 +109,6 @@ void sb_timer_stop(sb_timer_t *t)
 
 unsigned long long  sb_timer_value(sb_timer_t *t)
 {
-  struct timespec time_end;
-
   switch (t->state) {
     case TIMER_INITIALIZED:
       log_text(LOG_WARNING, "timer was never started");
@@ -236,7 +234,6 @@ sb_timer_t merge_timers(sb_timer_t *t1, sb_timer_t *t2)
 void add_ns_to_timespec(struct timespec *dest, long long delta)
 {
   long long x;
-  time_t sec;
 
   x = dest->tv_nsec + delta;
   if (x > 1000000000)
