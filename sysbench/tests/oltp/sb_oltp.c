@@ -199,7 +199,7 @@ static int oltp_init(void);
 static void oltp_print_mode(void);
 static sb_request_t oltp_get_request(int);
 static int oltp_execute_request(sb_request_t *, int);
-static void oltp_print_stats(void);
+static void oltp_print_stats(sb_stat_t type);
 static db_conn_t *oltp_connect(void);
 static int oltp_disconnect(db_conn_t *);
 static int oltp_reconnect(int thread_id);
@@ -247,6 +247,7 @@ static int read_ops;
 static int write_ops;
 static int other_ops;
 static int transactions;
+static int last_transactions;
 static int deadlocks;
 
 static sb_timer_t *exec_timers;
@@ -498,7 +499,13 @@ int oltp_cmd_prepare(void)
   }
 
   oltp_disconnect(con);
-  
+
+  read_ops = 0;
+  write_ops = 0;
+  other_ops = 0;
+  transactions = last_transactions = 0;
+  deadlocks = 0;
+ 
   return 0;
 
  error:
@@ -1349,14 +1356,36 @@ int oltp_execute_request(sb_request_t *sb_req, int thread_id)
 }
 
 
-void oltp_print_stats(void)
+void oltp_print_stats(sb_stat_t type)
 {
-  double       total_time;
+  double       seconds;
   unsigned int i;
   sb_timer_t   exec_timer;
   sb_timer_t   fetch_timer;
+  int curr_transactions, num_transactions;
 
-  total_time = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
+  if (type == SB_STAT_INTERMEDIATE)
+  {
+    SB_THREAD_MUTEX_LOCK();
+
+    seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
+    curr_transactions = transactions;
+    num_transactions = curr_transactions - last_transactions;
+    last_transactions = curr_transactions;
+
+    SB_THREAD_MUTEX_UNLOCK();
+
+    log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
+                  "threads: %d, tps: %4.2f",
+                  sb_globals.num_threads, num_transactions / seconds);
+
+    return;
+  }
+  else if (type != SB_STAT_CUMULATIVE)
+    return;
+
+  seconds = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
+
   
   log_text(LOG_NOTICE, "OLTP test statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
@@ -1369,14 +1398,14 @@ void oltp_print_stats(void)
   log_text(LOG_NOTICE, "        total:                           %d",
            read_ops + write_ops + other_ops);
   log_text(LOG_NOTICE, "    transactions:                        %-6d"
-           " (%.2f per sec.)", transactions, transactions / total_time);
+           " (%.2f per sec.)", transactions, transactions / seconds);
   log_text(LOG_NOTICE, "    deadlocks:                           %-6d"
-           " (%.2f per sec.)", deadlocks, deadlocks / total_time);
+           " (%.2f per sec.)", deadlocks, deadlocks / seconds);
   log_text(LOG_NOTICE, "    read/write requests:                 %-6d"
            " (%.2f per sec.)", read_ops + write_ops,
-           (read_ops + write_ops) / total_time);  
+           (read_ops + write_ops) / seconds);
   log_text(LOG_NOTICE, "    other operations:                    %-6d"
-           " (%.2f per sec.)", other_ops, other_ops / total_time);
+           " (%.2f per sec.)", other_ops, other_ops / seconds);
 
   if (sb_globals.debug)
   {

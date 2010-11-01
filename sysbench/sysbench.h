@@ -106,6 +106,12 @@ typedef struct
   } u;
 } sb_request_t;
 
+typedef enum
+{
+  SB_STAT_INTERMEDIATE,
+  SB_STAT_CUMULATIVE
+} sb_stat_t;
+
 /* Test commands definition */
 
 typedef int sb_cmd_help(void);
@@ -122,7 +128,7 @@ typedef int sb_op_thread_init(int);
 typedef void sb_op_print_mode(void);
 typedef sb_request_t sb_op_get_request(int);
 typedef int sb_op_execute_request(sb_request_t *, int);
-typedef void sb_op_print_stats(void);
+typedef void sb_op_print_stats(sb_stat_t);
 typedef int sb_op_thread_done(int);
 typedef int sb_op_cleanup(void);
 typedef int sb_op_done(void);
@@ -160,8 +166,8 @@ typedef struct
 
 typedef struct sb_test
 {
-  char             *sname;
-  char             *lname;
+  const char       *sname;
+  const char       *lname;
   sb_operations_t  ops;
   sb_commands_t    cmds;
   sb_arg_t         *args;
@@ -189,6 +195,8 @@ typedef struct
   sb_timer_t       *op_timers;     /* timers to measure each thread's run time */
   sb_timer_t       exec_timer;     /* total execution timer */
   unsigned int     num_threads;    /* number of threads to use */
+  unsigned int     num_running;    /* number of threads currently active */
+  unsigned int     report_interval;/* intermediate reports interval */
   unsigned int     tx_rate;        /* target transaction rate */
   unsigned int     tx_jitter;      /* target transaction variation (us) */
   unsigned int     max_requests;   /* maximum number of requests */
@@ -200,13 +208,5 @@ typedef struct
 } sb_globals_t;
 
 extern sb_globals_t sb_globals;
-
-/* used to get options passed from command line */
-
-int sb_get_value_flag(char *);
-int sb_get_value_int(char *);
-unsigned long long sb_get_value_size(char *);
-float sb_get_value_float(char *);
-char *sb_get_value_string(char *);
 
 #endif

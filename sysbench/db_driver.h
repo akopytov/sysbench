@@ -165,8 +165,8 @@ typedef struct
 
 typedef struct
 {
-  char            *sname;   /* short name */
-  char            *lname;   /* long name */
+  const char      *sname;   /* short name */
+  const char      *lname;   /* long name */
   sb_arg_t        *args;    /* driver command line arguments */
   drv_ops_t       ops;      /* driver operations */
 

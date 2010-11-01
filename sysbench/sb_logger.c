@@ -38,20 +38,12 @@
 #include "sb_list.h"
 #include "sb_logger.h"
 
-/* Format of the timestamp string */
-#define TIMESTAMP_FMT "[%s] "
-
 #define TEXT_BUFFER_SIZE 4096
 #define ERROR_BUFFER_SIZE 256
 
 #define OPER_LOG_GRANULARITY 100000
 #define OPER_LOG_MIN_VALUE   1
 #define OPER_LOG_MAX_VALUE   1E13
-
-typedef enum {
-  BATCH_STATUS_START,
-  BATCH_STATUS_STOP
-} batch_status_t;
 
 /* Array of message handlers (one chain per message type) */
 
@@ -62,15 +54,6 @@ static unsigned char initialized;
 
 /* verbosity of messages */
 static unsigned char verbosity; 
-
-/* whether each message must be timestamped */
-static unsigned char log_timestamp; 
-
-/* whether batch mode must be used */
-static unsigned char batch_mode;
-
-/* delay in seconds between statistics dumps in batch mode */
-static unsigned int batch_delay;
 
 /*
   gettimeofday() is over-optimized on some architectures what results in excessive warning message
@@ -84,10 +67,6 @@ static double          oper_log_deduct;
 static double          oper_log_mult;
 static unsigned int    oper_percentile;
 static pthread_mutex_t oper_mutex; /* used to sync access to operations array */
-static pthread_mutex_t batch_mutex; /* used to sync batch operations */
-static pthread_cond_t  batch_cond;
-static pthread_t       batch_thread;
-static batch_status_t  batch_status;
 
 static pthread_mutex_t text_mutex;
 static unsigned int    text_cnt;
@@ -128,10 +107,6 @@ static sb_arg_t oper_handler_args[] =
 {
   {"percentile", "percentile rank of query response times to count",
    SB_ARG_TYPE_INT, "95"},
-  {"batch", "dump current stats periodically instead of final ones",
-   SB_ARG_TYPE_FLAG, "off"},
-  {"batch-delay", "delay between batch dumps in seconds",
-   SB_ARG_TYPE_INT, "300"},
 
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
@@ -145,10 +120,6 @@ static log_handler_t oper_handler = {
   oper_handler_args,
   {0,0}
 };
-
-
-/* Start routine for the batch thread */
-void *batch_runner_proc(void *);
 
 
 /* Register logger and all handlers */
@@ -165,6 +136,27 @@ int log_register(void)
   log_add_handler(LOG_MSG_TYPE_OPER, &oper_handler);
   
   return 0;
+}
+
+
+/* Display command line options for registered log handlers */
+
+
+void log_usage(void)
+{
+  unsigned int    i;
+  sb_list_item_t  *pos;
+  log_handler_t   *handler;
+
+  for (i = 0; i < LOG_MSG_TYPE_MAX; i++)
+  {
+    SB_LIST_FOR_EACH(pos, handlers + i)
+    {
+      handler = SB_LIST_ENTRY(pos, log_handler_t, listitem);
+      if (handler->args != NULL)
+	sb_print_options(handler->args);
+    }
+  }
 }
 
 
@@ -261,21 +253,10 @@ void log_text(log_msg_priority_t priority, const char *fmt, ...)
   char           buf[TEXT_BUFFER_SIZE];
   va_list        ap;
   int            n, clen, maxlen;
-  struct tm      tm_now;
-  time_t         t_now;
 
   maxlen = TEXT_BUFFER_SIZE;
   clen = 0;
-  
-  if (log_timestamp)
-  {
-    time(&t_now);
-    gmtime_r((const time_t *)&t_now, &tm_now);
-    n = strftime(buf, maxlen, TIMESTAMP_FMT, &tm_now);
-    clen += n;
-    maxlen -= n;
-  }
-  
+
   va_start(ap, fmt);
   n = vsnprintf(buf + clen, maxlen, fmt, ap);
   va_end(ap);
@@ -300,6 +281,60 @@ void log_text(log_msg_priority_t priority, const char *fmt, ...)
   msg.data = (void *)&text_msg;
   text_msg.priority = priority;
   text_msg.text = buf;
+  text_msg.flags = 0;
+
+  log_msg(&msg);
+}
+
+
+/*
+  variant of log_text() which prepends log lines with the elapsed time of a
+  specified timer.
+*/
+
+
+void log_timestamp(log_msg_priority_t priority, const sb_timer_t *timer,
+                   const char *fmt, ...)
+{
+  log_msg_t      msg;
+  log_msg_text_t text_msg;
+  char           buf[TEXT_BUFFER_SIZE];
+  va_list        ap;
+  int            n, clen, maxlen;
+
+  maxlen = TEXT_BUFFER_SIZE;
+  clen = 0;
+
+  n = snprintf(buf, maxlen, "[%4.0fs] ", NS2SEC(timer->elapsed));
+  clen += n;
+  maxlen -= n;
+
+  va_start(ap, fmt);
+  n = vsnprintf(buf + clen, maxlen, fmt, ap);
+  va_end(ap);
+  if (n < 0 || n >= maxlen)
+    n = maxlen;
+  clen += n;
+  maxlen -= n;
+  snprintf(buf + clen, maxlen, "\n");
+
+  /*
+    No race condition here because log_init() is supposed to be called
+    in a single-threaded stage
+  */
+  if (!initialized)
+  {
+    printf("%s", buf);
+
+    return;
+  }
+
+  msg.type = LOG_MSG_TYPE_TEXT;
+  msg.data = (void *)&text_msg;
+  text_msg.priority = priority;
+  text_msg.text = buf;
+  /* Skip duplicate checks */
+  text_msg.flags = LOG_MSG_TEXT_ALLOW_DUPLICATES;
 
   log_msg(&msg);
 }
@@ -394,24 +429,27 @@ int text_handler_process(log_msg_t *msg)
 
   if (text_msg->priority > verbosity)
     return 0;
-  
-  pthread_mutex_lock(&text_mutex);
-  if (!strcmp(text_buf, text_msg->text))
+
+  if (!text_msg->flags & LOG_MSG_TEXT_ALLOW_DUPLICATES)
   {
-    text_cnt++;
+    pthread_mutex_lock(&text_mutex);
+    if (!strcmp(text_buf, text_msg->text))
+    {
+      text_cnt++;
+      pthread_mutex_unlock(&text_mutex);
+
+      return 0;
+    }
+    else
+    {
+      if (text_cnt > 0)
+        printf("(last message repeated %u times)\n", text_cnt);
+
+      text_cnt = 0;
+      strncpy(text_buf, text_msg->text, TEXT_BUFFER_SIZE);
+    }
     pthread_mutex_unlock(&text_mutex);
-
-    return 0;
   }
-  else
-  {
-    if (text_cnt > 0)
-      printf("(last message repeated %u times)\n", text_cnt);
-
-    text_cnt = 0;
-    strncpy(text_buf, text_msg->text, TEXT_BUFFER_SIZE);
-  }
-  pthread_mutex_unlock(&text_mutex);
 
   switch (text_msg->priority) {
     case LOG_FATAL:
@@ -443,8 +481,6 @@ int text_handler_process(log_msg_t *msg)
 
 int oper_handler_init(void)
 {
-  pthread_attr_t batch_attr;
-  
   oper_percentile = sb_get_value_int("percentile");
   if (oper_percentile < 1 || oper_percentile > 100)
   {
@@ -456,31 +492,8 @@ int oper_handler_init(void)
   oper_log_deduct = log(OPER_LOG_MIN_VALUE);
   oper_log_mult = (OPER_LOG_GRANULARITY - 1) / (log(OPER_LOG_MAX_VALUE) - oper_log_deduct);
 
-  batch_mode = sb_get_value_flag("batch");
-  if (batch_mode)
-    log_timestamp = 1;
-  batch_delay = sb_get_value_int("batch-delay");
-
   pthread_mutex_init(&oper_mutex, NULL);
 
-  if (batch_mode)
-  {
-    int err;
-    pthread_mutex_init(&batch_mutex, NULL);
-    pthread_cond_init(&batch_cond, NULL);
-
-    /* Create batch thread */
-    pthread_attr_init(&batch_attr);
-    if ((err = pthread_create(&batch_thread, &batch_attr, &batch_runner_proc, NULL))
-        != 0)
-    {
-      log_text(LOG_FATAL, "Batch thread creation failed, errno = %d (%s)",
-                err, strerror(err));
-      return 1;
-    }
-    batch_status = BATCH_STATUS_STOP;
-  }
-  
   return 0;
 }
 
@@ -494,18 +507,6 @@ int oper_handler_process(log_msg_t *msg)
   unsigned int   ncell;
   log_msg_oper_t *oper_msg = (log_msg_oper_t *)msg->data;
 
-  if (batch_mode)
-  {
-    pthread_mutex_lock(&batch_mutex);
-    if (batch_status != BATCH_STATUS_START)
-    {
-      /* Wake up the batch thread */
-      batch_status = BATCH_STATUS_START;
-      pthread_cond_signal(&batch_cond);
-    }
-    pthread_mutex_unlock(&batch_mutex);
-  }
-  
   if (oper_msg->action == LOG_MSG_OPER_START)
   {
     sb_timer_init(&oper_msg->timer);
@@ -513,7 +514,7 @@ int oper_handler_process(log_msg_t *msg)
     return 0;
   }
 
-  optime = sb_timer_current(&oper_msg->timer);
+  optime = sb_timer_value(&oper_msg->timer);
   if (optime < OPER_LOG_MIN_VALUE)
   {
     /* Warn only once */
@@ -565,26 +566,6 @@ int oper_handler_done(void)
   double       time_avg;
   double       time_stddev;
 
-  if (batch_mode)
-  {
-    int err;
-    /* Stop the batch thread */
-    pthread_mutex_lock(&batch_mutex);
-    batch_status = BATCH_STATUS_STOP;
-    pthread_cond_signal(&batch_cond);
-    pthread_mutex_unlock(&batch_mutex);
-
-    if ((err = pthread_join(batch_thread, NULL)))
-    {
-      log_text(LOG_FATAL, "Batch thread join failed, errno = %d (%s)",
-               err, strerror(err));
-      return 1;
-    }
-
-    pthread_mutex_destroy(&batch_mutex);
-    pthread_cond_destroy(&batch_cond);
-  }
-  
   sb_timer_init(&t);
   nthreads = sb_globals.num_threads;
   for(i = 0; i < nthreads; i++)
@@ -682,89 +663,4 @@ int oper_handler_done(void)
   pthread_mutex_destroy(&oper_mutex);
   
   return 0;
-}
-
-
-/* Worker thread to periodically dump stats in batch mode */
-
-
-void *batch_runner_proc(void *arg)
-{
-  sb_timer_t         t;
-  struct timespec    delay;
-#ifndef HAVE_CLOCK_GETTIME
-  struct timeval     tv;
-#endif 
-  int                rc;
-  unsigned int       i, noper;
-  double             diff, pdiff, p, percent, optime;
-  
-  (void)arg; /* unused */
-  
-  /* Wait for the test to start */
-  pthread_mutex_lock(&batch_mutex);
-  pthread_cond_wait(&batch_cond, &batch_mutex);
-  pthread_mutex_unlock(&batch_mutex);
-  
-  /* Main batch loop */
-  while(batch_status != BATCH_STATUS_STOP)
-  {
-    /* Wait for batch_delay seconds */
-    pthread_mutex_lock(&batch_mutex);
-
-#ifdef HAVE_CLOCK_GETTIME
-    clock_gettime(CLOCK_REALTIME, &delay);
-    delay.tv_sec += batch_delay;
-#else
-    gettimeofday(&tv, NULL);
-    delay.tv_sec = tv.tv_sec + batch_delay;
-    delay.tv_nsec = tv.tv_usec * 1000;
-#endif
-    rc = pthread_cond_timedwait(&batch_cond, &batch_mutex, &delay);
-    pthread_mutex_unlock(&batch_mutex);
-
-    /* Status changed? */
-    if (rc != ETIMEDOUT)
-      continue;
-
-    /* Dump current statistics */
-
-    /* Calculate min/avg/max values for the last period */
-    sb_timer_init(&t);
-    for(i = 0; i < sb_globals.num_threads; i++)
-      t = merge_timers(&t,&(sb_globals.op_timers[i]));
-
-    /* Do we have any events to measure? */
-    if (t.events == 0)
-      continue;
-
-    /* Calculate percentile value for the last period */
-    percent = 0;
-    pthread_mutex_lock(&oper_mutex);
-
-    /* Calculate element with a given percentile rank */
-    pdiff = oper_percentile;
-    noper = 0;
-    for (i = 0; i < OPER_LOG_GRANULARITY; i++)
-    {
-      noper += operations[i];
-      p = (double)noper / t.events * 100;
-      diff = fabs(p - oper_percentile);
-      if (diff > pdiff || fabs(diff) < 1e-6)
-        break;
-      pdiff = diff;
-    }
-    if (i > 0)
-      i--;
-  
-    /* Calculate response time corresponding to this element */
-    optime = exp((double)i / oper_log_mult + oper_log_deduct);
-    pthread_mutex_unlock(&oper_mutex);
-
-    log_text(LOG_NOTICE, "min: %.4f  avg: %.4f  max: %.4f  percentile: %.4f",
-             NS2SEC(get_min_time(&t)), NS2SEC(get_avg_time(&t)),
-             NS2SEC(get_max_time(&t)), NS2SEC(optime));
-  }
-
-  return NULL;
 }

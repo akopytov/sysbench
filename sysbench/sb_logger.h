@@ -25,6 +25,10 @@
 #include "sb_options.h"
 #include "sb_timer.h"
 
+/* Text message flags (used in the 'flags' field of log_text_msg_t) */
+
+#define LOG_MSG_TEXT_ALLOW_DUPLICATES 1
+
 /* Macros to log per-request execution statistics */
 
 #define LOG_EVENT_START(msg, thread_id) \
@@ -68,7 +72,8 @@ typedef enum {
 
 typedef struct {
   log_msg_priority_t priority;
-  char              *text;
+  char               *text;
+  unsigned int       flags;
 } log_msg_text_t;
 
 /* Operation start/stop message definition */
@@ -110,13 +115,16 @@ typedef struct {
 typedef struct {
   log_handler_ops_t ops;          /* handler operations */
   sb_arg_t             *args;     /* handler arguments */
-  
   sb_list_item_t       listitem;  /* can be linked in a list */
 } log_handler_t;
 
 /* Register logger */
 
 int log_register(void);
+
+/* Display command line options for all register log handlers */
+
+void log_usage(void);
 
 /* Initialize logger */
 
@@ -133,6 +141,14 @@ void log_msg(log_msg_t *);
 /* printf-like wrapper to log text messages */
 
 void log_text(log_msg_priority_t priority, const char *fmt, ...);
+
+/*
+  variant of log_text() which prepends log lines with a elapsed time of the
+  specified timer.
+*/
+
+void log_timestamp(log_msg_priority_t priority, const sb_timer_t *timer,
+                   const char *fmt, ...);
 
 /* printf-like wrapper to log system error messages */
 

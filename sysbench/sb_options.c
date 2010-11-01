@@ -73,7 +73,7 @@ option_t *sb_find_option(char *name)
   return find_option(&options, name);
 }
 
-int set_option(char *name, char *value, sb_arg_type_t type)
+int set_option(const char *name, const char *value, sb_arg_type_t type)
 {
   option_t *opt;
   char     *tmp;
@@ -160,7 +160,7 @@ void sb_print_options(sb_arg_t *opts)
 }
 
 
-int sb_get_value_flag(char *name)
+int sb_get_value_flag(const char *name)
 {
   option_t *opt;
 
@@ -172,7 +172,7 @@ int sb_get_value_flag(char *name)
 }
 
 
-int sb_get_value_int(char *name)
+int sb_get_value_int(const char *name)
 {
   option_t       *opt;
   value_t        *val;
@@ -192,7 +192,7 @@ int sb_get_value_int(char *name)
 }
 
 
-unsigned long long sb_get_value_size(char *name)
+unsigned long long sb_get_value_size(const char *name)
 {
   option_t            *opt;
   value_t             *val;
@@ -249,7 +249,7 @@ unsigned long long sb_get_value_size(char *name)
 }
 
 
-float sb_get_value_float(char *name)
+float sb_get_value_float(const char *name)
 {
   option_t       *opt;
   value_t        *val;
@@ -271,7 +271,7 @@ float sb_get_value_float(char *name)
 }
 
 
-char *sb_get_value_string(char *name)
+char *sb_get_value_string(const char *name)
 {
   option_t       *opt;
   value_t        *val;
@@ -291,7 +291,7 @@ char *sb_get_value_string(char *name)
 }
 
 
-sb_list_t *sb_get_value_list(char *name)
+sb_list_t *sb_get_value_list(const char *name)
 {
   option_t       *opt;
 
@@ -425,7 +425,7 @@ int remove_option(sb_list_t * options, char * optname)
 } 
 
 
-value_t *add_value(sb_list_t *values, char *data)
+value_t *add_value(sb_list_t *values, const char *data)
 {
   value_t *newval;
   
@@ -446,7 +446,7 @@ value_t *add_value(sb_list_t *values, char *data)
 }
 
 
-value_t *find_value(sb_list_t *values, char *data)
+value_t *find_value(sb_list_t *values, const char *data)
 {
   sb_list_item_t *pos;
   value_t        *value; 
@@ -465,7 +465,7 @@ value_t *find_value(sb_list_t *values, char *data)
 }
 
 
-option_t *add_option(sb_list_t *options, char *name)
+option_t *add_option(sb_list_t *options, const char *name)
 {
   option_t *option;
   
@@ -486,7 +486,7 @@ option_t *add_option(sb_list_t *options, char *name)
 }
 
 
-option_t *find_option(sb_list_t *options, char *name)
+option_t *find_option(sb_list_t *options, const char *name)
 {
   sb_list_item_t *pos;
   option_t       *opt;    

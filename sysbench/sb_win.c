@@ -196,6 +196,11 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   return -1;
 }
 
+int pthread_cancel(pthread_t thread)
+{
+  return !TerminateThread(thread, 0);
+}
+
 /* Minimal size of thread stack on Windows*/
 #define PTHREAD_STACK_MIN 65536*2
 

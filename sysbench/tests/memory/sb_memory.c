@@ -57,7 +57,7 @@ static int memory_init(void);
 static void memory_print_mode(void);
 static sb_request_t memory_get_request(int);
 static int memory_execute_request(sb_request_t *, int);
-static void memory_print_stats(void);
+static void memory_print_stats(sb_stat_t type);
 
 static sb_test_t memory_test =
 {
@@ -88,7 +88,7 @@ static sb_test_t memory_test =
 /* Test arguments */
 
 static ssize_t memory_block_size;
-static size_t   memory_total_size;
+static off_t   memory_total_size;
 static unsigned int memory_scope;
 static unsigned int memory_oper;
 static unsigned int memory_access_rnd;
@@ -98,7 +98,8 @@ static unsigned int memory_hugetlb;
 
 /* Statistics */
 static unsigned int total_ops;
-static size_t        total_bytes;
+static off_t        total_bytes;
+static off_t        last_bytes;
 
 /* Array of per-thread buffers */
 static int **buffers;
@@ -359,18 +360,36 @@ void memory_print_mode(void)
 }
 
 
-void memory_print_stats(void)
+void memory_print_stats(sb_stat_t type)
 {
-  double total_time;
+  double       seconds;
+  const double megabyte = 1024.0 * 1024.0;
 
-  total_time = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
-  
-  log_text(LOG_NOTICE, "Operations performed: %d (%8.2f ops/sec)\n", total_ops,
-           total_ops / total_time);
-  if (memory_oper != SB_MEM_OP_NONE)
-    log_text(LOG_NOTICE, "%4.2f MB transferred (%4.2f MB/sec)\n",
-             (double)total_bytes / (1024 * 1024),
-             (double)total_bytes / (1024 * 1024) / total_time);
+  switch (type) {
+  case SB_STAT_INTERMEDIATE:
+    SB_THREAD_MUTEX_LOCK();
+    seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
+
+    log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
+                  "%4.2f MB/sec,",
+                  (double)(total_bytes - last_bytes) / megabyte / seconds);
+    last_bytes = total_bytes;
+    SB_THREAD_MUTEX_UNLOCK();
+
+    break;
+
+  case SB_STAT_CUMULATIVE:
+    seconds = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
+
+    log_text(LOG_NOTICE, "Operations performed: %d (%8.2f ops/sec)\n",
+             total_ops, total_ops / seconds);
+    if (memory_oper != SB_MEM_OP_NONE)
+      log_text(LOG_NOTICE, "%4.2f MB transferred (%4.2f MB/sec)\n",
+               total_bytes / megabyte,
+               total_bytes / megabyte / seconds);
+
+    break;
+  }
 }
 
 #ifdef HAVE_LARGE_PAGES

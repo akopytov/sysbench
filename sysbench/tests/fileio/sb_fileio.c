@@ -161,9 +161,12 @@ static int real_read_ops;
 static int write_ops;
 static int real_write_ops;
 static int other_ops;
+static int last_other_ops;
 static unsigned int req_performed; /* number of requests done */
 static unsigned long long bytes_read;
-static unsigned long long  bytes_written;
+static unsigned long long last_bytes_read;
+static unsigned long long bytes_written;
+static unsigned long long last_bytes_written;
 
 #ifdef HAVE_MMAP
 /* Array of file mappings */
@@ -222,7 +225,7 @@ static int file_execute_request(sb_request_t *, int);
 static int file_thread_done(int);
 #endif
 static int file_done(void);
-static void file_print_stats(void);
+static void file_print_stats(sb_stat_t);
 
 static sb_test_t fileio_test =
 {
@@ -762,25 +765,50 @@ void file_print_mode(void)
 /* Print test statistics */
 
 
-void file_print_stats(void)
+void file_print_stats(sb_stat_t type)
 {
-  double total_time;
+  double seconds;
   char   s1[16], s2[16], s3[16], s4[16];
 
-  total_time = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
-  
-  log_text(LOG_NOTICE,
-           "Operations performed:  %d Read, %d Write, %d Other = %d Total",
-           read_ops, write_ops, other_ops, read_ops + write_ops + other_ops); 
-  log_text(LOG_NOTICE, "Read %sb  Written %sb  Total transferred %sb  "
-           "(%sb/sec)",
-           sb_print_value_size(s1, sizeof(s1), bytes_read),
-           sb_print_value_size(s2, sizeof(s2), bytes_written),
-           sb_print_value_size(s3, sizeof(s3), bytes_read + bytes_written),
-           sb_print_value_size(s4, sizeof(s4),
-                               (bytes_read + bytes_written) / total_time));  
-  log_text(LOG_NOTICE, "%8.2f Requests/sec executed",
-           (read_ops + write_ops) / total_time);  
+  switch (type) {
+  case SB_STAT_INTERMEDIATE:
+    {
+      const double megabyte = 1024.0 * 1024.0;
+
+      SB_THREAD_MUTEX_LOCK();
+
+      seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
+      log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
+                    "reads: %4.2f MB/s writes: %4.2f MB/s fsyncs: %4.2f/s",
+                    (bytes_read - last_bytes_read) / megabyte / seconds,
+                    (bytes_written - last_bytes_written) / megabyte / seconds,
+                    (other_ops - last_other_ops) / seconds);
+      last_bytes_read = bytes_read;
+      last_bytes_written = bytes_written;
+      last_other_ops = other_ops;
+
+      SB_THREAD_MUTEX_UNLOCK();
+
+      break;
+    }
+
+  case SB_STAT_CUMULATIVE:
+    seconds = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
+
+    log_text(LOG_NOTICE,
+             "Operations performed:  %d reads, %d writes, %d Other = %d Total",
+             read_ops, write_ops, other_ops, read_ops + write_ops + other_ops);
+    log_text(LOG_NOTICE, "Read %sb  Written %sb  Total transferred %sb  "
+             "(%sb/sec)",
+             sb_print_value_size(s1, sizeof(s1), bytes_read),
+             sb_print_value_size(s2, sizeof(s2), bytes_written),
+             sb_print_value_size(s3, sizeof(s3), bytes_read + bytes_written),
+             sb_print_value_size(s4, sizeof(s4),
+                                 (bytes_read + bytes_written) / seconds));
+    log_text(LOG_NOTICE, "%8.2f Requests/sec executed",
+             (read_ops + write_ops) / seconds);
+    break;
+  }
 }
 
 
@@ -951,8 +979,11 @@ void clear_stats(void)
   write_ops = 0;
   real_write_ops = 0;
   other_ops = 0;
+  last_other_ops = 0;
   bytes_read = 0;
+  last_bytes_read = 0;
   bytes_written = 0;
+  last_bytes_written = 0;
   req_performed = 0;
   is_dirty = 0;
   if (sb_globals.validate)
@@ -1827,7 +1858,7 @@ void file_fill_buffer(char *buf, unsigned int len, size_t offset)
     buf[i] = sb_rnd() & 0xFF;
 
   /* Store the checksum */
-  *(int *)(buf + i) = (int)crc32(0, buf, len -
+  *(int *)(buf + i) = (int)crc32(0, (unsigned char *)buf, len -
                                  (FILE_CHECKSUM_LENGTH + FILE_OFFSET_LENGTH));
   /* Store the offset */
   *(long *)(buf + i + FILE_CHECKSUM_LENGTH) = offset;
@@ -1844,7 +1875,7 @@ int file_validate_buffer(char  *buf, unsigned int len, size_t offset)
 
   cs_offset = len - (FILE_CHECKSUM_LENGTH + FILE_OFFSET_LENGTH);
   
-  checksum = (unsigned int)crc32(0, buf, cs_offset);
+  checksum = (unsigned int)crc32(0, (unsigned char *)buf, cs_offset);
 
   if (checksum != *(unsigned int *)(buf + cs_offset))
   {

@@ -44,15 +44,19 @@
 #define NS2MS(nsec) ((nsec)/1000000.)
 #define MS2NS(msec)  ((msec)*1000000ULL)
 
+/* Difference between two 'timespec' values in nanoseconds */
+#define TIMESPEC_DIFF(a,b) (SEC2NS(a.tv_sec - b.tv_sec) + \
+			    (a.tv_nsec - b.tv_nsec))
+
 /* Wrapper over various *gettime* functions */
 #ifdef HAVE_CLOCK_GETTIME
 # define SB_GETTIME(tsp) clock_gettime(CLOCK_REALTIME, tsp)
 #else
-# define SB_GETTIME(tsp)              \
-  do {                                \
-    struct timeval tv;                \
-    gettimeofday(&tv, NULL);          \
-    (tsp)->tv_sec = tv.tv_sec;        \
+# define SB_GETTIME(tsp)                        \
+  do {                                          \
+    struct timeval tv;                          \
+    gettimeofday(&tv, NULL);                    \
+    (tsp)->tv_sec = tv.tv_sec;                  \
     (tsp)->tv_nsec = tv.tv_usec * 1000;         \
   } while (0)
 #endif
@@ -65,8 +69,8 @@ typedef enum {TIMER_UNINITIALIZED, TIMER_INITIALIZED, TIMER_STOPPED, \
 typedef struct
 {
   struct timespec    time_start;
-  struct timespec    time_end;
-  unsigned long long my_time;
+  struct timespec    time_split;
+  unsigned long long elapsed;
   unsigned long long min_time;
   unsigned long long max_time;
   unsigned long long sum_time;
@@ -86,11 +90,15 @@ void sb_timer_start(sb_timer_t *);
 /* stop timer */
 void sb_timer_stop(sb_timer_t *);
 
-/* get timer's value in microseconds */
+/* get the current timer value in nanoseconds */
 unsigned long long sb_timer_value(sb_timer_t *);
 
-/* get current time without stopping timer */
-unsigned long long  sb_timer_current(sb_timer_t *);
+/*
+  get time elapsed since the previos call to sb_timer_split() for the specified
+  timer without stopping it.  The first call returns time elapsed since the
+  timer was started.
+*/
+unsigned long long sb_timer_split(sb_timer_t *);
 
 /* get average time per event */
 unsigned long long get_avg_time(sb_timer_t *);
@@ -106,9 +114,6 @@ unsigned long long  get_max_time(sb_timer_t *);
 
 /* sum data from two timers. used in summing data from multiple threads */
 sb_timer_t merge_timers(sb_timer_t *, sb_timer_t *);
-
-/* subtract *after from *before */
-void diff_tv(long long *diff, struct timespec *before, struct timespec *after);
 
 /* add a number of nanoseconds to a struct timespec */
 void add_ns_to_timespec(struct timespec *dest, long long delta);

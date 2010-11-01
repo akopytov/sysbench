@@ -43,10 +43,10 @@ typedef enum
 /* Test option definition */
 typedef struct
 {
-  char           *name;
-  char           *desc;
+  const char     *name;
+  const char     *desc;
   sb_arg_type_t  type;
-  char *         value; 
+  const char     *value; 
 } sb_arg_t;
 
 typedef struct
@@ -74,7 +74,7 @@ int sb_options_init(void);
 int sb_register_arg_set(sb_arg_t *set);
 
 /* Set value 'value' of type 'type' for option 'name' */
-int set_option(char *name, char *value, sb_arg_type_t type);
+int set_option(const char *name, const char *value, sb_arg_type_t type);
 
 /* Find option specified by 'name' */
 option_t *sb_find_option(char *name);
@@ -82,19 +82,19 @@ option_t *sb_find_option(char *name);
 /* Print list of options specified by 'opts' */
 void sb_print_options(sb_arg_t *opts);
 
-int sb_get_value_flag(char *name);
+int sb_get_value_flag(const char *name);
 
-int sb_get_value_int(char *name);
+int sb_get_value_int(const char *name);
 
-unsigned long long sb_get_value_size(char *name);
+unsigned long long sb_get_value_size(const char *name);
 
-float sb_get_value_float(char *name);
+float sb_get_value_float(const char *name);
 
-char *sb_get_value_string(char *name);
+char *sb_get_value_string(const char *name);
+
+sb_list_t *sb_get_value_list(const char *name);
 
 char *sb_print_value_size(char *buf, unsigned int buflen, double value);
-
-sb_list_t *sb_get_value_list(char *name);
 
 value_t *new_value(void);
 
@@ -104,13 +104,13 @@ void free_values(sb_list_t *);
 
 void free_options(sb_list_t *);
 
-value_t *add_value(sb_list_t *, char *);
+value_t *add_value(sb_list_t *, const char *);
 
-value_t *find_value(sb_list_t *, char *);
+value_t *find_value(sb_list_t *, const char *);
 
-option_t *add_option(sb_list_t *, char *);
+option_t *add_option(sb_list_t *, const char *);
 
-option_t *find_option(sb_list_t *, char *);
+option_t *find_option(sb_list_t *, const char *);
 
 int remove_value(sb_list_t *, char *);
 
