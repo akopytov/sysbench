@@ -278,7 +278,7 @@ static sb_request_t get_request_nontrx(int);
 static sb_request_t get_request_sp(int);
 
 /* Adds a 'reconnect' request to the list of SQL queries */
-static inline int add_reconnect_req(sb_list_t *list);
+int add_reconnect_req(sb_list_t *list);
 
 /* Get random 'user think' time */
 static int get_think_time(void);
@@ -769,7 +769,7 @@ sb_request_t oltp_get_request(int tid)
 }
 
 
-inline int add_reconnect_req(sb_list_t *list)
+int add_reconnect_req(sb_list_t *list)
 {
   sb_sql_query_t *query;
 

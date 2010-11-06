@@ -23,6 +23,10 @@
 # include <stdlib.h>
 #endif
 
+#ifdef HAVE_STRING_H
+# include <string.h>
+#endif
+
 #include "sb_logger.h"
 #include "sb_timer.h"
 
@@ -108,8 +112,6 @@ void sb_timer_stop(sb_timer_t *t)
 
 unsigned long long  sb_timer_value(sb_timer_t *t)
 {
-  struct timespec time_end;
-
   switch (t->state) {
     case TIMER_INITIALIZED:
       log_text(LOG_WARNING, "timer was never started");
@@ -208,6 +210,7 @@ sb_timer_t merge_timers(sb_timer_t *t1, sb_timer_t *t2)
 {
   sb_timer_t t;
 
+  memset(&t, 0, sizeof(sb_timer_t));
   t.elapsed = t1->elapsed + t2->elapsed;
   t.sum_time = t1->sum_time+t2->sum_time;
   t.events = t1->events+t2->events;
@@ -232,7 +235,6 @@ sb_timer_t merge_timers(sb_timer_t *t1, sb_timer_t *t2)
 void add_ns_to_timespec(struct timespec *dest, long long delta)
 {
   long long x;
-  time_t sec;
 
   x = dest->tv_nsec + delta;
   if (x > 1000000000)

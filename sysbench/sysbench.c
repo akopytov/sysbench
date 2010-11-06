@@ -138,7 +138,7 @@ static void sigalrm_handler(int sig)
 /* Main request provider function */ 
 
 
-sb_request_t get_request(sb_test_t *test, int thread_id)
+static sb_request_t get_request(sb_test_t *test, int thread_id)
 { 
   sb_request_t r;
   (void)thread_id; /* unused */
@@ -158,7 +158,7 @@ sb_request_t get_request(sb_test_t *test, int thread_id)
 /* Main request execution function */
 
 
-int execute_request(sb_test_t *test, sb_request_t *r,int thread_id)
+static int execute_request(sb_test_t *test, sb_request_t *r,int thread_id)
 {
   unsigned int rc;
   
@@ -174,15 +174,7 @@ int execute_request(sb_test_t *test, sb_request_t *r,int thread_id)
 }
 
 
-int register_test(sb_test_t *test)
-{
-  SB_LIST_ADD_TAIL(&test->listitem, &tests);
-
-  return 0;
-}
-
-
-int register_tests(void)
+static int register_tests(void)
 {
   SB_LIST_INIT(&tests);
 
@@ -236,22 +228,7 @@ void print_usage(void)
 }
 
 
-sb_arg_t *find_argument(char *name, sb_arg_t *args)
-{
-  unsigned int i;
-
-  if (args == NULL)
-    return NULL;
-  
-  for (i = 0; args[i].name != NULL; i++)
-    if (!strcasecmp(args[i].name, name))
-      return &(args[i]);
-
-  return NULL;
-}
-
-
-sb_cmd_t parse_command(char *cmd)
+static sb_cmd_t parse_command(char *cmd)
 {
   if (!strcmp(cmd, "prepare"))
     return SB_COMMAND_PREPARE;
@@ -268,7 +245,7 @@ sb_cmd_t parse_command(char *cmd)
 }
 
 
-int parse_arguments(int argc, char *argv[])
+static int parse_arguments(int argc, char *argv[])
 {
   int               i;
   char              *name;
@@ -394,14 +371,16 @@ void print_run_mode(sb_test_t *test)
 
 /* Main runner test thread */
 
-void *runner_thread(void *arg)
+static void *runner_thread(void *arg)
 {
   sb_request_t     request;
   sb_thread_ctxt_t *ctxt;
   sb_test_t        *test;
   unsigned int     thread_id;
-  long long        period_ns, pause_ns, jitter_ns;
-  struct timespec  target_tv, now_tv, wakeup_tv;
+  long long        period_ns = 0;
+  long long        jitter_ns = 0;
+  long long        pause_ns;
+  struct timespec  target_tv, now_tv;
   
   ctxt = (sb_thread_ctxt_t *)arg;
   test = ctxt->test;
@@ -417,8 +396,8 @@ void *runner_thread(void *arg)
   if (sb_globals.tx_rate > 0)
   {
     /* initialize tx_rate variables */
-    period_ns = (long long) round(1000000000.0 / sb_globals.tx_rate *
-                                  sb_globals.num_threads);
+    period_ns = round(1000000000.0 / sb_globals.tx_rate *
+                      sb_globals.num_threads);
     if (sb_globals.tx_jitter > 0)
       jitter_ns = sb_globals.tx_jitter * 1000;
     else
@@ -487,7 +466,7 @@ void *runner_thread(void *arg)
 
 /* Intermediate reports thread */
 
-void *report_thread_proc(void *arg)
+static void *report_thread_proc(void *arg)
 {
   unsigned long long       pause_ns;
   unsigned long long       prev_ns;
@@ -533,7 +512,7 @@ void *report_thread_proc(void *arg)
   Wait for them to complete and measure time 
 */
 
-int run_test(sb_test_t *test)
+static int run_test(sb_test_t *test)
 {
   unsigned int i;
   int          err;
@@ -654,7 +633,7 @@ int run_test(sb_test_t *test)
 }
 
 
-sb_test_t *find_test(char *name)
+static sb_test_t *find_test(char *name)
 {
   sb_list_item_t *pos;
   sb_test_t      *test;
@@ -670,7 +649,7 @@ sb_test_t *find_test(char *name)
 }
 
 
-int init(void)
+static int init(void)
 {
   option_t          *opt;
   char              *tmp;

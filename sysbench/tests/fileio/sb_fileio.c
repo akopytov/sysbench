@@ -25,8 +25,6 @@
 
 #ifdef STDC_HEADERS
 # include <stdio.h>
-/* Required for memalign to be declared on Solaris */
-#define __EXTENSIONS__
 # include <stdlib.h>
 #endif
 

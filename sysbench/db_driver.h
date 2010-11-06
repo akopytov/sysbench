@@ -263,4 +263,18 @@ db_error_t db_errno(db_conn_t *);
 
 int db_print_value(db_bind_t *, char *, int);
 
+/* DB drivers registrars */
+
+#ifdef USE_MYSQL
+int register_driver_mysql(sb_list_t *);
+#endif
+
+#ifdef USE_ORACLE
+int register_driver_oracle(sb_list_t *);
+#endif
+
+#ifdef USE_PGSQL
+int register_driver_pgsql(sb_list_t *);
+#endif
+
 #endif /* DB_DRIVER_H */
