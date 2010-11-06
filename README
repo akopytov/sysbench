@@ -64,4 +64,4 @@ which runs it as designed. This allows to design test highly scalable as well
 as producing large amount of conflicts if needed for test case.
 
 Bug reporting:
-Please report any bugs you encounter to <alexeyk@mysql.com>. 
+Please report any bugs you encounter to <sysbench-developers@lists.launchpad.net>. 
