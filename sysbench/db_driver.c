@@ -392,6 +392,7 @@ db_result_set_t *db_execute(db_stmt_t *stmt)
   return rs;
 }
 
+
 /* Return the number of rows in a result set */
 
 

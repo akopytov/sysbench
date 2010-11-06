@@ -147,8 +147,6 @@ static void print_header(void);
 static void print_usage(void);
 static void print_run_mode(sb_test_t *);
 
-static void *report_thread_proc(void *arg);
-
 #ifdef HAVE_ALARM
 static void sigalrm_handler(int sig)
 {
@@ -405,9 +403,9 @@ static void *runner_thread(void *arg)
   sb_thread_ctxt_t *ctxt;
   sb_test_t        *test;
   unsigned int     thread_id;
-  long long        pause_ns;
   long long        period_ns = 0;
   long long        jitter_ns = 0;
+  long long        pause_ns;
   struct timespec  target_tv, now_tv;
   
   ctxt = (sb_thread_ctxt_t *)arg;
@@ -424,8 +422,8 @@ static void *runner_thread(void *arg)
   if (sb_globals.tx_rate > 0)
   {
     /* initialize tx_rate variables */
-    period_ns = (long long) round(1000000000.0 / sb_globals.tx_rate *
-                                  sb_globals.num_threads);
+    period_ns = round(1000000000.0 / sb_globals.tx_rate *
+                      sb_globals.num_threads);
     if (sb_globals.tx_jitter > 0)
       jitter_ns = sb_globals.tx_jitter * 1000;
     else
@@ -494,7 +492,7 @@ static void *runner_thread(void *arg)
 
 /* Intermediate reports thread */
 
-void *report_thread_proc(void *arg)
+static void *report_thread_proc(void *arg)
 {
   unsigned long long       pause_ns;
   unsigned long long       prev_ns;
