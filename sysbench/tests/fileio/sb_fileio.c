@@ -160,7 +160,6 @@ static long long       position;      /* current position in file */
 static unsigned int    current_file;  /* current file */
 static unsigned int    fsynced_file;  /* file number to be fsynced (periodic) */
 static unsigned int    fsynced_file2; /* fsyncing in the end */
-static pthread_mutex_t fsync_mutex;   /* used to sync access to counters */
 
 static int is_dirty;               /* any writes after last fsync series ? */
 static int read_ops;
@@ -356,8 +355,6 @@ int file_prepare(void)
     return 1;
 #endif
 
-  pthread_mutex_init(&fsync_mutex, NULL);
-  
   return 0; 
 }
 
@@ -386,8 +383,6 @@ int file_done(void)
   if (buffer != NULL)
     sb_free_memaligned(buffer);
 
-  pthread_mutex_destroy(&fsync_mutex);
-  
   return 0;
 }
 
@@ -411,6 +406,7 @@ sb_request_t file_get_seq_request(void)
   sb_file_request_t    *file_req = &sb_req.u.file_request;
 
   sb_req.type = SB_REQ_TYPE_FILE;
+  SB_THREAD_MUTEX_LOCK();
   
   /* assume function is called with correct mode always */
   if (test_mode == MODE_WRITE || test_mode == MODE_REWRITE)
@@ -487,18 +483,17 @@ sb_request_t file_get_seq_request(void)
     current_file++;
     position=0;
 
-    pthread_mutex_unlock(&fsync_mutex);
-    
     if (sb_globals.validate)
     {
       check_seq_req(&prev_req, file_req);
       prev_req = *file_req;
     }
     
+    SB_THREAD_MUTEX_UNLOCK(); 
     return sb_req; /* This request is valid even for last file */
   }      
   
-  pthread_mutex_unlock(&fsync_mutex);
+  SB_THREAD_MUTEX_UNLOCK(); 
 
   if (sb_globals.validate)
   {
@@ -523,6 +518,7 @@ sb_request_t file_get_rnd_request(void)
   int                  mode = test_mode;
   
   sb_req.type = SB_REQ_TYPE_FILE;
+  SB_THREAD_MUTEX_LOCK(); 
   
   /*
     Convert mode for combined tests. Locking to get consistent values
@@ -530,12 +526,10 @@ sb_request_t file_get_rnd_request(void)
   */
   if (test_mode==MODE_RND_RW)
   {
-    SB_THREAD_MUTEX_LOCK();
     if ((double)(real_read_ops + 1) / (real_write_ops + 1) < file_rw_ratio)
       mode=MODE_RND_READ;
     else
       mode=MODE_RND_WRITE;
-    SB_THREAD_MUTEX_UNLOCK();
   }
 
   /* fsync all files (if requested by user) as soon as we are done */
@@ -545,7 +539,6 @@ sb_request_t file_get_rnd_request(void)
         (real_mode == MODE_RND_WRITE || real_mode == MODE_RND_RW ||
          real_mode == MODE_MIXED))
     {
-      pthread_mutex_lock(&fsync_mutex);
       if(fsynced_file2 < num_files)
       {
         file_req->file_id = fsynced_file2;
@@ -553,14 +546,14 @@ sb_request_t file_get_rnd_request(void)
         file_req->pos = 0;
         file_req->size = 0;
         fsynced_file2++;
-        pthread_mutex_unlock(&fsync_mutex);
-        
+
+        SB_THREAD_MUTEX_UNLOCK();        
         return sb_req;
       }
-      pthread_mutex_unlock(&fsync_mutex);
     }
     sb_req.type = SB_REQ_TYPE_NULL;
 
+    SB_THREAD_MUTEX_UNLOCK();        
     return sb_req;
   }
 
@@ -582,7 +575,9 @@ sb_request_t file_get_rnd_request(void)
       is_dirty = 0;
     }
       
-    return sb_req;
+      SB_THREAD_MUTEX_UNLOCK();
+      return sb_req;
+    }
   }
 
   randnum=sb_rnd();
@@ -601,6 +596,7 @@ sb_request_t file_get_rnd_request(void)
   if (file_req->operation == FILE_OP_TYPE_WRITE) 
     is_dirty = 1;
 
+  SB_THREAD_MUTEX_UNLOCK();        
   return sb_req;
 }
 
