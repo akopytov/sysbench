@@ -153,6 +153,9 @@ static int sb_lua_db_store_results(lua_State *);
 static int sb_lua_db_free_results(lua_State *);
 static int sb_lua_rand(lua_State *);
 static int sb_lua_rand_uniq(lua_State *);
+static int sb_lua_rand_uniform(lua_State *);
+static int sb_lua_rand_gaussian(lua_State *);
+static int sb_lua_rand_special(lua_State *);
 static int sb_lua_rnd(lua_State *);
 static int sb_lua_rand_str(lua_State *);
 
@@ -415,7 +418,16 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
 
   lua_pushcfunction(state, sb_lua_rand_str);
   lua_setglobal(state, "sb_rand_str");
-  
+
+  lua_pushcfunction(state, sb_lua_rand_uniform);
+  lua_setglobal(state, "sb_rand_uniform");
+
+  lua_pushcfunction(state, sb_lua_rand_gaussian);
+  lua_setglobal(state, "sb_rand_gaussian");
+
+  lua_pushcfunction(state, sb_lua_rand_special);
+  lua_setglobal(state, "sb_rand_special");
+
   lua_pushcfunction(state, sb_lua_db_connect);
   lua_setglobal(state, "db_connect");
   
@@ -1013,6 +1025,42 @@ int sb_lua_rand(lua_State *L)
   b = luaL_checknumber(L, 2);
 
   lua_pushnumber(L, sb_rand(a, b));
+
+  return 1;
+}
+
+int sb_lua_rand_uniform(lua_State *L)
+{
+  int a, b;
+
+  a = luaL_checknumber(L, 1);
+  b = luaL_checknumber(L, 2);
+
+  lua_pushnumber(L, sb_rand_uniform(a, b));
+
+  return 1;
+}
+
+int sb_lua_rand_gaussian(lua_State *L)
+{
+  int a, b;
+
+  a = luaL_checknumber(L, 1);
+  b = luaL_checknumber(L, 2);
+
+  lua_pushnumber(L, sb_rand_gaussian(a, b));
+
+  return 1;
+}
+
+int sb_lua_rand_special(lua_State *L)
+{
+  int a, b;
+
+  a = luaL_checknumber(L, 1);
+  b = luaL_checknumber(L, 2);
+
+  lua_pushnumber(L, sb_rand_special(a, b));
 
   return 1;
 }

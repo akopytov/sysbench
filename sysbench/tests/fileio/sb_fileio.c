@@ -414,8 +414,6 @@ sb_request_t file_get_seq_request(void)
   else     
     file_req->operation = FILE_OP_TYPE_READ;
 
-  pthread_mutex_lock(&fsync_mutex);
-
   /* Do final fsync on all files and quit if we are done */
   if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
   {
@@ -432,7 +430,6 @@ sb_request_t file_get_seq_request(void)
     else 
       sb_req.type = SB_REQ_TYPE_NULL;
 
-    pthread_mutex_unlock(&fsync_mutex);
     return sb_req;
   }
 
@@ -450,7 +447,6 @@ sb_request_t file_get_seq_request(void)
     if (fsynced_file == num_files)
       fsynced_file = 0;
 
-    pthread_mutex_unlock(&fsync_mutex);
     return sb_req;
   }
   
@@ -561,20 +557,21 @@ sb_request_t file_get_rnd_request(void)
     is_dirty is only set if writes are done and cleared after all files
     are synced
   */
-  if(file_fsync_freq != 0 && is_dirty &&
-     req_performed % file_fsync_freq == 0)
+  if (file_fsync_freq != 0 && is_dirty)
   {
-    file_req->operation = FILE_OP_TYPE_FSYNC;  
-    file_req->file_id = fsynced_file;
-    file_req->pos = 0;
-    file_req->size = 0;
-    fsynced_file++;
-    if (fsynced_file == num_files)
+    if (req_performed % file_fsync_freq == 0)
     {
-      fsynced_file = 0;
-      is_dirty = 0;
-    }
-      
+      file_req->operation = FILE_OP_TYPE_FSYNC;  
+      file_req->file_id = fsynced_file;
+      file_req->pos = 0;
+      file_req->size = 0;
+      fsynced_file++;
+      if (fsynced_file == num_files)
+      {
+        fsynced_file = 0;
+        is_dirty = 0;
+      }
+
       SB_THREAD_MUTEX_UNLOCK();
       return sb_req;
     }
