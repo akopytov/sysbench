@@ -121,7 +121,7 @@ static lua_State *gstate;
 static db_driver_t *db_driver;
 
 /* Variable with unique address to store per-state data */
-static const char sb_lua_ctxt_key;
+static const char sb_lua_ctxt_key = 0;
 
 /* Control variable for sb_lua_db_init_once() */
 static pthread_once_t db_init_control = PTHREAD_ONCE_INIT;
