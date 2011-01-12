@@ -248,6 +248,8 @@ static int write_ops;
 static int other_ops;
 static int transactions;
 static int last_transactions;
+static int last_read_ops;
+static int last_write_ops;
 static int deadlocks;
 
 static sb_timer_t *exec_timers;
@@ -500,8 +502,8 @@ int oltp_cmd_prepare(void)
 
   oltp_disconnect(con);
 
-  read_ops = 0;
-  write_ops = 0;
+  read_ops = last_read_ops = 0;
+  write_ops = last_write_ops = 0;
   other_ops = 0;
   transactions = last_transactions = 0;
   deadlocks = 0;
@@ -1362,22 +1364,31 @@ void oltp_print_stats(sb_stat_t type)
   unsigned int i;
   sb_timer_t   exec_timer;
   sb_timer_t   fetch_timer;
-  int curr_transactions, num_transactions;
+  int          num_read_ops;
+  int          num_write_ops;
+  int          num_transactions;
 
   if (type == SB_STAT_INTERMEDIATE)
   {
     SB_THREAD_MUTEX_LOCK();
 
     seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
-    curr_transactions = transactions;
-    num_transactions = curr_transactions - last_transactions;
-    last_transactions = curr_transactions;
+
+    num_transactions = transactions - last_transactions;
+    last_transactions = transactions;
+
+    num_read_ops = read_ops - last_read_ops;
+    last_read_ops = read_ops;
+
+    num_write_ops = write_ops - last_write_ops;
+    last_write_ops = write_ops;
 
     SB_THREAD_MUTEX_UNLOCK();
 
     log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
-                  "threads: %d, tps: %4.2f",
-                  sb_globals.num_threads, num_transactions / seconds);
+                  "threads: %d, tps: %4.2f, reads/s: %4.2f, writes/s: %4.2f",
+                  sb_globals.num_threads, num_transactions / seconds,
+                  num_read_ops / seconds, num_write_ops / seconds);
 
     return;
   }
