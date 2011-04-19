@@ -519,7 +519,12 @@ static void *report_thread_proc(void *arg)
   for (;;)
   {
     usleep(pause_ns / 1000);
-    current_test->ops.print_stats(SB_STAT_INTERMEDIATE);
+    /*
+      sb_globals.report_interval may be set to 0 by the master thread
+      to silence report at the end of the test
+    */
+    if (sb_globals.report_interval > 0)
+      current_test->ops.print_stats(SB_STAT_INTERMEDIATE);
     curr_ns = sb_timer_value(&sb_globals.exec_timer);
     do
     {
@@ -544,6 +549,7 @@ static int run_test(sb_test_t *test)
   unsigned int i;
   int          err;
   pthread_t    report_thread;
+  int          report_thread_created = 0;
 
   /* initialize test */
   if (test->ops.init != NULL && test->ops.init() != 0)
@@ -597,6 +603,7 @@ static int run_test(sb_test_t *test)
       log_errno(LOG_FATAL, "pthread_create() for the reporting thread failed.");
       return 1;
     }
+    report_thread_created = 1;
   }
 
   /* Starting the test threads */
@@ -631,11 +638,8 @@ static int run_test(sb_test_t *test)
 
   sb_timer_stop(&sb_globals.exec_timer);
 
-  if (sb_globals.report_interval > 0)
-  {
-    if (pthread_cancel(report_thread) || pthread_join(report_thread, NULL))
-      log_errno(LOG_FATAL, "Terminating the reporting thread failed.");
-  }
+  /* Silence periodic reports if they were on */
+  sb_globals.report_interval = 0;
 
 #ifdef HAVE_ALARM
   alarm(0);
@@ -660,6 +664,13 @@ static int run_test(sb_test_t *test)
   /* finalize test */
   if (test->ops.done != NULL)
     (*(test->ops.done))();
+
+  /* Delay killing the reporting thread to avoid mutex lock leaks */
+  if (report_thread_created)
+  {
+    if (pthread_cancel(report_thread) || pthread_join(report_thread, NULL))
+      log_errno(LOG_FATAL, "Terminating the reporting thread failed.");
+  }
 
   return sb_globals.error != 0;
 }
