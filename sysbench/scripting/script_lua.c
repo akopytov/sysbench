@@ -611,7 +611,11 @@ int sb_lua_db_query(lua_State *L)
   query = luaL_checkstring(L, 1);
   rs = db_query(ctxt->con, query);
   if (rs == NULL)
-    luaL_error(L, "Database query failed");
+  {
+    if (ctxt->con->db_errno == SB_DB_ERROR_DEADLOCK)
+      lua_pushnumber(L, SB_DB_RESTART_TRANSACTION);
+    lua_error(L);
+  }
 
   db_store_results(rs);
   db_free_results(rs);

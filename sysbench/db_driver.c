@@ -454,8 +454,16 @@ db_result_set_t *db_query(db_conn_t *con, const char *query)
   rs->connection = con;
 
   con->db_errno = con->driver->ops.query(con, query, rs);
-  if (con->db_errno != SB_DB_ERROR_NONE)
+
+  if (con->db_errno == SB_DB_ERROR_NONE)
+    db_update_thread_stats(con->thread_id, db_get_query_type(query));
+  else
+  {
+    if (con->db_errno == SB_DB_ERROR_DEADLOCK)
+      thread_stats[con->thread_id].deadlocks++;
+
     return NULL;
+  }
 
   return rs;
 }
