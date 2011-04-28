@@ -1,4 +1,6 @@
-loadfile("common.lua")()
+pathtest = string.match(test, "(.*/)") or ""
+
+dofile(pathtest .. "common.lua")
 
 function thread_init(thread_id)
    local index_name
