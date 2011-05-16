@@ -419,7 +419,7 @@ sb_request_t file_get_seq_request(void)
   {
     /* no fsync for reads */
     if (file_fsync_end && file_req->operation == FILE_OP_TYPE_WRITE &&
-        fsynced_file < num_files)
+        fsynced_file2 < num_files)
     {
       file_req->file_id = fsynced_file2;
       file_req->pos = 0;
