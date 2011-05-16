@@ -430,6 +430,7 @@ sb_request_t file_get_seq_request(void)
     else 
       sb_req.type = SB_REQ_TYPE_NULL;
 
+    SB_THREAD_MUTEX_UNLOCK();
     return sb_req;
   }
 
@@ -447,6 +448,7 @@ sb_request_t file_get_seq_request(void)
     if (fsynced_file == num_files)
       fsynced_file = 0;
 
+    SB_THREAD_MUTEX_UNLOCK();
     return sb_req;
   }
   
@@ -619,7 +621,7 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
   /* Check request parameters */
   if (file_req->file_id > num_files)
   {
-    log_text(LOG_FATAL, "Incorrect file discovered in request");
+    log_text(LOG_FATAL, "Incorrect file id in request: %u", file_req->file_id);
     return 1;
   }
   if (file_req->pos + file_req->size > file_size)
@@ -709,7 +711,8 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
         break;
       if(file_fsync(file_req->file_id, thread_id))
       {
-        log_errno(LOG_FATAL, "Failed to fsync file! file: " FD_FMT, fd);
+        log_errno(LOG_FATAL, "Failed to fsync file! id: %u fd: " FD_FMT,
+                  file_req->file_id, fd);
         return 1;
       }
     
