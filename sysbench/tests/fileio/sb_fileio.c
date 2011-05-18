@@ -706,7 +706,7 @@ void file_print_mode(void)
 {
   char sizestr[16];
   
-  log_text(LOG_INFO, "Extra file open flags: %d", file_extra_flags);
+  log_text(LOG_INFO, "Extra file open flags: %x", file_extra_flags);
   log_text(LOG_INFO, "%d files, %sb each", num_files,
            sb_print_value_size(sizestr, sizeof(sizestr), file_size));
   log_text(LOG_INFO, "%sb total file size",
@@ -870,11 +870,13 @@ int create_files(void)
            (long)(file_size / 1024),
            (long)((file_size * num_files) / (1024 * 1024)));
   log_text(LOG_INFO, "Creating files for the test...");
+  log_text(LOG_INFO, "Extra file open flags: %x", file_extra_flags);
   for (i=0; i < num_files; i++) {
     snprintf(file_name, sizeof(file_name), "test_file.%d",i);
     unlink(file_name);
 
-    fd = open(file_name, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+    fd = open(file_name, O_CREAT | O_WRONLY | file_extra_flags,
+              S_IRUSR | S_IWUSR);
     if (fd < 0)
     {
       log_errno(LOG_FATAL, "Can't open file");
