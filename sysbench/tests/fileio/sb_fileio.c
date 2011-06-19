@@ -434,11 +434,9 @@ sb_request_t file_get_seq_request(void)
     return sb_req;
   }
 
-  req_performed++;
-
   /* See whether it's time to fsync file(s) */
   if (file_fsync_freq != 0 && file_req->operation == FILE_OP_TYPE_WRITE &&
-      req_performed % file_fsync_freq == 0)
+      is_dirty && req_performed % file_fsync_freq == 0)
   {
     file_req->operation = FILE_OP_TYPE_FSYNC;
     file_req->file_id = fsynced_file;
@@ -446,12 +444,20 @@ sb_request_t file_get_seq_request(void)
     file_req->size = 0;
     fsynced_file++;
     if (fsynced_file == num_files)
+    {
       fsynced_file = 0;
+      is_dirty = 0;
+    }
 
     SB_THREAD_MUTEX_UNLOCK();
     return sb_req;
   }
-  
+
+  req_performed++;
+
+  if (file_req->operation == FILE_OP_TYPE_WRITE)
+    is_dirty = 1;
+
   /* Rewind to the first file if all files are processed */
   if (current_file == num_files)
   {
@@ -474,7 +480,9 @@ sb_request_t file_get_seq_request(void)
     file_req->file_id = current_file;
     file_req->pos = position;
   }
-  
+
+  position += file_req->size;
+
   /* scroll to the next file if not already out of bound */
   if (position == file_size)
   {
@@ -735,16 +743,16 @@ void file_print_mode(void)
 {
   char sizestr[16];
   
-  log_text(LOG_INFO, "Extra file open flags: %x", file_extra_flags);
-  log_text(LOG_INFO, "%d files, %sb each", num_files,
+  log_text(LOG_NOTICE, "Extra file open flags: %x", file_extra_flags);
+  log_text(LOG_NOTICE, "%d files, %sb each", num_files,
            sb_print_value_size(sizestr, sizeof(sizestr), file_size));
-  log_text(LOG_INFO, "%sb total file size",
+  log_text(LOG_NOTICE, "%sb total file size",
            sb_print_value_size(sizestr, sizeof(sizestr),
                                file_size * num_files));
-  log_text(LOG_INFO, "Block size %sb",
+  log_text(LOG_NOTICE, "Block size %sb",
            sb_print_value_size(sizestr, sizeof(sizestr), file_block_size));
   if (file_merged_requests > 0)
-    log_text(LOG_INFO, "Merging requests  up to %sb for sequential IO.",
+    log_text(LOG_NOTICE, "Merging requests  up to %sb for sequential IO.",
              sb_print_value_size(sizestr, sizeof(sizestr),
                                  file_max_request_size));
 
@@ -753,9 +761,9 @@ void file_print_mode(void)
     case MODE_RND_WRITE:
     case MODE_RND_READ:
     case MODE_RND_RW:
-      log_text(LOG_INFO, "Number of IO requests: %d",
+      log_text(LOG_NOTICE, "Number of IO requests: %d",
                sb_globals.max_requests);
-      log_text(LOG_INFO,
+      log_text(LOG_NOTICE,
                "Read/Write ratio for combined random IO test: %2.2f",
                file_rw_ratio);
       break;
@@ -764,22 +772,22 @@ void file_print_mode(void)
   }
 
   if (file_fsync_freq > 0)
-    log_text(LOG_INFO,
+    log_text(LOG_NOTICE,
              "Periodic FSYNC enabled, calling fsync() each %d requests.",
              file_fsync_freq);
 
   if (file_fsync_end)
-    log_text(LOG_INFO, "Calling fsync() at the end of test, Enabled.");
+    log_text(LOG_NOTICE, "Calling fsync() at the end of test, Enabled.");
 
   if (file_fsync_all)
-    log_text(LOG_INFO, "Calling fsync() after each write operation.");
+    log_text(LOG_NOTICE, "Calling fsync() after each write operation.");
 
-  log_text(LOG_INFO, "Using %s I/O mode", get_io_mode_str(file_io_mode));
+  log_text(LOG_NOTICE, "Using %s I/O mode", get_io_mode_str(file_io_mode));
 
   if (sb_globals.validate)
-    log_text(LOG_INFO, "Using checksums validation.");
+    log_text(LOG_NOTICE, "Using checksums validation.");
   
-  log_text(LOG_INFO, "Doing %s test", get_test_mode_str(test_mode));
+  log_text(LOG_NOTICE, "Doing %s test", get_test_mode_str(test_mode));
 }
 
 
@@ -895,11 +903,11 @@ int create_files(void)
   char               file_name[512];
   long long          offset;
 
-  log_text(LOG_INFO, "%d files, %ldKb each, %ldMb total", num_files,
+  log_text(LOG_NOTICE, "%d files, %ldKb each, %ldMb total", num_files,
            (long)(file_size / 1024),
            (long)((file_size * num_files) / (1024 * 1024)));
-  log_text(LOG_INFO, "Creating files for the test...");
-  log_text(LOG_INFO, "Extra file open flags: %x", file_extra_flags);
+  log_text(LOG_NOTICE, "Creating files for the test...");
+  log_text(LOG_NOTICE, "Extra file open flags: %x", file_extra_flags);
   for (i=0; i < num_files; i++) {
     snprintf(file_name, sizeof(file_name), "test_file.%d",i);
     unlink(file_name);
@@ -949,7 +957,7 @@ int remove_files(void)
   unsigned int i;
   char         file_name[512];
   
-  log_text(LOG_INFO, "Removing test files...");
+  log_text(LOG_NOTICE, "Removing test files...");
   
   for (i = 0; i < num_files; i++)
   {
