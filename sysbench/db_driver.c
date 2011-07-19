@@ -33,6 +33,7 @@
 
 #include "db_driver.h"
 #include "sb_list.h"
+#include "sb_percentile.h"
 
 /* Query length limit for bulk insert queries */
 #define BULK_PACKET_SIZE (512*1024)
@@ -52,10 +53,12 @@ typedef struct {
 /* Global variables */
 db_globals_t db_globals;
 
+sb_percentile_t local_percentile;
+
 /* Used in intermediate reports */
-unsigned long last_transactions;
-unsigned long last_read_ops;
-unsigned long last_write_ops;
+static unsigned long last_transactions;
+static unsigned long last_read_ops;
+static unsigned long last_write_ops;
 
 /* Static variables */
 static sb_list_t        drivers;          /* list of available DB drivers */
@@ -240,7 +243,10 @@ db_driver_t *db_init(const char *name)
       sb_timer_init(fetch_timers + i);
     }
   }
-  
+
+  if (sb_percentile_init(&local_percentile, 100000, 1.0, 1e13))
+    return NULL;
+
   return drv;
 }
 
@@ -556,6 +562,8 @@ int db_done(db_driver_t *drv)
     free(thread_stats);
   }
 
+  sb_percentile_done(&local_percentile);
+
   return drv->ops.done();
 }
 
@@ -822,14 +830,19 @@ void db_print_stats(sb_stat_t type)
     seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
 
     log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
-                  "threads: %d, tps: %4.2f, reads/s: %4.2f, writes/s: %4.2f",
+                  "threads: %d, tps: %4.2f, reads/s: %4.2f, writes/s: %4.2f "
+                  "response time: %4.2fms (95%%), %4.2fms (99%%)",
                   sb_globals.num_threads,
                   (transactions - last_transactions) / seconds,
                   (read_ops - last_read_ops) / seconds,
-                  (write_ops - last_write_ops) / seconds);
+                  (write_ops - last_write_ops) / seconds,
+                  NS2MS(sb_percentile_calculate(&local_percentile, 95)),
+                  NS2MS(sb_percentile_calculate(&local_percentile, 99)));
     last_transactions = transactions;
     last_read_ops = read_ops;
     last_write_ops = write_ops;
+
+    sb_percentile_reset(&local_percentile);
 
     return;
   }

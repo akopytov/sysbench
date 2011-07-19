@@ -24,6 +24,7 @@
 
 #include "sysbench.h"
 #include "sb_list.h"
+#include "sb_percentile.h"
 
 
 /* Prepared statements usage modes */
@@ -44,6 +45,8 @@ typedef struct
 } db_globals_t;
 
 extern db_globals_t db_globals;
+
+extern sb_percentile_t local_percentile;
 
 /* Driver capabilities definition */
 

@@ -299,6 +299,9 @@ int sb_lua_op_execute_request(sb_request_t *sb_req, int thread_id)
       
   LOG_EVENT_STOP(msg, thread_id);
 
+  sb_percentile_update(&local_percentile,
+                       sb_timer_value(sb_globals.op_timers + thread_id));
+
   return 0;
 }
 
