@@ -34,7 +34,7 @@
 #define LOG_EVENT_START(msg, thread_id) \
   do \
   { \
-    sb_timer_start(&sb_globals.op_timers[thread_id]); \
+    ((log_msg_oper_t *)(msg).data)->thread_id = thread_id; \
     ((log_msg_oper_t *)(msg).data)->action = LOG_MSG_OPER_START; \
     log_msg(&(msg)); \
   } while (0);
@@ -42,9 +42,9 @@
 #define LOG_EVENT_STOP(msg, thread_id) \
   do \
   { \
+    ((log_msg_oper_t *)(msg).data)->thread_id = thread_id; \
     ((log_msg_oper_t *)(msg).data)->action = LOG_MSG_OPER_STOP; \
     log_msg(&(msg)); \
-    sb_timer_stop(&sb_globals.op_timers[thread_id]); \
   } while (0);
 
 /* Message types definition */
@@ -85,7 +85,7 @@ typedef enum {
 
 typedef struct {
   log_msg_oper_action_t action;
-  sb_timer_t            timer;
+  int                   thread_id;
 } log_msg_oper_t;
 
 /* General log message definition */

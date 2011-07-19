@@ -28,7 +28,9 @@ add_executable(sysbench
   sb_options.c 
   sb_options.h 
   sb_logger.c 
-  sb_logger.h 
+  sb_logger.h
+  sb_percentile.c
+  sb_percentile.h
   sb_list.h 
   db_driver.h 
   db_driver.c

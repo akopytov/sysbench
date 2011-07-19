@@ -37,6 +37,7 @@
 #include "sysbench.h"
 #include "sb_list.h"
 #include "sb_logger.h"
+#include "sb_percentile.h"
 
 #define TEXT_BUFFER_SIZE 4096
 #define ERROR_BUFFER_SIZE 256
@@ -55,18 +56,8 @@ static unsigned char initialized;
 /* verbosity of messages */
 static unsigned char verbosity; 
 
-/*
-  gettimeofday() is over-optimized on some architectures what results in excessive warning message
-  This flag is required to issue a warning only once
-*/
-static unsigned char oper_time_warning;
-
-/* array of operation response times for operations handler */
-static unsigned int    operations[OPER_LOG_GRANULARITY]; 
-static double          oper_log_deduct;
-static double          oper_log_mult;
+static sb_percentile_t percentile;
 static unsigned int    oper_percentile;
-static pthread_mutex_t oper_mutex; /* used to sync access to operations array */
 
 static pthread_mutex_t text_mutex;
 static unsigned int    text_cnt;
@@ -489,10 +480,9 @@ int oper_handler_init(void)
     return 1;
   }
 
-  oper_log_deduct = log(OPER_LOG_MIN_VALUE);
-  oper_log_mult = (OPER_LOG_GRANULARITY - 1) / (log(OPER_LOG_MAX_VALUE) - oper_log_deduct);
-
-  pthread_mutex_init(&oper_mutex, NULL);
+  if (sb_percentile_init(&percentile, OPER_LOG_GRANULARITY, OPER_LOG_MIN_VALUE,
+                         OPER_LOG_MAX_VALUE))
+    return 1;
 
   return 0;
 }
@@ -503,46 +493,20 @@ int oper_handler_init(void)
 
 int oper_handler_process(log_msg_t *msg)
 {
-  double         optime;
-  unsigned int   ncell;
   log_msg_oper_t *oper_msg = (log_msg_oper_t *)msg->data;
+  sb_timer_t     *timer = sb_globals.op_timers + oper_msg->thread_id;
+  long long      value;
 
   if (oper_msg->action == LOG_MSG_OPER_START)
   {
-    sb_timer_init(&oper_msg->timer);
-    sb_timer_start(&oper_msg->timer);
+    sb_timer_start(timer);
     return 0;
   }
 
-  optime = sb_timer_value(&oper_msg->timer);
-  if (optime < OPER_LOG_MIN_VALUE)
-  {
-    /* Warn only once */
-    if (!oper_time_warning) {
-      log_text(LOG_WARNING, "Operation time (%f) is less than minimal counted value, "
-               "counting as %f", optime, (double)OPER_LOG_MIN_VALUE);
-      log_text(LOG_WARNING, "Percentile statistics will be inaccurate");
-      oper_time_warning = 1;
-    }
-    optime = OPER_LOG_MIN_VALUE;
-  }
-  else if (optime > OPER_LOG_MAX_VALUE)
-  {
-    /* Warn only once */
-    if (!oper_time_warning) {
-      log_text(LOG_WARNING, "Operation time (%f) is greater than maximal counted value, "
-               "counting as %f", optime, (double)OPER_LOG_MAX_VALUE);
-      log_text(LOG_WARNING, "Percentile statistics will be inaccurate");
-      oper_time_warning = 1;
-    }
-    optime = OPER_LOG_MAX_VALUE;
-  }
-  
-  ncell = floor((log(optime) - oper_log_deduct) * oper_log_mult + 0.5);
-  pthread_mutex_lock(&oper_mutex);
-  operations[ncell]++;
-  pthread_mutex_unlock(&oper_mutex);
-  
+  sb_timer_stop(timer);
+  value = sb_timer_value(timer);
+  sb_percentile_update(&percentile, value);
+
   return 0;
 }
 
@@ -552,12 +516,8 @@ int oper_handler_process(log_msg_t *msg)
 
 int oper_handler_done(void)
 {
-  double       p;
   double       diff;
-  double       pdiff;
-  double       optime;
   unsigned int i;
-  unsigned int noper = 0;
   unsigned int nthreads;
   sb_timer_t   t;
   /* variables to count thread fairness */
@@ -592,24 +552,9 @@ int oper_handler_done(void)
   /* Print approx. percentile value for event execution times */
   if (t.events > 0)
   {
-    /* Calculate element with a given percentile rank */
-    pdiff = oper_percentile;
-    for (i = 0; i < OPER_LOG_GRANULARITY; i++)
-    {
-      noper += operations[i];
-      p = (double)noper / t.events * 100;
-      diff = fabs(p - oper_percentile);
-      if (diff > pdiff || fabs(diff) < 1e-6)
-        break;
-      pdiff = diff;
-    }
-    if (i > 0)
-      i--;
-  
-    /* Calculate response time corresponding to this element */
-    optime = exp((double)i / oper_log_mult + oper_log_deduct);
     log_text(LOG_NOTICE, "         approx. %3d percentile:         %10.2fms",
-             oper_percentile, NS2MS(optime));
+             oper_percentile,
+             NS2MS(sb_percentile_calculate(&percentile, oper_percentile)));
   }
   log_text(LOG_NOTICE, "");
 
@@ -660,7 +605,5 @@ int oper_handler_done(void)
     log_text(LOG_NOTICE, "");
   }
 
-  pthread_mutex_destroy(&oper_mutex);
-  
   return 0;
 }

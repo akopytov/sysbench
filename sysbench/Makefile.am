@@ -37,7 +37,7 @@ endif
 
 sysbench_SOURCES = sysbench.c sysbench.h sb_timer.c sb_timer.h \
 sb_options.c sb_options.h sb_logger.c sb_logger.h sb_list.h db_driver.h \
-db_driver.c
+db_driver.c sb_percentile.c sb_percentile.h
 
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     tests/memory/libsbmemory.a tests/cpu/libsbcpu.a tests/oltp/libsboltp.a \

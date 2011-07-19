@@ -22,6 +22,7 @@
 #include "sysbench.h"
 #include "db_driver.h"
 #include "sb_oltp.h"
+#include "sb_percentile.h"
 
 #define GET_RANDOM_ID() ((*rnd_func)())
 
@@ -254,6 +255,8 @@ static int deadlocks;
 
 static sb_timer_t *exec_timers;
 static sb_timer_t *fetch_timers;
+
+static sb_percentile_t local_percentile;
 
 /* Random seed used to generate unique random numbers */
 static unsigned long long rnd_seed;
@@ -648,7 +651,11 @@ int oltp_init(void)
       sb_timer_init(fetch_timers + thread_id);
     }
   }
-  
+
+  /* Percentile stats for --report-interval */
+  if (sb_percentile_init(&local_percentile, 100000, 1.0, 1e13))
+    return 1;
+
   return 0;
 }
 
@@ -672,7 +679,9 @@ int oltp_done(void)
 
   free(bind_bufs);
   free(statements);
-  
+
+  sb_percentile_done(&local_percentile);
+
   return 0;
 }
 
@@ -1337,7 +1346,11 @@ int oltp_execute_request(sb_request_t *sb_req, int thread_id)
   } while(retry); /* retry transaction in case of deadlock */
 
   LOG_EVENT_STOP(msg, thread_id);
-  
+
+  /* Update percentile stats for --report-interval */
+  sb_percentile_update(&local_percentile,
+                       sb_timer_value(&sb_globals.op_timers[thread_id]));
+
   SB_THREAD_MUTEX_LOCK();
   read_ops += local_read_ops;
   write_ops += local_write_ops;
@@ -1386,9 +1399,14 @@ void oltp_print_stats(sb_stat_t type)
     SB_THREAD_MUTEX_UNLOCK();
 
     log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
-                  "threads: %d, tps: %4.2f, reads/s: %4.2f, writes/s: %4.2f",
+                  "threads: %d, tps: %4.2f, reads/s: %4.2f, writes/s: %4.2f "
+                  "response time: %4.2fms (95%%), %4.2fms (99%%)",
                   sb_globals.num_threads, num_transactions / seconds,
-                  num_read_ops / seconds, num_write_ops / seconds);
+                  num_read_ops / seconds, num_write_ops / seconds,
+                  NS2MS(sb_percentile_calculate(&local_percentile, 95)),
+                  NS2MS(sb_percentile_calculate(&local_percentile, 99)));
+
+    sb_percentile_reset(&local_percentile);
 
     return;
   }
