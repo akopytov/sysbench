@@ -206,6 +206,7 @@ sys/mman.h \
 sys/shm.h \
 thread.h \
 unistd.h \
+limits.h \
 ])
 
 

@@ -34,10 +34,8 @@
 
 static inline void sb_timer_update(sb_timer_t *t)
 {
-  struct timespec time_end;
-
-  SB_GETTIME(&time_end);
-  t->elapsed = TIMESPEC_DIFF(time_end, t->time_start);
+  SB_GETTIME(&t->time_end);
+  t->elapsed = TIMESPEC_DIFF(t->time_end, t->time_start);
 }
 
 /* initialize timer */
@@ -45,13 +43,30 @@ static inline void sb_timer_update(sb_timer_t *t)
 
 void sb_timer_init(sb_timer_t *t)
 {
+  memset(&t->time_start, 0, sizeof(struct timespec));
+  memset(&t->time_end, 0, sizeof(struct timespec));
+  memset(&t->time_split, 0, sizeof(struct timespec));
+  sb_timer_reset(t);
+  t->state = TIMER_INITIALIZED;
+}
+
+
+/* Reset timer counters, but leave the current state intact */
+void sb_timer_reset(sb_timer_t *t)
+{
   t->min_time = 0xffffffffffffffffULL;
   t->max_time = 0;
   t->sum_time = 0;
   t->events = 0;
-  t->state = TIMER_INITIALIZED;
+  t->elapsed = 0;
 }
 
+
+/* check whether the timer is initialized */
+int sb_timer_initialized(sb_timer_t *t)
+{
+  return t->state != TIMER_UNINITIALIZED;
+}
 
 /* start timer */
 
@@ -148,8 +163,15 @@ unsigned long long sb_timer_split(sb_timer_t *t)
       log_text(LOG_WARNING, "timer was never started");
       return 0;
     case TIMER_STOPPED:
-      log_text(LOG_WARNING, "timer was already stopped");
-      return 0;;
+      res = TIMESPEC_DIFF(t->time_end, t->time_split);
+      t->time_split = t->time_end;
+      if (res)
+        return res;
+      else
+      {
+        log_text(LOG_WARNING, "timer was already stopped");
+        return 0;
+      }
     case TIMER_RUNNING:
       break;
     default:

@@ -59,6 +59,9 @@
 #ifdef HAVE_SIGNAL_H
 # include <signal.h>
 #endif
+#ifdef HAVE_LIMITS_H
+# include <limits.h>
+#endif
 
 #include "sysbench.h"
 #include "sb_options.h"
@@ -91,6 +94,11 @@ sb_arg_t general_args[] =
   {"report-interval", "periodically report intermediate statistics "
    "with a specified interval in seconds. 0 disables intermediate reports",
     SB_ARG_TYPE_INT, "0"},
+  {"report-checkpoints", "dump full statistics and reset all counters at "
+   "specified points in time. The argument is a list of comma-separated values "
+   "representing the amount of time in seconds elapsed from start of test "
+   "when report checkpoint(s) must be performed. Report checkpoints are off by "
+   "default.", SB_ARG_TYPE_LIST, ""},
   {"test", "test to run", SB_ARG_TYPE_STRING, NULL},
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
@@ -125,6 +133,8 @@ static void sigalrm_handler(int sig)
   if (sig == SIGALRM)
   {
     sb_timer_stop(&sb_globals.exec_timer);
+    sb_timer_stop(&sb_globals.cumulative_timer1);
+    sb_timer_stop(&sb_globals.cumulative_timer2);
     log_text(LOG_FATAL,
              "The --max-time limit has expired, forcing shutdown...");
     if (current_test && current_test->ops.print_stats)
@@ -337,6 +347,27 @@ void print_run_mode(sb_test_t *test)
              sb_globals.report_interval);
   }
 
+  if (sb_globals.n_checkpoints > 0)
+  {
+    char         list_str[MAX_CHECKPOINTS * 12];
+    char         *tmp = list_str;
+    unsigned int i;
+    int          n, size = sizeof(list_str);
+
+    for (i = 0; i < sb_globals.n_checkpoints - 1; i++)
+    {
+      n = snprintf(tmp, size, "%u, ", sb_globals.checkpoints[i]);
+      if (n >= size)
+        break;
+      tmp += n;
+      size -= n;
+    }
+    if (i == sb_globals.n_checkpoints - 1)
+      snprintf(tmp, size, "%u", sb_globals.checkpoints[i]);
+    log_text(LOG_NOTICE, "Report checkpoint(s) at %s seconds",
+             list_str);
+  }
+
   if (sb_globals.debug)
     log_text(LOG_NOTICE, "Debug mode enabled.\n");
   
@@ -511,6 +542,53 @@ static void *report_thread_proc(void *arg)
   return NULL;
 }
 
+/* Checkpoints reports thread */
+
+static void *checkpoints_thread_proc(void *arg)
+{
+  unsigned long long       pause_ns;
+  unsigned long long       next_ns;
+  unsigned long long       curr_ns;
+  unsigned int             i;
+
+  (void)arg; /* unused */
+
+  if (current_test->ops.print_stats == NULL)
+  {
+    log_text(LOG_DEBUG, "Reporting not supported by the current test, ",
+             "terminating the reporting thread");
+    return NULL;
+  }
+
+  log_text(LOG_DEBUG, "Checkpoints report thread started");
+
+  pthread_mutex_lock(&thread_start_mutex);
+  pthread_mutex_unlock(&thread_start_mutex);
+
+  for (i = 0; i < sb_globals.n_checkpoints; i++)
+  {
+    next_ns = SEC2NS(sb_globals.checkpoints[i]);
+    curr_ns = sb_timer_value(&sb_globals.exec_timer);
+    if (next_ns <= curr_ns)
+      continue;
+
+    pause_ns = next_ns - curr_ns;
+    usleep(pause_ns / 1000);
+    /*
+      Just to update elapsed time in timer which is alter used by
+      log_timestamp.
+    */
+    curr_ns = sb_timer_value(&sb_globals.exec_timer);
+
+    SB_THREAD_MUTEX_LOCK();
+    log_timestamp(LOG_NOTICE, &sb_globals.exec_timer, "Checkpoint report:");
+    current_test->ops.print_stats(SB_STAT_CUMULATIVE);
+    print_global_stats();
+    SB_THREAD_MUTEX_UNLOCK();
+  }
+
+  return NULL;
+}
 
 /* 
   Main test function. Start threads. 
@@ -522,7 +600,9 @@ static int run_test(sb_test_t *test)
   unsigned int i;
   int          err;
   pthread_t    report_thread;
+  pthread_t    checkpoints_thread;
   int          report_thread_created = 0;
+  int          checkpoints_thread_created = 0;
 
   /* initialize test */
   if (test->ops.init != NULL && test->ops.init() != 0)
@@ -533,9 +613,10 @@ static int run_test(sb_test_t *test)
 
   /* initialize and start timers */
   sb_timer_init(&sb_globals.exec_timer);
+  sb_timer_init(&sb_globals.cumulative_timer1);
+  sb_timer_init(&sb_globals.cumulative_timer2);
   for(i = 0; i < sb_globals.num_threads; i++)
   {
-    sb_timer_init(&sb_globals.op_timers[i]);
     threads[i].id = i;
     threads[i].test = test;
   }    
@@ -575,6 +656,19 @@ static int run_test(sb_test_t *test)
     report_thread_created = 1;
   }
 
+  if (sb_globals.n_checkpoints > 0)
+  {
+    /* Create a thread for checkpoint statistic reports */
+    if ((err = pthread_create(&checkpoints_thread, &thread_attr,
+                              &checkpoints_thread_proc, NULL)) != 0)
+    {
+      log_errno(LOG_FATAL, "pthread_create() for the checkpoint thread "
+                "failed.");
+      return 1;
+    }
+    checkpoints_thread_created = 1;
+  }
+
   /* Starting the test threads */
   for(i = 0; i < sb_globals.num_threads; i++)
   {
@@ -589,6 +683,8 @@ static int run_test(sb_test_t *test)
   }
 
   sb_timer_start(&sb_globals.exec_timer); /* Start benchmark timer */
+  sb_timer_start(&sb_globals.cumulative_timer1);
+  sb_timer_start(&sb_globals.cumulative_timer2);
 
 #ifdef HAVE_ALARM
   /* Set the alarm to force shutdown */
@@ -607,6 +703,8 @@ static int run_test(sb_test_t *test)
   }
 
   sb_timer_stop(&sb_globals.exec_timer);
+  sb_timer_stop(&sb_globals.cumulative_timer1);
+  sb_timer_stop(&sb_globals.cumulative_timer2);
 
   /* Silence periodic reports if they were on */
   sb_globals.report_interval = 0;
@@ -633,11 +731,17 @@ static int run_test(sb_test_t *test)
   if (test->ops.done != NULL)
     (*(test->ops.done))();
 
-  /* Delay killing the reporting thread to avoid mutex lock leaks */
+  /* Delay killing the reporting threads to avoid mutex lock leaks */
   if (report_thread_created)
   {
     if (pthread_cancel(report_thread) || pthread_join(report_thread, NULL))
       log_errno(LOG_FATAL, "Terminating the reporting thread failed.");
+  }
+  if (checkpoints_thread_created)
+  {
+    if (pthread_cancel(checkpoints_thread) ||
+        pthread_join(checkpoints_thread, NULL))
+      log_errno(LOG_FATAL, "Terminating the checkpoint thread failed.");
   }
 
   return sb_globals.error != 0;
@@ -660,10 +764,23 @@ static sb_test_t *find_test(char *name)
 }
 
 
+static int checkpoint_cmp(const void *a_ptr, const void *b_ptr)
+{
+  const unsigned int a = *(const unsigned int *) a_ptr;
+  const unsigned int b = *(const unsigned int *) b_ptr;
+
+  return (int) (a - b);
+}
+
+
 static int init(void)
 {
   option_t          *opt;
   char              *tmp;
+  sb_list_t         *checkpoints_list;
+  sb_list_item_t    *pos_val;
+  value_t           *val;
+  long              res;
 
   sb_globals.num_threads = sb_get_value_int("num-threads");
   if (sb_globals.num_threads <= 0)
@@ -703,12 +820,10 @@ static int init(void)
     else
       sb_globals.force_shutdown = 0;
   }
-  
-  sb_globals.op_timers = (sb_timer_t *)malloc(sb_globals.num_threads * 
-                                              sizeof(sb_timer_t));
+
   threads = (sb_thread_ctxt_t *)malloc(sb_globals.num_threads * 
                                        sizeof(sb_thread_ctxt_t));
-  if (sb_globals.op_timers == NULL || threads == NULL)
+  if (threads == NULL)
   {
     log_text(LOG_FATAL, "Memory allocation failure.\n");
     return 1;
@@ -740,9 +855,37 @@ static int init(void)
   }
   sb_globals.tx_rate = sb_get_value_int("tx-rate");
   sb_globals.tx_jitter = sb_get_value_int("tx-jitter");
-  sb_globals.report_interval =
-    sb_get_value_int("report-interval");
-  
+  sb_globals.report_interval = sb_get_value_int("report-interval");
+
+  sb_globals.n_checkpoints = 0;
+  checkpoints_list = sb_get_value_list("report-checkpoints");
+  SB_LIST_FOR_EACH(pos_val, checkpoints_list)
+  {
+    char *endptr;
+
+    val = SB_LIST_ENTRY(pos_val, value_t, listitem);
+    res = strtol(val->data, &endptr, 10);
+    if (*endptr != '\0' || res < 0 || res > UINT_MAX)
+    {
+      log_text(LOG_FATAL, "Invalid value for --report-checkpoints: '%s'",
+               val->data);
+      return 1;
+    }
+    if (++sb_globals.n_checkpoints > MAX_CHECKPOINTS)
+    {
+      log_text(LOG_FATAL, "Too many checkpoints in --report-checkpoints "
+               "(up to %d can be defined)", MAX_CHECKPOINTS);
+      return 1;
+    }
+    sb_globals.checkpoints[sb_globals.n_checkpoints-1] = (unsigned int) res;
+  }
+
+  if (sb_globals.n_checkpoints > 0)
+  {
+    qsort(sb_globals.checkpoints, sb_globals.n_checkpoints,
+          sizeof(unsigned int), checkpoint_cmp);
+  }
+
   return 0;
 }
 

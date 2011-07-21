@@ -46,6 +46,9 @@
 #define OPER_LOG_MIN_VALUE   1
 #define OPER_LOG_MAX_VALUE   1E13
 
+/* per-thread timers for response time stats */
+sb_timer_t *timers;
+
 /* Array of message handlers (one chain per message type) */
 
 static sb_list_t handlers[LOG_MSG_TYPE_MAX];
@@ -62,6 +65,15 @@ static unsigned int    oper_percentile;
 static pthread_mutex_t text_mutex;
 static unsigned int    text_cnt;
 static char            text_buf[TEXT_BUFFER_SIZE];
+
+/* Temporary copy of timers */
+static sb_timer_t *timers_copy;
+
+/*
+  Mutex protecting timers.
+  TODO: replace with an rwlock (and implement pthread rwlocks for Windows).
+*/
+static pthread_mutex_t timers_mutex;
 
 static int text_handler_init(void);
 static int text_handler_process(log_msg_t *msg);
@@ -472,6 +484,8 @@ int text_handler_process(log_msg_t *msg)
 
 int oper_handler_init(void)
 {
+  unsigned int i;
+
   oper_percentile = sb_get_value_int("percentile");
   if (oper_percentile < 1 || oper_percentile > 100)
   {
@@ -484,6 +498,20 @@ int oper_handler_init(void)
                          OPER_LOG_MAX_VALUE))
     return 1;
 
+  timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
+  timers_copy = (sb_timer_t *)malloc(sb_globals.num_threads *
+                                     sizeof(sb_timer_t));
+  if (timers == NULL || timers_copy == NULL)
+  {
+    log_text(LOG_FATAL, "Memory allocation failure");
+    return 1;
+  }
+
+  for (i = 0; i < sb_globals.num_threads; i++)
+    sb_timer_init(&timers[i]);
+
+  pthread_mutex_init(&timers_mutex, NULL);
+
   return 0;
 }
 
@@ -494,27 +522,36 @@ int oper_handler_init(void)
 int oper_handler_process(log_msg_t *msg)
 {
   log_msg_oper_t *oper_msg = (log_msg_oper_t *)msg->data;
-  sb_timer_t     *timer = sb_globals.op_timers + oper_msg->thread_id;
+  sb_timer_t     *timer = &timers[oper_msg->thread_id];
   long long      value;
 
   if (oper_msg->action == LOG_MSG_OPER_START)
   {
+    pthread_mutex_lock(&timers_mutex);
     sb_timer_start(timer);
+    pthread_mutex_unlock(&timers_mutex);
+
     return 0;
   }
 
+  pthread_mutex_lock(&timers_mutex);
+
   sb_timer_stop(timer);
   value = sb_timer_value(timer);
+
+  pthread_mutex_unlock(&timers_mutex);
+
   sb_percentile_update(&percentile, value);
 
   return 0;
 }
 
+/*
+  Print global stats either from the last checkpoint (if used) or
+  from the test start.
+*/
 
-/* Uninitialize operations messages handler */
-
-
-int oper_handler_done(void)
+int print_global_stats(void)
 {
   double       diff;
   unsigned int i;
@@ -525,23 +562,40 @@ int oper_handler_done(void)
   double       events_stddev;
   double       time_avg;
   double       time_stddev;
+  double       percentile_val;
+  unsigned long long total_time_ns;
 
   sb_timer_init(&t);
   nthreads = sb_globals.num_threads;
-  for(i = 0; i < nthreads; i++)
-    t = merge_timers(&t,&(sb_globals.op_timers[i]));
 
-  /* Print total statistics */
+  /* Create a temporary copy of timers and reset them */
+  pthread_mutex_lock(&timers_mutex);
+
+  memcpy(timers_copy, timers, sb_globals.num_threads * sizeof(sb_timer_t));
+  for (i = 0; i < sb_globals.num_threads; i++)
+    sb_timer_reset(&timers[i]);
+
+  total_time_ns = sb_timer_split(&sb_globals.cumulative_timer2);
+
+  percentile_val = sb_percentile_calculate(&percentile, oper_percentile);
+  sb_percentile_reset(&percentile);
+
+  pthread_mutex_unlock(&timers_mutex);
+
+  for(i = 0; i < nthreads; i++)
+    t = merge_timers(&t, &timers_copy[i]);
+
+/* Print total statistics */
   log_text(LOG_NOTICE, "");
-  log_text(LOG_NOTICE, "Test execution summary:");
+  log_text(LOG_NOTICE, "General statistics:");
   log_text(LOG_NOTICE, "    total time:                          %.4fs",
-           NS2SEC(sb_timer_value(&sb_globals.exec_timer)));
+           NS2SEC(total_time_ns));
   log_text(LOG_NOTICE, "    total number of events:              %lld",
            t.events);
   log_text(LOG_NOTICE, "    total time taken by event execution: %.4f",
            NS2SEC(get_sum_time(&t)));
 
-  log_text(LOG_NOTICE, "    per-request statistics:");
+  log_text(LOG_NOTICE, "    response time:");
   log_text(LOG_NOTICE, "         min:                            %10.2fms",
            NS2MS(get_min_time(&t)));
   log_text(LOG_NOTICE, "         avg:                            %10.2fms",
@@ -553,8 +607,7 @@ int oper_handler_done(void)
   if (t.events > 0)
   {
     log_text(LOG_NOTICE, "         approx. %3d percentile:         %10.2fms",
-             oper_percentile,
-             NS2MS(sb_percentile_calculate(&percentile, oper_percentile)));
+             oper_percentile, NS2MS(percentile_val));
   }
   log_text(LOG_NOTICE, "");
 
@@ -570,10 +623,10 @@ int oper_handler_done(void)
   time_stddev = 0;
   for(i = 0; i < nthreads; i++)
   {
-    diff = fabs(events_avg - sb_globals.op_timers[i].events);
+    diff = fabs(events_avg - timers_copy[i].events);
     events_stddev += diff*diff;
     
-    diff = fabs(time_avg - NS2SEC(get_sum_time(&sb_globals.op_timers[i])));
+    diff = fabs(time_avg - NS2SEC(get_sum_time(&timers_copy[i])));
     time_stddev += diff*diff;
   }
   events_stddev = sqrt(events_stddev / nthreads);
@@ -593,17 +646,31 @@ int oper_handler_done(void)
     {
       log_text(LOG_DEBUG, "    thread #%3d: min: %.4fs  avg: %.4fs  max: %.4fs  "
                "events: %lld",i,
-               NS2SEC(get_min_time(&sb_globals.op_timers[i])),
-               NS2SEC(get_avg_time(&sb_globals.op_timers[i])),
-               NS2SEC(get_max_time(&sb_globals.op_timers[i])),
-               sb_globals.op_timers[i].events);
+               NS2SEC(get_min_time(&timers_copy[i])),
+               NS2SEC(get_avg_time(&timers_copy[i])),
+               NS2SEC(get_max_time(&timers_copy[i])),
+               timers_copy[i].events);
       log_text(LOG_DEBUG, "                 "
                "total time taken by even execution: %.4fs",
-               NS2SEC(get_sum_time(&sb_globals.op_timers[i]))
+               NS2SEC(get_sum_time(&timers_copy[i]))
                );
     }
     log_text(LOG_NOTICE, "");
   }
+
+  return 0;
+}
+
+/* Uninitialize operations messages handler */
+
+int oper_handler_done(void)
+{
+  print_global_stats();
+
+  free(timers);
+  free(timers_copy);
+
+  pthread_mutex_destroy(&timers_mutex);
 
   return 0;
 }

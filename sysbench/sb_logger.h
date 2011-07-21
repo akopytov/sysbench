@@ -118,6 +118,9 @@ typedef struct {
   sb_list_item_t       listitem;  /* can be linked in a list */
 } log_handler_t;
 
+/* per-thread timers for response time stats */
+extern sb_timer_t *timers;
+
 /* Register logger */
 
 int log_register(void);
@@ -157,5 +160,12 @@ void log_errno(log_msg_priority_t priority, const char *fmt, ...);
 /* Uninitialize logger */
 
 void log_done(void);
+
+/*
+  Print global stats either from the last checkpoint (if used) or
+  from the test start.
+*/
+
+int print_global_stats(void);
 
 #endif /* SB_LOGGER_H */

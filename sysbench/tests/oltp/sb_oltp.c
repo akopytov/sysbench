@@ -300,6 +300,8 @@ static int prepare_stmt_set_trx(oltp_stmt_set_t *, oltp_bind_set_t *, db_conn_t 
 static int prepare_stmt_set_nontrx(oltp_stmt_set_t *, oltp_bind_set_t *, db_conn_t *);
 static int prepare_stmt_set_sp(oltp_stmt_set_t *, oltp_bind_set_t *, db_conn_t *);
 
+static void oltp_reset_stats(void);
+
 /* Close a set of statements */
 void close_stmt_set(oltp_stmt_set_t *set);
 
@@ -505,12 +507,8 @@ int oltp_cmd_prepare(void)
 
   oltp_disconnect(con);
 
-  read_ops = last_read_ops = 0;
-  write_ops = last_write_ops = 0;
-  other_ops = 0;
-  transactions = last_transactions = 0;
-  deadlocks = 0;
- 
+  oltp_reset_stats();
+
   return 0;
 
  error:
@@ -645,12 +643,9 @@ int oltp_init(void)
   {
     exec_timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
     fetch_timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
-    for (thread_id = 0; thread_id < sb_globals.num_threads; thread_id++)
-    {
-      sb_timer_init(exec_timers + thread_id);
-      sb_timer_init(fetch_timers + thread_id);
-    }
   }
+
+  oltp_reset_stats();
 
   /* Percentile stats for --report-interval */
   if (sb_percentile_init(&local_percentile, 100000, 1.0, 1e13))
@@ -1348,8 +1343,7 @@ int oltp_execute_request(sb_request_t *sb_req, int thread_id)
   LOG_EVENT_STOP(msg, thread_id);
 
   /* Update percentile stats for --report-interval */
-  sb_percentile_update(&local_percentile,
-                       sb_timer_value(&sb_globals.op_timers[thread_id]));
+  sb_percentile_update(&local_percentile, sb_timer_value(&timers[thread_id]));
 
   SB_THREAD_MUTEX_LOCK();
   read_ops += local_read_ops;
@@ -1413,9 +1407,8 @@ void oltp_print_stats(sb_stat_t type)
   else if (type != SB_STAT_CUMULATIVE)
     return;
 
-  seconds = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
+  seconds = NS2SEC(sb_timer_split(&sb_globals.cumulative_timer1));
 
-  
   log_text(LOG_NOTICE, "OLTP test statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
   log_text(LOG_NOTICE, "        read:                            %d",
@@ -1468,6 +1461,8 @@ void oltp_print_stats(sb_stat_t type)
     log_text(LOG_DEBUG, "  total:                                %.4fs",
              NS2SEC(get_sum_time(&fetch_timer)));
   }
+
+  oltp_reset_stats();
 }
 
 
@@ -2345,3 +2340,30 @@ int get_think_time(void)
   return t; 
 }
 
+
+static void oltp_reset_stats(void)
+{
+  unsigned int thread_id;
+
+  read_ops = last_read_ops = 0;
+  write_ops = last_write_ops = 0;
+  other_ops = 0;
+  transactions = last_transactions = 0;
+  deadlocks = 0;
+
+  /*
+    So that intermediate stats are calculated from the current moment
+    rather than from the previous intermediate report
+  */
+  if (sb_timer_initialized(&sb_globals.exec_timer))
+    sb_timer_split(&sb_globals.exec_timer);
+
+  if (sb_globals.debug)
+  {
+    for (thread_id = 0; thread_id < sb_globals.num_threads; thread_id++)
+    {
+      sb_timer_init(exec_timers + thread_id);
+      sb_timer_init(fetch_timers + thread_id);
+    }
+  }
+}

@@ -29,6 +29,10 @@
 # include <ctype.h>
 #endif
 
+#ifdef HAVE_LIMITS_H
+# include <limits.h>
+#endif
+
 #include "sb_options.h"
 
 #define VALUE_DELIMITER '='
@@ -177,6 +181,8 @@ int sb_get_value_int(const char *name)
   option_t       *opt;
   value_t        *val;
   sb_list_item_t *pos;
+  long           res;
+  char           *endptr;
 
   opt = find_option(&options, name);
   if (opt == NULL)
@@ -185,7 +191,14 @@ int sb_get_value_int(const char *name)
   SB_LIST_FOR_EACH(pos, &opt->values)
   {
     val = SB_LIST_ENTRY(pos, value_t, listitem);
-    return atoi(val->data);
+    res = strtol(val->data, &endptr, 10);
+    if (*endptr != '\0' || res > INT_MAX || res < INT_MIN)
+    {
+      fprintf(stderr, "Invalid value for the '%s' option: '%s'\n",
+              name, val->data);
+      exit(EXIT_FAILURE);
+    }
+    return (int) res;
   }
 
   return 0;
@@ -606,4 +619,3 @@ int write_config(FILE *fp, sb_list_t *options)
     
   return 0;
 }
-
