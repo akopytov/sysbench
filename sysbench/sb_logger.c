@@ -57,7 +57,6 @@ static sb_list_t handlers[LOG_MSG_TYPE_MAX];
 static unsigned char initialized; 
 
 static sb_percentile_t percentile;
-static unsigned int    oper_percentile;
 
 static pthread_mutex_t text_mutex;
 static unsigned int    text_cnt;
@@ -480,15 +479,16 @@ int text_handler_process(log_msg_t *msg)
 
 int oper_handler_init(void)
 {
-  unsigned int i;
+  unsigned int i, tmp;
 
-  oper_percentile = sb_get_value_int("percentile");
-  if (oper_percentile < 1 || oper_percentile > 100)
+  tmp = sb_get_value_int("percentile");
+  if (tmp < 1 || tmp > 100)
   {
     log_text(LOG_FATAL, "Invalid value for percentile option: %d",
-             oper_percentile);
+             tmp);
     return 1;
   }
+  sb_globals.percentile_rank = tmp;
 
   if (sb_percentile_init(&percentile, OPER_LOG_GRANULARITY, OPER_LOG_MIN_VALUE,
                          OPER_LOG_MAX_VALUE))
@@ -573,7 +573,8 @@ int print_global_stats(void)
 
   total_time_ns = sb_timer_split(&sb_globals.cumulative_timer2);
 
-  percentile_val = sb_percentile_calculate(&percentile, oper_percentile);
+  percentile_val = sb_percentile_calculate(&percentile,
+                                           sb_globals.percentile_rank);
   sb_percentile_reset(&percentile);
 
   pthread_mutex_unlock(&timers_mutex);
@@ -603,7 +604,7 @@ int print_global_stats(void)
   if (t.events > 0)
   {
     log_text(LOG_NOTICE, "         approx. %3d percentile:         %10.2fms",
-             oper_percentile, NS2MS(percentile_val));
+             sb_globals.percentile_rank, NS2MS(percentile_val));
   }
   log_text(LOG_NOTICE, "");
 
