@@ -377,7 +377,7 @@ void memory_print_stats(sb_stat_t type)
     break;
 
   case SB_STAT_CUMULATIVE:
-    seconds = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
+    seconds = NS2SEC(sb_timer_split(&sb_globals.cumulative_timer1));
 
     log_text(LOG_NOTICE, "Operations performed: %d (%8.2f ops/sec)\n",
              total_ops, total_ops / seconds);
@@ -385,6 +385,14 @@ void memory_print_stats(sb_stat_t type)
       log_text(LOG_NOTICE, "%4.2f MB transferred (%4.2f MB/sec)\n",
                total_bytes / megabyte,
                total_bytes / megabyte / seconds);
+    total_ops = 0;
+    total_bytes = 0;
+    /*
+      So that intermediate stats are calculated from the current moment
+      rather than from the previous intermediate report
+    */
+    if (sb_timer_initialized(&sb_globals.exec_timer))
+      sb_timer_split(&sb_globals.exec_timer);
 
     break;
   }

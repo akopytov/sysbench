@@ -268,6 +268,7 @@ static int create_files(void);
 static int remove_files(void);
 static int parse_arguments(void);
 static void clear_stats(void);
+static void init_vars(void);
 static sb_request_t file_get_seq_request(void);
 static sb_request_t file_get_rnd_request(void);
 static void check_seq_req(sb_file_request_t *, sb_file_request_t *);
@@ -323,6 +324,7 @@ int file_init(void)
     return 1;
 #endif
 
+  init_vars();
   clear_stats();
 
   return 0;
@@ -822,7 +824,7 @@ void file_print_stats(sb_stat_t type)
     }
 
   case SB_STAT_CUMULATIVE:
-    seconds = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
+    seconds = NS2SEC(sb_timer_split(&sb_globals.cumulative_timer1));
 
     log_text(LOG_NOTICE,
              "Operations performed:  %d reads, %d writes, %d Other = %d Total",
@@ -836,6 +838,8 @@ void file_print_stats(sb_stat_t type)
                                  (bytes_read + bytes_written) / seconds));
     log_text(LOG_NOTICE, "%8.2f Requests/sec executed",
              (read_ops + write_ops) / seconds);
+    clear_stats();
+
     break;
   }
 }
@@ -999,12 +1003,25 @@ int file_cmd_cleanup(void)
   return remove_files();
 }
 
-void clear_stats(void)
+void init_vars(void)
 {
   position = 0; /* position in file */
   current_file = 0;
   fsynced_file = 0; /* for counting file to be fsynced */
   fsynced_file2 = 0;
+  req_performed = 0;
+  is_dirty = 0;
+  if (sb_globals.validate)
+  {
+    prev_req.size = 0;
+    prev_req.operation = FILE_OP_TYPE_NULL;
+    prev_req.file_id = 0;
+    prev_req.pos = 0;
+  }
+}
+
+void clear_stats(void)
+{
   read_ops = 0;
   real_read_ops = 0;
   write_ops = 0;
@@ -1015,15 +1032,12 @@ void clear_stats(void)
   last_bytes_read = 0;
   bytes_written = 0;
   last_bytes_written = 0;
-  req_performed = 0;
-  is_dirty = 0;
-  if (sb_globals.validate)
-  {
-    prev_req.size = 0;
-    prev_req.operation = FILE_OP_TYPE_NULL;
-    prev_req.file_id = 0;
-    prev_req.pos = 0;
-  }
+  /*
+    So that intermediate stats are calculated from the current moment
+    rather than from the previous intermediate report
+  */
+  if (sb_timer_initialized(&sb_globals.exec_timer))
+    sb_timer_split(&sb_globals.exec_timer);
 }
 
 

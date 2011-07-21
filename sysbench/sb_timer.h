@@ -70,6 +70,7 @@ typedef enum {TIMER_UNINITIALIZED, TIMER_INITIALIZED, TIMER_STOPPED, \
 typedef struct
 {
   struct timespec    time_start;
+  struct timespec    time_end;
   struct timespec    time_split;
   unsigned long long elapsed;
   unsigned long long min_time;
@@ -84,6 +85,12 @@ typedef struct
 
 /* Initialize timer */
 void sb_timer_init(sb_timer_t *);
+
+/* Reset timer counters, but leave the current state intact */
+void sb_timer_reset(sb_timer_t *t);
+
+/* check whether the timer is initialized */
+int sb_timer_initialized(sb_timer_t *t);
 
 /* start timer */
 void sb_timer_start(sb_timer_t *);

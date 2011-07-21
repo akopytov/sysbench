@@ -75,6 +75,7 @@ static void db_free_row(db_row_t *);
 static int db_bulk_do_insert(db_conn_t *, int);
 static db_query_type_t db_get_query_type(const char *);
 static void db_update_thread_stats(int, db_query_type_t);
+static void db_reset_stats(void);
 
 /* DB layer arguments */
 
@@ -224,7 +225,7 @@ db_driver_t *db_init(const char *name)
     return NULL;
 
   /* Initialize per-thread stats */
-  thread_stats = (db_thread_stat_t *)calloc(sb_globals.num_threads,
+  thread_stats = (db_thread_stat_t *)malloc(sb_globals.num_threads *
                                             sizeof(db_thread_stat_t));
   if (thread_stats == NULL)
     return NULL;
@@ -235,14 +236,13 @@ db_driver_t *db_init(const char *name)
   /* Initialize timers if in debug mode */
   if (db_globals.debug)
   {
-    exec_timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
-    fetch_timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
-    for (i = 0; i < sb_globals.num_threads; i++)
-    {
-      sb_timer_init(exec_timers + i);
-      sb_timer_init(fetch_timers + i);
-    }
+    exec_timers = (sb_timer_t *) malloc(sb_globals.num_threads *
+                                        sizeof(sb_timer_t));
+    fetch_timers = (sb_timer_t *) malloc(sb_globals.num_threads *
+                                         sizeof(sb_timer_t));
   }
+
+  db_reset_stats();
 
   if (sb_percentile_init(&local_percentile, 100000, 1.0, 1e13))
     return NULL;
@@ -838,9 +838,12 @@ void db_print_stats(sb_stat_t type)
                   (write_ops - last_write_ops) / seconds,
                   NS2MS(sb_percentile_calculate(&local_percentile, 95)),
                   NS2MS(sb_percentile_calculate(&local_percentile, 99)));
+
+    SB_THREAD_MUTEX_LOCK();
     last_transactions = transactions;
     last_read_ops = read_ops;
     last_write_ops = write_ops;
+    SB_THREAD_MUTEX_UNLOCK();
 
     sb_percentile_reset(&local_percentile);
 
@@ -849,8 +852,8 @@ void db_print_stats(sb_stat_t type)
   else if (type != SB_STAT_CUMULATIVE)
     return;
 
-  seconds = NS2SEC(sb_timer_value(&sb_globals.exec_timer));
-  
+  seconds = NS2SEC(sb_timer_split(&sb_globals.cumulative_timer1));
+
   log_text(LOG_NOTICE, "OLTP test statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
   log_text(LOG_NOTICE, "        read:                            %d",
@@ -903,6 +906,8 @@ void db_print_stats(sb_stat_t type)
     log_text(LOG_DEBUG, "  total:                                %.4fs",
              NS2SEC(get_sum_time(&fetch_timer)));
   }
+
+  db_reset_stats();
 }
 
 /* Get query type */
@@ -957,4 +962,31 @@ void db_update_thread_stats(int id, db_query_type_t type)
   }
 
   pthread_mutex_unlock(&thread_stats[id].stat_mutex);
+}
+
+static void db_reset_stats(void)
+{
+  unsigned int i;
+
+  memset(thread_stats, 0, sb_globals.num_threads * sizeof(db_thread_stat_t));
+
+  last_transactions = 0;
+  last_read_ops = 0;
+  last_write_ops = 0;
+
+  /*
+    So that intermediate stats are calculated from the current moment
+    rather than from the previous intermediate report
+  */
+  if (sb_timer_initialized(&sb_globals.exec_timer))
+    sb_timer_split(&sb_globals.exec_timer);
+
+  if (sb_globals.debug)
+  {
+    for (i = 0; i < sb_globals.num_threads; i++)
+    {
+      sb_timer_init(exec_timers + i);
+      sb_timer_init(fetch_timers + i);
+    }
+  }
 }

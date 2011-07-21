@@ -52,6 +52,9 @@
 
 #define SB_MAX_RND 0x3fffffffu
 
+/* Maximum number of elements in --report-checkpoints list */
+#define MAX_CHECKPOINTS 256
+
 /* random() is not thread-safe on most platforms, use lrand48() if available */
 #ifdef HAVE_LRAND48
 #define sb_rnd() (lrand48() % SB_MAX_RND)
@@ -191,11 +194,16 @@ typedef struct
   sb_cmd_t         command;        /* command passed from command line */
   int              error;          /* global error - everyone exit */
   pthread_mutex_t  exec_mutex;     /* execution mutex */
-  sb_timer_t       *op_timers;     /* timers to measure each thread's run time */
   sb_timer_t       exec_timer;     /* total execution timer */
+  /* timers for cumulative reports */
+  sb_timer_t       cumulative_timer1;
+  sb_timer_t       cumulative_timer2;
   unsigned int     num_threads;    /* number of threads to use */
   unsigned int     num_running;    /* number of threads currently active */
   unsigned int     report_interval;/* intermediate reports interval */
+  /* array of report checkpoints */
+  unsigned int     checkpoints[MAX_CHECKPOINTS];
+  unsigned int     n_checkpoints;  /* number of checkpoints */
   unsigned int     tx_rate;        /* target transaction rate */
   unsigned int     tx_jitter;      /* target transaction variation (us) */
   unsigned int     max_requests;   /* maximum number of requests */

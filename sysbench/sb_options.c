@@ -29,6 +29,10 @@
 # include <ctype.h>
 #endif
 
+#ifdef HAVE_LIMITS_H
+# include <limits.h>
+#endif
+
 #include "sb_options.h"
 #include "sysbench.h"
 
@@ -192,12 +196,20 @@ int sb_opt_to_int(option_t *opt)
 {
   value_t        *val;
   sb_list_item_t *pos;
-
+  long           res;
+  char           *endptr;
 
   SB_LIST_ONCE(pos, &opt->values)
   {
     val = SB_LIST_ENTRY(pos, value_t, listitem);
-    return atoi(val->data);
+    res = strtol(val->data, &endptr, 10);
+    if (*endptr != '\0' || res > INT_MAX || res < INT_MIN)
+    {
+      fprintf(stderr, "Invalid value for the '%s' option: '%s'\n",
+              opt->name, val->data);
+      exit(EXIT_FAILURE);
+    }
+    return (int) res;
   }
 
   return 0;
@@ -212,7 +224,7 @@ int sb_get_value_int(const char *name)
   if (opt == NULL)
     return 0;
 
-  return sb_opt_to_int(opt);
+  return sb_opt_to_int(opt);;
 }
 
 
@@ -701,4 +713,3 @@ int write_config(FILE *fp, sb_list_t *options)
     
   return 0;
 }
-

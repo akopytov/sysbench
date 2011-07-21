@@ -86,7 +86,7 @@ typedef sb_list_item_t sb_list_t ;
   ((item_p)->prev_p != (head_p))
 
 #define SB_LIST_ITEM_LAST(item_p, head_p) \
-  ((item_p)->next_p != (head_p))
+  ((item_p)->next_p == (head_p))
 
 #define SB_LIST_ITEM_NEXT(item_p) \
   ((item_p)->next_p)
