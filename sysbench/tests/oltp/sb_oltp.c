@@ -1394,11 +1394,12 @@ void oltp_print_stats(sb_stat_t type)
 
     log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
                   "threads: %d, tps: %4.2f, reads/s: %4.2f, writes/s: %4.2f "
-                  "response time: %4.2fms (95%%), %4.2fms (99%%)",
+                  "response time: %4.2fms (%u%%)",
                   sb_globals.num_threads, num_transactions / seconds,
                   num_read_ops / seconds, num_write_ops / seconds,
-                  NS2MS(sb_percentile_calculate(&local_percentile, 95)),
-                  NS2MS(sb_percentile_calculate(&local_percentile, 99)));
+                  NS2MS(sb_percentile_calculate(&local_percentile,
+                                                sb_globals.percentile_rank)),
+                  sb_globals.percentile_rank);
 
     sb_percentile_reset(&local_percentile);
 
