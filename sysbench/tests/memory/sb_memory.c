@@ -88,7 +88,7 @@ static sb_test_t memory_test =
 /* Test arguments */
 
 static ssize_t memory_block_size;
-static off_t   memory_total_size;
+static long long    memory_total_size;
 static unsigned int memory_scope;
 static unsigned int memory_oper;
 static unsigned int memory_access_rnd;
@@ -98,8 +98,8 @@ static unsigned int memory_hugetlb;
 
 /* Statistics */
 static unsigned int total_ops;
-static off_t        total_bytes;
-static off_t        last_bytes;
+static long long    total_bytes;
+static long long    last_bytes;
 
 /* Array of per-thread buffers */
 static int **buffers;
