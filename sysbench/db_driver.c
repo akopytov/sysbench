@@ -969,7 +969,14 @@ static void db_reset_stats(void)
 {
   unsigned int i;
 
-  memset(thread_stats, 0, sb_globals.num_threads * sizeof(db_thread_stat_t));
+  for(i = 0; i < sb_globals.num_threads; i++)
+  {
+    thread_stats[i].read_ops = 0;
+    thread_stats[i].write_ops = 0;
+    thread_stats[i].other_ops = 0;
+    thread_stats[i].transactions = 0;
+    thread_stats[i].deadlocks = 0;
+  }
 
   last_transactions = 0;
   last_read_ops = 0;

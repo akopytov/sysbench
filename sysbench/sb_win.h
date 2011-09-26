@@ -33,6 +33,11 @@ typedef intptr_t ssize_t;
 #define SIZEOF_SIZE_T 4
 #endif
 
+#ifndef __cplusplus
+#ifndef inline
+#define inline __inline
+#endif
+#endif
 
 struct  timespec
 {
@@ -111,4 +116,3 @@ static  __inline int usleep(int micros)
 #define gmtime_r(a,b) gmtime_s(b,a)
 
 #endif
-

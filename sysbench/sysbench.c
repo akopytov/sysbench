@@ -453,8 +453,7 @@ static void *runner_thread(void *arg)
   if (sb_globals.tx_rate > 0)
   {
     /* initialize tx_rate variables */
-    period_ns = round(1000000000.0 / sb_globals.tx_rate *
-                      sb_globals.num_threads);
+    period_ns = floor(1e9 / sb_globals.tx_rate * sb_globals.num_threads + 0.5);
     if (sb_globals.tx_jitter > 0)
       jitter_ns = sb_globals.tx_jitter * 1000;
     else
