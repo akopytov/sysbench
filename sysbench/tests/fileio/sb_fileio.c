@@ -175,6 +175,8 @@ static unsigned long long last_bytes_read;
 static unsigned long long bytes_written;
 static unsigned long long last_bytes_written;
 
+static const double megabyte = 1024.0 * 1024.0;
+
 #ifdef HAVE_MMAP
 /* Array of file mappings */
 static void          **mmaps;
@@ -822,8 +824,6 @@ void file_print_stats(sb_stat_t type)
   switch (type) {
   case SB_STAT_INTERMEDIATE:
     {
-      const double megabyte = 1024.0 * 1024.0;
-
       SB_THREAD_MUTEX_LOCK();
 
       seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
@@ -936,15 +936,22 @@ int create_files(void)
   int                fd;
   char               file_name[512];
   long long          offset;
+  long long          written = 0;
+  sb_timer_t         t;
+  double             seconds;
 
   log_text(LOG_NOTICE, "%d files, %ldKb each, %ldMb total", num_files,
            (long)(file_size / 1024),
            (long)((file_size * num_files) / (1024 * 1024)));
   log_text(LOG_NOTICE, "Creating files for the test...");
   log_text(LOG_NOTICE, "Extra file open flags: %x", file_extra_flags);
-  for (i=0; i < num_files; i++) {
+
+  sb_timer_init(&t);
+  sb_timer_start(&t);
+
+  for (i=0; i < num_files; i++)
+  {
     snprintf(file_name, sizeof(file_name), "test_file.%d",i);
-    unlink(file_name);
 
     fd = open(file_name, O_CREAT | O_WRONLY | file_extra_flags,
               S_IRUSR | S_IWUSR);
@@ -954,10 +961,25 @@ int create_files(void)
       return 1; 
     }
 
-    for (offset = 0; offset < file_size; offset += file_block_size)
+#ifndef _WIN32
+    offset = (long long) lseek(fd, 0, SEEK_END);
+#else
+    offset = (long long) _lseeki64(fd, 0, SEEK_END);
+#endif
+
+    if (offset >= file_size)
+      log_text(LOG_NOTICE, "Reusing existing file %s", file_name);
+    else if (offset > 0)
+      log_text(LOG_NOTICE, "Extending existing file %s", file_name);
+    else
+      log_text(LOG_NOTICE, "Creating file %s", file_name);
+
+    for (; offset < file_size;
+         written += file_block_size, offset += file_block_size)
     {
-      /* If in validation mode, fill buffer with random values
-         and write checksum
+      /*
+        If in validation mode, fill buffer with random values
+        and write checksum
       */
       if (sb_globals.validate)
         file_fill_buffer(buffer, file_block_size, offset);
@@ -974,7 +996,18 @@ int create_files(void)
 #endif
     close(fd);
   }
-  return 0; 
+
+  sb_timer_stop(&t);
+  seconds = NS2SEC(sb_timer_value(&t));
+
+  if (written > 0)
+    log_text(LOG_NOTICE, "%llu bytes written in %.2f seconds (%.2f MB/sec).",
+             written, seconds,
+             (double) (written / megabyte) / seconds);
+  else
+    log_text(LOG_NOTICE, "No bytes written.");
+
+  return 0;
 
  error:
   log_errno(LOG_FATAL, "Failed to write file!");
