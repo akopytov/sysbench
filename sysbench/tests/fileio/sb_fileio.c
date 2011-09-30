@@ -58,6 +58,7 @@
 
 #include "sysbench.h"
 #include "crc32.h"
+#include "sb_percentile.h"
 
 /* Lengths of the checksum and the offset fields in a block */
 #define FILE_CHECKSUM_LENGTH sizeof(int)
@@ -182,6 +183,9 @@ static file_test_mode_t test_mode;
 
 /* Previous request needed for validation */
 static sb_file_request_t prev_req;
+
+/* Percentile stats for --report-interval */
+static sb_percentile_t local_percentile;
 
 static sb_arg_t fileio_args[] = {
   {"file-num", "number of files to create", SB_ARG_TYPE_INT, "128"},
@@ -317,6 +321,9 @@ int file_init(void)
   init_vars();
   clear_stats();
 
+  if (sb_percentile_init(&local_percentile, 100000, 1.0, 1e13))
+    return 1;
+
   return 0;
 }
 
@@ -381,6 +388,8 @@ int file_done(void)
 
   if (buffer != NULL)
     sb_free_memaligned(buffer);
+
+  sb_percentile_done(&local_percentile);
 
   return 0;
 }
@@ -640,6 +649,9 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
       }
       LOG_EVENT_STOP(msg, thread_id);
 
+      sb_percentile_update(&local_percentile,
+                           sb_timer_value(&timers[thread_id]));
+
       SB_THREAD_MUTEX_LOCK();
       write_ops++;
       real_write_ops++;
@@ -660,6 +672,9 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
         return 1;
       }
       LOG_EVENT_STOP(msg, thread_id);
+
+      sb_percentile_update(&local_percentile,
+                           sb_timer_value(&timers[thread_id]));
 
       /* Validate block if run with validation enabled */
       if (sb_globals.validate &&
@@ -763,6 +778,9 @@ void file_print_stats(sb_stat_t type)
 {
   double seconds;
   char   s1[16], s2[16], s3[16], s4[16];
+  unsigned long long diff_read;
+  unsigned long long diff_written;
+  unsigned long long diff_other_ops;
 
   switch (type) {
   case SB_STAT_INTERMEDIATE:
@@ -772,16 +790,28 @@ void file_print_stats(sb_stat_t type)
       SB_THREAD_MUTEX_LOCK();
 
       seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
-      log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
-                    "reads: %4.2f MB/s writes: %4.2f MB/s fsyncs: %4.2f/s",
-                    (bytes_read - last_bytes_read) / megabyte / seconds,
-                    (bytes_written - last_bytes_written) / megabyte / seconds,
-                    (other_ops - last_other_ops) / seconds);
+
+      diff_read = bytes_read - last_bytes_read;
+      diff_written = bytes_written - last_bytes_written;
+      diff_other_ops = other_ops - last_other_ops;
+
       last_bytes_read = bytes_read;
       last_bytes_written = bytes_written;
       last_other_ops = other_ops;
 
       SB_THREAD_MUTEX_UNLOCK();
+
+      log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
+                    "reads: %4.2f MB/s writes: %4.2f MB/s fsyncs: %4.2f/s "
+                    "response time: %4.2fms (%u%%)",
+                    diff_read / megabyte / seconds,
+                    diff_written / megabyte / seconds,
+                    diff_other_ops / seconds,
+                    NS2MS(sb_percentile_calculate(&local_percentile,
+                                                  sb_globals.percentile_rank)),
+                    sb_globals.percentile_rank);
+
+      sb_percentile_reset(&local_percentile);
 
       break;
     }
