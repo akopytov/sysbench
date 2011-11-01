@@ -199,7 +199,6 @@ int pgsql_drv_init(void)
 int pgsql_drv_describe(drv_caps_t *caps)
 {
   PGconn *con;
-  (void)table_name; /* unused */
   
   *caps = pgsql_drv_caps;
 
