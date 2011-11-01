@@ -32,6 +32,16 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 ) /*! ENGINE = ]] .. mysql_table_engine ..
 " MAX_ROWS = " .. myisam_max_rows .. " */"
 
+   elseif (db_driver == "pgsql") then
+      query = [[
+CREATE TABLE sbtest]] .. i .. [[ (
+id SERIAL NOT NULL,
+k INTEGER DEFAULT '0' NOT NULL,
+c CHAR(120) DEFAULT '' NOT NULL,
+pad CHAR(60) DEFAULT '' NOT NULL,
+]] .. index_name .. [[ (id)
+) ]]
+
    elseif (db_driver == "drizzle") then
       query = [[
 CREATE TABLE sbtest (
@@ -48,8 +58,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    db_query(query)
 
-
-   db_query("CREATE INDEX k on sbtest" .. i .. "(k)")
+   db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
 
    print("Inserting " .. oltp_table_size .. " records into 'sbtest" .. i .. "'")
 
