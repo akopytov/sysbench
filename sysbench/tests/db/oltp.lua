@@ -25,7 +25,9 @@ function event(thread_id)
    local query
 
    table_name = "sbtest".. sb_rand_uniform(1, oltp_tables_count)
-   db_query(begin_query)
+   if not oltp_skip_trx then
+      db_query(begin_query)
+   end
 
    for i=1, oltp_point_selects do
       rs = db_query("SELECT c FROM ".. table_name .." WHERE id=" .. sb_rand(1, oltp_table_size))
@@ -79,7 +81,9 @@ function event(thread_id)
 
    end -- oltp_read_only
 
-   db_query(commit_query)
+   if not oltp_skip_trx then
+      db_query(commit_query)
+   end
 
 end
 
