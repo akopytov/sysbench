@@ -144,4 +144,10 @@ function set_vars()
       oltp_read_only = false
    end
 
+   if (oltp_skip_trx == 'on') then
+      oltp_skip_trx = true
+   else
+      oltp_skip_trx = false
+   end
+
 end
