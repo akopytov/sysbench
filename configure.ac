@@ -259,6 +259,11 @@ AC_CHECK_DECL([clock_gettime],
 )
 AC_SEARCH_LIBS([clock_gettime], [rt]) 
 
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+save_LIBS="$LIBS"
+LIBS="$PTHREAD_LIBS $LIBS"
+
 AC_CHECK_FUNCS([ \
 alarm \
 directio \
@@ -282,6 +287,9 @@ valloc \
 AC_CHECK_FUNC(pthread_once, , 
               AC_MSG_ERROR([*** pthread_once() is not available on this platform ***])
 )
+
+LIBS="$save_LIBS"
+CFLAGS="$save_CFLAGS"
 
 AC_ARG_WITH([debug],
     [AS_HELP_STRING([--with-debug],
