@@ -840,7 +840,7 @@ void file_print_stats(sb_stat_t type)
 
       log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
                     "reads: %4.2f MB/s writes: %4.2f MB/s fsyncs: %4.2f/s "
-                    "response time: %4.2fms (%u%%)",
+                    "response time: %4.3fms (%u%%)",
                     diff_read / megabyte / seconds,
                     diff_written / megabyte / seconds,
                     diff_other_ops / seconds,
