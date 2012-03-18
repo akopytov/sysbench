@@ -164,9 +164,7 @@ static unsigned int    fsynced_file2; /* fsyncing in the end */
 
 static int is_dirty;               /* any writes after last fsync series ? */
 static int read_ops;
-static int real_read_ops;
 static int write_ops;
-static int real_write_ops;
 static int other_ops;
 static int last_other_ops;
 static unsigned int req_performed; /* number of requests done */
@@ -545,7 +543,7 @@ sb_request_t file_get_rnd_request(void)
   */
   if (test_mode==MODE_RND_RW)
   {
-    if ((double)(real_read_ops + 1) / (real_write_ops + 1) < file_rw_ratio)
+    if ((double)(read_ops + 1) / (write_ops + 1) < file_rw_ratio)
       mode=MODE_RND_READ;
     else
       mode=MODE_RND_WRITE;
@@ -683,6 +681,10 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
           log_errno(LOG_FATAL, "Failed to fsync file! file: " FD_FMT, fd);
           return 1;
         }
+
+        SB_THREAD_MUTEX_LOCK();
+        other_ops++;
+        SB_THREAD_MUTEX_UNLOCK();
       }
 
       LOG_EVENT_STOP(msg, thread_id);
@@ -690,13 +692,14 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
       sb_percentile_update(&local_percentile,
                            sb_timer_value(&timers[thread_id]));
 
-      SB_THREAD_MUTEX_LOCK();
-      write_ops++;
-      real_write_ops++;
-      bytes_written += file_req->size;
-      if (file_fsync_all)
-        other_ops++;
-      SB_THREAD_MUTEX_UNLOCK();
+      /* In async mode stats will me updated on AIO requests completion */
+      if (file_io_mode != FILE_IO_MODE_ASYNC)
+      {
+        SB_THREAD_MUTEX_LOCK();
+        write_ops++;
+        bytes_written += file_req->size;
+        SB_THREAD_MUTEX_UNLOCK();
+      }
 
       break;
     case FILE_OP_TYPE_READ:
@@ -723,13 +726,15 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
            file_req->file_id, file_req->pos);
         return 1;
       }
-      
-      SB_THREAD_MUTEX_LOCK();
-      read_ops++;
-      real_read_ops++;
-      bytes_read += file_req->size;
 
-      SB_THREAD_MUTEX_UNLOCK();
+      /* In async mode stats will me updated on AIO requests completion */
+      if(file_io_mode != FILE_IO_MODE_ASYNC)
+      {
+        SB_THREAD_MUTEX_LOCK();
+        read_ops++;
+        bytes_read += file_req->size;
+        SB_THREAD_MUTEX_UNLOCK();
+      }
 
       break;
     case FILE_OP_TYPE_FSYNC:
@@ -742,11 +747,15 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
                   file_req->file_id, fd);
         return 1;
       }
-    
-      SB_THREAD_MUTEX_LOCK();
-      other_ops++;
-      SB_THREAD_MUTEX_UNLOCK();
-    
+
+      /* In async mode stats will me updated on AIO requests completion */
+      if(file_io_mode != FILE_IO_MODE_ASYNC)
+      {
+        SB_THREAD_MUTEX_LOCK();
+        other_ops++;
+        SB_THREAD_MUTEX_UNLOCK();
+      }
+
       break;         
     default:
       log_text(LOG_FATAL, "Execute of UNKNOWN file request type called (%d)!, "
@@ -840,7 +849,7 @@ void file_print_stats(sb_stat_t type)
 
       log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
                     "reads: %4.2f MB/s writes: %4.2f MB/s fsyncs: %4.2f/s "
-                    "response time: %4.2fms (%u%%)",
+                    "response time: %4.3fms (%u%%)",
                     diff_read / megabyte / seconds,
                     diff_written / megabyte / seconds,
                     diff_other_ops / seconds,
@@ -1086,9 +1095,7 @@ void init_vars(void)
 void clear_stats(void)
 {
   read_ops = 0;
-  real_read_ops = 0;
   write_ops = 0;
-  real_write_ops = 0;
   other_ops = 0;
   last_other_ops = 0;
   bytes_read = 0;
@@ -1251,28 +1258,48 @@ int file_wait(int thread_id, long nreq)
     iocbp = (struct iocb *)(unsigned long)event->obj;
     oper = (sb_aio_oper_t *)iocbp;
     switch (oper->type) {
-      case FILE_OP_TYPE_FSYNC:
+    case FILE_OP_TYPE_FSYNC:
         if (event->res != 0)
         {
           log_text(LOG_FATAL, "Asynchronous fsync failed!\n");
           return 1;
         }
+
+        SB_THREAD_MUTEX_LOCK();
+        other_ops++;
+        SB_THREAD_MUTEX_UNLOCK();
+
         break;
-      case FILE_OP_TYPE_READ:
+
+    case FILE_OP_TYPE_READ:
         if ((ssize_t)event->res != oper->len)
         {
           log_text(LOG_FATAL, "Asynchronous read failed!\n");
           return 1;
         }
+
+        SB_THREAD_MUTEX_LOCK();
+        read_ops++;
+        bytes_read += oper->len;
+        SB_THREAD_MUTEX_UNLOCK();
+
         break;
-      case FILE_OP_TYPE_WRITE:
+
+    case FILE_OP_TYPE_WRITE:
         if ((ssize_t)event->res != oper->len)
         {
           log_text(LOG_FATAL, "Asynchronous write failed!\n");
           return 1;
         }
+
+        SB_THREAD_MUTEX_LOCK();
+        write_ops++;
+        bytes_written += oper->len;
+        SB_THREAD_MUTEX_UNLOCK();
+
         break;
-      default:
+
+    default:
         break;
     }
     free(oper);
