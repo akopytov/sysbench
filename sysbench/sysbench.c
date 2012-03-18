@@ -73,6 +73,9 @@
 /* Large prime number to generate unique random IDs */
 #define LARGE_PRIME 2147483647
 
+/* Maximum queue length for the tx-rate mode */
+#define MAX_QUEUE_LEN 100000
+
 /* Random numbers distributions */
 typedef enum
 {
@@ -80,6 +83,12 @@ typedef enum
   DIST_TYPE_GAUSSIAN,
   DIST_TYPE_SPECIAL
 } rand_dist_t;
+
+/* Event queue data type for the tx-rate mode */
+typedef struct {
+  unsigned long long event_time;
+  sb_list_item_t     listitem;
+} event_queue_elem_t;
 
 /* If we should initialize random numbers generator */
 static int rand_init;
@@ -108,8 +117,6 @@ sb_arg_t general_args[] =
    SB_ARG_TYPE_STRING, "off"},
   {"thread-stack-size", "size of stack per thread", SB_ARG_TYPE_SIZE, "64K"},
   {"tx-rate", "target transaction rate (tps)", SB_ARG_TYPE_INT, "0"},
-  {"tx-jitter", "target transaction variation, in microseconds",
-    SB_ARG_TYPE_INT, "0"},
   {"report-interval", "periodically report intermediate statistics "
    "with a specified interval in seconds. 0 disables intermediate reports",
     SB_ARG_TYPE_INT, "0"},
@@ -150,6 +157,13 @@ sb_test_t        *current_test;
 /* used to start test with all threads ready */
 static pthread_mutex_t thread_start_mutex;
 static pthread_attr_t  thread_attr;
+
+/* structures to handle queue of events, needed for tx_rate mode */
+static sb_list_t       event_queue;
+static pthread_mutex_t event_queue_mutex;
+static pthread_cond_t  event_queue_cv;
+
+static int queue_is_full;
 
 static void print_header(void);
 static void print_usage(void);
@@ -199,7 +213,7 @@ static sb_request_t get_request(sb_test_t *test, int thread_id)
 static int execute_request(sb_test_t *test, sb_request_t *r,int thread_id)
 {
   unsigned int rc;
-  
+
   if (test->ops.execute_request != NULL)
     rc = test->ops.execute_request(r, thread_id);
   else
@@ -361,8 +375,7 @@ void print_run_mode(sb_test_t *test)
   if (sb_globals.tx_rate > 0)
   {
     log_text(LOG_NOTICE,
-            "Target transaction rate: %d/sec, with jitter %d usec",
-             sb_globals.tx_rate, sb_globals.tx_jitter);
+            "Target transaction rate: %d/sec", sb_globals.tx_rate);
   }
 
   if (sb_globals.report_interval)
@@ -430,19 +443,18 @@ void print_run_mode(sb_test_t *test)
 
 static void *runner_thread(void *arg)
 {
-  sb_request_t     request;
-  sb_thread_ctxt_t *ctxt;
-  sb_test_t        *test;
-  unsigned int     thread_id;
-  long long        period_ns = 0;
-  long long        jitter_ns = 0;
-  long long        pause_ns;
-  struct timespec  target_tv, now_tv;
-  
+  sb_request_t        request;
+  sb_thread_ctxt_t   *ctxt;
+  sb_test_t          *test;
+  unsigned int        thread_id;
+  unsigned long long  queue_start_time;
+  sb_list_item_t     *pos;
+  event_queue_elem_t *event;
+
   ctxt = (sb_thread_ctxt_t *)arg;
   test = ctxt->test;
   thread_id = ctxt->id;
-  
+
   log_text(LOG_DEBUG, "Runner thread started (%d)!", thread_id);
   if (test->ops.thread_init != NULL && test->ops.thread_init(thread_id) != 0)
   {
@@ -450,17 +462,6 @@ static void *runner_thread(void *arg)
     return NULL; /* thread initialization failed  */
   }
 
-  if (sb_globals.tx_rate > 0)
-  {
-    /* initialize tx_rate variables */
-    period_ns = floor(1e9 / sb_globals.tx_rate * sb_globals.num_threads + 0.5);
-    if (sb_globals.tx_jitter > 0)
-      jitter_ns = sb_globals.tx_jitter * 1000;
-    else
-      /* Default jitter is 1/10th of the period */
-      jitter_ns = period_ns / 10;
-  }
- 
   /* 
     We do this to make sure all threads get to this barrier 
     about the same time 
@@ -469,42 +470,62 @@ static void *runner_thread(void *arg)
   sb_globals.num_running++;
   pthread_mutex_unlock(&thread_start_mutex);
 
-  if (sb_globals.tx_rate > 0)
-  {
-    /* we are time-rating transactions */
-    SB_GETTIME(&target_tv);
-    /* For the first transaction - ramp up */
-    pause_ns = period_ns / sb_globals.num_threads * thread_id;
-    add_ns_to_timespec(&target_tv, period_ns);
-    usleep(pause_ns / 1000);
-  }
-
   do
   {
+
+    /* If we are in tx_rate mode, we take events from queue */
+    if (sb_globals.tx_rate > 0)
+    {
+      if (queue_is_full)
+      {
+        log_text(LOG_FATAL, "Event queue is full.");
+        break;
+      }
+      pthread_mutex_lock(&event_queue_mutex);
+      while(!sb_globals.event_queue_length)
+        pthread_cond_wait(&event_queue_cv, &event_queue_mutex);
+
+      SB_LIST_ONCE(pos, &event_queue)
+      {
+        event = SB_LIST_ENTRY(pos, event_queue_elem_t, listitem);
+        queue_start_time = event->event_time;;
+
+        SB_LIST_DELETE(pos);
+
+        sb_globals.event_queue_length--;
+      }
+
+      pthread_mutex_unlock(&event_queue_mutex);
+
+      timers[thread_id].queue_time = sb_timer_value(&sb_globals.exec_timer) -
+        queue_start_time;
+
+      /* we do it without mutex protection, that's fine to have racing */
+      sb_globals.concurrency++;
+    }
+
+
     request = get_request(test, thread_id);
+
     /* check if we shall execute it */
     if (request.type != SB_REQ_TYPE_NULL)
     {
       if (execute_request(test, &request, thread_id))
         break; /* break if error returned (terminates only one thread) */
     }
+
+    if (sb_globals.tx_rate > 0)
+    {
+      /* we do it without mutex protection, that's fine to have racing */
+      sb_globals.concurrency--;
+    }
+
     /* Check if we have a time limit */
     if (sb_globals.max_time != 0 &&
         sb_timer_value(&sb_globals.exec_timer) >= SEC2NS(sb_globals.max_time))
     {
       log_text(LOG_INFO, "Time limit exceeded, exiting...");
       break;
-    }
-
-    /* check if we are time-rating transactions and need to pause */
-    if (sb_globals.tx_rate > 0)
-    {
-      add_ns_to_timespec(&target_tv, period_ns);
-      SB_GETTIME(&now_tv);
-      pause_ns = TIMESPEC_DIFF(target_tv, now_tv) - (jitter_ns / 2) +
-	(sb_rnd() % jitter_ns);
-      if (pause_ns > 5000)
-        usleep(pause_ns / 1000);
     }
 
   } while ((request.type != SB_REQ_TYPE_NULL) && (!sb_globals.error) );
@@ -519,6 +540,76 @@ static void *runner_thread(void *arg)
   return NULL; 
 }
 
+static void *eventgen_thread_proc(void *arg)
+{
+  unsigned long long pause_ns;
+  unsigned long long prev_ns;
+  unsigned long long next_ns;
+  unsigned long long curr_ns;
+  unsigned long long intr_ns;
+  event_queue_elem_t queue_array[MAX_QUEUE_LEN];
+  int                i;
+
+  (void)arg; /* unused */
+
+  SB_LIST_INIT(&event_queue);
+  i = 0;
+
+  log_text(LOG_DEBUG, "Event generating thread started");
+
+  pthread_mutex_lock(&thread_start_mutex);
+  pthread_mutex_unlock(&thread_start_mutex);
+
+  curr_ns = sb_timer_value(&sb_globals.exec_timer);
+  /* emulate exponential distribution with Lambda = tx_rate */
+  intr_ns = (long) (log(1 - (double) sb_rnd() / (double) SB_MAX_RND) /
+                    (-(double) sb_globals.tx_rate)*1000000);
+  next_ns = curr_ns + intr_ns*1000;
+
+  for (;;)
+  {
+    prev_ns = curr_ns;
+
+    curr_ns = sb_timer_value(&sb_globals.exec_timer);
+
+    /* emulate exponential distribution with Lambda = tx_rate */
+    intr_ns = (long) (log(1 - (double)sb_rnd() / (double)SB_MAX_RND) /
+                      (-(double)sb_globals.tx_rate)*1000000);
+
+    next_ns = next_ns + intr_ns*1000;
+    if (next_ns > curr_ns)
+      pause_ns = next_ns - curr_ns;
+    else
+    {
+      pause_ns = 1000;
+      log_timestamp(LOG_ALERT, &sb_globals.exec_timer,
+                    "Event generation thread is too slow");
+    }
+
+    usleep(pause_ns / 1000);
+
+    queue_array[i].event_time = sb_timer_value(&sb_globals.exec_timer);
+    pthread_mutex_lock(&event_queue_mutex);
+    SB_LIST_ADD_TAIL(&queue_array[i].listitem, &event_queue);
+    sb_globals.event_queue_length++;
+    if (sb_globals.event_queue_length >= MAX_QUEUE_LEN)
+      queue_is_full = 1;
+    pthread_cond_signal(&event_queue_cv);
+    pthread_mutex_unlock(&event_queue_mutex);
+
+    if (queue_is_full)
+    {
+      log_text(LOG_FATAL, "Event queue is full.");
+      return NULL;
+    }
+
+    i++;
+    if (i >= MAX_QUEUE_LEN)
+      i = 0;
+  }
+
+  return NULL;
+}
 
 /* Intermediate reports thread */
 
@@ -627,6 +718,7 @@ static int run_test(sb_test_t *test)
   int          err;
   pthread_t    report_thread;
   pthread_t    checkpoints_thread;
+  pthread_t    eventgen_thread;
   int          report_thread_created = 0;
   int          checkpoints_thread_created = 0;
 
@@ -652,6 +744,12 @@ static int run_test(sb_test_t *test)
     return 1;
 
   pthread_mutex_init(&sb_globals.exec_mutex, NULL);
+
+
+  pthread_mutex_init(&event_queue_mutex, NULL);    
+  pthread_cond_init(&event_queue_cv, NULL);
+  sb_globals.event_queue_length = 0;
+  queue_is_full = 0;
 
   /* start mutex used for barrier */
   pthread_mutex_init(&thread_start_mutex,NULL);    
@@ -684,6 +782,16 @@ static int run_test(sb_test_t *test)
       return 1;
     }
     report_thread_created = 1;
+  }
+
+  if (sb_globals.tx_rate > 0)
+  {
+    if ((err = pthread_create(&eventgen_thread, &thread_attr, &eventgen_thread_proc,
+                              NULL)) != 0)
+    {
+      log_errno(LOG_FATAL, "pthread_create() for the reporting thread failed.");
+      return 1;
+    }
   }
 
   if (sb_globals.n_checkpoints > 0)
@@ -768,6 +876,10 @@ static int run_test(sb_test_t *test)
     if (pthread_cancel(report_thread) || pthread_join(report_thread, NULL))
       log_errno(LOG_FATAL, "Terminating the reporting thread failed.");
   }
+
+  if (pthread_cancel(eventgen_thread) || pthread_join(eventgen_thread, NULL))
+    log_text(LOG_FATAL, "Terminating the event generator thread failed.");
+
   if (checkpoints_thread_created)
   {
     if (pthread_cancel(checkpoints_thread) ||
@@ -914,7 +1026,6 @@ static int init(void)
   rand_res = sb_get_value_int("rand-spec-res");
 
   sb_globals.tx_rate = sb_get_value_int("tx-rate");
-  sb_globals.tx_jitter = sb_get_value_int("tx-jitter");
   sb_globals.report_interval = sb_get_value_int("report-interval");
 
   sb_globals.n_checkpoints = 0;

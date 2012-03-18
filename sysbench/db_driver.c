@@ -830,7 +830,7 @@ void db_print_stats(sb_stat_t type)
     seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
 
     log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
-                  "threads: %d, tps: %4.2f, reads/s: %4.2f, writes/s: %4.2f "
+                  "threads: %d, tps: %4.2f, reads/s: %4.2f, writes/s: %4.2f, "
                   "response time: %4.2fms (%u%%)",
                   sb_globals.num_threads,
                   (transactions - last_transactions) / seconds,
@@ -839,6 +839,12 @@ void db_print_stats(sb_stat_t type)
                   NS2MS(sb_percentile_calculate(&local_percentile,
                                                 sb_globals.percentile_rank)),
                   sb_globals.percentile_rank);
+    if (sb_globals.tx_rate > 0)
+    {
+      log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
+                    "queue length: %d, concurrency: %d",
+                    sb_globals.event_queue_length, sb_globals.concurrency);
+    }
 
     SB_THREAD_MUTEX_LOCK();
     last_transactions = transactions;

@@ -77,6 +77,7 @@ typedef struct
   unsigned long long max_time;
   unsigned long long sum_time;
   unsigned long long events;
+  unsigned long long queue_time;
   timer_state_t      state;
 } sb_timer_t;
 

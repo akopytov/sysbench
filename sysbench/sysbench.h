@@ -97,7 +97,7 @@ typedef struct
 {
   int              type;
   struct sb_test_t *test;
-  
+
   /* type-specific data */
   union
   {
@@ -191,29 +191,33 @@ typedef struct
 
 typedef struct
 {
-  sb_cmd_t         command;        /* command passed from command line */
-  int              error;          /* global error - everyone exit */
-  pthread_mutex_t  exec_mutex;     /* execution mutex */
-  sb_timer_t       exec_timer;     /* total execution timer */
+  sb_cmd_t        command;      /* command passed from command line */
+  int             error;        /* global error - everyone exit */
+  pthread_mutex_t exec_mutex;   /* execution mutex */
+  sb_timer_t      exec_timer;   /* total execution timer */
   /* timers for cumulative reports */
-  sb_timer_t       cumulative_timer1;
-  sb_timer_t       cumulative_timer2;
-  unsigned int     num_threads;    /* number of threads to use */
-  unsigned int     num_running;    /* number of threads currently active */
-  unsigned int     report_interval;/* intermediate reports interval */
-  unsigned int     percentile_rank;/* percentile rank for response time stats */
+  sb_timer_t      cumulative_timer1;
+  sb_timer_t      cumulative_timer2;
+  unsigned int    num_threads;  /* number of threads to use */
+  unsigned int    num_running;  /* number of threads currently active */
+  unsigned int    report_interval; /* intermediate reports interval */
+  unsigned int    percentile_rank; /* percentile rank for response time stats */
   /* array of report checkpoints */
-  unsigned int     checkpoints[MAX_CHECKPOINTS];
-  unsigned int     n_checkpoints;  /* number of checkpoints */
-  unsigned int     tx_rate;        /* target transaction rate */
-  unsigned int     tx_jitter;      /* target transaction variation (us) */
-  unsigned int     max_requests;   /* maximum number of requests */
-  unsigned int     max_time;       /* total execution time limit */
-  unsigned char    debug;          /* debug flag */
-  int              force_shutdown; /* whether we must force test shutdown */
-  unsigned int     timeout;        /* forced shutdown timeout */
-  unsigned char    validate;       /* validation flag */
-  unsigned char    verbosity;      /* log verbosity */
+  unsigned int    checkpoints[MAX_CHECKPOINTS];
+  unsigned int    n_checkpoints; /* number of checkpoints */
+  unsigned int    tx_rate;      /* target transaction rate */
+  unsigned int    max_requests; /* maximum number of requests */
+  unsigned int    max_time;     /* total execution time limit */
+  unsigned char   debug;        /* debug flag */
+  int             force_shutdown; /* whether we must force test shutdown */
+  unsigned int    timeout;      /* forced shutdown timeout */
+  unsigned char   validate;     /* validation flag */
+  unsigned char   verbosity;    /* log verbosity */
+  int             event_queue_length; /* length of request queue when tx-rate is
+                                         used */
+  int             concurrency;  /* number of concurrent requests when tx-rate is
+                                used */
+
 } sb_globals_t;
 
 extern sb_globals_t sb_globals;

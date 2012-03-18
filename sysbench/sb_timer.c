@@ -35,7 +35,7 @@
 static inline void sb_timer_update(sb_timer_t *t)
 {
   SB_GETTIME(&t->time_end);
-  t->elapsed = TIMESPEC_DIFF(t->time_end, t->time_start);
+  t->elapsed = TIMESPEC_DIFF(t->time_end, t->time_start) + t->queue_time;
 }
 
 /* initialize timer */
@@ -59,6 +59,7 @@ void sb_timer_reset(sb_timer_t *t)
   t->sum_time = 0;
   t->events = 0;
   t->elapsed = 0;
+  t->queue_time = 0;
 }
 
 
