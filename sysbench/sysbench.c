@@ -719,8 +719,9 @@ static int run_test(sb_test_t *test)
   pthread_t    report_thread;
   pthread_t    checkpoints_thread;
   pthread_t    eventgen_thread;
-  int          report_thread_created = 0;
+  int          report_thread_created      = 0;
   int          checkpoints_thread_created = 0;
+  int          eventgen_thread_created    = 0;
 
   /* initialize test */
   if (test->ops.init != NULL && test->ops.init() != 0)
@@ -792,6 +793,7 @@ static int run_test(sb_test_t *test)
       log_errno(LOG_FATAL, "pthread_create() for the reporting thread failed.");
       return 1;
     }
+    eventgen_thread_created = 1;
   }
 
   if (sb_globals.n_checkpoints > 0)
@@ -877,8 +879,11 @@ static int run_test(sb_test_t *test)
       log_errno(LOG_FATAL, "Terminating the reporting thread failed.");
   }
 
-  if (pthread_cancel(eventgen_thread) || pthread_join(eventgen_thread, NULL))
-    log_text(LOG_FATAL, "Terminating the event generator thread failed.");
+  if (eventgen_thread_created)
+  {
+    if (pthread_cancel(eventgen_thread) || pthread_join(eventgen_thread, NULL))
+      log_text(LOG_FATAL, "Terminating the event generator thread failed.");
+  }
 
   if (checkpoints_thread_created)
   {
