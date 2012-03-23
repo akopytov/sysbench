@@ -992,7 +992,7 @@ static void db_reset_stats(void)
     So that intermediate stats are calculated from the current moment
     rather than from the previous intermediate report
   */
-  if (sb_timer_initialized(&sb_globals.exec_timer))
+  if (sb_timer_running(&sb_globals.exec_timer))
     sb_timer_split(&sb_globals.exec_timer);
 
   if (sb_globals.debug)

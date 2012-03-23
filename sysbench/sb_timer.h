@@ -93,6 +93,9 @@ void sb_timer_reset(sb_timer_t *t);
 /* check whether the timer is initialized */
 int sb_timer_initialized(sb_timer_t *t);
 
+/* check whether the timer is running */
+int sb_timer_running(sb_timer_t *t);
+
 /* start timer */
 void sb_timer_start(sb_timer_t *);
 
