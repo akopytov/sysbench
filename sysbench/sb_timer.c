@@ -72,7 +72,7 @@ int sb_timer_initialized(sb_timer_t *t)
 /* check whether the timer is running */
 int sb_timer_running(sb_timer_t *t)
 {
-  return t->state != TIMER_RUNNING;
+  return t->state == TIMER_RUNNING;
 }
 
 /* start timer */
