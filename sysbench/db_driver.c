@@ -995,7 +995,7 @@ static void db_reset_stats(void)
   if (sb_timer_running(&sb_globals.exec_timer))
     sb_timer_split(&sb_globals.exec_timer);
 
-  if (sb_globals.debug)
+  if (db_globals.debug)
   {
     for (i = 0; i < sb_globals.num_threads; i++)
     {
