@@ -936,6 +936,56 @@ const char *get_test_mode_str(file_test_mode_t mode)
 }
 
 
+/*
+  Converts the argument of --file-extra-flags to platform-specific open() flags.
+  Returns 1 on error, 0 on success.
+*/
+
+static int convert_extra_flags(file_flags_t extra_flags, int *open_flags)
+{
+  switch (file_extra_flags) {
+  case SB_FILE_FLAG_NORMAL:
+#ifdef _WIN32
+    *open_flags = FILE_ATTRIBUTE_NORMAL;
+#endif
+    break;
+  case SB_FILE_FLAG_SYNC:
+#ifdef _WIN32
+    *open_flags = FILE_FLAG_WRITE_THROUGH;
+#else
+    *open_flags = O_SYNC;
+#endif
+    break;
+  case SB_FILE_FLAG_DSYNC:
+#ifdef O_DSYNC
+    *open_flags = O_DSYNC;
+#else
+    log_text(LOG_FATAL,
+             "--file-extra-flags=dsync is not supported on this platform.");
+    return 1;
+#endif
+    break;
+  case SB_FILE_FLAG_DIRECTIO:
+#ifdef HAVE_DIRECTIO
+    /* Will call directio(3) later */
+#elif defined(O_DIRECT)
+    *open_flags = O_DIRECT;
+#elif defined _WIN32
+    *open_flags = FILE_FLAG_NO_BUFFERING;
+#else
+    log_text(LOG_FATAL,
+             "--file-extra-flags=direct is not supported on this platform.");
+    return 1;
+#endif
+    break;
+  default:
+    log_text(LOG_FATAL, "Unknown extra flags value: %d", (int) extra_flags);
+    return 1;
+  }
+
+  return 0;
+}
+
 /* Create files of necessary size for test */
 
 
@@ -948,12 +998,16 @@ int create_files(void)
   long long          written = 0;
   sb_timer_t         t;
   double             seconds;
+  int                flags = 0;
 
   log_text(LOG_NOTICE, "%d files, %ldKb each, %ldMb total", num_files,
            (long)(file_size / 1024),
            (long)((file_size * num_files) / (1024 * 1024)));
   log_text(LOG_NOTICE, "Creating files for the test...");
   log_text(LOG_NOTICE, "Extra file open flags: %x", file_extra_flags);
+
+  if (convert_extra_flags(file_extra_flags, &flags))
+    return 1;
 
   sb_timer_init(&t);
   sb_timer_start(&t);
@@ -962,8 +1016,7 @@ int create_files(void)
   {
     snprintf(file_name, sizeof(file_name), "test_file.%d",i);
 
-    fd = open(file_name, O_CREAT | O_WRONLY | file_extra_flags,
-              S_IRUSR | S_IWUSR);
+    fd = open(file_name, O_CREAT | O_WRONLY | flags, S_IRUSR | S_IWUSR);
     if (fd < 0)
     {
       log_errno(LOG_FATAL, "Can't open file");
@@ -1969,45 +2022,8 @@ static FILE_DESCRIPTOR sb_open(const char *name)
   FILE_DESCRIPTOR file;
   int flags = 0;
 
-  switch (file_extra_flags) {
-  case SB_FILE_FLAG_NORMAL:
-#ifdef _WIN32
-    flags = FILE_ATTRIBUTE_NORMAL;
-#endif
-    break;
-  case SB_FILE_FLAG_SYNC:
-#ifdef _WIN32
-    flags = FILE_FLAG_WRITE_THROUGH;
-#else
-    flags = O_SYNC;
-#endif
-    break;
-  case SB_FILE_FLAG_DSYNC:
-#ifdef O_DSYNC
-    flags = O_DSYNC;
-#else
-    log_text(LOG_FATAL,
-             "--file-extra-flags=dsync is not supported on this platform.");
+  if (convert_extra_flags(file_extra_flags, &flags))
     return SB_INVALID_FILE;
-#endif
-    break;
-  case SB_FILE_FLAG_DIRECTIO:
-#ifdef HAVE_DIRECTIO
-    /* Will call directio(3) later */
-#elif defined(O_DIRECT)
-    flags = O_DIRECT;
-#elif defined _WIN32
-    flags = FILE_FLAG_NO_BUFFERING;
-#else
-    log_text(LOG_FATAL,
-             "--file-extra-flags=direct is not supported on this platform.");
-    return SB_INVALID_FILE;
-#endif
-    break;
-  default:
-    log_text(LOG_FATAL, "Unknown extra flags value: %d", file_extra_flags);
-    return SB_INVALID_FILE;
-  }
 
 #ifndef _WIN32
   file = open(name, O_CREAT | O_RDWR | flags,
