@@ -38,7 +38,8 @@ pgsql_ldadd = drivers/pgsql/libsbpgsql.a $(PGSQL_LIBS)
 endif
 
 if USE_LUA
-lua_ldadd = scripting/lua/src/liblua.a -lm @LIBADD_DLOPEN@
+#lua_ldadd = scripting/lua/src/liblua.a -lm @LIBADD_DLOPEN@
+lua_ldadd = scripting/lua/src/liblua.a -lm -ldl
 endif
 
 sysbench_SOURCES = sysbench.c sysbench.h sb_timer.c sb_timer.h \
