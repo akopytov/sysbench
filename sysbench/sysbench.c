@@ -159,9 +159,10 @@ static pthread_mutex_t thread_start_mutex;
 static pthread_attr_t  thread_attr;
 
 /* structures to handle queue of events, needed for tx_rate mode */
-static sb_list_t       event_queue;
-static pthread_mutex_t event_queue_mutex;
-static pthread_cond_t  event_queue_cv;
+static sb_list_t          event_queue;
+static pthread_mutex_t    event_queue_mutex;
+static pthread_cond_t     event_queue_cv;
+static event_queue_elem_t queue_array[MAX_QUEUE_LEN];
 
 static int queue_is_full;
 
@@ -547,7 +548,6 @@ static void *eventgen_thread_proc(void *arg)
   unsigned long long next_ns;
   unsigned long long curr_ns;
   unsigned long long intr_ns;
-  event_queue_elem_t queue_array[MAX_QUEUE_LEN];
   int                i;
 
   (void)arg; /* unused */
