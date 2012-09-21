@@ -227,6 +227,7 @@ int sb_rand(int, int);
 int sb_rand_uniform(int, int);
 int sb_rand_gaussian(int, int);
 int sb_rand_special(int, int);
+int sb_rand_pareto(int, int);
 int sb_rand_uniq(int a, int b);
 void sb_rand_str(const char *, char *);
 

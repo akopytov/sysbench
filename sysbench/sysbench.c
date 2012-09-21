@@ -81,7 +81,8 @@ typedef enum
 {
   DIST_TYPE_UNIFORM,
   DIST_TYPE_GAUSSIAN,
-  DIST_TYPE_SPECIAL
+  DIST_TYPE_SPECIAL,
+  DIST_TYPE_PARETO
 } rand_dist_t;
 
 /* Event queue data type for the tx-rate mode */
@@ -98,6 +99,10 @@ static unsigned int rand_iter;
 static unsigned int rand_pct;
 static unsigned int rand_res;
 static int rand_seed; /* optional seed set on the command line */
+
+/* parameters for Pareto distribution */
+static double pareto_h; /* parameter h */
+static double pareto_power; /* parameter pre-calculated by h */
 
 /* Random seed used to generate unique random numbers */
 static unsigned long long rnd_seed;
@@ -131,7 +136,7 @@ sb_arg_t general_args[] =
   {"help", "print help and exit", SB_ARG_TYPE_FLAG, NULL},
   {"version", "print version and exit", SB_ARG_TYPE_FLAG, "off"},
   {"rand-init", "initialize random number generator", SB_ARG_TYPE_FLAG, "off"},
-  {"rand-type", "random numbers distribution {uniform,gaussian,special}", SB_ARG_TYPE_STRING,
+  {"rand-type", "random numbers distribution {uniform,gaussian,special,pareto}", SB_ARG_TYPE_STRING,
    "special"},
   {"rand-spec-iter", "number of iterations used for numbers generation", SB_ARG_TYPE_INT, "12"},
   {"rand-spec-pct", "percentage of values to be treated as 'special' (for special distribution)",
@@ -139,6 +144,7 @@ sb_arg_t general_args[] =
   {"rand-spec-res", "percentage of 'special' values to use (for special distribution)",
    SB_ARG_TYPE_INT, "75"},
   {"rand-seed", "seed for random number generator, ignored when 0", SB_ARG_TYPE_INT, "0"},
+  {"rand-pareto-h", "parameter h for pareto distibution", SB_ARG_TYPE_FLOAT, "0.2"},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
 
@@ -1020,6 +1026,11 @@ static int init(void)
     rand_type = DIST_TYPE_SPECIAL;
     rand_func = &sb_rand_special;
   }
+  else if (!strcmp(s, "pareto"))
+  {
+    rand_type = DIST_TYPE_PARETO;
+    rand_func = &sb_rand_pareto;
+  }
   else
   {
     log_text(LOG_FATAL, "Invalid random numbers distribution: %s.", s);
@@ -1029,6 +1040,9 @@ static int init(void)
   rand_iter = sb_get_value_int("rand-spec-iter");
   rand_pct = sb_get_value_int("rand-spec-pct");
   rand_res = sb_get_value_int("rand-spec-res");
+
+  pareto_h  = sb_get_value_float("rand-pareto-h");
+  pareto_power = log(pareto_h)/log(1.0-pareto_h);
 
   sb_globals.tx_rate = sb_get_value_int("tx-rate");
   sb_globals.report_interval = sb_get_value_int("report-interval");
@@ -1271,6 +1285,15 @@ int sb_rand_special(int a, int b)
   return a + res;
 }
 
+/* Pareto distribution */
+
+int sb_rand_pareto(int a, int b)
+{
+  double randf;
+  randf = (double) sb_rnd() / (double) SB_MAX_RND;
+  
+  return a + (int)(b - a + 1) * pow(randf, pareto_power);
+}
 
 /* Generate unique random id */
 
