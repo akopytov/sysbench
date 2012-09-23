@@ -57,11 +57,16 @@
 
 /* random() is not thread-safe on most platforms, use lrand48() if available */
 #ifdef HAVE_LRAND48
-#define sb_rnd() (lrand48() % SB_MAX_RND)
-#define sb_srnd(seed) srand48(seed)
+# define sb_rnd() (lrand48() % SB_MAX_RND)
+# define sb_srnd(seed) srand48(seed)
 #else
-#define sb_rnd() (random() % SB_MAX_RND)
-#define sb_srnd(seed) srandom((unsigned int)seed)
+# define sb_rnd() (random() % SB_MAX_RND)
+# define sb_srnd(seed) srandom((unsigned int)seed)
+#endif
+#ifdef HAVE_DRAND48
+# define sb_rnd_double() drand48()
+#else
+# define sb_rnd_double() (((double) sb_rnd()) / SB_MAX_RND)
 #endif
 
 /* Sysbench commands */
@@ -227,6 +232,7 @@ int sb_rand(int, int);
 int sb_rand_uniform(int, int);
 int sb_rand_gaussian(int, int);
 int sb_rand_special(int, int);
+int sb_rand_pareto(int, int);
 int sb_rand_uniq(int a, int b);
 void sb_rand_str(const char *, char *);
 

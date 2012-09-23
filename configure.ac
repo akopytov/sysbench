@@ -274,6 +274,7 @@ directio \
 fdatasync \
 gettimeofday \
 lrand48 \
+drand48 \
 memalign \
 memset \
 mkstemp \
