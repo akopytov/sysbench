@@ -214,6 +214,8 @@ typedef struct
   unsigned int     timeout;        /* forced shutdown timeout */
   unsigned char    debug;          /* debug flag */
   unsigned char    validate;       /* validation flag */
+  /* 1 when forced shutdown is in progress, 0 otherwise */
+  int              forced_shutdown_in_progress;
 } sb_globals_t;
 
 extern sb_globals_t sb_globals;

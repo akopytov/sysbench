@@ -132,14 +132,20 @@ static void sigalrm_handler(int sig)
 {
   if (sig == SIGALRM)
   {
+    sb_globals.forced_shutdown_in_progress = 1;
+
     sb_timer_stop(&sb_globals.exec_timer);
     sb_timer_stop(&sb_globals.cumulative_timer1);
     sb_timer_stop(&sb_globals.cumulative_timer2);
+
     log_text(LOG_FATAL,
              "The --max-time limit has expired, forcing shutdown...");
+
     if (current_test && current_test->ops.print_stats)
       current_test->ops.print_stats(SB_STAT_CUMULATIVE);
+
     log_done();
+
     exit(2);
   }
 }
