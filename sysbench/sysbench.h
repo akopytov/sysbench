@@ -222,7 +222,8 @@ typedef struct
                                          used */
   int             concurrency;  /* number of concurrent requests when tx-rate is
                                 used */
-
+  /* 1 when forced shutdown is in progress, 0 otherwise */
+  int             forced_shutdown_in_progress;
 } sb_globals_t;
 
 extern sb_globals_t sb_globals;

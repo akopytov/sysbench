@@ -579,6 +579,35 @@ int print_global_stats(void)
 
   pthread_mutex_unlock(&timers_mutex);
 
+  if (sb_globals.forced_shutdown_in_progress)
+  {
+    /*
+      In case we print statistics on forced shutdown, there may be (potentially
+      long running or hung) transactions which are still in progress.
+
+      We still want to reflect them in statistics, so stop running timers to
+      consider long transactions as done at the forced shutdown time, and print
+      a counter of still running transactions.
+    */
+    unsigned int unfinished = 0;
+
+    for (i = 0; i < nthreads; i++)
+    {
+      if (sb_timer_running(&timers_copy[i]))
+      {
+        unfinished++;
+        sb_timer_stop(&timers_copy[i]);
+      };
+    }
+
+    if (unfinished > 0)
+    {
+      log_text(LOG_NOTICE, "");
+      log_text(LOG_NOTICE, "Number of unfinished transactions on "
+               "forced shutdown: %u", unfinished);
+    }
+  }
+
   for(i = 0; i < nthreads; i++)
     t = merge_timers(&t, &timers_copy[i]);
 
