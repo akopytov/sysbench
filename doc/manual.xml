@@ -22,6 +22,45 @@
   
   <toc></toc>
 
+  <chapter id="about">
+    <title>About this document</title>
+
+    <para>
+      This document is a user manual for SysBench, a multi-threaded
+      benchmark tool available from <ulink
+      url="http://launchpad.net/sysbench">http://launchpad.net/sysbench</ulink>.
+      This document describes features provided by the 0.4.x development
+      branch of SysBench. New features available in the newer 0.5.x
+      branch are not covered by this document.
+    </para>
+
+    <section id="translations">
+      <title> Translations </title>
+      <para>
+	The following translations of this document are currently
+	available:
+
+      <variablelist>
+	<varlistentry>
+	  <term>Serbo-Croatian</term>
+	  <listitem><para>
+	      <ulink url="http://science.webhostinggeeks.com/sysbench-manual">http://science.webhostinggeeks.com/sysbench-manual/</ulink>.
+	    </para></listitem>
+	</varlistentry>
+      </variablelist>
+      </para>
+    </section>
+
+    <section id="acknowledgments">
+      <title> Acknowledgments </title>
+      <para>
+	Thanks to Vera Djuraskovic
+	<email>veradjuraskovic@webhostinggeeks.com</email> for
+	contributing a Serbo-Croatian translation of this document.
+      </para>
+    </section>
+  </chapter>
+
   <chapter id="introduction">
     <title>Introduction</title>
 
@@ -775,7 +814,7 @@
 	Example usage:
 	<screen>
 	  $ sysbench --test=oltp --mysql-table-engine=myisam --oltp-table-size=1000000 --mysql-socket=/tmp/mysql.sock prepare
-	  $ sysbench --num-threads=16 --max-requests=100000 --test=oltp --oltp-table-size=1000000 --mysql-socket=/tmp/mysql.sock --oltp-read-only run
+	  $ sysbench --num-threads=16 --max-requests=100000 --test=oltp --oltp-table-size=1000000 --mysql-socket=/tmp/mysql.sock --oltp-read-only=on run
 	</screen>
 	The first command will create a MyISAM table 'sbtest' in a database 'sbtest' on a MySQL server using <option>/tmp/mysql.sock</option> socket, then fill this table with 1M records. The second command will run the actual benchmark with 16 client threads, limiting the total number of request by 100,000.
       </para>
