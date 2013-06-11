@@ -108,6 +108,8 @@ static double pareto_power; /* parameter pre-calculated by h */
 static unsigned long long rnd_seed;
 /* Mutex to protect random seed */
 static pthread_mutex_t    rnd_mutex;
+/* Mutex to protect report_interval */
+static pthread_mutex_t    report_interval_mutex;
 
 /* Stack size for each thread */
 static int thread_stack_size;
@@ -657,8 +659,11 @@ static void *report_thread_proc(void *arg)
       sb_globals.report_interval may be set to 0 by the master thread
       to silence report at the end of the test
     */
+    pthread_mutex_lock(&report_interval_mutex);
     if (sb_globals.report_interval > 0)
       current_test->ops.print_stats(SB_STAT_INTERMEDIATE);
+    pthread_mutex_unlock(&report_interval_mutex);
+
     curr_ns = sb_timer_value(&sb_globals.exec_timer);
     do
     {
@@ -785,6 +790,7 @@ static int run_test(sb_test_t *test)
   /* Initialize random seed  */
   rnd_seed = LARGE_PRIME;
   pthread_mutex_init(&rnd_mutex, NULL);
+  pthread_mutex_init(&report_interval_mutex, NULL);
 
   if (sb_globals.report_interval > 0)
   {
@@ -859,7 +865,9 @@ static int run_test(sb_test_t *test)
   sb_timer_stop(&sb_globals.cumulative_timer2);
 
   /* Silence periodic reports if they were on */
+  pthread_mutex_lock(&report_interval_mutex);
   sb_globals.report_interval = 0;
+  pthread_mutex_unlock(&report_interval_mutex);
 
 #ifdef HAVE_ALARM
   alarm(0);
@@ -891,6 +899,8 @@ static int run_test(sb_test_t *test)
     if (pthread_cancel(report_thread) || pthread_join(report_thread, NULL))
       log_errno(LOG_FATAL, "Terminating the reporting thread failed.");
   }
+
+  pthread_mutex_destroy(&report_interval_mutex);
 
   if (eventgen_thread_created)
   {
