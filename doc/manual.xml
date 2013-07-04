@@ -504,8 +504,7 @@
 		    <option>seqrd</option>, <option>rndrd</option>, <option>rndwr</option>, <option>rndwr</option> (see above)
 		  </entry><entry><emphasis>required</emphasis></entry></row>
 		<row><entry><option>--file-io-mode</option></entry><entry>
-		    I/O mode. Possible values: <option>sync</option>, <option>async</option>, <option>fastmmap</option>, 
-		    <option>slowmmap</option> (only if supported by the platform, see above).
+		    I/O mode. Possible values: <option>sync</option>, <option>async</option>, <option>map</option>, 
 		  </entry><entry>sync</entry></row>
 		<row><entry><option>--file-async-backlog</option></entry><entry>
 		    Number of asynchronous operations to queue per thread (only for <option>--file-io-mode=async</option>, see above)
