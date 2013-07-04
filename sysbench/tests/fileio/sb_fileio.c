@@ -193,7 +193,7 @@ static sb_arg_t fileio_args[] = {
   {"file-total-size", "total size of files to create", SB_ARG_TYPE_SIZE, "2G"},
   {"file-test-mode", "test mode {seqwr, seqrewr, seqrd, rndrd, rndwr, rndrw}",
    SB_ARG_TYPE_STRING, NULL},
-  {"file-io-mode", "file operations mode {sync,async,fastmmap,slowmmap}", SB_ARG_TYPE_STRING, "sync"},
+  {"file-io-mode", "file operations mode {sync,async,mmap}", SB_ARG_TYPE_STRING, "sync"},
 #ifdef HAVE_LIBAIO
   {"file-async-backlog", "number of asynchronous operatons to queue per thread", SB_ARG_TYPE_INT, "128"},
 #endif
