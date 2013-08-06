@@ -112,6 +112,9 @@ int set_option(const char *name, const char *value, sb_arg_type_t type)
       add_value(&opt->values, value);
       break;
     case SB_ARG_TYPE_LIST:
+      if (value == NULL)
+        break;
+
       tmp = strdup(value);
       for (tmp = strtok(tmp, ","); tmp != NULL; tmp = strtok(NULL, ","))
         add_value(&opt->values, tmp);

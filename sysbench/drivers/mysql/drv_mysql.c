@@ -64,7 +64,7 @@ static sb_arg_t mysql_drv_args[] =
 {
   {"mysql-host", "MySQL server host", SB_ARG_TYPE_LIST, "localhost"},
   {"mysql-port", "MySQL server port", SB_ARG_TYPE_INT, "3306"},
-  {"mysql-socket", "MySQL socket", SB_ARG_TYPE_STRING, NULL},
+  {"mysql-socket", "MySQL socket", SB_ARG_TYPE_LIST, NULL},
   {"mysql-user", "MySQL user", SB_ARG_TYPE_STRING, "sbtest"},
   {"mysql-password", "MySQL password", SB_ARG_TYPE_STRING, ""},
   {"mysql-db", "MySQL database name", SB_ARG_TYPE_STRING, "sbtest"},
@@ -83,7 +83,7 @@ typedef struct
 {
   sb_list_t          *hosts;
   unsigned int       port;
-  char               *socket;
+  sb_list_t          *sockets;
   char               *user;
   char               *password;
   char               *db;
@@ -136,7 +136,9 @@ static mysql_drv_args_t args;          /* driver args */
 
 static char use_ps; /* whether server-side prepared statemens should be used */
 
+/* Positions in the list of hosts/sockets protected by hosts_mutex */
 static sb_list_item_t *hosts_pos;
+static sb_list_item_t *sockets_pos;
 
 static pthread_mutex_t hosts_mutex;
 
@@ -218,9 +220,11 @@ int mysql_drv_init(void)
   }
   hosts_pos = args.hosts;
   pthread_mutex_init(&hosts_mutex, NULL);
-  
+
+  args.sockets = sb_get_value_list("mysql-socket");
+  sockets_pos = args.sockets;
+
   args.port = (unsigned int)sb_get_value_int("mysql-port");
-  args.socket = sb_get_value_string("mysql-socket");
   args.user = sb_get_value_string("mysql-user");
   args.password = sb_get_value_string("mysql-password");
   args.db = sb_get_value_string("mysql-db");
@@ -261,6 +265,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
 {
   MYSQL          *con;
   char           *host;
+  char           *socket;
   const char     *ssl_key;
   const char     *ssl_cert;
   const char     *ssl_ca;
@@ -274,12 +279,25 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   mysql_init(con);
 
   pthread_mutex_lock(&hosts_mutex);
-  hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
-  if (hosts_pos == args.hosts)
+
+  if (SB_LIST_IS_EMPTY(args.sockets))
+  {
+    socket = NULL;
     hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
-  host = SB_LIST_ENTRY(hosts_pos, value_t, listitem)->data;
+    if (hosts_pos == args.hosts)
+      hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
+    host = SB_LIST_ENTRY(hosts_pos, value_t, listitem)->data;
+  }
+  else
+  {
+    host = "localhost";
+    sockets_pos = SB_LIST_ITEM_NEXT(sockets_pos);
+    if (sockets_pos == args.sockets)
+      sockets_pos = SB_LIST_ITEM_NEXT(sockets_pos);
+    socket = SB_LIST_ENTRY(sockets_pos, value_t, listitem)->data;
+  }
   pthread_mutex_unlock(&hosts_mutex);
-  
+
 #if 0
   /*
     FIXME: the following leads to crash in the client lib.
@@ -307,7 +325,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
         SAFESTR(args.password),
         SAFESTR(args.db),
         args.port,
-        SAFESTR(args.socket),
+        SAFESTR(socket),
         (MYSQL_VERSION_ID >= 50000) ? "CLIENT_MULTI_STATEMENTS" : "0"
         );
   if (!mysql_real_connect(con,
@@ -316,7 +334,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
                           args.password,
                           args.db,
                           args.port,
-                          args.socket,
+                          socket,
 #if MYSQL_VERSION_ID >= 50000
                           CLIENT_MULTI_STATEMENTS)
 #else
