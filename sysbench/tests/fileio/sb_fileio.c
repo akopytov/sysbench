@@ -1502,9 +1502,9 @@ int file_fsync(unsigned int file_id, int thread_id)
   else if (file_io_mode == FILE_IO_MODE_MMAP)
   {
 #ifndef _WIN32
-    msync(mmaps[file_id], file_size, MS_SYNC | MS_INVALIDATE);
+    return msync(mmaps[file_id], file_size, MS_SYNC | MS_INVALIDATE);
 #else
-    FlushViewOfFile(mmaps[file_id], (size_t)file_size);
+    return !FlushViewOfFile(mmaps[file_id], (size_t)file_size);
 #endif
   }
 #endif
