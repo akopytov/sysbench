@@ -14,8 +14,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-EXTRA_DIST = delete.lua insert.lua oltp_complex_ro.lua oltp_complex_rw.lua \
+EXTRA_DIST = delete.lua insert.lua oltp.lua \
              oltp_simple.lua \
+             parallel_prepare.lua \
+             select_random_points.lua \
+             select_random_ranges.lua \
              select.lua \
              update_index.lua \
              update_non_index.lua
