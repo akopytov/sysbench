@@ -16,7 +16,7 @@ fi
 if test [ -n "$ac_cv_pgsql_includes" ]
 then
     AC_CACHE_CHECK([PostgreSQL includes], [ac_cv_pgsql_includes], [ac_cv_pgsql_includes=""])
-    MYSQL_CFLAGS="-I$ac_cv_mysql_includes"
+    PGSQL_CFLAGS="-I$ac_cv_mysql_includes"
 fi
 
 # Check for custom library path
