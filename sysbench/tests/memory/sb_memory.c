@@ -261,11 +261,10 @@ int memory_execute_request(sb_request_t *sb_req, int thread_id)
     buf = buffers[thread_id];
   end = (int *)((char *)buf + memory_block_size);
 
-  LOG_EVENT_START(msg, thread_id);
-
   if (memory_access_rnd)
   {
     rand = sb_rnd();
+    LOG_EVENT_START(msg, thread_id);
     switch (mem_req->type) {
       case SB_MEM_OP_WRITE:
         for (i = 0; i < memory_block_size; i++)
@@ -291,6 +290,7 @@ int memory_execute_request(sb_request_t *sb_req, int thread_id)
   }
   else
   {
+    LOG_EVENT_START(msg, thread_id);
     switch (mem_req->type) {
       case SB_MEM_OP_NONE:
         for (; buf < end; buf++)
