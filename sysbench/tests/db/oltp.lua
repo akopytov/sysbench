@@ -5,7 +5,7 @@ dofile(pathtest .. "common.lua")
 function thread_init(thread_id)
    set_vars()
 
-   if (db_driver == "mysql" and mysql_table_engine == "myisam") then
+   if (((db_driver == "mysql") or (db_driver == "attachsql")) and mysql_table_engine == "myisam") then
       begin_query = "LOCK TABLES sbtest WRITE"
       commit_query = "UNLOCK TABLES"
    else

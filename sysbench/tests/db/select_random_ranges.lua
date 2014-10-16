@@ -14,7 +14,7 @@ function prepare()
 
    print("Creating table 'sbtest'...")
 
-   if (db_driver == "mysql") then
+   if ((db_driver == "mysql") or (db_driver == "attachsql")) then
       query = [[
         CREATE TABLE sbtest (
           id INTEGER UNSIGNED NOT NULL ]] .. ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,

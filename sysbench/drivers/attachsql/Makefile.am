@@ -1,4 +1,4 @@
-# Copyright (C) 2004 MySQL AB
+# Copyright (C) 2009 Sun Microsystems, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,24 +14,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-if USE_MYSQL
-MYSQL_DIR = mysql
-endif
+noinst_LIBRARIES = libsbattachsql.a
 
-if USE_DRIZZLE
-DRIZZLE_DIR = drizzle
-endif
-
-if USE_ATTACHSQL
-ATTACHSQL_DIR = attachsql
-endif
-
-if USE_ORACLE
-ORACLE_DIR = oracle
-endif
-
-if USE_PGSQL
-PGSQL_DIR = pgsql
-endif
-
-SUBDIRS = $(MYSQL_DIR) $(ORACLE_DIR) $(PGSQL_DIR) $(DRIZZLE_DIR) $(ATTACHSQL_DIR)
+libsbattachsql_a_SOURCES = drv_attachsql.c

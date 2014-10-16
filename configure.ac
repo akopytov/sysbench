@@ -107,6 +107,14 @@ AC_ARG_WITH([drizzle],
 )
 AC_CACHE_CHECK([whether to compile with Drizzle support], [ac_cv_use_drizzle], [ac_cv_use_drizzle=no])
 
+# Check if we should compile with libattachsql support
+AC_ARG_WITH([attachsql], 
+            AS_HELP_STRING([--with-attachsql],[compile with libattachsql support (default is enabled)]),
+            [ac_cv_use_attachsql=$withval], [ac_cv_use_attachsql=yes]
+)
+AC_CACHE_CHECK([whether to compile with libattachsql support], [ac_cv_use_attachsql], [ac_cv_use_attachsql=no])
+
+
 # Check if we should compile with Oracle support
 AC_ARG_WITH([oracle],
             AS_HELP_STRING([--with-oracle],[compile with Oracle support (default is disabled)]),
@@ -187,6 +195,20 @@ then
     AC_DEFINE(USE_DRIZZLE,1,[Define to 1 if you want to compile with Drizzle support])
 fi
 AM_CONDITIONAL(USE_DRIZZLE, test x$ac_cv_libdrizzle = xyes)
+
+if test x$ac_cv_use_attachsql != xno; then
+  AC_LIB_HAVE_LINKFLAGS(attachsql,,
+    [#include <libattachsql-1.0/attachsql.h>],
+    [
+     const char *version= attachsql_get_library_version();
+    ])
+fi
+if test "x$ac_cv_libattachsql" = "xyes"
+then
+    AC_DEFINE(USE_ATTACHSQL,1,[Define to 1 if you want to compile with libattachsql support])
+fi
+AM_CONDITIONAL(USE_ATTACHSQL, test x$ac_cv_libattachsql = xyes)
+
 
 AM_CONDITIONAL(USE_ORACLE, test x$ac_cv_use_oracle != xno)
 if test x$ac_cv_use_oracle != xno; then
@@ -428,6 +450,7 @@ sysbench/drivers/mysql/Makefile
 sysbench/drivers/drizzle/Makefile
 sysbench/drivers/oracle/Makefile
 sysbench/drivers/pgsql/Makefile
+sysbench/drivers/attachsql/Makefile
 sysbench/tests/Makefile
 sysbench/tests/cpu/Makefile
 sysbench/tests/fileio/Makefile

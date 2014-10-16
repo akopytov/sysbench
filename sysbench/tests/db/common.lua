@@ -20,7 +20,7 @@ function create_insert(table_id)
    i = table_id
 
    print("Creating table 'sbtest" .. i .. "'...")
-   if (db_driver == "mysql") then
+   if ((db_driver == "mysql") or (db_driver == "attachsql")) then
       query = [[
 CREATE TABLE sbtest]] .. i .. [[ (
 id INTEGER UNSIGNED NOT NULL ]] ..

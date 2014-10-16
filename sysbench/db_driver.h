@@ -309,6 +309,10 @@ int register_driver_mysql(sb_list_t *);
 int register_driver_drizzle(sb_list_t *);
 #endif
 
+#ifdef USE_ATTACHSQL
+int register_driver_attachsql(sb_list_t *);
+#endif
+
 #ifdef USE_DRIZZLECLIENT
 int register_driver_drizzleclient(sb_list_t *);
 #endif
