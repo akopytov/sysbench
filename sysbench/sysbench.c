@@ -597,7 +597,7 @@ static void *eventgen_thread_proc(void *arg)
     else
     {
       pause_ns = 1000;
-      log_timestamp(LOG_ALERT, &sb_globals.exec_timer,
+      log_timestamp(LOG_DEBUG, &sb_globals.exec_timer,
                     "Event generation thread is too slow");
     }
 
