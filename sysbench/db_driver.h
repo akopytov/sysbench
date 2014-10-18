@@ -65,7 +65,8 @@ typedef struct
 typedef enum
 {
   SB_DB_ERROR_NONE,
-  SB_DB_ERROR_DEADLOCK,
+  SB_DB_ERROR_RESTART_TRANSACTION,
+  SB_DB_ERROR_RECONNECTED,
   SB_DB_ERROR_FAILED
 } db_error_t;
 

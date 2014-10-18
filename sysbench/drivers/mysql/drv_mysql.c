@@ -35,6 +35,7 @@
 
 #include <mysql.h>
 #include <mysqld_error.h>
+#include <errmsg.h>
 
 #include "sb_options.h"
 #include "db_driver.h"
@@ -75,7 +76,9 @@ static sb_arg_t mysql_drv_args[] =
   {"mysql-ssl", "use SSL connections, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
   {"myisam-max-rows", "max-rows parameter for MyISAM tables", SB_ARG_TYPE_INT, "1000000"},
   {"mysql-debug", "dump all client library calls", SB_ARG_TYPE_FLAG, "off"},
-  
+  {"mysql-ignore-errors", "list of errors to ignore, or \"all\"",
+   SB_ARG_TYPE_LIST, "1213,1020,1205"},
+
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
 
@@ -89,7 +92,19 @@ typedef struct
   char               *db;
   unsigned char      use_ssl;
   unsigned char      debug;
+  sb_list_t          *ignored_errors;
 } mysql_drv_args_t;
+
+typedef struct
+{
+  MYSQL        *mysql;
+  char         *host;
+  char         *user;
+  char         *password;
+  char         *db;
+  unsigned int port;
+  char         *socket;
+} db_mysql_conn_t;
 
 #ifdef HAVE_PS
 /* Structure used for DB-to-MySQL bind types map */
@@ -232,7 +247,9 @@ int mysql_drv_init(void)
   args.debug = sb_get_value_flag("mysql-debug");
   if (args.debug)
     sb_globals.verbosity = LOG_DEBUG;
-  
+
+  args.ignored_errors = sb_get_value_list("mysql-ignore-errors");
+
   use_ps = 0;
 #ifdef HAVE_PS
   mysql_drv_caps.prepared_statements = 1;
@@ -258,54 +275,12 @@ int mysql_drv_describe(drv_caps_t *caps)
 }
 
 
-/* Connect to MySQL database */
-
-
-int mysql_drv_connect(db_conn_t *sb_conn)
+static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
 {
-  MYSQL          *con;
-  char           *host;
-  char           *socket;
+  MYSQL          *con = db_mysql_con->mysql;
   const char     *ssl_key;
   const char     *ssl_cert;
   const char     *ssl_ca;
-  
-  con = (MYSQL *)malloc(sizeof(MYSQL));
-  if (con == NULL)
-    return 1;
-  sb_conn->ptr = con;
-  
-  DEBUG("mysql_init(%p)", con);
-  mysql_init(con);
-
-  pthread_mutex_lock(&hosts_mutex);
-
-  if (SB_LIST_IS_EMPTY(args.sockets))
-  {
-    socket = NULL;
-    hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
-    if (hosts_pos == args.hosts)
-      hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
-    host = SB_LIST_ENTRY(hosts_pos, value_t, listitem)->data;
-  }
-  else
-  {
-    host = "localhost";
-    sockets_pos = SB_LIST_ITEM_NEXT(sockets_pos);
-    if (sockets_pos == args.sockets)
-      sockets_pos = SB_LIST_ITEM_NEXT(sockets_pos);
-    socket = SB_LIST_ENTRY(sockets_pos, value_t, listitem)->data;
-  }
-  pthread_mutex_unlock(&hosts_mutex);
-
-#if 0
-  /*
-    FIXME: the following leads to crash in the client lib.
-    http://bugs.mysql.com/?id=40552
-  */
-  mysql_options(con, MYSQL_READ_DEFAULT_GROUP, "sysbench");
-  DEBUG("mysql_options(%p, MYSQL_READ_DEFAULT_GROUP, \"sysbench\")", con);
-#endif
 
   if (args.use_ssl)
   {
@@ -317,37 +292,92 @@ int mysql_drv_connect(db_conn_t *sb_conn)
           ssl_cert, ssl_ca);
     mysql_ssl_set(con, ssl_key, ssl_cert, ssl_ca, NULL, NULL);
   }
-  
+
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",
         con,
-        SAFESTR(host),
-        SAFESTR(args.user),
-        SAFESTR(args.password),
-        SAFESTR(args.db),
-        args.port,
-        SAFESTR(socket),
+        SAFESTR(db_mysql_con->host),
+        SAFESTR(db_mysql_con->user),
+        SAFESTR(db_mysql_con->password),
+        SAFESTR(db_mysql_con->db),
+        db_mysql_con->port,
+        SAFESTR(db_mysql_con->socket),
         (MYSQL_VERSION_ID >= 50000) ? "CLIENT_MULTI_STATEMENTS" : "0"
         );
-  if (!mysql_real_connect(con,
-                          host,
-                          args.user,
-                          args.password,
-                          args.db,
-                          args.port,
-                          socket,
+
+  return mysql_real_connect(con,
+                            db_mysql_con->host,
+                            db_mysql_con->user,
+                            db_mysql_con->password,
+                            db_mysql_con->db,
+                            db_mysql_con->port,
+                            db_mysql_con->socket,
 #if MYSQL_VERSION_ID >= 50000
-                          CLIENT_MULTI_STATEMENTS)
+                            CLIENT_MULTI_STATEMENTS
 #else
-                          0)
+                            0
 #endif
-      )
+                            ) == NULL;
+}
+
+
+/* Connect to MySQL database */
+
+
+int mysql_drv_connect(db_conn_t *sb_conn)
+{
+  MYSQL           *con;
+  db_mysql_conn_t *db_mysql_con;
+
+  db_mysql_con = (db_mysql_conn_t *) calloc(1, sizeof(db_mysql_conn_t));
+
+  if (db_mysql_con == NULL)
+    return 1;
+
+  con = (MYSQL *) malloc(sizeof(MYSQL));
+  if (con == NULL)
+    return 1;
+
+  db_mysql_con->mysql = con;
+
+  DEBUG("mysql_init(%p)", con);
+  mysql_init(con);
+
+  pthread_mutex_lock(&hosts_mutex);
+
+  if (SB_LIST_IS_EMPTY(args.sockets))
+  {
+    db_mysql_con->socket = NULL;
+    hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
+    if (hosts_pos == args.hosts)
+      hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
+    db_mysql_con->host = SB_LIST_ENTRY(hosts_pos, value_t, listitem)->data;
+  }
+  else
+  {
+    db_mysql_con->host = "localhost";
+    sockets_pos = SB_LIST_ITEM_NEXT(sockets_pos);
+    if (sockets_pos == args.sockets)
+      sockets_pos = SB_LIST_ITEM_NEXT(sockets_pos);
+    db_mysql_con->socket = SB_LIST_ENTRY(sockets_pos, value_t, listitem)->data;
+  }
+  pthread_mutex_unlock(&hosts_mutex);
+
+  db_mysql_con->user = args.user;
+  db_mysql_con->password = args.password;
+  db_mysql_con->db = args.db;
+  db_mysql_con->port = args.port;
+
+  if (mysql_drv_real_connect(db_mysql_con))
   {
     log_text(LOG_FATAL, "unable to connect to MySQL server, aborting...");
     log_text(LOG_FATAL, "error %d: %s", mysql_errno(con),
-           mysql_error(con));
+             mysql_error(con));
+    free(db_mysql_con);
     free(con);
     return 1;
   }
+
+  sb_conn->ptr = db_mysql_con;
 
   return 0;
 }
@@ -358,15 +388,16 @@ int mysql_drv_connect(db_conn_t *sb_conn)
 
 int mysql_drv_disconnect(db_conn_t *sb_conn)
 {
-  MYSQL *con = sb_conn->ptr;
+  db_mysql_conn_t *db_mysql_con = sb_conn->ptr;
 
-  if (con != NULL)
+  if (db_mysql_con != NULL && db_mysql_con->mysql != NULL)
   {
-    DEBUG("mysql_close(%p)", con);
-    mysql_close(con);
+    DEBUG("mysql_close(%p)", db_mysql_con->mysql);
+    mysql_close(db_mysql_con->mysql);
+    free(db_mysql_con->mysql);
+    free(db_mysql_con);
   }
-  free(con);
-  
+
   return 0;
 }
 
@@ -377,7 +408,8 @@ int mysql_drv_disconnect(db_conn_t *sb_conn)
 int mysql_drv_prepare(db_stmt_t *stmt, const char *query)
 {
 #ifdef HAVE_PS
-  MYSQL      *con = (MYSQL *)stmt->connection->ptr;
+  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) stmt->connection->ptr;
+  MYSQL      *con = db_mysql_con->mysql;
   MYSQL_STMT *mystmt;
   unsigned int rc;
 
@@ -438,7 +470,8 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query)
 
 int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 {
-  MYSQL        *con = (MYSQL *)stmt->connection->ptr;
+  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) stmt->connection->ptr;
+  MYSQL        *con = db_mysql_con->mysql;
 #ifdef HAVE_PS
   MYSQL_BIND   *bind;
   unsigned int i;
@@ -518,7 +551,8 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 
   return 1;
 #else
-  MYSQL        *con = (MYSQL *)stmt->connection->ptr;
+  db_mysql_conn_t *db_mysql_con =(db_mysql_conn_t *) stmt->connection->ptr;
+  MYSQL        *con = db_mysql_con->mysql;
   MYSQL_BIND   *bind;
   unsigned int i;
   my_bool rc;
@@ -556,6 +590,95 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 }
 
 
+/*
+  Reset connection to the server by reconnecting with the same parameters.
+*/
+
+
+static int mysql_drv_reconnect(db_conn_t *sb_con)
+{
+  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) sb_con->ptr;
+  MYSQL *con = db_mysql_con->mysql;
+
+  log_text(LOG_DEBUG, "Reconnecting");
+
+  DEBUG("mysql_close(%p)", con);
+  mysql_close(con);
+
+  while (mysql_drv_real_connect(db_mysql_con))
+  {
+    if (sb_globals.error)
+      return SB_DB_ERROR_FAILED;
+
+    usleep(1000);
+  }
+
+  log_text(LOG_DEBUG, "Reconnected");
+
+  return SB_DB_ERROR_RECONNECTED;
+}
+
+
+/*
+  Check if the error in a given connection should be fatal or ignored according
+  to the list of errors in --mysql-ignore-errors.
+*/
+
+
+static int check_error(db_conn_t *sb_con, const char *func, const char *query)
+{
+  sb_list_item_t *pos;
+  unsigned int   tmp;
+  unsigned int   error;
+  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) sb_con->ptr;
+  MYSQL          *con = db_mysql_con->mysql;
+
+  error = mysql_errno(con);
+  DEBUG("mysql_errno(%p) = %u", con, error);
+
+  /*
+    Check if the error code is specified in --mysql-ignore-errors, and return
+    SB_DB_ERROR_RESTART_TRANSACTION if so, or SB_DB_ERROR_FAILED otherwise
+  */
+  SB_LIST_FOR_EACH(pos, args.ignored_errors)
+  {
+    const char *val = SB_LIST_ENTRY(pos, value_t, listitem)->data;
+
+    tmp = (unsigned int) atoi(val);
+
+    if (error == tmp || !strcmp(val, "all"))
+    {
+      log_text(LOG_DEBUG, "Ignoring error %u %s, ", error, mysql_error(con));
+
+      /* Check if we should reconnect */
+      switch (error)
+      {
+      case CR_SERVER_LOST:
+      case CR_SERVER_GONE_ERROR:
+      case CR_TCP_CONNECTION:
+      case CR_SERVER_LOST_EXTENDED:
+
+        return mysql_drv_reconnect(sb_con);
+
+      default:
+
+        break;
+      }
+
+      return SB_DB_ERROR_RESTART_TRANSACTION;
+    }
+  }
+
+  if (query)
+    log_text(LOG_ALERT, "%s for query '%s' failed: %u %s",
+             func, query, error, mysql_error(con));
+  else
+    log_text(LOG_ALERT, "%s failed: %u %s",
+             func, error, mysql_error(con));
+
+  return SB_DB_ERROR_FAILED;
+}
+
 /* Execute prepared statement */
 
 
@@ -568,7 +691,7 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
   char            need_realloc;
   int             n;
   unsigned int    rc;
- 
+
 #ifdef HAVE_PS
   (void)rs; /* unused */
 
@@ -581,19 +704,10 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
     }
     rc = (unsigned int)mysql_stmt_execute(stmt->ptr);
     DEBUG("mysql_stmt_execute(%p) = %u", stmt->ptr, rc);
+
     if (rc)
-    {
-      rc = mysql_errno(con->ptr);
-      DEBUG("mysql_errno(%p) = %u", con->ptr, rc);
-      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
-          rc == ER_CHECKREAD)
-        return SB_DB_ERROR_DEADLOCK;
-      log_text(LOG_ALERT, "mysql_stmt_execute() for query '%s' failed: %d %s",
-               stmt->query,
-               mysql_errno(con->ptr),
-               mysql_error(con->ptr));
-      return SB_DB_ERROR_FAILED;
-    }
+      return check_error(con, "mysql_stmt_execute()", stmt->query);
+
     return SB_DB_ERROR_NONE;
   }
 #else
@@ -654,23 +768,16 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
 int mysql_drv_query(db_conn_t *sb_conn, const char *query,
                       db_result_set_t *rs)
 {
-  MYSQL *con = sb_conn->ptr;
+  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *)sb_conn->ptr;
+  MYSQL *con = db_mysql_con->mysql;
   unsigned int rc;
 
   (void)rs; /* unused */
   rc = (unsigned int)mysql_real_query(con, query, strlen(query));
   DEBUG("mysql_real_query(%p, \"%s\", %u) = %u", con, query, strlen(query), rc);
+
   if (rc)
-  {
-    rc = mysql_errno(con);
-    DEBUG("mysql_errno(%p) = %u", con, rc);
-    if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
-        rc == ER_CHECKREAD)
-      return SB_DB_ERROR_DEADLOCK;
-    log_text(LOG_ALERT, "failed to execute MySQL query: `%s`:", query);
-    log_text(LOG_ALERT, "Error %d %s", mysql_errno(con), mysql_error(con));
-    return SB_DB_ERROR_FAILED; 
-  }  
+    return check_error(sb_conn, "mysql_drv_query()", query);
 
   return SB_DB_ERROR_NONE;
 }
@@ -693,12 +800,13 @@ int mysql_drv_fetch(db_result_set_t *rs)
 
 int mysql_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
 {
+  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) rs->connection->ptr;
   row->ptr = mysql_fetch_row(rs->ptr);
   DEBUG("mysql_fetch_row(%p) = %p", rs->ptr, row->ptr);
   if (row->ptr == NULL)
   {
     log_text(LOG_FATAL, "mysql_fetch_row() failed: %s",
-             mysql_error(rs->connection->ptr));
+             mysql_error(db_mysql_con->mysql));
     return 1;
   }
   
@@ -720,7 +828,8 @@ unsigned long long mysql_drv_num_rows(db_result_set_t *rs)
 
 int mysql_drv_store_results(db_result_set_t *rs)
 {
-  MYSQL        *con = rs->connection->ptr;
+  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) rs->connection->ptr;
+  MYSQL        *con = db_mysql_con->mysql;
   MYSQL_RES    *res;
   MYSQL_ROW    row;
   unsigned int rc;
@@ -736,20 +845,10 @@ int mysql_drv_store_results(db_result_set_t *rs)
     DEBUG("mysql_stmt_store_result(%p) = %d", rs->statement->ptr, rc);
     if (rc)
     {
-      rc = mysql_errno(con);
-      DEBUG("mysql_errno(%p) = %d", con, rc);
-      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
-          rc == ER_CHECKREAD)
-      {
-        log_text(LOG_WARNING,
-                 "mysql_stmt_store_result() failed with error: (%d) %s", rc,
-                 mysql_error(con));
-        return SB_DB_ERROR_DEADLOCK;
-      }
-      else if (mysql_stmt_field_count(rs->statement->ptr) == 0)
+      if (mysql_stmt_field_count(rs->statement->ptr) == 0)
         return SB_DB_ERROR_NONE;
-      log_text(LOG_ALERT, "MySQL error: %s\n", mysql_error(con));
-      return SB_DB_ERROR_FAILED;
+
+      return check_error(rs->connection, "mysql_stmt_store_result()", NULL);
     }
     rs->nrows = mysql_stmt_num_rows(rs->statement->ptr);
     DEBUG("mysql_stmt_num_rows(%p) = %d", rs->statement->ptr, rs->nrows);
@@ -770,20 +869,10 @@ int mysql_drv_store_results(db_result_set_t *rs)
   DEBUG("mysql_store_result(%p) = %p", con, res);
   if (res == NULL)
   {
-      rc = mysql_errno(con);
-      DEBUG("mysql_errno(%p) = %u", con, rc);
-      if (rc == ER_LOCK_DEADLOCK || rc == ER_LOCK_WAIT_TIMEOUT ||
-          rc == ER_CHECKREAD)
-      {
-        log_text(LOG_WARNING,
-                 "mysql_store_result() failed with error: (%u) %s", rc,
-                 mysql_error(con));
-        return SB_DB_ERROR_DEADLOCK;
-      }
-      else if (mysql_field_count(con) == 0)
+      if (mysql_field_count(con) == 0)
         return SB_DB_ERROR_NONE;
-      log_text(LOG_ALERT, "MySQL error: %s", mysql_error(con));
-      return SB_DB_ERROR_FAILED; 
+
+      return check_error(rs->connection, "mysql_store_result()", NULL);
   }
   rs->ptr = (void *)res;
 

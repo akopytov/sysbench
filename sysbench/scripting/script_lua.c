@@ -35,16 +35,11 @@
 #define THREAD_DONE_FUNC "thread_done"
 #define HELP_FUNC "help"
 
-/* DB Error codes */
-
-#define SB_DB_OK                  0
-#define SB_DB_RESTART_TRANSACTION 1
-
 /* Macros to call Lua functions */
 #define CALL_ERROR(L, name)           \
   do { \
     const char *err = lua_tostring(L, -1); \
-    log_text(LOG_FATAL, "failed to execute function `%s': %s",   \
+    log_text(LOG_DEBUG, "failed to execute function `%s': %s",   \
              name, err ? err : "(null)");                               \
   } while (0)
 
@@ -281,9 +276,10 @@ int sb_lua_op_execute_request(sb_request_t *sb_req, int thread_id)
     if (lua_pcall(L, 1, 1, 0))
     {
       if (lua_gettop(L) && lua_isnumber(L, -1) &&
-          lua_tonumber(L, -1) == SB_DB_RESTART_TRANSACTION)
+          lua_tonumber(L, -1) == SB_DB_ERROR_RESTART_TRANSACTION)
       {
-        log_text(LOG_DEBUG, "Deadlock detected, restarting transaction");
+        log_text(LOG_DEBUG,
+                 "Ignored error encountered, restarting transaction");
         restart = 1;
       }
       else
@@ -471,8 +467,8 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   
   lua_pushnumber(state, SB_DB_ERROR_NONE);
   lua_setglobal(state, "DB_ERROR_NONE");
-  lua_pushnumber(state, SB_DB_ERROR_DEADLOCK);
-  lua_setglobal(state, "DB_ERROR_DEADLOCK");
+  lua_pushnumber(state, SB_DB_ERROR_RESTART_TRANSACTION);
+  lua_setglobal(state, "DB_ERROR_RESTART_TRANSACTION");
   lua_pushnumber(state, SB_DB_ERROR_FAILED);
   lua_setglobal(state, "DB_ERROR_FAILED");
 
@@ -614,8 +610,7 @@ int sb_lua_db_query(lua_State *L)
   rs = db_query(ctxt->con, query);
   if (rs == NULL)
   {
-    if (ctxt->con->db_errno == SB_DB_ERROR_DEADLOCK)
-      lua_pushnumber(L, SB_DB_RESTART_TRANSACTION);
+    lua_pushnumber(L, ctxt->con->db_errno);
     lua_error(L);
   }
 
@@ -943,8 +938,7 @@ int sb_lua_db_execute(lua_State *L)
   if (ptr == NULL)
   {
     stmt->rs = NULL;
-    if (ctxt->con->db_errno == SB_DB_ERROR_DEADLOCK)
-      lua_pushnumber(L, SB_DB_RESTART_TRANSACTION);
+    lua_pushnumber(L, ctxt->con->db_errno);
     lua_error(L);
   }
   else

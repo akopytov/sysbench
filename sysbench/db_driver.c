@@ -46,7 +46,8 @@ typedef struct {
   unsigned long   write_ops;
   unsigned long   other_ops;
   unsigned long   transactions;
-  unsigned long   deadlocks;
+  unsigned long   errors;
+  unsigned long   reconnects;
   pthread_mutex_t stat_mutex;
 } db_thread_stat_t;
 
@@ -59,6 +60,8 @@ sb_percentile_t local_percentile;
 static unsigned long last_transactions;
 static unsigned long last_read_ops;
 static unsigned long last_write_ops;
+static unsigned long last_errors;
+static unsigned long last_reconnects;
 
 /* Static variables */
 static sb_list_t        drivers;          /* list of available DB drivers */
@@ -392,9 +395,14 @@ db_result_set_t *db_execute(db_stmt_t *stmt)
   {
     log_text(LOG_DEBUG, "ERROR: exiting db_execute(), driver's execute method failed");
 
-    if (con->db_errno == SB_DB_ERROR_DEADLOCK)
-      thread_stats[con->thread_id].deadlocks++;
-    
+    if (con->db_errno == SB_DB_ERROR_RECONNECTED)
+    {
+      thread_stats[con->thread_id].reconnects++;
+      con->db_errno = SB_DB_ERROR_RESTART_TRANSACTION;
+    }
+    else if (con->db_errno == SB_DB_ERROR_RESTART_TRANSACTION)
+      thread_stats[con->thread_id].errors++;
+
     return NULL;
   }
 
@@ -468,8 +476,13 @@ db_result_set_t *db_query(db_conn_t *con, const char *query)
     db_update_thread_stats(con->thread_id, db_get_query_type(query));
   else
   {
-    if (con->db_errno == SB_DB_ERROR_DEADLOCK)
-      thread_stats[con->thread_id].deadlocks++;
+    if (con->db_errno == SB_DB_ERROR_RECONNECTED)
+    {
+      thread_stats[con->thread_id].reconnects++;
+      con->db_errno = SB_DB_ERROR_RESTART_TRANSACTION;
+    }
+    else if (con->db_errno == SB_DB_ERROR_RESTART_TRANSACTION)
+      thread_stats[con->thread_id].errors++;
 
     return NULL;
   }
@@ -813,10 +826,11 @@ void db_print_stats(sb_stat_t type)
   unsigned long write_ops;
   unsigned long other_ops;
   unsigned long transactions;
-  unsigned long deadlocks;
+  unsigned long errors;
+  unsigned long reconnects;
 
   /* Summarize per-thread counters */
-  read_ops = write_ops = other_ops = transactions = deadlocks = 0;
+  read_ops = write_ops = other_ops = transactions = errors = reconnects = 0;
   for (i = 0; i < sb_globals.num_threads; i++)
   {
     pthread_mutex_lock(&thread_stats[i].stat_mutex);
@@ -824,7 +838,8 @@ void db_print_stats(sb_stat_t type)
     write_ops += thread_stats[i].write_ops;
     other_ops += thread_stats[i].other_ops;
     transactions += thread_stats[i].transactions;
-    deadlocks += thread_stats[i].deadlocks;
+    errors += thread_stats[i].errors;
+    reconnects += thread_stats[i].reconnects;
     pthread_mutex_unlock(&thread_stats[i].stat_mutex);
   }
 
@@ -833,15 +848,18 @@ void db_print_stats(sb_stat_t type)
     seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
 
     log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
-                  "threads: %d, tps: %4.2f, reads/s: %4.2f, writes/s: %4.2f, "
-                  "response time: %4.2fms (%u%%)",
+                  "threads: %d, tps: %4.2f, reads: %4.2f, writes: %4.2f, "
+                  "response time: %4.2fms (%u%%), errors: %4.2f, "
+                  "reconnects: %5.2f",
                   sb_globals.num_threads,
                   (transactions - last_transactions) / seconds,
                   (read_ops - last_read_ops) / seconds,
                   (write_ops - last_write_ops) / seconds,
                   NS2MS(sb_percentile_calculate(&local_percentile,
                                                 sb_globals.percentile_rank)),
-                  sb_globals.percentile_rank);
+                  sb_globals.percentile_rank,
+                  (errors - last_errors) / seconds,
+                  (reconnects - last_reconnects) / seconds);
     if (sb_globals.tx_rate > 0)
     {
       log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
@@ -853,6 +871,8 @@ void db_print_stats(sb_stat_t type)
     last_transactions = transactions;
     last_read_ops = read_ops;
     last_write_ops = write_ops;
+    last_errors = errors;
+    last_reconnects = reconnects;
     SB_THREAD_MUTEX_UNLOCK();
 
     sb_percentile_reset(&local_percentile);
@@ -876,13 +896,15 @@ void db_print_stats(sb_stat_t type)
            read_ops + write_ops + other_ops);
   log_text(LOG_NOTICE, "    transactions:                        %-6d"
            " (%.2f per sec.)", transactions, transactions / seconds);
-  log_text(LOG_NOTICE, "    deadlocks:                           %-6d"
-           " (%.2f per sec.)", deadlocks, deadlocks / seconds);
   log_text(LOG_NOTICE, "    read/write requests:                 %-6d"
            " (%.2f per sec.)", read_ops + write_ops,
            (read_ops + write_ops) / seconds);  
   log_text(LOG_NOTICE, "    other operations:                    %-6d"
            " (%.2f per sec.)", other_ops, other_ops / seconds);
+  log_text(LOG_NOTICE, "    ignored errors:                      %-6d"
+           " (%.2f per sec.)", errors, errors / seconds);
+  log_text(LOG_NOTICE, "    reconnects:                          %-6d"
+           " (%.2f per sec.)", reconnects, reconnects / seconds);
 
   if (db_globals.debug)
   {
@@ -984,12 +1006,14 @@ static void db_reset_stats(void)
     thread_stats[i].write_ops = 0;
     thread_stats[i].other_ops = 0;
     thread_stats[i].transactions = 0;
-    thread_stats[i].deadlocks = 0;
+    thread_stats[i].errors = 0;
+    thread_stats[i].reconnects = 0;
   }
 
   last_transactions = 0;
   last_read_ops = 0;
   last_write_ops = 0;
+  last_errors = 0;
 
   /*
     So that intermediate stats are calculated from the current moment
