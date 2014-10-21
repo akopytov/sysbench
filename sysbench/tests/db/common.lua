@@ -30,7 +30,8 @@ c CHAR(120) DEFAULT '' NOT NULL,
 pad CHAR(60) DEFAULT '' NOT NULL,
 ]] .. index_name .. [[ (id)
 ) /*! ENGINE = ]] .. mysql_table_engine ..
-" MAX_ROWS = " .. myisam_max_rows .. " */"
+" MAX_ROWS = " .. myisam_max_rows .. " */ " ..
+   (mysql_table_options or "")
 
    elseif (db_driver == "pgsql") then
       query = [[
