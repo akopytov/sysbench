@@ -432,7 +432,7 @@ int drizzle_drv_query(db_conn_t *sb_conn, const char *query,
      */
     if (rc == 1213 || rc == 1205 ||
         rc == 1020)
-      return SB_DB_ERROR_DEADLOCK;
+      return SB_DB_ERROR_RESTART_TRANSACTION;
     log_text(LOG_ALERT, "Drizzle Query Failed: %u:%s",
              drizzle_result_error_code(result),
              drizzle_result_error(result));

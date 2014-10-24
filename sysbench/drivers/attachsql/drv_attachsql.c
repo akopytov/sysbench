@@ -454,7 +454,7 @@ int attachsql_drv_query(db_conn_t *sb_conn, const char *query,
       if (rc == 1213 || rc == 1205 || rc == 1020)
       {
         attachsql_error_free(error);
-        return SB_DB_ERROR_DEADLOCK;
+        return SB_DB_ERROR_RESTART_TRANSACTION;
       }
       log_text(LOG_ALERT, "libAttachSQL Query Failed: %u:%s", attachsql_error_code(error), attachsql_error_message(error));
       attachsql_error_free(error);
