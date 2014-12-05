@@ -862,9 +862,13 @@ void db_print_stats(sb_stat_t type)
                   (reconnects - last_reconnects) / seconds);
     if (sb_globals.tx_rate > 0)
     {
+      pthread_mutex_lock(&event_queue_mutex);
+
       log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
                     "queue length: %d, concurrency: %d",
                     sb_globals.event_queue_length, sb_globals.concurrency);
+
+      pthread_mutex_unlock(&event_queue_mutex);
     }
 
     SB_THREAD_MUTEX_LOCK();

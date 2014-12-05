@@ -168,8 +168,8 @@ static pthread_mutex_t thread_start_mutex;
 static pthread_attr_t  thread_attr;
 
 /* structures to handle queue of events, needed for tx_rate mode */
+pthread_mutex_t           event_queue_mutex;
 static sb_list_t          event_queue;
-static pthread_mutex_t    event_queue_mutex;
 static pthread_cond_t     event_queue_cv;
 static event_queue_elem_t queue_array[MAX_QUEUE_LEN];
 
@@ -511,15 +511,14 @@ static void *runner_thread(void *arg)
         sb_globals.event_queue_length--;
       }
 
+      sb_globals.concurrency++;
+
       pthread_mutex_unlock(&event_queue_mutex);
 
       timers[thread_id].queue_time = sb_timer_value(&sb_globals.exec_timer) -
         queue_start_time;
 
-      /* we do it without mutex protection, that's fine to have racing */
-      sb_globals.concurrency++;
     }
-
 
     request = get_request(test, thread_id);
 
@@ -532,8 +531,9 @@ static void *runner_thread(void *arg)
 
     if (sb_globals.tx_rate > 0)
     {
-      /* we do it without mutex protection, that's fine to have racing */
+      pthread_mutex_lock(&event_queue_mutex);
       sb_globals.concurrency--;
+      pthread_mutex_unlock(&event_queue_mutex);
     }
 
     /* Check if we have a time limit */

@@ -227,6 +227,7 @@ typedef struct
 } sb_globals_t;
 
 extern sb_globals_t sb_globals;
+extern pthread_mutex_t event_queue_mutex;
 
 /* Random number generators */
 int sb_rand(int, int);
