@@ -1101,10 +1101,18 @@ int sb_lua_rand_str(lua_State *L)
 
 sb_lua_ctxt_t *sb_lua_get_context(lua_State *L)
 {
+  sb_lua_ctxt_t *ctxt;
+
   lua_pushlightuserdata(L, (void *)&sb_lua_ctxt_key);
   lua_gettable(L, LUA_REGISTRYINDEX);
 
-  return (sb_lua_ctxt_t *)lua_touserdata(L, -1);
+  ctxt = (sb_lua_ctxt_t *)lua_touserdata(L, -1);
+
+  if (ctxt == NULL)
+    luaL_error(L, "Attempt to access database driver before it is initialized. "
+               "Check your script for syntax errors");
+
+  return ctxt;
 }
 
 /* Set a per-state interpreter context */
