@@ -28,6 +28,12 @@ then
                 [ac_cv_pgsql_libs=$withval])
 fi
 
+if test [ -n "$ac_cv_pgsql_libs" ]
+then
+     AC_CACHE_CHECK([PostgreSQL libraries], [ac_cv_pgsql_libs], [ac_cv_pgsql_libs=""])
+     PGSQL_LIBS="-L$ac_cv_pgsql_libs -lpq"
+fi
+
 # If some path is missing, try to autodetermine with pgsql_config
 if test [ -z "$ac_cv_pgsql_includes" -o -z "$ac_cv_pgsql_libs" ]
 then
