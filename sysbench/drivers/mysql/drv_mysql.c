@@ -74,6 +74,7 @@ static sb_arg_t mysql_drv_args[] =
   {"mysql-engine-trx", "whether storage engine used is transactional or not {yes,no,auto}",
    SB_ARG_TYPE_STRING, "auto"},
   {"mysql-ssl", "use SSL connections, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
+  {"mysql-compression", "use compression, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
   {"myisam-max-rows", "max-rows parameter for MyISAM tables", SB_ARG_TYPE_INT, "1000000"},
   {"mysql-debug", "dump all client library calls", SB_ARG_TYPE_FLAG, "off"},
   {"mysql-ignore-errors", "list of errors to ignore, or \"all\"",
@@ -91,6 +92,7 @@ typedef struct
   char               *password;
   char               *db;
   unsigned char      use_ssl;
+  unsigned char      use_compression;
   unsigned char      debug;
   sb_list_t          *ignored_errors;
 } mysql_drv_args_t;
@@ -244,6 +246,7 @@ int mysql_drv_init(void)
   args.password = sb_get_value_string("mysql-password");
   args.db = sb_get_value_string("mysql-db");
   args.use_ssl = sb_get_value_flag("mysql-ssl");
+  args.use_compression = sb_get_value_flag("mysql-compression");
   args.debug = sb_get_value_flag("mysql-debug");
   if (args.debug)
     sb_globals.verbosity = LOG_DEBUG;
@@ -292,6 +295,11 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
           ssl_cert, ssl_ca);
     mysql_ssl_set(con, ssl_key, ssl_cert, ssl_ca, NULL, NULL);
   }
+
+	if (args.use_compression)
+	{
+		mysql_options(con,MYSQL_OPT_COMPRESS,NULL);
+	}
 
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",
         con,
