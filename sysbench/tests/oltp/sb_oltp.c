@@ -2359,7 +2359,7 @@ static void oltp_reset_stats(void)
   if (sb_timer_initialized(&sb_globals.exec_timer))
     sb_timer_split(&sb_globals.exec_timer);
 
-  if (sb_globals.debug)
+  if (sb_globals.debug && exec_timers != NULL)
   {
     for (thread_id = 0; thread_id < sb_globals.num_threads; thread_id++)
     {

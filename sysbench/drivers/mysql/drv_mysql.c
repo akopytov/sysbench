@@ -69,6 +69,7 @@ static sb_arg_t mysql_drv_args[] =
   {"mysql-ssl", "use SSL connections, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
   {"myisam-max-rows", "max-rows parameter for MyISAM tables", SB_ARG_TYPE_INT, "1000000"},
   {"mysql-create-options", "additional options passed to CREATE TABLE", SB_ARG_TYPE_STRING, ""},
+  {"mysql-dry-run", "Dry run, pretent that all MySQL client API calls are successful without executing them", SB_ARG_TYPE_FLAG, NULL},
   
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
@@ -92,6 +93,7 @@ typedef struct
   mysql_drv_trx_t    engine_trx;
   unsigned int       use_ssl;
   const char         *create_options;
+  unsigned int       dry_run;
 } mysql_drv_args_t;
 
 #ifdef HAVE_PS
@@ -240,7 +242,9 @@ int mysql_drv_init(void)
   args.create_options = sb_get_value_string("mysql-create-options");
   if (args.create_options == NULL)
     args.create_options = "";
-  
+
+  args.dry_run = sb_get_value_flag("mysql-dry-run");
+
   use_ps = 0;
 #ifdef HAVE_PS
   mysql_drv_caps.prepared_statements = 1;
@@ -303,8 +307,16 @@ int mysql_drv_describe(drv_caps_t *caps, const char * table_name)
   
   connected = 1;
   snprintf(query, sizeof(query), "SHOW TABLE STATUS LIKE '%s'", table_name);
-  
-  rc = mysql_real_query(con.ptr, query, strlen(query)); 
+
+  if (args.dry_run)
+  {
+    caps->transactions = 1;
+    caps->prepared_statements = 1;
+
+    return 0;
+  }
+
+  rc = mysql_real_query(con.ptr, query, strlen(query));
   DEBUG("mysql_real_query(%p, \"%s\", %d) = %d", con.ptr, query, strlen(query), rc);
   if (rc)
     goto error;
@@ -363,11 +375,16 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   const char     *ssl_cert;
   const char     *ssl_ca;
   
+  if (args.dry_run)
+  {
+    return 0;
+  }
+
   con = (MYSQL *)malloc(sizeof(MYSQL));
   if (con == NULL)
     return 1;
   sb_conn->ptr = con;
-  
+
   mysql_init(con);
   DEBUG("mysql_init(%p)", con);
 
@@ -440,6 +457,9 @@ int mysql_drv_disconnect(db_conn_t *sb_conn)
 {
   MYSQL *con = sb_conn->ptr;
 
+  if (args.dry_run)
+    return 0;
+
   if (con != NULL)
   {
     DEBUG("mysql_close(%p)", con);
@@ -460,6 +480,9 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query)
   MYSQL      *con = (MYSQL *)stmt->connection->ptr;
   MYSQL_STMT *mystmt;
   unsigned int rc;
+
+  if (args.dry_run)
+    return 0;
 
   if (con == NULL)
     return 1;
@@ -523,7 +546,10 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
   unsigned int i;
   unsigned int rc;
 #endif
-  
+
+  if (args.dry_run)
+    return 0;
+
   if (con == NULL)
     return 1;
 
@@ -641,7 +667,10 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
   char            need_realloc;
   int             n;
   unsigned int    rc;
- 
+
+  if (args.dry_run)
+    return 0;
+
 #ifdef HAVE_PS
   (void)rs; /* unused */
 
@@ -730,6 +759,10 @@ int mysql_drv_query(db_conn_t *sb_conn, const char *query,
   unsigned int rc;
 
   (void)rs; /* unused */
+
+  if (args.dry_run)
+    return 0;
+
   rc = mysql_real_query(con, query, strlen(query));
   DEBUG("mysql_real_query(%p, \"%s\", %u) = %u", con, query, strlen(query), rc);
   if (rc)
@@ -777,7 +810,7 @@ int mysql_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
 
 unsigned long long mysql_drv_num_rows(db_result_set_t *rs)
 {
-  return rs->nrows;
+  return args.dry_run ? 0 : rs->nrows;
 }
 
 
@@ -790,6 +823,9 @@ int mysql_drv_store_results(db_result_set_t *rs)
   MYSQL_RES    *res;
   MYSQL_ROW    row;
   int rc;
+
+  if (args.dry_run)
+    return 0;
 
 #ifdef HAVE_PS
   /* Is this result set from prepared statement? */
@@ -864,6 +900,9 @@ int mysql_drv_store_results(db_result_set_t *rs)
 
 int mysql_drv_free_results(db_result_set_t *rs)
 {
+  if (args.dry_run)
+    return 0;
+
 #ifdef HAVE_PS
   /* Is this a result set of a prepared statement */
   if (rs->statement != NULL && rs->statement->emulated == 0)
@@ -889,6 +928,9 @@ int mysql_drv_free_results(db_result_set_t *rs)
 
 int mysql_drv_close(db_stmt_t *stmt)
 {
+  if (args.dry_run)
+    return 0;
+
 #ifdef HAVE_PS
   if (stmt->ptr == NULL)
     return 1;
@@ -905,6 +947,9 @@ int mysql_drv_close(db_stmt_t *stmt)
 /* Uninitialize driver */
 int mysql_drv_done(void)
 {
+  if (args.dry_run)
+    return 0;
+
   mysql_library_end();
   
   return 0;
