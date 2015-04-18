@@ -79,6 +79,8 @@ static sb_arg_t mysql_drv_args[] =
   {"mysql-debug", "dump all client library calls", SB_ARG_TYPE_FLAG, "off"},
   {"mysql-ignore-errors", "list of errors to ignore, or \"all\"",
    SB_ARG_TYPE_LIST, "1213,1020,1205"},
+  {"mysql-dry-run", "Dry run, pretent that all MySQL client API calls are successful without executing them",
+   SB_ARG_TYPE_FLAG, NULL},
 
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
@@ -95,6 +97,7 @@ typedef struct
   unsigned char      use_compression;
   unsigned char      debug;
   sb_list_t          *ignored_errors;
+  unsigned int       dry_run;
 } mysql_drv_args_t;
 
 typedef struct
@@ -253,6 +256,8 @@ int mysql_drv_init(void)
 
   args.ignored_errors = sb_get_value_list("mysql-ignore-errors");
 
+  args.dry_run = sb_get_value_flag("mysql-dry-run");
+
   use_ps = 0;
 #ifdef HAVE_PS
   mysql_drv_caps.prepared_statements = 1;
@@ -262,7 +267,7 @@ int mysql_drv_init(void)
 
   DEBUG("mysql_library_init(%d, %p, %p)", 0, NULL, NULL);
   mysql_library_init(0, NULL, NULL);
-  
+
   return 0;
 }
 
@@ -273,7 +278,7 @@ int mysql_drv_init(void)
 int mysql_drv_describe(drv_caps_t *caps)
 {
   *caps = mysql_drv_caps;
-  
+
   return 0;
 }
 
@@ -335,6 +340,9 @@ int mysql_drv_connect(db_conn_t *sb_conn)
 {
   MYSQL           *con;
   db_mysql_conn_t *db_mysql_con;
+
+  if (args.dry_run)
+    return 0;
 
   db_mysql_con = (db_mysql_conn_t *) calloc(1, sizeof(db_mysql_conn_t));
 
@@ -398,6 +406,8 @@ int mysql_drv_disconnect(db_conn_t *sb_conn)
 {
   db_mysql_conn_t *db_mysql_con = sb_conn->ptr;
 
+  if (args.dry_run)
+    return 0;
   if (db_mysql_con != NULL && db_mysql_con->mysql != NULL)
   {
     DEBUG("mysql_close(%p)", db_mysql_con->mysql);
@@ -420,6 +430,9 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query)
   MYSQL      *con = db_mysql_con->mysql;
   MYSQL_STMT *mystmt;
   unsigned int rc;
+
+  if (args.dry_run)
+    return 0;
 
   if (con == NULL)
     return 1;
@@ -458,7 +471,7 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query)
       }
     }
     stmt->query = strdup(query);
-    
+
     return 0;
   }
 
@@ -486,7 +499,10 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
   my_bool rc;
   unsigned long param_count;
 #endif
-  
+
+  if (args.dry_run)
+    return 0;
+
   if (con == NULL)
     return 1;
 
@@ -540,7 +556,7 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
     return 1;
   memcpy(stmt->bound_param, params, len * sizeof(db_bind_t));
   stmt->bound_param_len = len;
-  
+
   return 0;
 
 }
@@ -564,7 +580,7 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
   MYSQL_BIND   *bind;
   unsigned int i;
   my_bool rc;
-  
+
   if (con == NULL || stmt->ptr == NULL)
     return 1;
 
@@ -583,7 +599,7 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 
   /* FIXME */
   gresults = params;
-  
+
   rc = mysql_stmt_bind_result(stmt->ptr, bind);
   DEBUG("mysql_stmt_bind_result(%p, %p) = %d", stmt->ptr, bind, rc);
   if (rc)
@@ -700,6 +716,9 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
   int             n;
   unsigned int    rc;
 
+  if (args.dry_run)
+    return 0;
+
 #ifdef HAVE_PS
   (void)rs; /* unused */
 
@@ -757,7 +776,7 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
     vcnt++;
   }
   buf[j] = '\0';
-  
+
   con->db_errno = mysql_drv_query(con, buf, rs);
   free(buf);
   if (con->db_errno != SB_DB_ERROR_NONE)
@@ -765,7 +784,7 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
     log_text(LOG_DEBUG, "ERROR: exiting mysql_drv_execute(), database error");
     return con->db_errno;
   }
-  
+
   return SB_DB_ERROR_NONE;
 }
 
@@ -781,6 +800,10 @@ int mysql_drv_query(db_conn_t *sb_conn, const char *query,
   unsigned int rc;
 
   (void)rs; /* unused */
+
+  if (args.dry_run)
+    return 0;
+
   rc = (unsigned int)mysql_real_query(con, query, strlen(query));
   DEBUG("mysql_real_query(%p, \"%s\", %u) = %u", con, query, strlen(query), rc);
 
@@ -798,7 +821,7 @@ int mysql_drv_fetch(db_result_set_t *rs)
 {
   /* NYI */
   (void)rs;  /* unused */
-  
+
   return 1;
 }
 
@@ -817,7 +840,7 @@ int mysql_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
              mysql_error(db_mysql_con->mysql));
     return 1;
   }
-  
+
   return 0;
 }
 
@@ -827,7 +850,7 @@ int mysql_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
 
 unsigned long long mysql_drv_num_rows(db_result_set_t *rs)
 {
-  return rs->nrows;
+  return args.dry_run ? 0 : rs->nrows;
 }
 
 
@@ -841,6 +864,9 @@ int mysql_drv_store_results(db_result_set_t *rs)
   MYSQL_RES    *res;
   MYSQL_ROW    row;
   unsigned int rc;
+
+  if (args.dry_run)
+    return 0;
 
 #ifdef HAVE_PS
   /* Is this result set from prepared statement? */
@@ -868,10 +894,10 @@ int mysql_drv_store_results(db_result_set_t *rs)
     return SB_DB_ERROR_NONE;
   }
 #endif
-  
+
   if (con == NULL)
     return SB_DB_ERROR_FAILED;
-  
+
   /* using store results for speed will not work for large sets */
   res = mysql_store_result(con);
   DEBUG("mysql_store_result(%p) = %p", con, res);
@@ -886,7 +912,7 @@ int mysql_drv_store_results(db_result_set_t *rs)
 
   rs->nrows = mysql_num_rows(res);
   DEBUG("mysql_num_rows(%p) = %u", res, rs->nrows);
-  
+
   /* just fetch result */
   while((row = mysql_fetch_row(res)))
     DEBUG("mysql_fetch_row(%p) = %p", res, row);
@@ -899,6 +925,9 @@ int mysql_drv_store_results(db_result_set_t *rs)
 
 int mysql_drv_free_results(db_result_set_t *rs)
 {
+  if (args.dry_run)
+    return 0;
+
 #ifdef HAVE_PS
   /* Is this a result set of a prepared statement */
   if (rs->statement != NULL && rs->statement->emulated == 0)
@@ -924,11 +953,15 @@ int mysql_drv_free_results(db_result_set_t *rs)
 
 int mysql_drv_close(db_stmt_t *stmt)
 {
+  if (args.dry_run)
+    return 0;
+
   if (stmt->query)
   {
     free(stmt->query);
     stmt->query = NULL;
   }
+
 #ifdef HAVE_PS
   if (stmt->ptr == NULL)
     return 1;
@@ -945,8 +978,11 @@ int mysql_drv_close(db_stmt_t *stmt)
 /* Uninitialize driver */
 int mysql_drv_done(void)
 {
+  if (args.dry_run)
+    return 0;
+
   mysql_library_end();
-  
+
   return 0;
 }
 
