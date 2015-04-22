@@ -80,7 +80,7 @@ static sb_arg_t mysql_drv_args[] =
   {"mysql-ignore-errors", "list of errors to ignore, or \"all\"",
    SB_ARG_TYPE_LIST, "1213,1020,1205"},
   {"mysql-dry-run", "Dry run, pretent that all MySQL client API calls are successful without executing them",
-   SB_ARG_TYPE_FLAG, NULL},
+   SB_ARG_TYPE_FLAG, "off"},
 
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
@@ -795,14 +795,17 @@ int mysql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
 int mysql_drv_query(db_conn_t *sb_conn, const char *query,
                       db_result_set_t *rs)
 {
-  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *)sb_conn->ptr;
-  MYSQL *con = db_mysql_con->mysql;
+  db_mysql_conn_t *db_mysql_con;
+  MYSQL *con;
   unsigned int rc;
 
   (void)rs; /* unused */
 
   if (args.dry_run)
     return 0;
+
+  db_mysql_con = (db_mysql_conn_t *)sb_conn->ptr;
+  con = db_mysql_con->mysql;
 
   rc = (unsigned int)mysql_real_query(con, query, strlen(query));
   DEBUG("mysql_real_query(%p, \"%s\", %u) = %u", con, query, strlen(query), rc);
