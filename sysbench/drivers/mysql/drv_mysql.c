@@ -863,13 +863,15 @@ unsigned long long mysql_drv_num_rows(db_result_set_t *rs)
 int mysql_drv_store_results(db_result_set_t *rs)
 {
   db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) rs->connection->ptr;
-  MYSQL        *con = db_mysql_con->mysql;
+  MYSQL        *con;
   MYSQL_RES    *res;
   MYSQL_ROW    row;
   unsigned int rc;
 
   if (args.dry_run)
     return 0;
+
+  con = db_mysql_con->mysql;
 
 #ifdef HAVE_PS
   /* Is this result set from prepared statement? */
