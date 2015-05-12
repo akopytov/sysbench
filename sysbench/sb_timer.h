@@ -51,7 +51,7 @@
 
 /* Wrapper over various *gettime* functions */
 #ifdef HAVE_CLOCK_GETTIME
-# define SB_GETTIME(tsp) clock_gettime(CLOCK_REALTIME, tsp)
+# define SB_GETTIME(tsp) clock_gettime(CLOCK_MONOTONIC, tsp)
 #else
 # define SB_GETTIME(tsp)                        \
   do {                                          \
