@@ -144,7 +144,7 @@ sb_request_t threads_get_request(void)
   sb_threads_request_t *threads_req = &sb_req.u.threads_request;
 
   SB_THREAD_MUTEX_LOCK();
-  if (req_performed >= sb_globals.max_requests)
+  if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
   {
     sb_req.type = SB_REQ_TYPE_NULL;
     SB_THREAD_MUTEX_UNLOCK();

@@ -101,7 +101,7 @@ sb_request_t cpu_get_request(void)
 {
   sb_request_t req;
   
-  if (req_performed >= sb_globals.max_requests)
+  if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
   {
     req.type = SB_REQ_TYPE_NULL;
     return req;
