@@ -67,10 +67,8 @@ General command line options
 
 The table below lists the supported common options, their descriptions and default values:
 
-*Option*              | *Description* | *Default
-----------------------|---------------|---------
-
-
+*Option*              | *Description* | *Default value*
+----------------------|---------------|----------------
 | `--num-threads`       | The total number of worker threads to create                                                                                                                                                                                                                                                                                                                                                                                                                            | 1               |
 | `--max-requests`      | Limit for total number of requests. 0 means unlimited                                                                                                                                                                                                                                                                                                                                                                                                                   | 10000           |
 | `--max-time`          | Limit for total execution time in seconds. 0 (default) means unlimited                                                                                                                                                                                                                                                                                                                                                                                                  | 0               |
