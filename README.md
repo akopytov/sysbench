@@ -48,18 +48,15 @@ The general syntax for SysBench is as follows:
 		  sysbench [common-options] --test=name [test-options] command
 
 
-See ? for a description of common options and documentation for particular test mode for a list of test-specific options.
+See [General command line options](README.md#general-command-line-options) for a description of common options and documentation for particular test mode for a list of test-specific options.
 
 Below is a brief description of available commands and their purpose:
 
 + `prepare`: performs preparative actions for those tests which need
 them, e.g. creating the necessary files on disk for the `fileio` test,
 or filling the test database for OLTP tests.
-
 + `run`: runs the actual test specified with the `--test` option.
-
 + `cleanup`: removes temporary data after the test run in those tests which create one.
-
 + `help`: displays usage information for a test specified with the
   `--test` option.
 
@@ -70,8 +67,10 @@ General command line options
 
 The table below lists the supported common options, their descriptions and default values:
 
-| *Option*              | *Description*                                                                                                                                                                                                                                                                                                                                                                                                                                                           | *Default value* |
-|-----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------|
+*Option*              | *Description* | *Default
+----------------------|---------------|---------
+
+
 | `--num-threads`       | The total number of worker threads to create                                                                                                                                                                                                                                                                                                                                                                                                                            | 1               |
 | `--max-requests`      | Limit for total number of requests. 0 means unlimited                                                                                                                                                                                                                                                                                                                                                                                                                   | 10000           |
 | `--max-time`          | Limit for total execution time in seconds. 0 (default) means unlimited                                                                                                                                                                                                                                                                                                                                                                                                  | 0               |
