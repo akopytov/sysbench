@@ -52,62 +52,39 @@ See ? for a description of common options and documentation for particular test 
 
 Below is a brief description of available commands and their purpose:
 
-`prepare`  
-Performs preparative actions for those tests which need them, e.g. creating the necessary files on disk for the
++ `prepare`: performs preparative actions for those tests which need
+them, e.g. creating the necessary files on disk for the `fileio` test,
+or filling the test database for OLTP tests.
 
-fileio
++ `run`: runs the actual test specified with the `--test` option.
 
-test, or filling the test database for the
++ `cleanup`: removes temporary data after the test run in those tests which create one.
 
-oltp
++ `help`: displays usage information for a test specified with the
+  `--test` option.
 
-test.
-
-`run`  
-Runs the actual test specified with the
-
---test=
-
-name
-
-option.
-
-`cleanup`  
-Removes temporary data after the test run in those tests which create one.
-
-`help`  
-Displays usage information for a test specified with the
-
---test=
-
-name
-
-option.
-
-Also you can use `sysbench help` to display the brief usage summary and the list of available test modes.
+Also you can use `sysbench help` (without `--test`) to display the brief usage summary and the list of available test modes.
 
 General command line options
 ----------------------------
 
 The table below lists the supported common options, their descriptions and default values:
 
-|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|
-| *Option*              | *Description*                                                                                                                                                                                                                                                                                                                                                                         | *Default value* |
-| `--num-threads`       | The total number of worker threads to create                                                                                                                                                                                                                                                                                                                                          | 1               |
-| `--max-requests`      | Limit for total number of requests. 0 means unlimited                                                                                                                                                                                                                                                                                                                                 | 10000           |
-| `--max-time`          | Limit for total execution time in seconds. 0 (default) means unlimited                                                                                                                                                                                                                                                                                                                | 0               |
-| `--thread-stack-size` | Size of stack for each thread                                                                                                                                                                                                                                                                                                                                                         | 32K             |
-| `--init-rng`          | Specifies if random numbers generator should be initialized from timer before the test start                                                                                                                                                                                                                                                                                          | off             |
-| `--report-interval`   | Periodically report intermediate statistics with a specified interval in seconds. Note that statistics produced by this option is per-interval rather than cumulative. 0 disables intermediate reports                                                                                                                                                                                | 0               |
-| `--test`              | Name of the test mode to run                                                                                                                                                                                                                                                                                                                                                          | *Required*      |
-| `--debug`             | Print more debug info                                                                                                                                                                                                                                                                                                                                                                 | off             |
-| `--validate`          | Perform validation of test results where possible                                                                                                                                                                                                                                                                                                                                     | off             |
-| `--help`              | Print help on general syntax or on a test mode specified with --test, and exit                                                                                                                                                                                                                                                                                                        | off             |
-| `--verbosity`         | Verbosity level (0 - only critical messages, 5 - debug)                                                                                                                                                                                                                                                                                                                               | 4               |
-| `--percentile`        | SysBench measures execution times for all processed requests to display statistical information like minimal, average and maximum execution time. For most benchmarks it is also useful to know a request execution time value matching some percentile (e.g. 95% percentile means we should drop 5% of the most long requests and choose the maximal value from the remaining ones). 
-                                                                                                                                                                                                                                                                                                                                                                                                                
-                         This option allows to specify a percentile rank of query execution times to count                                                                                                                                                                                                                                                                                                      | 95              |
-| `--validate`          | Perform validation of test results where possible                                                                                                                                                                                                                                                                                                                                     | off             |
+| *Option*              | *Description*                                                                                                                                                                                                                                                                                                                                                                                                                                                           | *Default value* |
+|-----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------|
+| `--num-threads`       | The total number of worker threads to create                                                                                                                                                                                                                                                                                                                                                                                                                            | 1               |
+| `--max-requests`      | Limit for total number of requests. 0 means unlimited                                                                                                                                                                                                                                                                                                                                                                                                                   | 10000           |
+| `--max-time`          | Limit for total execution time in seconds. 0 (default) means unlimited                                                                                                                                                                                                                                                                                                                                                                                                  | 0               |
+| `--thread-stack-size` | Size of stack for each thread                                                                                                                                                                                                                                                                                                                                                                                                                                           | 32K             |
+| `--init-rng`          | Specifies if random numbers generator should be initialized from timer before the test start                                                                                                                                                                                                                                                                                                                                                                            | off             |
+| `--report-interval`   | Periodically report intermediate statistics with a specified interval in seconds. Note that statistics produced by this option is per-interval rather than cumulative. 0 disables intermediate reports                                                                                                                                                                                                                                                                  | 0               |
+| `--test`              | Name of the test mode to run                                                                                                                                                                                                                                                                                                                                                                                                                                            | *Required*      |
+| `--debug`             | Print more debug info                                                                                                                                                                                                                                                                                                                                                                                                                                                   | off             |
+| `--validate`          | Perform validation of test results where possible                                                                                                                                                                                                                                                                                                                                                                                                                       | off             |
+| `--help`              | Print help on general syntax or on a test mode specified with --test, and exit                                                                                                                                                                                                                                                                                                                                                                                          | off             |
+| `--verbosity`         | Verbosity level (0 - only critical messages, 5 - debug)                                                                                                                                                                                                                                                                                                                                                                                                                 | 4               |
+| `--percentile`        | SysBench measures execution times for all processed requests to display statistical information like minimal, average and maximum execution time. For most benchmarks it is also useful to know a request execution time value matching some percentile (e.g. 95% percentile means we should drop 5% of the most long requests and choose the maximal value from the remaining ones). This option allows to specify a percentile rank of query execution times to count | 95              |
+| `--validate`          | Perform validation of test results where possible                                                                                                                                                                                                                                                                                                                                                                                                                       | off             |
 
 Note that numerical values for all *size* options (like `--thread-stack-size` in this table) may be specified by appending the corresponding multiplicative suffix (K for kilobytes, M for megabytes, G for gigabytes and T for terabytes).
 
