@@ -1,5 +1,5 @@
-SysBench
-============
+About
+=====
 
 SysBench is a modular, cross-platform and multi-threaded benchmark tool
 for evaluating OS parameters that are important for a system running a
@@ -9,8 +9,8 @@ The idea of this benchmark suite is to quickly get an impression about
 system performance without setting up complex database benchmarks or
 even without installing a database at all.
 
-Features of SysBench
---------------------
+Features
+--------
 
 Current features allow to test the following system parameters:
 
