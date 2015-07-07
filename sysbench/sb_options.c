@@ -675,9 +675,12 @@ sb_list_t *read_config(FILE *fp, sb_list_t *options)
         {
           /* Empty */
         }
+
         if (tmp[optlen] != '\0')
           tmp[optlen++] = '\0';
+
         add_value(&newopt->values, tmp);
+        tmp += optlen;
       }
     }
   }
