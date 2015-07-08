@@ -148,6 +148,7 @@ sb_arg_t general_args[] =
   {"rand-seed", "seed for random number generator, ignored when 0", SB_ARG_TYPE_INT, "0"},
   {"rand-pareto-h", "parameter h for pareto distibution", SB_ARG_TYPE_FLOAT,
    "0.2"},
+  {"config-file", "File containing command line options", SB_ARG_TYPE_FILE, NULL},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
 

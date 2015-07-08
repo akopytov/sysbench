@@ -32,7 +32,8 @@ typedef enum
   SB_ARG_TYPE_SIZE,
   SB_ARG_TYPE_FLOAT,
   SB_ARG_TYPE_STRING,
-  SB_ARG_TYPE_LIST
+  SB_ARG_TYPE_LIST,
+  SB_ARG_TYPE_FILE
 } sb_arg_type_t;
 
 /* Test option definition */

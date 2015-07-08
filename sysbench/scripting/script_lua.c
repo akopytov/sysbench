@@ -395,6 +395,9 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
         /*FIXME: should be exported as tables */
         lua_pushnil(state);
         break;
+      case SB_ARG_TYPE_FILE:
+        /* FIXME: no need to export anything */
+        break;
       default:
         log_text(LOG_WARNING, "Global option '%s' will not be exported, because"
                  " the type is unknown", opt->name);
