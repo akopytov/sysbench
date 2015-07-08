@@ -72,7 +72,7 @@ int sb_register_arg_set(sb_arg_t *set);
 int set_option(const char *name, const char *value, sb_arg_type_t type);
 
 /* Find option specified by 'name' */
-option_t *sb_find_option(char *name);
+option_t *sb_find_option(const char *name);
 
 /* Print list of options specified by 'opts' */
 void sb_print_options(sb_arg_t *opts);

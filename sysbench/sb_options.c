@@ -82,7 +82,7 @@ int sb_register_arg_set(sb_arg_t *set)
   return 0;
 }
 
-option_t *sb_find_option(char *name)
+option_t *sb_find_option(const char *name)
 {
   return find_option(&options, name);
 }
