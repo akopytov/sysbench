@@ -670,7 +670,8 @@ sb_list_t *read_config(FILE *fp, sb_list_t *options)
         if (*tmp == VALUE_SEPARATOR)
           tmp++;
       } else {
-        for (optlen = 0; tmp[optlen] != '\0' && tmp[optlen] != VALUE_SEPARATOR;
+        for (optlen = 0; tmp[optlen] != '\0' && tmp[optlen] != VALUE_SEPARATOR
+                         && !isspace(tmp[optlen]);
              optlen++)
         {
           /* Empty */
