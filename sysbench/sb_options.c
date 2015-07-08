@@ -640,6 +640,8 @@ sb_list_t *read_config(FILE *fp, sb_list_t *options)
 
     if ((newopt = add_option(options, buf)) == NULL)
       return NULL;
+
+    free_values(&newopt->values);
     while (*tmp != '\0')
     {
       if (isspace((int)*tmp))
