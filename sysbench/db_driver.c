@@ -314,7 +314,7 @@ int db_disconnect(db_conn_t *con)
   rc = drv->ops.disconnect(con);
   free(con);
 
-  return 0;
+  return rc;
 }
 
 
