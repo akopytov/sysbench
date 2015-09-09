@@ -463,7 +463,7 @@ static void *runner_thread(void *arg)
   sb_thread_ctxt_t   *ctxt;
   sb_test_t          *test;
   unsigned int        thread_id;
-  unsigned long long  queue_start_time;
+  unsigned long long  queue_start_time = 0;
   sb_list_item_t     *pos;
   event_queue_elem_t *event;
 
@@ -559,7 +559,6 @@ static void *runner_thread(void *arg)
 static void *eventgen_thread_proc(void *arg)
 {
   unsigned long long pause_ns;
-  unsigned long long prev_ns;
   unsigned long long next_ns;
   unsigned long long curr_ns;
   unsigned long long intr_ns;
@@ -583,8 +582,6 @@ static void *eventgen_thread_proc(void *arg)
 
   for (;;)
   {
-    prev_ns = curr_ns;
-
     curr_ns = sb_timer_value(&sb_globals.exec_timer);
 
     /* emulate exponential distribution with Lambda = tx_rate */
