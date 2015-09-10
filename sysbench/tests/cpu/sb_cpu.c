@@ -150,7 +150,7 @@ int cpu_execute_request(sb_request_t *r, int thread_id)
 void cpu_print_mode(void)
 {
   log_text(LOG_INFO, "Doing CPU performance benchmark\n");  
-  log_text(LOG_NOTICE, "Primer numbers limit: %d\n", max_prime);
+  log_text(LOG_NOTICE, "Prime numbers limit: %d\n", max_prime);
 }
 
 int cpu_done(void)
