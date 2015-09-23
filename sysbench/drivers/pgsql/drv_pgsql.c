@@ -512,8 +512,8 @@ int pgsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
     status = PQresultStatus(pgres);
     if (status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK)
     {
-      log_text(LOG_FATAL, "query execution failed: %d", PQerrorMessage(pgcon));
-      log_text(LOG_DEBUG, "status = %d", status);
+      log_text(LOG_FATAL, "PQexecPrepared() failed: %d %s", status,
+               PQerrorMessage(pgcon));
       return SB_DB_ERROR_FAILED;
     }
     rs->ptr = (void *)pgres;
@@ -581,8 +581,8 @@ int pgsql_drv_query(db_conn_t *sb_conn, const char *query,
   status = PQresultStatus(pgres);
   if (status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK)
   {
-    log_text(LOG_ALERT, "failed to execute PgSQL query: `%s`:", query);
-    log_text(LOG_ALERT, "error: %s", PQerrorMessage(con));
+    log_text(LOG_ALERT, "failed to execute query: %s:", query);
+    log_text(LOG_ALERT, "error: %d %s", status, PQerrorMessage(con));
     return SB_DB_ERROR_FAILED;
   }
 
