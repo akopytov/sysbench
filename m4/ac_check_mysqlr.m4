@@ -66,9 +66,13 @@ then
         AC_MSG_ERROR([mysql_config executable not found
 ********************************************************************************
 ERROR: cannot find MySQL libraries. If you want to compile with MySQL support,
-       you must either specify file locations explicitly using 
-       --with-mysql-includes and --with-mysql-libs options, or make sure path to 
-       mysql_config is listed in your PATH environment variable. If you want to 
+       please install the package containing MySQL client libraries and headers.
+       On Debian-based systems the package name is libmysqlclient-dev.
+       On RedHat-based systems, it is mysql-devel.
+       If you have those libraries installed in non-standard locations,
+       you must either specify file locations explicitly using
+       --with-mysql-includes and --with-mysql-libs options, or make sure path to
+       mysql_config is listed in your PATH environment variable. If you want to
        disable MySQL support, use --without-mysql option.
 ********************************************************************************
 ])
