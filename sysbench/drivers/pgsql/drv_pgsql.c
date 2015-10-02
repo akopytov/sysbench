@@ -466,6 +466,34 @@ int pgsql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 }
 
 
+/* Check query execution status */
+
+
+static int pgsql_check_status(PGconn *pgcon, PGresult *pgres,
+                              const char *funcname)
+{
+  ExecStatusType status;
+
+  status = PQresultStatus(pgres);
+  if (status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK)
+  {
+    const char * const errmsg = PQerrorMessage(pgcon);
+
+    if (strstr(errmsg, "deadlock detected") ||
+        strstr(errmsg, "duplicate key value violates unique constraint"))
+    {
+      PQexec(pgcon, "ROLLBACK");
+      return SB_DB_ERROR_DEADLOCK;
+    }
+
+    log_text(LOG_FATAL, "%s() failed: %d %s", funcname, status, errmsg);
+    return SB_DB_ERROR_FAILED;
+  }
+
+  return SB_DB_ERROR_NONE;
+}
+
+
 /* Execute prepared statement */
 
 
@@ -474,14 +502,14 @@ int pgsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
   db_conn_t       *con = stmt->connection;
   PGconn          *pgcon = (PGconn *)con->ptr;
   PGresult        *pgres;
-  ExecStatusType  status;
   pg_stmt_t       *pgstmt;
   char            *buf = NULL;
   unsigned int    buflen = 0;
   unsigned int    i, j, vcnt;
   char            need_realloc;
   int             n;
- 
+  int             rc;
+
   if (!stmt->emulated)
   {
     pgstmt = stmt->ptr;
@@ -509,23 +537,13 @@ int pgsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
 
     pgres = PQexecPrepared(pgcon, pgstmt->name, pgstmt->nparams,
                            (const char **)pgstmt->pvalues, NULL, NULL, 1);
-    status = PQresultStatus(pgres);
-    if (status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK)
-    {
-      const char * const errmsg = PQerrorMessage(pgcon);
 
-      if (strstr(errmsg, "deadlock detected"))
-      {
-        PQexec(pgcon, "ROLLBACK");
-        return SB_DB_ERROR_DEADLOCK;
-      }
+    rc = pgsql_check_status(pgcon, pgres, "PQexecPrepared");
 
-      log_text(LOG_FATAL, "PQexecPrepared() failed: %d %s", status, errmsg);
-      return SB_DB_ERROR_FAILED;
-    }
-    rs->ptr = (void *)pgres;
+    if (rc == SB_DB_ERROR_NONE)
+      rs->ptr = (void *)pgres;
 
-    return SB_DB_ERROR_NONE;
+    return rc;
   }
 
   /* Use emulation */
@@ -580,30 +598,19 @@ int pgsql_drv_query(db_conn_t *sb_conn, const char *query,
 {
   PGconn         *con = sb_conn->ptr;
   PGresult       *pgres;
-  ExecStatusType status;
+  int            rc;
 
   (void)rs; /* unused */
 
   pgres = PQexec(con, query);
-  status = PQresultStatus(pgres);
-  if (status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK)
-  {
-    const char * const errmsg = PQerrorMessage(con);
+  rc = pgsql_check_status(con, pgres, "PQexec");
 
-    if (strstr(errmsg, "deadlock detected"))
-    {
-      PQexec(con, "ROLLBACK");
-      return SB_DB_ERROR_DEADLOCK;
-    }
+  if (rc == SB_DB_ERROR_NONE)
+    rs->ptr = pgres;
+  else if (rc == SB_DB_ERROR_FAILED)
+    log_text(LOG_FATAL, "failed query: %s", query);
 
-    log_text(LOG_ALERT, "failed to execute query: %s:", query);
-    log_text(LOG_ALERT, "error: %d %s", status, errmsg);
-    return SB_DB_ERROR_FAILED;
-  }
-
-  rs->ptr = pgres;
-  
-  return SB_DB_ERROR_NONE;
+  return rc;
 }
 
 
