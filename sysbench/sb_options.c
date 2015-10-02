@@ -82,9 +82,21 @@ int sb_register_arg_set(sb_arg_t *set)
   return 0;
 }
 
-option_t *sb_find_option(char *name)
+option_t *sb_find_option(const char *name)
 {
   return find_option(&options, name);
+}
+
+static void read_config_file(const char *filename)
+{
+  /* read config options from file */
+  FILE *fp = fopen(filename, "r");
+  if (!fp) {
+    perror(filename);
+  } else {
+    read_config(fp, &options);
+    fclose(fp);
+  }
 }
 
 int set_option(const char *name, const char *value, sb_arg_type_t type)
@@ -119,6 +131,9 @@ int set_option(const char *name, const char *value, sb_arg_type_t type)
       for (tmp = strtok(tmp, ","); tmp != NULL; tmp = strtok(NULL, ","))
         add_value(&opt->values, tmp);
       free(tmp);
+      break;
+    case SB_ARG_TYPE_FILE:
+      read_config_file(value);
       break;
     default:
       printf("Unknown argument type: %d", type);
@@ -162,6 +177,9 @@ void sb_print_options(sb_arg_t *opts)
         break;
       case SB_ARG_TYPE_STRING:
         fmt = "=STRING";
+        break;
+      case SB_ARG_TYPE_FILE:
+        fmt = "=FILENAME";
         break;
       default:
         fmt = "<UNKNOWN>";
@@ -640,6 +658,8 @@ sb_list_t *read_config(FILE *fp, sb_list_t *options)
 
     if ((newopt = add_option(options, buf)) == NULL)
       return NULL;
+
+    free_values(&newopt->values);
     while (*tmp != '\0')
     {
       if (isspace((int)*tmp))
