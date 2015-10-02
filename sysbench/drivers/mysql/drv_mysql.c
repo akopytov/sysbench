@@ -69,7 +69,7 @@ static sb_arg_t mysql_drv_args[] =
   {"mysql-ssl", "use SSL connections, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
   {"myisam-max-rows", "max-rows parameter for MyISAM tables", SB_ARG_TYPE_INT, "1000000"},
   {"mysql-create-options", "additional options passed to CREATE TABLE", SB_ARG_TYPE_STRING, ""},
-  {"mysql-dry-run", "Dry run, pretent that all MySQL client API calls are successful without executing them", SB_ARG_TYPE_FLAG, NULL},
+  {"mysql-dry-run", "Dry run, pretent that all MySQL client API calls are successful without executing them", SB_ARG_TYPE_FLAG, "off"},
   
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
