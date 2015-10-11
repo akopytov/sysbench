@@ -249,7 +249,7 @@ local unsigned long crc32_little(crc, buf, len)
         len--;
     }
 
-    buf4 = (const u4 FAR *)buf;
+    buf4 = (const u4 FAR *)(void *)buf;
     while (len >= 32) {
         DOLIT32;
         len -= 32;
@@ -289,7 +289,7 @@ local unsigned long crc32_big(crc, buf, len)
         len--;
     }
 
-    buf4 = (const u4 FAR *)buf;
+    buf4 = (const u4 FAR *)(void *)buf;
     buf4--;
     while (len >= 32) {
         DOBIG32;
