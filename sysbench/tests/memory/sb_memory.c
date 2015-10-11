@@ -55,7 +55,7 @@ static sb_arg_t memory_args[] =
 /* Memory test operations */
 static int memory_init(void);
 static void memory_print_mode(void);
-static sb_request_t memory_get_request(void);
+static sb_request_t memory_get_request(int);
 static int memory_execute_request(sb_request_t *, int);
 static void memory_print_stats(sb_stat_t type);
 
@@ -216,7 +216,7 @@ int memory_init(void)
 }
 
 
-sb_request_t memory_get_request(void)
+sb_request_t memory_get_request(int thread_id __attribute__((unused)))
 {
   sb_request_t      req;
   sb_mem_request_t  *mem_req = &req.u.mem_request;
@@ -259,7 +259,7 @@ int memory_execute_request(sb_request_t *sb_req, int thread_id)
     buf = buffer;
   else
     buf = buffers[thread_id];
-  end = (int *)((char *)buf + memory_block_size);
+  end = (int *)(void *)((char *)buf + memory_block_size);
 
   if (memory_access_rnd)
   {

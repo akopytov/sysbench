@@ -53,7 +53,7 @@ static sb_arg_t threads_args[] =
 static int threads_init(void);
 static int threads_prepare(void);
 static void threads_print_mode(void);
-static sb_request_t threads_get_request(void);
+static sb_request_t threads_get_request(int);
 static int threads_execute_request(sb_request_t *, int);
 static int threads_cleanup(void);
 
@@ -138,7 +138,7 @@ int threads_cleanup(void)
 }
 
 
-sb_request_t threads_get_request(void)
+sb_request_t threads_get_request(int thread_id __attribute__((unused)))
 {
   sb_request_t         sb_req;
   sb_threads_request_t *threads_req = &sb_req.u.threads_request;
