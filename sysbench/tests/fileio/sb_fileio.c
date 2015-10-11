@@ -1499,7 +1499,9 @@ int file_fsync(unsigned int file_id, int thread_id)
       return !FlushFileBuffers(fd);
 #endif
 
-#ifdef HAVE_FDATASYNC    
+#ifdef F_FULLFSYNC
+      return fcntl(fd, F_FULLFSYNC) != -1;
+#elif defined(HAVE_FDATASYNC)
     return fdatasync(fd);
 #else
     log_text(LOG_ALERT, "Unknown fsync mode: %d", file_fsync_mode);
