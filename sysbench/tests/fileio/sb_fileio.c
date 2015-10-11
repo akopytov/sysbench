@@ -138,6 +138,15 @@ typedef struct
 static sb_aio_context_t *aio_ctxts;
 #endif
 
+typedef struct
+{
+  void           *buffer;
+  unsigned int    buffer_file_id;
+  long long       buffer_pos;
+} sb_per_thread_t;
+
+static sb_per_thread_t	*per_thread;
+
 /* Test options */
 static unsigned int      num_files;
 static long long         total_size;
@@ -184,9 +193,6 @@ static unsigned long file_page_mask;
 /* Array of file descriptors */
 static FILE_DESCRIPTOR *files;
 
-/* Buffer for all I/O operations */
-static void *buffer;
-
 /* test mode type */
 static file_test_mode_t test_mode;
 
@@ -229,7 +235,7 @@ static int file_cmd_cleanup(void);
 static int file_init(void);
 static void file_print_mode(void);
 static int file_prepare(void);
-static sb_request_t file_get_request(void);
+static sb_request_t file_get_request(int thread_id);
 static int file_execute_request(sb_request_t *, int);
 #ifdef HAVE_LIBAIO
 static int file_thread_done(int);
@@ -274,7 +280,7 @@ static int parse_arguments(void);
 static void clear_stats(void);
 static void init_vars(void);
 static sb_request_t file_get_seq_request(void);
-static sb_request_t file_get_rnd_request(void);
+static sb_request_t file_get_rnd_request(int thread_id);
 static void check_seq_req(sb_file_request_t *, sb_file_request_t *);
 static const char *get_io_mode_str(file_io_mode_t mode);
 static const char *get_test_mode_str(file_test_mode_t mode);
@@ -389,22 +395,27 @@ int file_done(void)
     return 1;
 #endif
 
-  if (buffer != NULL)
-    sb_free_memaligned(buffer);
+  for (i = 0; i < sb_globals.num_threads; i++)
+  {
+    if (per_thread[i].buffer != NULL)
+      sb_free_memaligned(per_thread[i].buffer);
+  }
+
+  free(per_thread);
 
   sb_percentile_done(&local_percentile);
 
   return 0;
 }
 
-sb_request_t file_get_request(void)
+sb_request_t file_get_request(int thread_id)
 {
   if (test_mode == MODE_WRITE || test_mode == MODE_REWRITE ||
       test_mode == MODE_READ)
     return file_get_seq_request();
   
   
-  return file_get_rnd_request();
+  return file_get_rnd_request(thread_id);
 }
 
 
@@ -499,25 +510,16 @@ sb_request_t file_get_seq_request(void)
   {
     current_file++;
     position=0;
-
-    if (sb_globals.validate)
-    {
-      check_seq_req(&prev_req, file_req);
-      prev_req = *file_req;
-    }
-    
-    SB_THREAD_MUTEX_UNLOCK(); 
-    return sb_req; /* This request is valid even for last file */
   }      
   
-  SB_THREAD_MUTEX_UNLOCK(); 
-
   if (sb_globals.validate)
   {
     check_seq_req(&prev_req, file_req);
     prev_req = *file_req;
   }
   
+  SB_THREAD_MUTEX_UNLOCK(); 
+
   return sb_req;    
 }
 
@@ -525,7 +527,7 @@ sb_request_t file_get_seq_request(void)
 /* Request generatior for random tests */
 
 
-sb_request_t file_get_rnd_request(void)
+sb_request_t file_get_rnd_request(int thread_id)
 {
   sb_request_t         sb_req;
   sb_file_request_t    *file_req = &sb_req.u.file_request;
@@ -533,7 +535,8 @@ sb_request_t file_get_rnd_request(void)
   unsigned long long   tmppos;
   int                  real_mode = test_mode;
   int                  mode = test_mode;
-  
+  unsigned int         i;
+
   sb_req.type = SB_REQ_TYPE_FILE;
   SB_THREAD_MUTEX_LOCK(); 
   
@@ -598,17 +601,36 @@ sb_request_t file_get_rnd_request(void)
     }
   }
 
-  randnum=sb_rnd();
   if (mode==MODE_RND_WRITE) /* mode shall be WRITE or RND_WRITE only */
     file_req->operation = FILE_OP_TYPE_WRITE;
-  else     
+  else
     file_req->operation = FILE_OP_TYPE_READ;
 
-  tmppos = (long long)((double)randnum / (double)SB_MAX_RND * (double)(total_size));
-  tmppos = tmppos - (tmppos % (long long)file_block_size);
-  file_req->file_id = (int)(tmppos / (long long)file_size);
-  file_req->pos = (long long)(tmppos % (long long)file_size);
+retry:
+  randnum = sb_rnd();
+
+  tmppos = (long long) ((double) randnum / SB_MAX_RND * total_size);
+  tmppos = tmppos - (tmppos % (long long) file_block_size);
+  file_req->file_id = (int) (tmppos / (long long) file_size);
+  file_req->pos = (long long) (tmppos % (long long) file_size);
   file_req->size = file_block_size;
+
+  if (sb_globals.validate)
+  {
+    /*
+       For the multi-threaded validation test we have to make sure the block is
+       not being used by another thread
+    */
+    for (i = 0; i < sb_globals.num_threads; i++)
+    {
+      if (i != (unsigned) thread_id && per_thread[i].buffer_file_id == file_req->file_id &&
+          per_thread[i].buffer_pos == file_req->pos)
+        goto retry;
+    }
+  }
+
+  per_thread[thread_id].buffer_file_id = file_req->file_id;
+  per_thread[thread_id].buffer_pos = file_req->pos;
 
   req_performed++;
   if (file_req->operation == FILE_OP_TYPE_WRITE) 
@@ -661,11 +683,11 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
 
       /* Store checksum and offset in a buffer when in validation mode */
       if (sb_globals.validate)
-        file_fill_buffer(buffer, file_req->size, file_req->pos);
+        file_fill_buffer(per_thread[thread_id].buffer, file_req->size, file_req->pos);
                          
       LOG_EVENT_START(msg, thread_id);
-      if(file_pwrite(file_req->file_id, buffer, file_req->size, file_req->pos,
-                     thread_id)
+      if(file_pwrite(file_req->file_id, per_thread[thread_id].buffer,
+                     file_req->size, file_req->pos, thread_id)
          != (ssize_t)file_req->size)
       {
         log_errno(LOG_FATAL, "Failed to write file! file: " FD_FMT " pos: %lld", 
@@ -704,8 +726,8 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
       break;
     case FILE_OP_TYPE_READ:
       LOG_EVENT_START(msg, thread_id);
-      if(file_pread(file_req->file_id, buffer, file_req->size, file_req->pos,
-                    thread_id)
+      if(file_pread(file_req->file_id, per_thread[thread_id].buffer,
+                    file_req->size, file_req->pos, thread_id)
          != (ssize_t)file_req->size)
       {
         log_errno(LOG_FATAL, "Failed to read file! file: " FD_FMT " pos: %lld",
@@ -719,7 +741,7 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
 
       /* Validate block if run with validation enabled */
       if (sb_globals.validate &&
-          file_validate_buffer(buffer, file_req->size, file_req->pos))
+          file_validate_buffer(per_thread[thread_id].buffer, file_req->size, file_req->pos))
       {
         log_text(LOG_FATAL,
           "Validation failed on file " FD_FMT ", block offset 0x%x, exiting...",
@@ -1041,12 +1063,12 @@ int create_files(void)
     {
       /*
         If in validation mode, fill buffer with random values
-        and write checksum
+        and write checksum. Not called in parallel, so use per_thread[0].
       */
       if (sb_globals.validate)
-        file_fill_buffer(buffer, file_block_size, offset);
+        file_fill_buffer(per_thread[0].buffer, file_block_size, offset);
                          
-      if (write(fd, buffer, file_block_size) < 0)
+      if (write(fd, per_thread[0].buffer, file_block_size) < 0)
         goto error;
     }
     
@@ -1655,7 +1677,7 @@ ssize_t file_pread(unsigned int file_id, void *buf, ssize_t count,
                  fd, page_addr);
     if (start == MAP_FAILED)
       return 0;
-    memcpy(buffer, (char *)start + page_offset, count);
+    memcpy(buf, (char *)start + page_offset, count);
     munmap(start, count + page_offset);
     return count;
 # else
@@ -1664,7 +1686,7 @@ ssize_t file_pread(unsigned int file_id, void *buf, ssize_t count,
     (void)page_offset; /* unused */
     
     /* We already have all files mapped on 64-bit platforms */
-    memcpy(buffer, (char *)mmaps[file_id] + offset, count);
+    memcpy(buf, (char *)mmaps[file_id] + offset, count);
 
     return count;
 # endif
@@ -1716,7 +1738,7 @@ ssize_t file_pwrite(unsigned int file_id, void *buf, ssize_t count,
 
     if (start == MAP_FAILED)
       return 0;
-    memcpy((char *)start + page_offset, buffer, count);
+    memcpy((char *)start + page_offset, buf, count);
     munmap(start, count + page_offset);
 
     return count;
@@ -1726,7 +1748,7 @@ ssize_t file_pwrite(unsigned int file_id, void *buf, ssize_t count,
     (void)page_offset; /* unused */
 
     /* We already have all files mapped on 64-bit platforms */
-    memcpy((char *)mmaps[file_id] + offset, buffer, count);
+    memcpy((char *)mmaps[file_id] + offset, buf, count);
 
     return count;
 # endif    
@@ -1743,6 +1765,7 @@ ssize_t file_pwrite(unsigned int file_id, void *buf, ssize_t count,
 int parse_arguments(void)
 {
   char         *mode;
+  unsigned int  i;
   
   num_files = sb_get_value_int("file-num");
 
@@ -1898,13 +1921,17 @@ int parse_arguments(void)
     return 1;
   }
 
-  buffer = sb_memalign(file_max_request_size);
+  per_thread = malloc(sizeof(*per_thread) * sb_globals.num_threads);
+  for (i = 0; i < sb_globals.num_threads; i++)
+  {
+    per_thread[i].buffer = sb_memalign(file_max_request_size);
+  }
 
   return 0;
 }
 
 
-/* check if two request given out are really sequential) */
+/* check if two requests are sequential */
 
 
 void check_seq_req(sb_file_request_t *prev_req, sb_file_request_t *r)
@@ -1916,7 +1943,8 @@ void check_seq_req(sb_file_request_t *prev_req, sb_file_request_t *r)
   if (prev_req->operation == FILE_OP_TYPE_NULL)
     return;
   /* check files */
-  if (r->file_id - prev_req->file_id>1)
+  if (r->file_id - prev_req->file_id>1 &&
+      !(r->file_id == 0 && prev_req->file_id == num_files-1))
   {
     log_text(LOG_WARNING,
              "Discovered too large file difference in seq requests!");
@@ -2057,10 +2085,10 @@ void file_fill_buffer(unsigned char *buf, unsigned int len,
     buf[i] = sb_rnd() & 0xFF;
 
   /* Store the checksum */
-  *(int *)(buf + i) = (int)crc32(0, (unsigned char *)buf, len -
+  *(int *)(void *)(buf + i) = (int)crc32(0, (unsigned char *)buf, len -
                                  (FILE_CHECKSUM_LENGTH + FILE_OFFSET_LENGTH));
   /* Store the offset */
-  *(long *)(buf + i + FILE_CHECKSUM_LENGTH) = offset;
+  *(long *)(void *)(buf + i + FILE_CHECKSUM_LENGTH) = offset;
 }
 
 
@@ -2076,19 +2104,19 @@ int file_validate_buffer(unsigned char  *buf, unsigned int len, size_t offset)
   
   checksum = (unsigned int)crc32(0, (unsigned char *)buf, cs_offset);
 
-  if (checksum != *(unsigned int *)(buf + cs_offset))
+  if (checksum != *(unsigned int *)(void *)(buf + cs_offset))
   {
     log_text(LOG_FATAL, "Checksum mismatch in block: ", offset);
     log_text(LOG_FATAL, "    Calculated value: 0x%x    Stored value: 0x%x",
-             checksum, *(unsigned int *)(buf + cs_offset));
+             checksum, *(unsigned int *)(void *)(buf + cs_offset));
     return 1;
   }
 
-  if (offset != *(size_t *)(buf + cs_offset + FILE_CHECKSUM_LENGTH))
+  if (offset != *(size_t *)(void *)(buf + cs_offset + FILE_CHECKSUM_LENGTH))
   {
     log_text(LOG_FATAL, "Offset mismatch in block:");
     log_text(LOG_FATAL, "   Actual offset: %ld    Stored offset: %ld",
-             offset, *(size_t *)(buf + cs_offset + FILE_CHECKSUM_LENGTH));
+             offset, *(size_t *)(void *)(buf + cs_offset + FILE_CHECKSUM_LENGTH));
     return 1;
   }
 

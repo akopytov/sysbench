@@ -90,7 +90,7 @@ static unsigned int nevents;
 
 static int sb_lua_init(void);
 static int sb_lua_done(void);
-static sb_request_t sb_lua_get_request(void);
+static sb_request_t sb_lua_get_request(int thread_id);
 static int sb_lua_op_execute_request(sb_request_t *, int);
 static int sb_lua_op_thread_init(int);
 static int sb_lua_op_thread_done(int);
@@ -234,7 +234,7 @@ int sb_lua_init(void)
   return 0;
 }
 
-sb_request_t sb_lua_get_request(void)
+sb_request_t sb_lua_get_request(int __attribute__((unused))thread_id)
 {
   sb_request_t req;
 

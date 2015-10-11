@@ -38,7 +38,7 @@ static sb_arg_t cpu_args[] =
 /* CPU test operations */
 static int cpu_init(void);
 static void cpu_print_mode(void);
-static sb_request_t cpu_get_request(void);
+static sb_request_t cpu_get_request(int thread_id);
 static int cpu_execute_request(sb_request_t *, int);
 static int cpu_done(void);
 
@@ -97,7 +97,7 @@ int cpu_init(void)
 }
 
 
-sb_request_t cpu_get_request(void)
+sb_request_t cpu_get_request(int __attribute__ ((unused)) thread_id)
 {
   sb_request_t req;
   

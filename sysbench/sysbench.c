@@ -213,7 +213,7 @@ static sb_request_t get_request(sb_test_t *test, int thread_id)
   (void)thread_id; /* unused */
 
   if (test->ops.get_request != NULL)
-    r = test->ops.get_request();
+    r = test->ops.get_request(thread_id);
   else
   { 
     log_text(LOG_ALERT, "Unsupported mode! Creating NULL request.");
