@@ -965,7 +965,7 @@ const char *get_test_mode_str(file_test_mode_t mode)
 
 static int convert_extra_flags(file_flags_t extra_flags, int *open_flags)
 {
-  switch (file_extra_flags) {
+  switch (extra_flags) {
   case SB_FILE_FLAG_NORMAL:
 #ifdef _WIN32
     *open_flags = FILE_ATTRIBUTE_NORMAL;
@@ -2064,7 +2064,8 @@ static FILE_DESCRIPTOR sb_open(const char *name)
 #endif
 
 #ifdef HAVE_DIRECTIO
-  if (VALID_FILE(file) && directio(file, DIRECTIO_ON))
+  if (VALID_FILE(file) && file_extra_flags == SB_FILE_FLAG_DIRECTIO &&
+      directio(file, DIRECTIO_ON))
   {
     log_errno(LOG_FATAL, "directio() failed");
     return SB_INVALID_FILE;
