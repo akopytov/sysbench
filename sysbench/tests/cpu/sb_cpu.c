@@ -28,6 +28,12 @@
 
 #include "sysbench.h"
 
+#ifdef _GNUC
+#define ATTR_UNUSED __attribute__((unused))
+#else
+#define ATTR_UNUSED
+#endif
+
 /* CPU test arguments */
 static sb_arg_t cpu_args[] =
 {
@@ -97,7 +103,7 @@ int cpu_init(void)
 }
 
 
-sb_request_t cpu_get_request(int __attribute__ ((unused)) thread_id)
+sb_request_t cpu_get_request(int ATTR_UNUSED thread_id)
 {
   sb_request_t req;
   
