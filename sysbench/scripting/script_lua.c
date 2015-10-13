@@ -234,9 +234,11 @@ int sb_lua_init(void)
   return 0;
 }
 
-sb_request_t sb_lua_get_request(int __attribute__((unused))thread_id)
+sb_request_t sb_lua_get_request(int thread_id)
 {
   sb_request_t req;
+
+  (void) thread_id; /* unused */
 
   if (sb_globals.max_requests != 0 && nevents >= sb_globals.max_requests)
   {

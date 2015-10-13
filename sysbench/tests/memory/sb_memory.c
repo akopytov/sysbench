@@ -216,11 +216,13 @@ int memory_init(void)
 }
 
 
-sb_request_t memory_get_request(int thread_id __attribute__((unused)))
+sb_request_t memory_get_request(int thread_id)
 {
   sb_request_t      req;
   sb_mem_request_t  *mem_req = &req.u.mem_request;
-  
+
+  (void) thread_id; /* unused */
+
   SB_THREAD_MUTEX_LOCK();
   if (total_bytes >= memory_total_size)
   {

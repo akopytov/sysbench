@@ -97,10 +97,12 @@ int cpu_init(void)
 }
 
 
-sb_request_t cpu_get_request(int __attribute__ ((unused)) thread_id)
+sb_request_t cpu_get_request(int thread_id)
 {
   sb_request_t req;
-  
+
+  (void) thread_id; /* unused */
+
   if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
   {
     req.type = SB_REQ_TYPE_NULL;

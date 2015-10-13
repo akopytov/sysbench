@@ -138,10 +138,12 @@ int threads_cleanup(void)
 }
 
 
-sb_request_t threads_get_request(int thread_id __attribute__((unused)))
+sb_request_t threads_get_request(int thread_id)
 {
   sb_request_t         sb_req;
   sb_threads_request_t *threads_req = &sb_req.u.threads_request;
+
+  (void) thread_id; /* unused */
 
   SB_THREAD_MUTEX_LOCK();
   if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
