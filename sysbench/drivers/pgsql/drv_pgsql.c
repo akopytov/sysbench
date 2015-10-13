@@ -90,8 +90,6 @@ static drv_caps_t pgsql_drv_caps =
   0,    /* needs_commit */
   1,    /* serial */
   0,    /* unsigned int */
-  
-  NULL  /* table_options_str */
 };
 
 /* Describes the PostgreSQL prepared statement */
