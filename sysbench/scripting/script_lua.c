@@ -19,6 +19,12 @@
 # include "config.h"
 #endif
 
+#ifdef _GNUC
+#define ATTR_UNUSED __attribute__((unused))
+#else
+#define ATTR_UNUSED
+#endif
+
 #include "script_lua.h"
 #include "lua.h"
 #include "lualib.h"
@@ -234,7 +240,7 @@ int sb_lua_init(void)
   return 0;
 }
 
-sb_request_t sb_lua_get_request(int __attribute__((unused))thread_id)
+sb_request_t sb_lua_get_request(int ATTR_UNUSED thread_id)
 {
   sb_request_t req;
 

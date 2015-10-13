@@ -27,6 +27,12 @@
 # include <pthread.h>
 #endif
 
+#ifdef _GNUC
+#define ATTR_UNUSED __attribute__((unused))
+#else
+#define ATTR_UNUSED
+#endif
+
 #include "sysbench.h"
 
 /* How to test scheduler pthread_yield or sched_yield */
@@ -138,7 +144,7 @@ int threads_cleanup(void)
 }
 
 
-sb_request_t threads_get_request(int thread_id __attribute__((unused)))
+sb_request_t threads_get_request(int ATTR_UNUSED thread_id)
 {
   sb_request_t         sb_req;
   sb_threads_request_t *threads_req = &sb_req.u.threads_request;

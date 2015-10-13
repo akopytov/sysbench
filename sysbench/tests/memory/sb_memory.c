@@ -32,6 +32,12 @@
 # include <sys/shm.h>
 #endif
 
+#ifdef _GNUC
+#define ATTR_UNUSED __attribute__((unused))
+#else
+#define ATTR_UNUSED
+#endif
+
 #define LARGE_PAGE_SIZE (4UL * 1024 * 1024)
 
 /* Memory test arguments */
@@ -216,7 +222,7 @@ int memory_init(void)
 }
 
 
-sb_request_t memory_get_request(int thread_id __attribute__((unused)))
+sb_request_t memory_get_request(int ATTR_UNUSED thread_id)
 {
   sb_request_t      req;
   sb_mem_request_t  *mem_req = &req.u.mem_request;
