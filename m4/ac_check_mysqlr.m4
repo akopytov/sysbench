@@ -86,8 +86,7 @@ ERROR: cannot find MySQL libraries. If you want to compile with MySQL support,
         if test [ -z "$ac_cv_mysql_libs" ]
         then
             AC_MSG_CHECKING(MySQL linker flags)
-            MYSQL_LIBS=`${mysqlconfig} --libs | sed -e \
-            's/-lmysqlclient /-lmysqlclient_r /' -e 's/-lmysqlclient$/-lmysqlclient_r/'`
+            MYSQL_LIBS=`${mysqlconfig} --libs_r`
             AC_MSG_RESULT($MYSQL_LIBS)
         fi
     fi
