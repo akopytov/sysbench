@@ -38,6 +38,6 @@ function cleanup()
 
    for i = 1,num_threads do
       print("Dropping table 'sbtest" .. i .. "'...")
-      db_query("DROP TABLE sbtest".. i )
+      db_query("DROP TABLE IF EXISTS sbtest".. i )
    end
 end
