@@ -7,7 +7,7 @@ function prepare()
 
    db_connect()
 
-   for i = 1,num_threads do
+   for i = 0,num_threads-1 do
       db_query([[
 CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
 id INTEGER UNSIGNED NOT NULL,
@@ -42,7 +42,7 @@ function cleanup()
 
    table_size = table_size or 10000
 
-   for i = 1,num_threads do
+   for i = 0,num_threads-1 do
       print("Dropping table 'sbtest" .. i .. "'...")
       db_query("DROP TABLE IF EXISTS sbtest".. i )
    end
