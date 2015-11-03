@@ -2,6 +2,8 @@
 -- Bulk insert tests                                                          --
 -- -------------------------------------------------------------------------- --
 
+cursize=0
+
 function prepare()
    local i
 
@@ -24,16 +26,17 @@ end
 
 function event(thread_id)
    local i
-   local table_id
 
-   table_id = thread_id
-
-      db_bulk_insert_init("INSERT INTO sbtest" .. table_id .. " VALUES")
-
-   for i = 1,table_size do
-      db_bulk_insert_next("(" .. i .. "," .. i .. ")")
+   if (cursize == 0) then
+      db_bulk_insert_init("INSERT INTO sbtest" .. thread_id .. " VALUES")
    end
 
+   cursize = cursize + 1
+
+   db_bulk_insert_next("(" .. cursize .. "," .. cursize .. ")")
+end
+
+function thread_done(thread_9d)
    db_bulk_insert_done()
 end
 
