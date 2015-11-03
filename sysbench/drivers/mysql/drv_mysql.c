@@ -694,10 +694,10 @@ static int check_error(db_conn_t *sb_con, const char *func, const char *query)
   }
 
   if (query)
-    log_text(LOG_ALERT, "%s for query '%s' failed: %u %s",
-             func, query, error, mysql_error(con));
+    log_text(LOG_ALERT, "%s returned error %u (%s) for query '%s'",
+             func, error, mysql_error(con), query);
   else
-    log_text(LOG_ALERT, "%s failed: %u %s",
+    log_text(LOG_ALERT, "%s returned error %u (%s)",
              func, error, mysql_error(con));
 
   return SB_DB_ERROR_FAILED;
