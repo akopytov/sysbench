@@ -2,6 +2,22 @@
 -- Bulk insert tests                                                          --
 -- -------------------------------------------------------------------------- --
 
+function prepare()
+   local i
+
+   db_connect()
+
+   for i = 1,num_threads do
+      db_query([[
+CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
+id INTEGER UNSIGNED NOT NULL,
+k INTEGER UNSIGNED DEFAULT '0' NOT NULL,
+PRIMARY KEY (id)
+) ENGINE = InnoDB
+]])
+   end
+end
+
 function thread_init(thread_id)
    table_size = table_size or 10000
 end
@@ -11,16 +27,6 @@ function event(thread_id)
    local table_id
 
    table_id = thread_id
-
-   db_query("DROP TABLE IF EXISTS sbtest" .. table_id)
-
-   db_query([[
-CREATE TABLE IF NOT EXISTS sbtest]] .. table_id .. [[ (
-id INTEGER UNSIGNED NOT NULL,
-k INTEGER UNSIGNED DEFAULT '0' NOT NULL,
-PRIMARY KEY (id)
-) ENGINE = InnoDB
-]])
 
       db_bulk_insert_init("INSERT INTO sbtest" .. table_id .. " VALUES")
 
