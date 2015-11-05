@@ -20,10 +20,6 @@ PRIMARY KEY (id)
    end
 end
 
-function thread_init(thread_id)
-   table_size = table_size or 10000
-end
-
 function event(thread_id)
    local i
 
@@ -42,8 +38,6 @@ end
 
 function cleanup()
    local i
-
-   table_size = table_size or 10000
 
    for i = 0,num_threads-1 do
       print("Dropping table 'sbtest" .. i .. "'...")
