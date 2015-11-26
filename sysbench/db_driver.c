@@ -851,7 +851,7 @@ void db_print_stats(sb_stat_t type)
                   "threads: %d, tps: %4.2f, reads: %4.2f, writes: %4.2f, "
                   "response time: %4.2fms (%u%%), errors: %4.2f, "
                   "reconnects: %5.2f",
-                  sb_globals.num_threads,
+                  sb_globals.num_running,
                   (transactions - last_transactions) / seconds,
                   (read_ops - last_read_ops) / seconds,
                   (write_ops - last_write_ops) / seconds,
