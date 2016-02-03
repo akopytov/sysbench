@@ -132,7 +132,14 @@ function set_vars()
    oltp_distinct_ranges = oltp_distinct_ranges or 1
    oltp_index_updates = oltp_index_updates or 1
    oltp_non_index_updates = oltp_non_index_updates or 1
+   oltp_delete_inserts = oltp_delete_inserts or 1
 
+   if (oltp_range_selets = 'off') then
+   	oltp_range_selects = false
+   else
+   	oltp_range_selects = true
+   end
+   
    if (oltp_auto_inc == 'off') then
       oltp_auto_inc = false
    else
