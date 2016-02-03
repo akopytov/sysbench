@@ -75,7 +75,7 @@ function event(thread_id)
 
    for idx=1, oltp_delete_inserts do
       
-   idx = sb_rand(1, oltp_table_size)
+   i = sb_rand(1, oltp_table_size)
 
    rs = db_query("DELETE FROM " .. table_name .. " WHERE id=" .. i)
    
