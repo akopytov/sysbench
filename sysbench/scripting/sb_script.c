@@ -22,9 +22,7 @@
 
 #include "sb_script.h"
 
-#ifdef HAVE_LUA
-# include "script_lua.h"
-#endif
+#include "script_lua.h"
 
 static sb_test_t test;
 
@@ -34,10 +32,8 @@ sb_test_t *script_load(const char *testname)
 {
   test.sname = strdup(testname);
 
-#ifdef HAVE_LUA
   if (!script_load_lua(testname, &test))
     return &test;
-#endif
-  
+
   return NULL;
 }

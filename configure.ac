@@ -129,8 +129,8 @@ AC_ARG_WITH([pgsql],
 )
 AC_CACHE_CHECK([whether to compile with PostgreSQL support], [ac_cv_use_pgsql], [ac_cv_use_pgsql=yes])
 
-# Check if we should compile with Lua interpreter support
-AC_LUA_DEVEL
+# Set LuaJIT flags
+SB_LUAJIT
 
 # Check if we should enable large files support
 AC_ARG_ENABLE(largefile,
@@ -459,7 +459,5 @@ sysbench/tests/threads/Makefile
 sysbench/tests/mutex/Makefile
 sysbench/tests/db/Makefile
 sysbench/scripting/Makefile
-sysbench/scripting/lua/Makefile
-sysbench/scripting/lua/src/Makefile
 ])
 AC_OUTPUT

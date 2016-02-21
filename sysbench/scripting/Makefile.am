@@ -15,15 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-if USE_LUA
-SUBDIRS = lua .
-lua_sources = script_lua.c script_lua.h
-AM_CPPFLAGS += -I$(srcdir)/lua/src
-endif
-
 noinst_LIBRARIES = libsbscript.a
 
-libsbscript_a_SOURCES = sb_script.c sb_script.h $(lua_sources)
+libsbscript_a_SOURCES = sb_script.c sb_script.h script_lua.c script_lua.h
 
-libsbscript_a_CPPFLAGS = $(AM_CPPFLAGS)
-
+libsbscript_a_CPPFLAGS = $(LUAJIT_CFLAGS) $(AM_CPPFLAGS)
