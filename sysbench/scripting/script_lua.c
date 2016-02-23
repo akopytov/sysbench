@@ -1,4 +1,5 @@
 /* Copyright (C) 2006 MySQL AB
+   Copyright (C) 2006-2015 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,7 +13,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
 #ifdef HAVE_CONFIG_H
@@ -297,7 +298,8 @@ int sb_lua_op_execute_request(sb_request_t *sb_req, int thread_id)
       
   LOG_EVENT_STOP(msg, thread_id);
 
-  sb_percentile_update(&local_percentile, sb_timer_value(&timers[thread_id]));
+  if (db_driver != NULL)
+    sb_percentile_update(&local_percentile, sb_timer_value(&timers[thread_id]));
 
   return 0;
 }
