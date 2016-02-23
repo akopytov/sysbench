@@ -24,6 +24,7 @@
 #endif
 
 #include "sysbench.h"
+#include "sb_rnd.h"
 
 #ifdef HAVE_SYS_IPC_H
 # include <sys/ipc.h>
@@ -252,8 +253,7 @@ int memory_execute_request(sb_request_t *sb_req, int thread_id)
   log_msg_t           msg;
   log_msg_oper_t      op_msg;
   long                i;
-  unsigned int        rand;
-  
+
   /* Prepare log message */
   msg.type = LOG_MSG_TYPE_OPER;
   msg.data = &op_msg;
@@ -266,22 +266,19 @@ int memory_execute_request(sb_request_t *sb_req, int thread_id)
 
   if (memory_access_rnd)
   {
-    rand = sb_rnd();
     LOG_EVENT_START(msg, thread_id);
     switch (mem_req->type) {
       case SB_MEM_OP_WRITE:
         for (i = 0; i < memory_block_size; i++)
         {
-          idx = (int)((double)rand / (double)SB_MAX_RND *
-                      (double)(memory_block_size / sizeof(int)));
+          idx = (int)(sb_rnd_double() * (memory_block_size / sizeof(int)));
           buf[idx] = tmp;
         }
         break;
       case SB_MEM_OP_READ:
         for (i = 0; i < memory_block_size; i++)
         {
-          idx = (int)((double)rand / (double)SB_MAX_RND *
-                      (double)(memory_block_size / sizeof(int)));
+          idx = (int)(sb_rnd_double() * (memory_block_size / sizeof(int)));
           tmp = buf[idx];
         }
         break;

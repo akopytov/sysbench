@@ -60,6 +60,7 @@
 #include "sysbench.h"
 #include "crc32.h"
 #include "sb_percentile.h"
+#include "sb_rnd.h"
 
 /* Lengths of the checksum and the offset fields in a block */
 #define FILE_CHECKSUM_LENGTH sizeof(int)
@@ -532,7 +533,6 @@ sb_request_t file_get_rnd_request(int thread_id)
 {
   sb_request_t         sb_req;
   sb_file_request_t    *file_req = &sb_req.u.file_request;
-  unsigned int         randnum;
   unsigned long long   tmppos;
   int                  real_mode = test_mode;
   int                  mode = test_mode;
@@ -608,9 +608,7 @@ sb_request_t file_get_rnd_request(int thread_id)
     file_req->operation = FILE_OP_TYPE_READ;
 
 retry:
-  randnum = sb_rnd();
-
-  tmppos = (long long) ((double) randnum / SB_MAX_RND * total_size);
+  tmppos = (long long) (sb_rnd_double() * total_size);
   tmppos = tmppos - (tmppos % (long long) file_block_size);
   file_req->file_id = (int) (tmppos / (long long) file_size);
   file_req->pos = (long long) (tmppos % (long long) file_size);

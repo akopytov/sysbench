@@ -26,8 +26,8 @@
 #include "lauxlib.h"
 
 #include "sb_script.h"
-
 #include "db_driver.h"
+#include "sb_rnd.h"
 
 #define EVENT_FUNC "event"
 #define PREPARE_FUNC "prepare"
