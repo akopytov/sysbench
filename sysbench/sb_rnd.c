@@ -20,6 +20,8 @@
 # include "config.h"
 #endif
 
+#include <stdlib.h>
+
 #ifdef HAVE_LRAND48_R
 TLS struct drand48_data sb_rng_state;
 #elif defined(HAVE_RAND_R)
