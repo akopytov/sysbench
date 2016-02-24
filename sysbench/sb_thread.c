@@ -39,9 +39,6 @@
 int sb_thread_create(pthread_t *thread, const pthread_attr_t *attr,
                      void *(*start_routine) (void *), void *arg)
 {
-  /* Initialize thread-local RNG state */
-  sb_srnd(sb_rnd());
-
   return pthread_create(thread, attr, start_routine, arg);
 }
 

@@ -468,6 +468,9 @@ static void *runner_thread(void *arg)
   test = ctxt->test;
   thread_id = ctxt->id;
 
+  /* Initialize thread-local RNG state */
+  sb_srnd(thread_id);
+
   log_text(LOG_DEBUG, "Runner thread started (%d)!", thread_id);
   if (test->ops.thread_init != NULL && test->ops.thread_init(thread_id) != 0)
   {
