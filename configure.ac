@@ -298,7 +298,7 @@ alarm \
 directio \
 fdatasync \
 gettimeofday \
-lrand48_r
+lrand48_r \
 rand_r \
 memalign \
 memset \
