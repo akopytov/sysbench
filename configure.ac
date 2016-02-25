@@ -264,9 +264,9 @@ AC_C_INLINE
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
-AX_TLS([], [
+AX_TLS([],
   AC_MSG_ERROR([Thread-local storage is not suppored by the target platform!])
-])
+)
 
 if test "$enable_largefile" = yes; then
     AC_SYS_LARGEFILE

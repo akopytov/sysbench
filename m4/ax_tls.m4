@@ -46,6 +46,22 @@
 
 #serial 11
 
+#   Define m4_ifblank and m4_ifnblank macros from introduced in
+#   autotools 2.64 m4sugar.m4 if using an earlier autotools.
+
+ifdef([m4_ifblank], [], [
+m4_define([m4_ifblank],
+[m4_if(m4_translit([[$1]],  [ ][	][
+]), [], [$2], [$3])])
+])
+
+
+ifdef([m4_ifnblank], [], [
+m4_define([m4_ifnblank],
+[m4_if(m4_translit([[$1]],  [ ][	][
+]), [], [$3], [$2])])
+])
+
 AC_DEFUN([AX_TLS], [
   AC_MSG_CHECKING([for thread local storage (TLS) class])
   AC_CACHE_VAL([ac_cv_tls],
