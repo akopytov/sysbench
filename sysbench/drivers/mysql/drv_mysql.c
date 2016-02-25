@@ -413,7 +413,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
 
   if (mysql_drv_real_connect(db_mysql_con))
   {
-    if (sockets_pos)
+    if (!SB_LIST_IS_EMPTY(args.sockets))
       log_text(LOG_FATAL, "unable to connect to MySQL server on socket '%s', "
                "aborting...", db_mysql_con->socket);
     else
