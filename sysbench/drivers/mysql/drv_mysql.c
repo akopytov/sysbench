@@ -65,7 +65,7 @@ db_bind_t *gresults;
 static sb_arg_t mysql_drv_args[] =
 {
   {"mysql-host", "MySQL server host", SB_ARG_TYPE_LIST, "localhost"},
-  {"mysql-port", "MySQL server port", SB_ARG_TYPE_INT, "3306"},
+  {"mysql-port", "MySQL server port", SB_ARG_TYPE_LIST, "3306"},
   {"mysql-socket", "MySQL socket", SB_ARG_TYPE_LIST, NULL},
   {"mysql-user", "MySQL user", SB_ARG_TYPE_STRING, "sbtest"},
   {"mysql-password", "MySQL password", SB_ARG_TYPE_STRING, ""},
@@ -89,7 +89,7 @@ static sb_arg_t mysql_drv_args[] =
 typedef struct
 {
   sb_list_t          *hosts;
-  unsigned int       port;
+  sb_list_t          *ports;
   sb_list_t          *sockets;
   char               *user;
   char               *password;
@@ -157,11 +157,12 @@ static mysql_drv_args_t args;          /* driver args */
 
 static char use_ps; /* whether server-side prepared statemens should be used */
 
-/* Positions in the list of hosts/sockets protected by hosts_mutex */
+/* Positions in the list of hosts/ports/sockets. Protected by pos_mutex */
 static sb_list_item_t *hosts_pos;
+static sb_list_item_t *ports_pos;
 static sb_list_item_t *sockets_pos;
 
-static pthread_mutex_t hosts_mutex;
+static pthread_mutex_t pos_mutex;
 
 /* MySQL driver operations */
 
@@ -233,19 +234,26 @@ int register_driver_mysql(sb_list_t *drivers)
 
 int mysql_drv_init(void)
 {
+  pthread_mutex_init(&pos_mutex, NULL);
+
   args.hosts = sb_get_value_list("mysql-host");
   if (SB_LIST_IS_EMPTY(args.hosts))
   {
     log_text(LOG_FATAL, "No MySQL hosts specified, aborting");
     return 1;
   }
-  hosts_pos = args.hosts;
-  pthread_mutex_init(&hosts_mutex, NULL);
+  hosts_pos = SB_LIST_ITEM_NEXT(args.hosts);
+
+  args.ports = sb_get_value_list("mysql-port");
+  if (SB_LIST_IS_EMPTY(args.ports))
+  {
+    log_text(LOG_FATAL, "No MySQL ports specified, aborting");
+    return 1;
+  }
+  ports_pos = SB_LIST_ITEM_NEXT(args.ports);
 
   args.sockets = sb_get_value_list("mysql-socket");
-  sockets_pos = args.sockets;
 
-  args.port = (unsigned int)sb_get_value_int("mysql-port");
   args.user = sb_get_value_string("mysql-user");
   args.password = sb_get_value_string("mysql-password");
   args.db = sb_get_value_string("mysql-db");
@@ -359,34 +367,58 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   DEBUG("mysql_init(%p)", con);
   mysql_init(con);
 
-  pthread_mutex_lock(&hosts_mutex);
+  pthread_mutex_lock(&pos_mutex);
 
   if (SB_LIST_IS_EMPTY(args.sockets))
   {
     db_mysql_con->socket = NULL;
-    hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
-    if (hosts_pos == args.hosts)
-      hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
     db_mysql_con->host = SB_LIST_ENTRY(hosts_pos, value_t, listitem)->data;
+    db_mysql_con->port =
+      atoi(SB_LIST_ENTRY(ports_pos, value_t, listitem)->data);
+
+    /*
+       Pick the next port in args.ports. If there are no more ports in the list,
+       move to the next available host and get the first port again.
+    */
+    ports_pos = SB_LIST_ITEM_NEXT(ports_pos);
+    if (ports_pos == args.ports) {
+      hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
+      if (hosts_pos == args.hosts)
+        hosts_pos = SB_LIST_ITEM_NEXT(hosts_pos);
+
+      ports_pos = SB_LIST_ITEM_NEXT(ports_pos);
+    }
   }
   else
   {
     db_mysql_con->host = "localhost";
+
+    /*
+       The sockets list may be empty. So unlike hosts/ports the loop invariant
+       here is that sockets_pos points to the previous one and should be
+       advanced before using it, not after.
+     */
     sockets_pos = SB_LIST_ITEM_NEXT(sockets_pos);
     if (sockets_pos == args.sockets)
       sockets_pos = SB_LIST_ITEM_NEXT(sockets_pos);
+
     db_mysql_con->socket = SB_LIST_ENTRY(sockets_pos, value_t, listitem)->data;
   }
-  pthread_mutex_unlock(&hosts_mutex);
+  pthread_mutex_unlock(&pos_mutex);
 
   db_mysql_con->user = args.user;
   db_mysql_con->password = args.password;
   db_mysql_con->db = args.db;
-  db_mysql_con->port = args.port;
 
   if (mysql_drv_real_connect(db_mysql_con))
   {
-    log_text(LOG_FATAL, "unable to connect to MySQL server, aborting...");
+    if (sockets_pos)
+      log_text(LOG_FATAL, "unable to connect to MySQL server on socket '%s', "
+               "aborting...", db_mysql_con->socket);
+    else
+      log_text(LOG_FATAL, "unable to connect to MySQL server on host '%s', "
+               "port %u, aborting...",
+               db_mysql_con->host, db_mysql_con->port);
     log_text(LOG_FATAL, "error %d: %s", mysql_errno(con),
              mysql_error(con));
     free(db_mysql_con);
