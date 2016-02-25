@@ -253,6 +253,7 @@ int mysql_drv_init(void)
   ports_pos = SB_LIST_ITEM_NEXT(args.ports);
 
   args.sockets = sb_get_value_list("mysql-socket");
+  sockets_pos = args.sockets;
 
   args.user = sb_get_value_string("mysql-user");
   args.password = sb_get_value_string("mysql-password");
