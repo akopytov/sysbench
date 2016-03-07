@@ -89,12 +89,9 @@ if test x$PKG_CONFIG = x; then
     PKG_CONFIG="pkg-config"
 fi
 
-if test -z "$($PKG_CONFIG --version)"; then
-    echo <<EOF
-$PKG_CONFIG wasn't found, exiting. You must have it installed to compile sysbench
-EOF
-    exit 1
-fi
+$PKG_CONFIG --version >/dev/null 2>&1 || die \
+"$PKG_CONFIG wasn't found, exiting. \
+You must have pkg-config installed to compile sysbench"
 
 run $ACLOCAL $ACLOCAL_FLAGS || die "Can't execute aclocal"
 run $LIBTOOLIZE $LIBTOOLIZE_FLAGS || die "Can't execute libtoolize"
@@ -107,3 +104,5 @@ echo -n "Automade with: "
 $AUTOMAKE --version | head -1
 echo -n "Configured with: "
 $AUTOCONF --version | head -1
+echo -n "pkg-config version: "
+$PKG_CONFIG --version | head -1
