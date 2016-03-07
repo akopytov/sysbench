@@ -85,6 +85,17 @@ if test x$AUTOHEADER = x; then
   fi
 fi
 
+if test x$PKG_CONFIG = x; then
+    PKG_CONFIG="pkg-config"
+fi
+
+if test -z "$($PKG_CONFIG --version)"; then
+    echo <<EOF
+$PKG_CONFIG wasn't found, exiting. You must have it installed to compile sysbench
+EOF
+    exit 1
+fi
+
 run $ACLOCAL $ACLOCAL_FLAGS || die "Can't execute aclocal"
 run $LIBTOOLIZE $LIBTOOLIZE_FLAGS || die "Can't execute libtoolize"
 run $AUTOHEADER || die "Can't execute autoheader"
