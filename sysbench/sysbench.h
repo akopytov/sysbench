@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -51,24 +51,8 @@
 #define SB_THREAD_MUTEX_LOCK() pthread_mutex_lock(&sb_globals.exec_mutex) 
 #define SB_THREAD_MUTEX_UNLOCK() pthread_mutex_unlock(&sb_globals.exec_mutex)
 
-#define SB_MAX_RND 0x3fffffffu
-
 /* Maximum number of elements in --report-checkpoints list */
 #define MAX_CHECKPOINTS 256
-
-/* random() is not thread-safe on most platforms, use lrand48() if available */
-#ifdef HAVE_LRAND48
-# define sb_rnd() (lrand48() % SB_MAX_RND)
-# define sb_srnd(seed) srand48(seed)
-#else
-# define sb_rnd() (random() % SB_MAX_RND)
-# define sb_srnd(seed) srandom((unsigned int)seed)
-#endif
-#ifdef HAVE_DRAND48
-# define sb_rnd_double() drand48()
-#else
-# define sb_rnd_double() (((double) sb_rnd()) / SB_MAX_RND)
-#endif
 
 /* Sysbench commands */
 typedef enum

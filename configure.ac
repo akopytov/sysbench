@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT([sysbench],[0.5],[sysbench-developers@lists.launchpad.net])
+AC_INIT([sysbench],[0.9],[akopytov@gmail.com])
 AC_CONFIG_AUX_DIR([config])
 # Setting CFLAGS here prevents AC_CANONICAL_TARGET from injecting them
 SAVE_CFLAGS=${CFLAGS}
@@ -264,6 +264,9 @@ AC_C_INLINE
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
+AX_TLS([],
+  AC_MSG_ERROR([Thread-local storage is not suppored by the target platform!])
+)
 
 if test "$enable_largefile" = yes; then
     AC_SYS_LARGEFILE
@@ -295,8 +298,8 @@ alarm \
 directio \
 fdatasync \
 gettimeofday \
-lrand48 \
-drand48 \
+lrand48_r \
+rand_r \
 memalign \
 memset \
 mkstemp \

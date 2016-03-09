@@ -51,7 +51,7 @@ static sb_arg_t mutex_args[] =
 /* Mutex test operations */
 static int mutex_init(void);
 static void mutex_print_mode(void);
-static sb_request_t mutex_get_request(void);
+static sb_request_t mutex_get_request(int);
 static int mutex_execute_request(sb_request_t *, int);
 static int mutex_done(void);
 
@@ -130,11 +130,13 @@ int mutex_done(void)
 }
 
 
-sb_request_t mutex_get_request(void)
+sb_request_t mutex_get_request(int thread_id)
 {
   sb_request_t         sb_req;
   sb_mutex_request_t   *mutex_req = &sb_req.u.mutex_request;
-  
+
+  (void) thread_id; /* unused */
+
   sb_req.type = SB_REQ_TYPE_MUTEX;
   mutex_req->nlocks = mutex_locks;
   mutex_req->nloops = mutex_loops;

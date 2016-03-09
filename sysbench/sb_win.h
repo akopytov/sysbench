@@ -100,6 +100,7 @@ extern int pthread_create(pthread_t *thread, const pthread_attr_t *attr,  void *
 extern int pthread_cancel(pthread_t thread);
 extern int pthread_attr_setstacksize( pthread_attr_t *attr, size_t stacksize);
 extern int pthread_join(pthread_t thread, void **value_ptr);
+extern int pthread_self(void);
 extern int gettimeofday(struct timeval * tp, void * tzp);
 extern int random();
 

@@ -223,6 +223,11 @@ int pthread_join(pthread_t pthread, void **value_ptr)
 
 }
 
+pthread_t pthread_self(void)
+{
+  return GetCurrentThreadId();
+}
+
 /*
  One time initialization. For simplicity, we assume initializer thread
  does not exit within init_routine().

@@ -68,6 +68,8 @@
 #include "sb_options.h"
 #include "scripting/sb_script.h"
 #include "db_driver.h"
+#include "sb_rnd.h"
+#include "sb_thread.h"
 
 #define VERSION_STRING PACKAGE" "PACKAGE_VERSION
 
@@ -92,8 +94,6 @@ typedef struct {
   sb_list_item_t     listitem;
 } event_queue_elem_t;
 
-/* If we should initialize random numbers generator */
-static int rand_init;
 static rand_dist_t rand_type;
 static int (*rand_func)(int, int); /* pointer to random numbers generator */
 static unsigned int rand_iter;
@@ -138,7 +138,6 @@ sb_arg_t general_args[] =
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
   {"help", "print help and exit", SB_ARG_TYPE_FLAG, NULL},
   {"version", "print version and exit", SB_ARG_TYPE_FLAG, "off"},
-  {"rand-init", "initialize random number generator", SB_ARG_TYPE_FLAG, "off"},
   {"rand-type", "random numbers distribution {uniform,gaussian,special,pareto}",
    SB_ARG_TYPE_STRING, "special"},
   {"rand-spec-iter", "number of iterations used for numbers generation", SB_ARG_TYPE_INT, "12"},
@@ -429,12 +428,6 @@ void print_run_mode(sb_test_t *test)
   if (sb_globals.validate)
     log_text(LOG_NOTICE, "Additional request validation enabled.\n");
 
-  if (rand_init)
-  {
-    log_text(LOG_NOTICE, "Initializing random number generator from timer.\n");
-    sb_srnd(time(NULL));
-  }
-
   if (rand_seed)
   {
     log_text(LOG_NOTICE, "Initializing random number generator from seed (%d).\n", rand_seed);
@@ -442,7 +435,9 @@ void print_run_mode(sb_test_t *test)
   }
   else
   {
-    log_text(LOG_NOTICE, "Random number generator seed is 0 and will be ignored\n");
+    log_text(LOG_NOTICE,
+             "Initializing random number generator from current time\n");
+    sb_srnd(time(NULL));
   }
 
   if (sb_globals.force_shutdown)
@@ -472,6 +467,9 @@ static void *runner_thread(void *arg)
   ctxt = (sb_thread_ctxt_t *)arg;
   test = ctxt->test;
   thread_id = ctxt->id;
+
+  /* Initialize thread-local RNG state */
+  sb_srnd(thread_id);
 
   log_text(LOG_DEBUG, "Runner thread started (%d)!", thread_id);
   if (test->ops.thread_init != NULL && test->ops.thread_init(thread_id) != 0)
@@ -578,7 +576,7 @@ static void *eventgen_thread_proc(void *arg)
 
   curr_ns = sb_timer_value(&sb_globals.exec_timer);
   /* emulate exponential distribution with Lambda = tx_rate */
-  intr_ns = (long) (log(1 - (double) sb_rnd() / (double) SB_MAX_RND) /
+  intr_ns = (long) (log(1 - sb_rnd_double()) /
                     (-(double) sb_globals.tx_rate)*1000000);
   next_ns = curr_ns + intr_ns*1000;
 
@@ -587,7 +585,7 @@ static void *eventgen_thread_proc(void *arg)
     curr_ns = sb_timer_value(&sb_globals.exec_timer);
 
     /* emulate exponential distribution with Lambda = tx_rate */
-    intr_ns = (long) (log(1 - (double)sb_rnd() / (double)SB_MAX_RND) /
+    intr_ns = (long) (log(1 - sb_rnd_double()) /
                       (-(double)sb_globals.tx_rate)*1000000);
 
     next_ns = next_ns + intr_ns*1000;
@@ -794,10 +792,11 @@ static int run_test(sb_test_t *test)
   if (sb_globals.report_interval > 0)
   {
     /* Create a thread for intermediate statistic reports */
-    if ((err = pthread_create(&report_thread, &thread_attr, &report_thread_proc,
-                              NULL)) != 0)
+    if ((err = sb_thread_create(&report_thread, &thread_attr, &report_thread_proc,
+                                NULL)) != 0)
     {
-      log_errno(LOG_FATAL, "pthread_create() for the reporting thread failed.");
+      log_errno(LOG_FATAL,
+                "sb_thread_create() for the reporting thread failed.");
       return 1;
     }
     report_thread_created = 1;
@@ -805,10 +804,11 @@ static int run_test(sb_test_t *test)
 
   if (sb_globals.tx_rate > 0)
   {
-    if ((err = pthread_create(&eventgen_thread, &thread_attr, &eventgen_thread_proc,
-                              NULL)) != 0)
+    if ((err = sb_thread_create(&eventgen_thread, &thread_attr, &eventgen_thread_proc,
+                                NULL)) != 0)
     {
-      log_errno(LOG_FATAL, "pthread_create() for the reporting thread failed.");
+      log_errno(LOG_FATAL,
+                "sb_thread_create() for the reporting thread failed.");
       return 1;
     }
     eventgen_thread_created = 1;
@@ -817,11 +817,11 @@ static int run_test(sb_test_t *test)
   if (sb_globals.n_checkpoints > 0)
   {
     /* Create a thread for checkpoint statistic reports */
-    if ((err = pthread_create(&checkpoints_thread, &thread_attr,
-                              &checkpoints_thread_proc, NULL)) != 0)
+    if ((err = sb_thread_create(&checkpoints_thread, &thread_attr,
+                                &checkpoints_thread_proc, NULL)) != 0)
     {
-      log_errno(LOG_FATAL, "pthread_create() for the checkpoint thread "
-                "failed.");
+      log_errno(LOG_FATAL,
+                "sb_thread_create() for the checkpoint thread failed.");
       return 1;
     }
     checkpoints_thread_created = 1;
@@ -832,10 +832,10 @@ static int run_test(sb_test_t *test)
   {
     if (sb_globals.error)
       return 1;
-    if ((err = pthread_create(&(threads[i].thread), &thread_attr,
-                              &runner_thread, (void*)(threads + i))) != 0)
+    if ((err = sb_thread_create(&(threads[i].thread), &thread_attr,
+                                &runner_thread, (void*)(threads + i))) != 0)
     {
-      log_errno(LOG_FATAL, "pthread_create() for thread #%d failed.", i);
+      log_errno(LOG_FATAL, "sb_thread_create() for thread #%d failed.", i);
       return 1;
     }
   }
@@ -855,8 +855,8 @@ static int run_test(sb_test_t *test)
   log_text(LOG_NOTICE, "Threads started!\n");  
   for(i = 0; i < sb_globals.num_threads; i++)
   {
-    if((err = pthread_join(threads[i].thread, NULL)) != 0)
-      log_errno(LOG_FATAL, "pthread_join() for thread #%d failed.", i);
+    if((err = sb_thread_join(threads[i].thread, NULL)) != 0)
+      log_errno(LOG_FATAL, "sb_thread_join() for thread #%d failed.", i);
   }
 
   sb_timer_stop(&sb_globals.exec_timer);
@@ -895,7 +895,7 @@ static int run_test(sb_test_t *test)
   /* Delay killing the reporting threads to avoid mutex lock leaks */
   if (report_thread_created)
   {
-    if (pthread_cancel(report_thread) || pthread_join(report_thread, NULL))
+    if (sb_thread_cancel(report_thread) || sb_thread_join(report_thread, NULL))
       log_errno(LOG_FATAL, "Terminating the reporting thread failed.");
   }
 
@@ -903,14 +903,15 @@ static int run_test(sb_test_t *test)
 
   if (eventgen_thread_created)
   {
-    if (pthread_cancel(eventgen_thread) || pthread_join(eventgen_thread, NULL))
+    if (sb_thread_cancel(eventgen_thread) ||
+        sb_thread_join(eventgen_thread, NULL))
       log_text(LOG_FATAL, "Terminating the event generator thread failed.");
   }
 
   if (checkpoints_thread_created)
   {
-    if (pthread_cancel(checkpoints_thread) ||
-        pthread_join(checkpoints_thread, NULL))
+    if (sb_thread_cancel(checkpoints_thread) ||
+        sb_thread_join(checkpoints_thread, NULL))
       log_errno(LOG_FATAL, "Terminating the checkpoint thread failed.");
   }
 
@@ -1018,13 +1019,7 @@ static int init(void)
   
   sb_globals.validate = sb_get_value_flag("validate");
 
-  rand_init = sb_get_value_flag("rand-init"); 
-  rand_seed = sb_get_value_int("rand-seed"); 
-  if (rand_init && rand_seed)
-  {
-    log_text(LOG_FATAL, "Cannot set both --rand-init and --rand-seed");
-    return 1;
-  }
+  rand_seed = sb_get_value_int("rand-seed");
 
   s = sb_get_value_string("rand-type");
   if (!strcmp(s, "uniform"))

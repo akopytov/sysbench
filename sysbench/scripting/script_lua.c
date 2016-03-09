@@ -26,8 +26,8 @@
 #include "lauxlib.h"
 
 #include "sb_script.h"
-
 #include "db_driver.h"
+#include "sb_rnd.h"
 
 #define EVENT_FUNC "event"
 #define PREPARE_FUNC "prepare"
@@ -298,7 +298,8 @@ int sb_lua_op_execute_request(sb_request_t *sb_req, int thread_id)
       
   LOG_EVENT_STOP(msg, thread_id);
 
-  sb_percentile_update(&local_percentile, sb_timer_value(&timers[thread_id]));
+  if (db_driver != NULL)
+    sb_percentile_update(&local_percentile, sb_timer_value(&timers[thread_id]));
 
   return 0;
 }
