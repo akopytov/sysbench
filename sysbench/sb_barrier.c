@@ -24,7 +24,9 @@
 
    - it allows defining a callback function which is called right before
      signaling the participating threads to continue, i.e. as soon as the
-     required number of threads reach the barrier.
+     required number of threads reach the barrier. The callback can also signal
+     an error to sb_barrier_wait() callers by returning a non-zero value. In
+     which case sb_barrier_wait() returns a negative value to all callers.
 */
 
 #ifdef HAVE_CONFIG_H
@@ -48,6 +50,7 @@ int sb_barrier_init(sb_barrier_t *barrier, unsigned int count,
   barrier->callback = callback;
   barrier->arg = arg;
   barrier->serial = 0;
+  barrier->error = 0;
 
   return 0;
 }
@@ -69,20 +72,25 @@ int sb_barrier_wait(sb_barrier_t *barrier)
     pthread_cond_broadcast(&barrier->cond);
 
     if (barrier->callback != NULL && barrier->callback(barrier->arg) != 0)
+    {
+      barrier->error = 1;
       res = -1;
+    }
 
     pthread_mutex_unlock(&barrier->mutex);
 
-  } else {
+  }
+  else
+  {
     unsigned int serial = barrier->serial;
 
     do {
       pthread_cond_wait(&barrier->cond, &barrier->mutex);
     } while (serial == barrier->serial);
 
-    pthread_mutex_unlock(&barrier->mutex);
+    res = barrier->error ? -1 : 0;
 
-    res = 0;
+    pthread_mutex_unlock(&barrier->mutex);
   }
 
   return res;

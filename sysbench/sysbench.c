@@ -502,7 +502,8 @@ static void *worker_thread(void *arg)
   log_text(LOG_DEBUG, "Worker thread (#%d) started!", thread_id);
 
   /* Wait for other threads to initialize */
-  sb_barrier_wait(&thread_start_barrier);
+  if (sb_barrier_wait(&thread_start_barrier) < 0)
+    return NULL;
 
   do
   {
@@ -586,7 +587,8 @@ static void *eventgen_thread_proc(void *arg)
   log_text(LOG_DEBUG, "Event generating thread started");
 
   /* Wait for other threads to initialize */
-  sb_barrier_wait(&thread_start_barrier);
+  if (sb_barrier_wait(&thread_start_barrier) < 0)
+    return NULL;
 
   curr_ns = sb_timer_value(&sb_globals.exec_timer);
   /* emulate exponential distribution with Lambda = tx_rate */
@@ -652,7 +654,8 @@ static void *report_thread_proc(void *arg)
   log_text(LOG_DEBUG, "Reporting thread started");
 
   /* Wait for other threads to initialize */
-  sb_barrier_wait(&thread_start_barrier);
+  if (sb_barrier_wait(&thread_start_barrier) < 0)
+    return NULL;
 
   if (current_test->ops.print_stats == NULL)
   {
@@ -701,7 +704,8 @@ static void *checkpoints_thread_proc(void *arg)
   log_text(LOG_DEBUG, "Checkpoints report thread started");
 
   /* Wait for other threads to initialize */
-  sb_barrier_wait(&thread_start_barrier);
+  if (sb_barrier_wait(&thread_start_barrier) < 0)
+    return NULL;
 
   if (current_test->ops.print_stats == NULL)
   {

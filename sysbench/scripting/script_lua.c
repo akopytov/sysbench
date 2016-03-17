@@ -40,7 +40,7 @@
 #define CALL_ERROR(L, name)           \
   do { \
     const char *err = lua_tostring(L, -1); \
-    log_text(LOG_DEBUG, "failed to execute function `%s': %s",   \
+    log_text(LOG_FATAL, "failed to execute function `%s': %s",   \
              name, err ? err : "(null)");                               \
   } while (0)
 

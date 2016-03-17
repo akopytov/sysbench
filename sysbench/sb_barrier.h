@@ -45,6 +45,7 @@ typedef struct {
   pthread_cond_t   cond;
   sb_barrier_cb_t  callback;
   void             *arg;
+  int              error;
 } sb_barrier_t;
 
 int sb_barrier_init(sb_barrier_t *barrier, unsigned int count,
