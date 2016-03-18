@@ -183,7 +183,7 @@ static event_queue_elem_t queue_array[MAX_QUEUE_LEN];
 static int queue_is_full;
 
 static void print_header(void);
-static void print_usage(void);
+static void print_help(void);
 static void print_run_mode(sb_test_t *);
 
 #ifdef HAVE_ALARM
@@ -289,19 +289,20 @@ void print_header(void)
 /* Print program usage */
 
 
-void print_usage(void)
+void print_help(void)
 {
   sb_list_item_t *pos;
   sb_test_t      *test;
   
   printf("Usage:\n");
-  printf("  sysbench [general-options]... --test=<test-name> "
-         "[test-options]... command\n\n");
+  printf("  sysbench --test=<test-name> [options]... <command>\n\n");
+  printf("Commands: prepare run cleanup help version\n\n");
   printf("General options:\n");
   sb_print_options(general_args);
 
-  printf("Log options:\n");
-  log_usage();
+  log_print_help();
+
+  db_print_help();
 
   printf("Compiled-in tests:\n");
   SB_LIST_FOR_EACH(pos, &tests)
@@ -310,7 +311,6 @@ void print_usage(void)
     printf("  %s - %s\n", test->sname, test->lname);
   }
   printf("\n");
-  printf("Commands: prepare run cleanup help version\n\n");
   printf("See 'sysbench --test=<name> help' for a list of options for each test.\n\n");
 }
 
@@ -1177,7 +1177,7 @@ int main(int argc, char *argv[])
   /* Parse command line arguments */
   if (parse_arguments(argc,argv))
   {
-    print_usage();
+    print_help();
     exit(1);
   }
 
@@ -1190,7 +1190,7 @@ int main(int argc, char *argv[])
   if (sb_globals.command == SB_COMMAND_NULL)
   {
     fprintf(stderr, "Missing required command argument.\n");
-    print_usage();
+    print_help();
     exit(1);
   }
 
@@ -1214,7 +1214,7 @@ int main(int argc, char *argv[])
   if (sb_globals.command == SB_COMMAND_HELP)
   {
     if (test == NULL)
-      print_usage();
+      print_help();
     else
     {
       if (test->args != NULL)
@@ -1234,7 +1234,7 @@ int main(int argc, char *argv[])
   if (testname == NULL)
   {
     fprintf(stderr, "Missing required argument: --test.\n");
-    print_usage();
+    print_help();
     exit(1);
   }
 

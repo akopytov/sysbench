@@ -142,11 +142,13 @@ int log_register(void)
 /* Display command line options for registered log handlers */
 
 
-void log_usage(void)
+void log_print_help(void)
 {
   unsigned int    i;
   sb_list_item_t  *pos;
   log_handler_t   *handler;
+
+  printf("Log options:\n");
 
   for (i = 0; i < LOG_MSG_TYPE_MAX; i++)
   {
