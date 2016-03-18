@@ -26,4 +26,6 @@
 TLS struct drand48_data sb_rng_state;
 #elif defined(HAVE_RAND_R)
 TLS unsigned int sb_rng_state;
+#elif defined(_WIN32)
+__declspec(thread) unsigned int sb_rng_state;
 #endif

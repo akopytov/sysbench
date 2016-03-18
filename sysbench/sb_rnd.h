@@ -49,6 +49,12 @@ extern TLS unsigned int sb_rng_state;
 # define sb_srnd(seed) do { sb_rng_state = seed; } while(0)
 /* On some platforms rand() may return values larger than RAND_MAX */
 # define sb_rnd_double() ((double) (sb_rnd() % RAND_MAX) / RAND_MAX)
+#elif defined(_WIN32)
+extern __declspec(thread) unsigned int sb_rng_state;
+# define sb_rnd() (rand_s(&sb_rng_state))
+# define sb_srnd(seed) do { sb_rng_state = seed; } while(0)
+/* On some platforms rand() may return values larger than RAND_MAX */
+# define sb_rnd_double() ((double) (sb_rnd() % RAND_MAX) / RAND_MAX)
 #else
 # error No re-entrant PRNG function found.
 #endif
