@@ -32,10 +32,14 @@ AC_CACHE_CHECK([whether to build with system or bundled LuaJIT],
       AC_MSG_RESULT([system])
       PKG_CHECK_MODULES([LUAJIT], [luajit])
     ], [
-      AC_MSG_RESULT([bunled])
-      AC_MSG_ERROR([Building with bundled LuaJIT is not yet implemented, use --with-system-luajit])
+      AC_MSG_RESULT([bundled])
+      LUAJIT_CFLAGS="-I\$(abs_top_builddir)/third_party/luajit/inc"
+      LUAJIT_LIBS="\$(abs_top_builddir)/third_party/luajit/lib/libluajit-5.1.a"
     ])
   ])
+
+AC_DEFINE_UNQUOTED([SB_WITH_LUAJIT], ["$sb_use_luajit"],
+  [Whether system or bundled LuaJIT is used])
 
 # Add extra flags when building a 64-bit application on OS X,
 # http://luajit.org/install.html
@@ -45,4 +49,3 @@ AS_CASE([$host_os:$host_cpu],
 AC_SUBST([LUAJIT_LDFLAGS])
 
 ])
-

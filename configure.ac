@@ -434,7 +434,7 @@ fi
 
 AM_CFLAGS="${CC_WARNINGS} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
 
-AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/sysbench"
+AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/sysbench ${LUAJIT_CFLAGS}"
 
 AM_LDFLAGS="$PTHREAD_LIBS"
 
@@ -447,6 +447,7 @@ Makefile
 doc/xsl/Makefile
 doc/xsl/catalog.xml
 doc/Makefile
+third_party/luajit/Makefile
 sysbench/Makefile
 sysbench/drivers/Makefile
 sysbench/drivers/mysql/Makefile

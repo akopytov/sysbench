@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -70,6 +70,7 @@
 #include "db_driver.h"
 #include "sb_rnd.h"
 #include "sb_thread.h"
+#include "luajit.h"
 
 #define VERSION_STRING PACKAGE" "PACKAGE_VERSION
 
@@ -263,8 +264,9 @@ static int register_tests(void)
 
 void print_header(void)
 {
-  log_text(LOG_NOTICE, VERSION_STRING
-         ":  multi-threaded system evaluation benchmark\n");
+  log_text(LOG_NOTICE,
+           "%s (using %s %s)\n",
+           VERSION_STRING, SB_WITH_LUAJIT, LUAJIT_VERSION);
 }
 
 

@@ -1,5 +1,5 @@
 # Copyright (C) 2004 MySQL AB
-# Copyright (C) 2004-2009 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,6 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = doc sysbench
+SUBDIRS = doc third_party/luajit sysbench
 
 EXTRA_DIST = autogen.sh README README-WIN.txt ChangeLog
