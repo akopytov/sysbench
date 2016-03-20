@@ -85,8 +85,8 @@ if test x$AUTOHEADER = x; then
   fi
 fi
 
-run $ACLOCAL $ACLOCAL_FLAGS || die "Can't execute aclocal"
 run $LIBTOOLIZE $LIBTOOLIZE_FLAGS || die "Can't execute libtoolize"
+run $ACLOCAL $ACLOCAL_FLAGS || die "Can't execute aclocal"
 run $AUTOHEADER || die "Can't execute autoheader"
 run $AUTOMAKE $AUTOMAKE_FLAGS  || die "Can't execute automake"
 run $AUTOCONF || die "Can't execute autoconf"
