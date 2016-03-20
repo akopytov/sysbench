@@ -17,6 +17,10 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = doc third_party/luajit sysbench
+if USE_BUNDLED_LUAJIT
+  LUAJIT_DIR = third_party/luajit
+endif
+
+SUBDIRS = doc $(LUAJIT_DIR) sysbench
 
 EXTRA_DIST = autogen.sh README.md README-WIN.txt ChangeLog

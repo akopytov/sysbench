@@ -46,11 +46,12 @@ AS_IF([test "x$sb_cv_lib_luajit" = "xsystem"],
 AC_DEFINE_UNQUOTED([SB_WITH_LUAJIT], ["$sb_use_luajit"],
   [Whether system or bundled LuaJIT is used])
 
+AM_CONDITIONAL([USE_BUNDLED_LUAJIT], [test "x$sb_use_luajit" = xbundled])
+
 # Add extra flags when building a 64-bit application on OS X,
 # http://luajit.org/install.html
 AS_CASE([$host_os:$host_cpu],
         [*darwin*:x86_64],
         [LUAJIT_LDFLAGS="-pagezero_size 10000 -image_base 100000000"])
 AC_SUBST([LUAJIT_LDFLAGS])
-
 ])
