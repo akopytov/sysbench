@@ -94,40 +94,57 @@ fi
 
 
 # Check if we should compile with MySQL support
-AC_ARG_WITH([mysql], 
-            AS_HELP_STRING([--with-mysql],[compile with MySQL support (default is enabled)]),
-            [ac_cv_use_mysql=$withval], [ac_cv_use_mysql=yes]
+AC_ARG_WITH([mysql],
+            AS_HELP_STRING([--with-mysql],
+                           [compile with MySQL support (default is enabled)]),
+            [], [with_mysql=yes])
+AC_MSG_CHECKING([whether to compile with MySQL support])
+AS_IF([test "x$with_mysql" != "xno"],
+   [AC_MSG_RESULT([yes])],
+   [AC_MSG_RESULT([no])]
 )
-AC_CACHE_CHECK([whether to compile with MySQL support], [ac_cv_use_mysql], [ac_cv_use_mysql=no])
 
 # Check if we should compile with Drizzle support
-AC_ARG_WITH([drizzle], 
-            AS_HELP_STRING([--with-drizzle],[compile with Drizzle support (default is enabled)]),
-            [ac_cv_use_drizzle=$withval], [ac_cv_use_drizzle=yes]
+AC_ARG_WITH([drizzle],
+            AS_HELP_STRING([--with-drizzle],
+                           [compile with Drizzle support (default is disabled)]),
+            [], [with_drizzle=no])
+AC_MSG_CHECKING([whether to compile with Drizzle support])
+AS_IF([test "x$with_drizzle" != "xno"],
+   [AC_MSG_RESULT([yes])],
+   [AC_MSG_RESULT([no])]
 )
-AC_CACHE_CHECK([whether to compile with Drizzle support], [ac_cv_use_drizzle], [ac_cv_use_drizzle=no])
 
 # Check if we should compile with libattachsql support
-AC_ARG_WITH([attachsql], 
-            AS_HELP_STRING([--with-attachsql],[compile with libattachsql support (default is enabled)]),
-            [ac_cv_use_attachsql=$withval], [ac_cv_use_attachsql=yes]
-)
-AC_CACHE_CHECK([whether to compile with libattachsql support], [ac_cv_use_attachsql], [ac_cv_use_attachsql=no])
+AC_ARG_WITH([attachsql],
+            AS_HELP_STRING([--with-attachsql],
+                           [compile with libattachsql support (default is disabled)]),
+            [], [with_attachsql=no])
+AC_MSG_CHECKING([whether to compile with libattachsql support])
+AS_IF([test "x$with_attachsql" != "xno"],
+   [AC_MSG_RESULT([yes])],
+   [AC_MSG_RESULT([no])])
 
 
 # Check if we should compile with Oracle support
 AC_ARG_WITH([oracle],
-            AS_HELP_STRING([--with-oracle],[compile with Oracle support (default is disabled)]),
-            [ac_cv_use_oracle=$withval], [ac_cv_use_oracle=no]
-)
-AC_CACHE_CHECK([whether to compile with Oracle support], [ac_cv_use_oracle], [ac_cv_use_oracle=yes])
+            AS_HELP_STRING([--with-oracle],
+                           [compile with Oracle support (default is disabled)]),
+            [], [with_oracle=no])
+AC_MSG_CHECKING([whether to compile with Oracle support])
+AS_IF([test "x$with_oracle" != "xno"],
+   [AC_MSG_RESULT([yes])],
+   [AC_MSG_RESULT([no])])
 
 # Check if we should compile with PostgreSQL support
 AC_ARG_WITH([pgsql],
-            AS_HELP_STRING([--with-pgsql],[compile with PostgreSQL support (default is disabled)]),
-            [ac_cv_use_pgsql=$withval], [ac_cv_use_pgsql=no]
-)
-AC_CACHE_CHECK([whether to compile with PostgreSQL support], [ac_cv_use_pgsql], [ac_cv_use_pgsql=yes])
+            AS_HELP_STRING([--with-pgsql],
+                           [compile with PostgreSQL support (default is disabled)]),
+            [], [with_pgsql=no])
+AC_MSG_CHECKING([whether to compile with PostgreSQL support])
+AS_IF([test "x$with_pgsql" != "xno"],
+   [AC_MSG_RESULT([yes])],
+   [AC_MSG_RESULT([no])])
 
 # Set LuaJIT flags
 SB_LUAJIT
@@ -174,58 +191,59 @@ ACX_PTHREAD
 
 AC_CHECK_LIB(m, sqrt)
 
-if test x$ac_cv_use_mysql != xno; then
-    AC_CHECK_MYSQLR([$ac_cv_use_mysql])
-    AC_DEFINE(USE_MYSQL,1,[Define to 1 if you want to compile with MySQL support])
+AS_IF([test "x$with_mysql" != xno], [
+    AC_CHECK_MYSQLR([$with_mysql])
+    AC_DEFINE([USE_MYSQL], 1,
+              [Define to 1 if you want to compile with MySQL support])
     AC_SUBST([MYSQL_LIBS])
     AC_SUBST([MYSQL_CFLAGS])
-fi
-AM_CONDITIONAL(USE_MYSQL, test x$ac_cv_use_mysql != xno)
+])
+AM_CONDITIONAL(USE_MYSQL, test x$with_mysql != xno)
 
-if test x$ac_cv_use_drizzle != xno; then
+AS_IF([test "x$with_drizzle" != xno], [
   AC_LIB_HAVE_LINKFLAGS(drizzle,,
     [#include <libdrizzle/drizzle.h>],
     [
      int x= DRIZZLE_RETURN_ERROR_CODE;
      const char *version= drizzle_version();
     ])
-fi
-if test "x$ac_cv_libdrizzle" = "xyes"
-then
-    AC_DEFINE(USE_DRIZZLE,1,[Define to 1 if you want to compile with Drizzle support])
-fi
+    AS_IF([test "x$ac_cv_libdrizzle" = xyes], [
+      AC_DEFINE([USE_DRIZZLE],1,
+                [Define to 1 if you want to compile with Drizzle support])
+    ])
+])
 AM_CONDITIONAL(USE_DRIZZLE, test x$ac_cv_libdrizzle = xyes)
 
-if test x$ac_cv_use_attachsql != xno; then
+AS_IF([test "x$with_attachsql" != xno], [
   AC_LIB_HAVE_LINKFLAGS(attachsql,,
     [#include <libattachsql-1.0/attachsql.h>],
     [
      const char *version= attachsql_get_library_version();
     ])
-fi
-if test "x$ac_cv_libattachsql" = "xyes"
-then
-    AC_DEFINE(USE_ATTACHSQL,1,[Define to 1 if you want to compile with libattachsql support])
-fi
+    AS_IF([test "x$ac_cv_libattachsql" = xyes], [
+      AC_DEFINE(USE_ATTACHSQL,1,
+                [Define to 1 if you want to compile with libattachsql support])
+    ])
+])
 AM_CONDITIONAL(USE_ATTACHSQL, test x$ac_cv_libattachsql = xyes)
 
 
-AM_CONDITIONAL(USE_ORACLE, test x$ac_cv_use_oracle != xno)
-if test x$ac_cv_use_oracle != xno; then
+AS_IF([test x$with_oracle != xno], [
     AC_DEFINE(USE_ORACLE,1,[Define to 1 if you want to compile with Oracle support])
-    ORA_LIBS="-L${ac_cv_use_oracle}/lib -lclntsh"
-    ORA_CFLAGS="-I${ac_cv_use_oracle}/rdbms/demo -I${ac_cv_use_oracle}/rdbms/public"
+    ORA_LIBS="-L${sb_with_oracle}/lib -lclntsh"
+    ORA_CFLAGS="-I${with_oracle}/rdbms/demo -I${with_oracle}/rdbms/public"
     AC_SUBST([ORA_LIBS])
     AC_SUBST([ORA_CFLAGS])
-fi
+])
+AM_CONDITIONAL(USE_ORACLE, test x$with_oracle != xno)
 
-if test x$ac_cv_use_pgsql != xno; then
-    AC_CHECK_PGSQL([$ac_cv_use_pgsql])
+AS_IF([test x$with_pgsql != xno], [
+    AC_CHECK_PGSQL([$with_pgsql])
     AC_DEFINE(USE_PGSQL,1,[Define to 1 if you want to compile with PostgreSQL support])
     AC_SUBST([PGSQL_LIBS])
     AC_SUBST([PGSQL_CFLAGS])
-fi
-AM_CONDITIONAL(USE_PGSQL, test x$ac_cv_use_pgsql != xno)
+])
+AM_CONDITIONAL(USE_PGSQL, test x$with_pgsql != xno)
 
 # Check for libaio
 AC_CHECK_AIO
