@@ -70,6 +70,7 @@
 #include "db_driver.h"
 #include "sb_rnd.h"
 #include "sb_thread.h"
+#include "sb_barrier.h"
 #include "luajit.h"
 
 #define VERSION_STRING PACKAGE" "PACKAGE_VERSION
@@ -79,6 +80,9 @@
 
 /* Maximum queue length for the tx-rate mode */
 #define MAX_QUEUE_LEN 100000
+
+/* Wait at most this number of seconds for worker threads to initialize */
+#define THREAD_INIT_TIMEOUT 30
 
 /* Random numbers distributions */
 typedef enum
@@ -163,10 +167,11 @@ sb_list_t        tests;
 sb_globals_t     sb_globals;
 sb_test_t        *current_test;
 
+/* Barrier to ensure we start the benchmark run when all workers are ready */
+static sb_barrier_t thread_start_barrier;
+
 /* Mutexes */
 
-/* used to start test with all threads ready */
-static pthread_mutex_t thread_start_mutex;
 static pthread_attr_t  thread_attr;
 
 /* structures to handle queue of events, needed for tx_rate mode */
@@ -178,30 +183,42 @@ static event_queue_elem_t queue_array[MAX_QUEUE_LEN];
 static int queue_is_full;
 
 static void print_header(void);
-static void print_usage(void);
+static void print_help(void);
 static void print_run_mode(sb_test_t *);
 
 #ifdef HAVE_ALARM
-static void sigalrm_handler(int sig)
+static void sigalrm_thread_init_timeout_handler(int sig)
 {
-  if (sig == SIGALRM)
-  {
-    sb_globals.forced_shutdown_in_progress = 1;
+  if (sig != SIGALRM)
+    return;
 
-    sb_timer_stop(&sb_globals.exec_timer);
-    sb_timer_stop(&sb_globals.cumulative_timer1);
-    sb_timer_stop(&sb_globals.cumulative_timer2);
+  log_text(LOG_FATAL,
+           "Worker threads failed to initialize within %u seconds!",
+           THREAD_INIT_TIMEOUT);
 
-    log_text(LOG_FATAL,
-             "The --max-time limit has expired, forcing shutdown...");
+  exit(2);
+}
 
-    if (current_test && current_test->ops.print_stats)
-      current_test->ops.print_stats(SB_STAT_CUMULATIVE);
+static void sigalrm_forced_shutdown_handler(int sig)
+{
+  if (sig != SIGALRM)
+    return;
 
-    log_done();
+  sb_globals.forced_shutdown_in_progress = 1;
 
-    exit(2);
-  }
+  sb_timer_stop(&sb_globals.exec_timer);
+  sb_timer_stop(&sb_globals.cumulative_timer1);
+  sb_timer_stop(&sb_globals.cumulative_timer2);
+
+  log_text(LOG_FATAL,
+           "The --max-time limit has expired, forcing shutdown...");
+
+  if (current_test && current_test->ops.print_stats)
+    current_test->ops.print_stats(SB_STAT_CUMULATIVE);
+
+  log_done();
+
+  exit(2);
 }
 #endif
 
@@ -273,19 +290,20 @@ void print_header(void)
 /* Print program usage */
 
 
-void print_usage(void)
+void print_help(void)
 {
   sb_list_item_t *pos;
   sb_test_t      *test;
   
   printf("Usage:\n");
-  printf("  sysbench [general-options]... --test=<test-name> "
-         "[test-options]... command\n\n");
+  printf("  sysbench --test=<test-name> [options]... <command>\n\n");
+  printf("Commands: prepare run cleanup help version\n\n");
   printf("General options:\n");
   sb_print_options(general_args);
 
-  printf("Log options:\n");
-  log_usage();
+  log_print_help();
+
+  db_print_help();
 
   printf("Compiled-in tests:\n");
   SB_LIST_FOR_EACH(pos, &tests)
@@ -294,7 +312,6 @@ void print_usage(void)
     printf("  %s - %s\n", test->sname, test->lname);
   }
   printf("\n");
-  printf("Commands: prepare run cleanup help version\n\n");
   printf("See 'sysbench --test=<name> help' for a list of options for each test.\n\n");
 }
 
@@ -453,10 +470,10 @@ void print_run_mode(sb_test_t *test)
 }
 
 
-/* Main runner test thread */
+/* Main worker test thread */
 
 
-static void *runner_thread(void *arg)
+static void *worker_thread(void *arg)
 {
   sb_request_t        request;
   sb_thread_ctxt_t   *ctxt;
@@ -473,20 +490,22 @@ static void *runner_thread(void *arg)
   /* Initialize thread-local RNG state */
   sb_srnd(thread_id);
 
-  log_text(LOG_DEBUG, "Runner thread started (%d)!", thread_id);
+  log_text(LOG_DEBUG, "Worker thread started (%d)!", thread_id);
+
   if (test->ops.thread_init != NULL && test->ops.thread_init(thread_id) != 0)
   {
+    log_text(LOG_DEBUG, "Worker thread (#%d) failed to initialize!", thread_id);
     sb_globals.error = 1;
-    return NULL; /* thread initialization failed  */
+    /* Avoid blocking the main thread */
+    sb_barrier_wait(&thread_start_barrier);
+    return NULL;
   }
 
-  /* 
-    We do this to make sure all threads get to this barrier 
-    about the same time 
-  */
-  pthread_mutex_lock(&thread_start_mutex);
-  sb_globals.num_running++;
-  pthread_mutex_unlock(&thread_start_mutex);
+  log_text(LOG_DEBUG, "Worker thread (#%d) started!", thread_id);
+
+  /* Wait for other threads to initialize */
+  if (sb_barrier_wait(&thread_start_barrier) < 0)
+    return NULL;
 
   do
   {
@@ -551,11 +570,7 @@ static void *runner_thread(void *arg)
   if (test->ops.thread_done != NULL)
     test->ops.thread_done(thread_id);
 
-  pthread_mutex_lock(&thread_start_mutex);
-  sb_globals.num_running--;
-  pthread_mutex_unlock(&thread_start_mutex);
-  
-  return NULL; 
+  return NULL;
 }
 
 static void *eventgen_thread_proc(void *arg)
@@ -573,8 +588,9 @@ static void *eventgen_thread_proc(void *arg)
 
   log_text(LOG_DEBUG, "Event generating thread started");
 
-  pthread_mutex_lock(&thread_start_mutex);
-  pthread_mutex_unlock(&thread_start_mutex);
+  /* Wait for other threads to initialize */
+  if (sb_barrier_wait(&thread_start_barrier) < 0)
+    return NULL;
 
   curr_ns = sb_timer_value(&sb_globals.exec_timer);
   /* emulate exponential distribution with Lambda = tx_rate */
@@ -637,17 +653,18 @@ static void *report_thread_proc(void *arg)
 
   (void)arg; /* unused */
 
+  log_text(LOG_DEBUG, "Reporting thread started");
+
+  /* Wait for other threads to initialize */
+  if (sb_barrier_wait(&thread_start_barrier) < 0)
+    return NULL;
+
   if (current_test->ops.print_stats == NULL)
   {
     log_text(LOG_DEBUG, "Reporting not supported by the current test, ",
              "terminating the reporting thread");
     return NULL;
   }
-
-  log_text(LOG_DEBUG, "Reporting thread started");
-
-  pthread_mutex_lock(&thread_start_mutex);
-  pthread_mutex_unlock(&thread_start_mutex);
 
   pause_ns = interval_ns;
   prev_ns = sb_timer_value(&sb_globals.exec_timer) + interval_ns;
@@ -686,17 +703,18 @@ static void *checkpoints_thread_proc(void *arg)
 
   (void)arg; /* unused */
 
+  log_text(LOG_DEBUG, "Checkpoints report thread started");
+
+  /* Wait for other threads to initialize */
+  if (sb_barrier_wait(&thread_start_barrier) < 0)
+    return NULL;
+
   if (current_test->ops.print_stats == NULL)
   {
     log_text(LOG_DEBUG, "Reporting not supported by the current test, ",
-             "terminating the reporting thread");
+             "terminating the checkpoints thread");
     return NULL;
   }
-
-  log_text(LOG_DEBUG, "Checkpoints report thread started");
-
-  pthread_mutex_lock(&thread_start_mutex);
-  pthread_mutex_unlock(&thread_start_mutex);
 
   for (i = 0; i < sb_globals.n_checkpoints; i++)
   {
@@ -723,11 +741,29 @@ static void *checkpoints_thread_proc(void *arg)
   return NULL;
 }
 
-/* 
-  Main test function. Start threads. 
-  Wait for them to complete and measure time 
-*/
+/* Callback to start timers when all threads are ready */
 
+static int threads_started_callback(void *arg)
+{
+  (void) arg; /* unused */
+
+  /* Report initialization errors to the main thread */
+  if (sb_globals.error)
+    return 1;
+
+  sb_globals.num_running = sb_globals.num_threads;
+
+  sb_timer_start(&sb_globals.exec_timer);
+  sb_timer_start(&sb_globals.cumulative_timer1);
+  sb_timer_start(&sb_globals.cumulative_timer2);
+
+  return 0;
+}
+
+/*
+  Main test function. Start threads.
+  Wait for them to complete and measure time
+*/
 
 static int run_test(sb_test_t *test)
 {
@@ -739,6 +775,7 @@ static int run_test(sb_test_t *test)
   int          report_thread_created      = 0;
   int          checkpoints_thread_created = 0;
   int          eventgen_thread_created    = 0;
+  unsigned int barrier_threads;
 
   /* initialize test */
   if (test->ops.init != NULL && test->ops.init() != 0)
@@ -769,9 +806,6 @@ static int run_test(sb_test_t *test)
   sb_globals.event_queue_length = 0;
   queue_is_full = 0;
 
-  /* start mutex used for barrier */
-  pthread_mutex_init(&thread_start_mutex,NULL);    
-  pthread_mutex_lock(&thread_start_mutex);
   sb_globals.num_running = 0;
 
   /* initialize attr */
@@ -790,6 +824,19 @@ static int run_test(sb_test_t *test)
   rnd_seed = LARGE_PRIME;
   pthread_mutex_init(&rnd_mutex, NULL);
   pthread_mutex_init(&report_interval_mutex, NULL);
+
+  /* Calculate the required number of threads for the start barrier */
+  barrier_threads = 1 + sb_globals.num_threads +
+    (sb_globals.report_interval > 0) +
+    (sb_globals.tx_rate > 0) +
+    (sb_globals.n_checkpoints > 0);
+
+  /* Initialize the start barrier */
+  if (sb_barrier_init(&thread_start_barrier, barrier_threads,
+                      threads_started_callback, NULL)) {
+    log_errno(LOG_FATAL, "sb_barrier_init() failed");
+    return 1;
+  }
 
   if (sb_globals.report_interval > 0)
   {
@@ -829,36 +876,52 @@ static int run_test(sb_test_t *test)
     checkpoints_thread_created = 1;
   }
 
-  /* Starting the test threads */
+  /* Starting the worker threads */
   for(i = 0; i < sb_globals.num_threads; i++)
   {
-    if (sb_globals.error)
-      return 1;
     if ((err = sb_thread_create(&(threads[i].thread), &thread_attr,
-                                &runner_thread, (void*)(threads + i))) != 0)
+                                &worker_thread, (void*)(threads + i))) != 0)
     {
       log_errno(LOG_FATAL, "sb_thread_create() for thread #%d failed.", i);
       return 1;
     }
   }
 
-  sb_timer_start(&sb_globals.exec_timer); /* Start benchmark timer */
-  sb_timer_start(&sb_globals.cumulative_timer1);
-  sb_timer_start(&sb_globals.cumulative_timer2);
+#ifdef HAVE_ALARM
+  /* Exit with an error if thread initialization timeout expires */
+  signal(SIGALRM, sigalrm_thread_init_timeout_handler);
+
+  alarm(THREAD_INIT_TIMEOUT);
+#endif
+
+  log_text(LOG_NOTICE, "Initializing worker threads...\n");
+
+  if (sb_barrier_wait(&thread_start_barrier) < 0)
+  {
+    log_text(LOG_FATAL, "Thread initialization failed!");
+    return 1;
+  }
 
 #ifdef HAVE_ALARM
-  /* Set the alarm to force shutdown */
+  alarm(0);
+
   if (sb_globals.force_shutdown)
+  {
+    /* Set the alarm to force shutdown */
+    signal(SIGALRM, sigalrm_forced_shutdown_handler);
+
     alarm(sb_globals.max_time + sb_globals.timeout);
+  }
 #endif
-  
-  pthread_mutex_unlock(&thread_start_mutex);
-  
-  log_text(LOG_NOTICE, "Threads started!\n");  
+
+  log_text(LOG_NOTICE, "Threads started!\n");
+
   for(i = 0; i < sb_globals.num_threads; i++)
   {
     if((err = sb_thread_join(threads[i].thread, NULL)) != 0)
       log_errno(LOG_FATAL, "sb_thread_join() for thread #%d failed.", i);
+
+    sb_globals.num_running--;
   }
 
   sb_timer_stop(&sb_globals.exec_timer);
@@ -887,8 +950,6 @@ static int run_test(sb_test_t *test)
   pthread_mutex_destroy(&rnd_mutex);
 
   pthread_mutex_destroy(&sb_globals.exec_mutex);
-
-  pthread_mutex_destroy(&thread_start_mutex);
 
   /* finalize test */
   if (test->ops.done != NULL)
@@ -1115,7 +1176,7 @@ int main(int argc, char *argv[])
   /* Parse command line arguments */
   if (parse_arguments(argc,argv))
   {
-    print_usage();
+    print_help();
     exit(1);
   }
 
@@ -1128,7 +1189,7 @@ int main(int argc, char *argv[])
   if (sb_globals.command == SB_COMMAND_NULL)
   {
     fprintf(stderr, "Missing required command argument.\n");
-    print_usage();
+    print_help();
     exit(1);
   }
 
@@ -1152,7 +1213,7 @@ int main(int argc, char *argv[])
   if (sb_globals.command == SB_COMMAND_HELP)
   {
     if (test == NULL)
-      print_usage();
+      print_help();
     else
     {
       if (test->args != NULL)
@@ -1172,7 +1233,7 @@ int main(int argc, char *argv[])
   if (testname == NULL)
   {
     fprintf(stderr, "Missing required argument: --test.\n");
-    print_usage();
+    print_help();
     exit(1);
   }
 
@@ -1210,9 +1271,6 @@ int main(int argc, char *argv[])
   
   /* 'run' command */
   current_test = test;
-#ifdef HAVE_ALARM
-  signal(SIGALRM, sigalrm_handler);
-#endif
   if (run_test(test))
     exit(1);
 

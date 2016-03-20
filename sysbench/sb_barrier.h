@@ -16,16 +16,43 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
+/* Thread barrier implementation. */
+
+#ifndef SB_BARRIER_H
+#define SB_BARRIER_H
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
-#include <stdlib.h>
-
-#ifdef HAVE_LRAND48_R
-TLS struct drand48_data sb_rng_state;
-#elif defined(HAVE_RAND_R)
-TLS unsigned int sb_rng_state;
-#elif defined(_WIN32)
-__declspec(thread) unsigned int sb_rng_state;
+#ifdef HAVE_PTHREAD_H
+# include <pthread.h>
 #endif
+
+#ifdef _WIN32
+#include "sb_win.h"
+#endif
+
+#define SB_BARRIER_SERIAL_THREAD 1
+
+typedef int (*sb_barrier_cb_t)(void *);
+
+typedef struct {
+  unsigned int     count;
+  unsigned int     init_count;
+  unsigned int     serial;
+  pthread_mutex_t  mutex;
+  pthread_cond_t   cond;
+  sb_barrier_cb_t  callback;
+  void             *arg;
+  int              error;
+} sb_barrier_t;
+
+int sb_barrier_init(sb_barrier_t *barrier, unsigned int count,
+                    sb_barrier_cb_t callback, void *arg);
+
+int sb_barrier_wait(sb_barrier_t *barrier);
+
+void sb_barrier_destroy(sb_barrier_t *barrier);
+
+#endif /* SB_BARRIER_H */

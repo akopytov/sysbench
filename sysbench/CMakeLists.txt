@@ -37,6 +37,12 @@ add_executable(sysbench
   db_driver.c
   sb_win.c
   sb_win.h
+  sb_rnd.c
+  sb_rnd.h
+  sb_thread.c
+  sb_thread.h
+  sb_barrier.c
+  sb_barrier.h
 )
 if(MSVC)
   #  Link C runtime statically to avoid hassle with CRT dll redistribution.
