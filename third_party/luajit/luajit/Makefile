@@ -10,13 +10,13 @@
 # For MSVC, please follow the instructions given in src/msvcbuild.bat.
 # For MinGW and Cygwin, cd to src and run make with the Makefile there.
 #
-# Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+# Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 ##############################################################################
 
 MAJVER=  2
 MINVER=  1
 RELVER=  0
-PREREL=  -beta1
+PREREL=  -beta2
 VERSION= $(MAJVER).$(MINVER).$(RELVER)$(PREREL)
 ABIVER=  5.1
 

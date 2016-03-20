@@ -1,6 +1,6 @@
 /*
 ** String formatting.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include <stdio.h>
@@ -18,7 +18,7 @@
 /* -- Format parser ------------------------------------------------------- */
 
 static const uint8_t strfmt_map[('x'-'A')+1] = {
-  STRFMT_A,0,0,0,STRFMT_E,0,STRFMT_G,0,0,0,0,0,0,
+  STRFMT_A,0,0,0,STRFMT_E,STRFMT_F,STRFMT_G,0,0,0,0,0,0,
   0,0,0,0,0,0,0,0,0,0,STRFMT_X,0,0,
   0,0,0,0,0,0,
   STRFMT_A,0,STRFMT_C,STRFMT_D,STRFMT_E,STRFMT_F,STRFMT_G,0,STRFMT_I,0,0,0,0,
@@ -89,24 +89,6 @@ retlit:
 
 /* -- Raw conversions ----------------------------------------------------- */
 
-/* Write number to bufer. */
-char * LJ_FASTCALL lj_strfmt_wnum(char *p, cTValue *o)
-{
-  if (LJ_LIKELY((o->u32.hi << 1) < 0xffe00000)) {  /* Finite? */
-#if __BIONIC__
-    if (tvismzero(o)) { *p++ = '-'; *p++ = '0'; return p; }
-#endif
-    return p + lua_number2str(p, o->n);
-  } else if (((o->u32.hi & 0x000fffff) | o->u32.lo) != 0) {
-    *p++ = 'n'; *p++ = 'a'; *p++ = 'n';
-  } else if ((o->u32.hi & 0x80000000) == 0) {
-    *p++ = 'i'; *p++ = 'n'; *p++ = 'f';
-  } else {
-    *p++ = '-'; *p++ = 'i'; *p++ = 'n'; *p++ = 'f';
-  }
-  return p;
-}
-
 #define WINT_R(x, sh, sc) \
   { uint32_t d = (x*(((1<<sh)+sc-1)/sc))>>sh; x -= d*sc; *p++ = (char)('0'+d); }
 
@@ -168,21 +150,22 @@ char * LJ_FASTCALL lj_strfmt_wuleb128(char *p, uint32_t v)
   return p;
 }
 
-/* Return string or write number to buffer and return pointer to start. */
-const char *lj_strfmt_wstrnum(char *buf, cTValue *o, MSize *lenp)
+/* Return string or write number to tmp buffer and return pointer to start. */
+const char *lj_strfmt_wstrnum(lua_State *L, cTValue *o, MSize *lenp)
 {
+  SBuf *sb;
   if (tvisstr(o)) {
     *lenp = strV(o)->len;
     return strVdata(o);
   } else if (tvisint(o)) {
-    *lenp = (MSize)(lj_strfmt_wint(buf, intV(o)) - buf);
-    return buf;
+    sb = lj_strfmt_putint(lj_buf_tmp_(L), intV(o));
   } else if (tvisnum(o)) {
-    *lenp = (MSize)(lj_strfmt_wnum(buf, o) - buf);
-    return buf;
+    sb = lj_strfmt_putfnum(lj_buf_tmp_(L), STRFMT_G14, o->n);
   } else {
     return NULL;
   }
+  *lenp = sbuflen(sb);
+  return sbufB(sb);
 }
 
 /* -- Unformatted conversions to buffer ----------------------------------- */
@@ -198,8 +181,7 @@ SBuf * LJ_FASTCALL lj_strfmt_putint(SBuf *sb, int32_t k)
 /* Add number to buffer. */
 SBuf * LJ_FASTCALL lj_strfmt_putnum(SBuf *sb, cTValue *o)
 {
-  setsbufP(sb, lj_strfmt_wnum(lj_buf_more(sb, STRFMT_MAXBUF_NUM), o));
-  return sb;
+  return lj_strfmt_putfnum(sb, STRFMT_G14, o->n);
 }
 #endif
 
@@ -360,63 +342,6 @@ SBuf *lj_strfmt_putfnum_uint(SBuf *sb, SFormat sf, lua_Number n)
   return lj_strfmt_putfxint(sb, sf, (uint64_t)k);
 }
 
-/* Max. sprintf buffer size needed. At least #string.format("%.99f", -1e308). */
-#define STRFMT_FMTNUMBUF	512
-
-/* Add formatted floating-point number to buffer. */
-SBuf *lj_strfmt_putfnum(SBuf *sb, SFormat sf, lua_Number n)
-{
-  TValue tv;
-  tv.n = n;
-  if (LJ_UNLIKELY((tv.u32.hi << 1) >= 0xffe00000)) {
-    /* Canonicalize output of non-finite values. */
-    MSize width = STRFMT_WIDTH(sf), len = 3;
-    int prefix = 0, ch = (sf & STRFMT_F_UPPER) ? 0x202020 : 0;
-    char *p;
-    if (((tv.u32.hi & 0x000fffff) | tv.u32.lo) != 0) {
-      ch ^= ('n' << 16) | ('a' << 8) | 'n';
-      if ((sf & STRFMT_F_SPACE)) prefix = ' ';
-    } else {
-      ch ^= ('i' << 16) | ('n' << 8) | 'f';
-      if ((tv.u32.hi & 0x80000000)) prefix = '-';
-      else if ((sf & STRFMT_F_PLUS)) prefix = '+';
-      else if ((sf & STRFMT_F_SPACE)) prefix = ' ';
-    }
-    if (prefix) len = 4;
-    p = lj_buf_more(sb, width > len ? width : len);
-    if (!(sf & STRFMT_F_LEFT)) while (width-- > len) *p++ = ' ';
-    if (prefix) *p++ = prefix;
-    *p++ = (char)(ch >> 16); *p++ = (char)(ch >> 8); *p++ = (char)ch;
-    if ((sf & STRFMT_F_LEFT)) while (width-- > len) *p++ = ' ';
-    setsbufP(sb, p);
-  } else {  /* Delegate to sprintf() for now. */
-    uint8_t width = (uint8_t)STRFMT_WIDTH(sf), prec = (uint8_t)STRFMT_PREC(sf);
-    char fmt[1+5+2+3+1+1], *p = fmt;
-    *p++ = '%';
-    if ((sf & STRFMT_F_LEFT)) *p++ = '-';
-    if ((sf & STRFMT_F_PLUS)) *p++ = '+';
-    if ((sf & STRFMT_F_ZERO)) *p++ = '0';
-    if ((sf & STRFMT_F_SPACE)) *p++ = ' ';
-    if ((sf & STRFMT_F_ALT)) *p++ = '#';
-    if (width) {
-      uint8_t x = width / 10, y = width % 10;
-      if (x) *p++ = '0' + x;
-      *p++ = '0' + y;
-    }
-    if (prec != 255) {
-      uint8_t x = prec / 10, y = prec % 10;
-      *p++ = '.';
-      if (x) *p++ = '0' + x;
-      *p++ = '0' + y;
-    }
-    *p++ = (0x67666561 >> (STRFMT_FP(sf)<<3)) ^ ((sf & STRFMT_F_UPPER)?0x20:0);
-    *p = '\0';
-    p = lj_buf_more(sb, STRFMT_FMTNUMBUF);
-    setsbufP(sb, p + sprintf(p, fmt, n));
-  }
-  return sb;
-}
-
 /* -- Conversions to strings ---------------------------------------------- */
 
 /* Convert integer to string. */
@@ -424,14 +349,6 @@ GCstr * LJ_FASTCALL lj_strfmt_int(lua_State *L, int32_t k)
 {
   char buf[STRFMT_MAXBUF_INT];
   MSize len = (MSize)(lj_strfmt_wint(buf, k) - buf);
-  return lj_str_new(L, buf, len);
-}
-
-/* Convert number to string. */
-GCstr * LJ_FASTCALL lj_strfmt_num(lua_State *L, cTValue *o)
-{
-  char buf[STRFMT_MAXBUF_NUM];
-  MSize len = (MSize)(lj_strfmt_wnum(buf, o) - buf);
   return lj_str_new(L, buf, len);
 }
 
@@ -510,12 +427,9 @@ const char *lj_strfmt_pushvf(lua_State *L, const char *fmt, va_list argp)
     case STRFMT_UINT:
       lj_strfmt_putfxint(sb, sf, va_arg(argp, uint32_t));
       break;
-    case STRFMT_NUM: {
-      TValue tv;
-      tv.n = va_arg(argp, lua_Number);
-      setsbufP(sb, lj_strfmt_wnum(lj_buf_more(sb, STRFMT_MAXBUF_NUM), &tv));
+    case STRFMT_NUM:
+      lj_strfmt_putfnum(sb, STRFMT_G14, va_arg(argp, lua_Number));
       break;
-      }
     case STRFMT_STR: {
       const char *s = va_arg(argp, char *);
       if (s == NULL) s = "(null)";

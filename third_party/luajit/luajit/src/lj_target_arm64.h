@@ -1,6 +1,6 @@
 /*
 ** Definitions for ARM64 CPUs.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_TARGET_ARM64_H

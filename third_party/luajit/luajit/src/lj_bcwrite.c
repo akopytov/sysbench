@@ -1,6 +1,6 @@
 /*
 ** Bytecode writer.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_bcwrite_c

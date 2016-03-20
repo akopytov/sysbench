@@ -1,6 +1,6 @@
 /*
 ** MIPS IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Register allocator extensions --------------------------------------- */
@@ -651,8 +651,7 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
     rset_clear(allow, key);
     if (irkey[1].o == IR_HIOP) {
       if (ra_hasreg((irkey+1)->r)) {
-	tmpnum = (irkey+1)->r;
-	type = RID_TMP;
+	type = tmpnum = (irkey+1)->r;
 	tmp1 = ra_scratch(as, allow);
 	rset_clear(allow, tmp1);
 	ra_noweak(as, tmpnum);

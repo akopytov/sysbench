@@ -1,6 +1,6 @@
 /*
 ** Buffer handling.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_buf_c
@@ -77,7 +77,6 @@ SBuf *lj_buf_putmem(SBuf *sb, const void *q, MSize len)
   return sb;
 }
 
-#if LJ_HASJIT
 SBuf * LJ_FASTCALL lj_buf_putchar(SBuf *sb, int c)
 {
   char *p = lj_buf_more(sb, 1);
@@ -85,7 +84,6 @@ SBuf * LJ_FASTCALL lj_buf_putchar(SBuf *sb, int c)
   setsbufP(sb, p);
   return sb;
 }
-#endif
 
 SBuf * LJ_FASTCALL lj_buf_putstr(SBuf *sb, GCstr *s)
 {
@@ -186,7 +184,7 @@ SBuf *lj_buf_puttab(SBuf *sb, GCtab *t, GCstr *sep, int32_t i, int32_t e)
       } else if (tvisint(o)) {
 	p = lj_strfmt_wint(lj_buf_more(sb, STRFMT_MAXBUF_INT+seplen), intV(o));
       } else if (tvisnum(o)) {
-	p = lj_strfmt_wnum(lj_buf_more(sb, STRFMT_MAXBUF_NUM+seplen), o);
+	p = lj_buf_more(lj_strfmt_putfnum(sb, STRFMT_G14, numV(o)), seplen);
       } else {
 	goto badtype;
       }

@@ -1,6 +1,6 @@
 /*
 ** Metamethod handling.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -278,25 +278,25 @@ TValue *lj_meta_cat(lua_State *L, TValue *top, int left)
       */
       TValue *e, *o = top;
       uint64_t tlen = tvisstr(o) ? strV(o)->len : STRFMT_MAXBUF_NUM;
-      char *p, *buf;
+      SBuf *sb;
       do {
 	o--; tlen += tvisstr(o) ? strV(o)->len : STRFMT_MAXBUF_NUM;
       } while (--left > 0 && (tvisstr(o-1) || tvisnumber(o-1)));
       if (tlen >= LJ_MAX_STR) lj_err_msg(L, LJ_ERR_STROV);
-      p = buf = lj_buf_tmp(L, (MSize)tlen);
+      sb = lj_buf_tmp_(L);
+      lj_buf_more(sb, (MSize)tlen);
       for (e = top, top = o; o <= e; o++) {
 	if (tvisstr(o)) {
 	  GCstr *s = strV(o);
 	  MSize len = s->len;
-	  p = lj_buf_wmem(p, strdata(s), len);
+	  lj_buf_putmem(sb, strdata(s), len);
 	} else if (tvisint(o)) {
-	  p = lj_strfmt_wint(p, intV(o));
+	  lj_strfmt_putint(sb, intV(o));
 	} else {
-	  lua_assert(tvisnum(o));
-	  p = lj_strfmt_wnum(p, o);
+	  lj_strfmt_putfnum(sb, STRFMT_G14, numV(o));
 	}
       }
-      setstrV(L, top, lj_str_new(L, buf, (size_t)(p-buf)));
+      setstrV(L, top, lj_buf_str(L, sb));
     }
   } while (left >= 1);
   if (LJ_UNLIKELY(G(L)->gc.total >= G(L)->gc.threshold)) {
