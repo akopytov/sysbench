@@ -36,11 +36,18 @@ AC_CACHE_CHECK([whether to build with system or bundled LuaJIT],
   ])
 
 AS_IF([test "x$sb_cv_lib_luajit" = "xsystem"],
-      [PKG_CHECK_MODULES([LUAJIT], [luajit])],
-      [
-        LUAJIT_CFLAGS="-I\$(abs_top_builddir)/third_party/luajit/inc"
-        LUAJIT_LIBS="\$(abs_top_builddir)/third_party/luajit/lib/libluajit-5.1.a"
-      ]
+  # let PKG_CHECK_MODULES set LUAJIT_CFLAGS and LUAJIT_LIBS for system libluajit
+  [PKG_CHECK_MODULES([LUAJIT], [luajit])],
+  # Set LUAJIT_CFLAGS and LUAJIT_LIBS manually for bundled libluajit
+  [
+    LUAJIT_CFLAGS="-I\$(abs_top_builddir)/third_party/luajit/inc"
+    LUAJIT_LIBS="\$(abs_top_builddir)/third_party/luajit/lib/libluajit-5.1.a"
+    AS_CASE([$host_os],
+      # -ldl is required on Linux
+      [*linux*], [
+        LUAJIT_LIBS="$LUAJIT_LIBS -ldl"
+      ])
+  ]
 )
 
 AC_DEFINE_UNQUOTED([SB_WITH_LUAJIT], ["$sb_use_luajit"],
