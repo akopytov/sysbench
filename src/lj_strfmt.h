@@ -1,6 +1,6 @@
 /*
 ** String formatting.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_STRFMT_H
@@ -64,11 +64,12 @@ typedef enum FormatType {
 #define STRFMT_S	(STRFMT_STR)
 #define STRFMT_U	(STRFMT_UINT)
 #define STRFMT_X	(STRFMT_UINT|STRFMT_T_HEX)
+#define STRFMT_G14	(STRFMT_G | ((14+1) << STRFMT_SH_PREC))
 
 /* Maximum buffer sizes for conversions. */
 #define STRFMT_MAXBUF_XINT	(1+22)  /* '0' prefix + uint64_t in octal. */
 #define STRFMT_MAXBUF_INT	(1+10)  /* Sign + int32_t in decimal. */
-#define STRFMT_MAXBUF_NUM	LUAI_MAXNUMBER2STR
+#define STRFMT_MAXBUF_NUM	32  /* Must correspond with STRFMT_G14. */
 #define STRFMT_MAXBUF_PTR	(2+2*sizeof(ptrdiff_t))  /* "0x" + hex ptr. */
 
 /* Format parser. */
@@ -83,10 +84,9 @@ static LJ_AINLINE void lj_strfmt_init(FormatState *fs, const char *p, MSize len)
 
 /* Raw conversions. */
 LJ_FUNC char * LJ_FASTCALL lj_strfmt_wint(char *p, int32_t k);
-LJ_FUNC char * LJ_FASTCALL lj_strfmt_wnum(char *p, cTValue *o);
 LJ_FUNC char * LJ_FASTCALL lj_strfmt_wptr(char *p, const void *v);
 LJ_FUNC char * LJ_FASTCALL lj_strfmt_wuleb128(char *p, uint32_t v);
-LJ_FUNC const char *lj_strfmt_wstrnum(char *buf, cTValue *o, MSize *lenp);
+LJ_FUNC const char *lj_strfmt_wstrnum(lua_State *L, cTValue *o, MSize *lenp);
 
 /* Unformatted conversions to buffer. */
 LJ_FUNC SBuf * LJ_FASTCALL lj_strfmt_putint(SBuf *sb, int32_t k);

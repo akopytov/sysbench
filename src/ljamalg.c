@@ -1,6 +1,6 @@
 /*
 ** LuaJIT core and libraries amalgamation.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /*
@@ -46,6 +46,7 @@
 #include "lj_vmmath.c"
 #include "lj_strscan.c"
 #include "lj_strfmt.c"
+#include "lj_strfmt_num.c"
 #include "lj_api.c"
 #include "lj_profile.c"
 #include "lj_lex.c"

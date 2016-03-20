@@ -1,6 +1,6 @@
 /*
 ** C type management.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include "lj_obj.h"
@@ -14,6 +14,7 @@
 #include "lj_strfmt.h"
 #include "lj_ctype.h"
 #include "lj_ccallback.h"
+#include "lj_buf.h"
 
 /* -- C type definitions -------------------------------------------------- */
 
@@ -571,19 +572,18 @@ GCstr *lj_ctype_repr_int64(lua_State *L, uint64_t n, int isunsigned)
 /* Convert complex to string with 'i' or 'I' suffix. */
 GCstr *lj_ctype_repr_complex(lua_State *L, void *sp, CTSize size)
 {
-  char buf[2*STRFMT_MAXBUF_NUM+2+1], *p = buf;
+  SBuf *sb = lj_buf_tmp_(L);
   TValue re, im;
   if (size == 2*sizeof(double)) {
     re.n = *(double *)sp; im.n = ((double *)sp)[1];
   } else {
     re.n = (double)*(float *)sp; im.n = (double)((float *)sp)[1];
   }
-  p = lj_strfmt_wnum(p, &re);
-  if (!(im.u32.hi & 0x80000000u) || im.n != im.n) *p++ = '+';
-  p = lj_strfmt_wnum(p, &im);
-  *p = *(p-1) >= 'a' ? 'I' : 'i';
-  p++;
-  return lj_str_new(L, buf, p-buf);
+  lj_strfmt_putfnum(sb, STRFMT_G14, re.n);
+  if (!(im.u32.hi & 0x80000000u) || im.n != im.n) lj_buf_putchar(sb, '+');
+  lj_strfmt_putfnum(sb, STRFMT_G14, im.n);
+  lj_buf_putchar(sb, sbufP(sb)[-1] >= 'a' ? 'I' : 'i');
+  return lj_buf_str(L, sb);
 }
 
 /* -- C type state -------------------------------------------------------- */

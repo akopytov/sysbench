@@ -4,7 +4,7 @@
 <title>LuaJIT Change History</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 <meta name="Author" content="Mike Pall">
-<meta name="Copyright" content="Copyright (C) 2005-2015, Mike Pall">
+<meta name="Copyright" content="Copyright (C) 2005-2016, Mike Pall">
 <meta name="Language" content="en">
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
@@ -74,6 +74,19 @@ to see whether newer versions are available.
 </p>
 
 <div class="major" style="background: #d0d0ff;">
+<h2 id="LuaJIT-2.1.0-beta2">LuaJIT 2.1.0-beta2 &mdash; 2016-03-03</h2>
+<ul>
+<li>Enable trace stitching.</li>
+<li>Use internal implementation for converting FP numbers to strings.</li>
+<li>Parse Unicode escape <tt>'\u{XX...}'</tt> in string literals.</li>
+<li>Add MIPS soft-float support.</li>
+<li>Switch MIPS port to dual-number mode.</li>
+<li>x86/x64: Add support for AES-NI, AVX and AVX2 to DynASM.</li>
+<li>FFI: Add <tt>ssize_t</tt> declaration.</li>
+<li>FFI: Parse <tt>#line NN</tt> and <tt>#NN</tt>.</li>
+<li>Various minor fixes.</li>
+</ul>
+
 <h2 id="LuaJIT-2.1.0-beta1">LuaJIT 2.1.0-beta1 &mdash; 2015-08-25</h2>
 <p>
 This is a brief summary of the major changes in LuaJIT 2.1 compared to 2.0.
@@ -86,12 +99,11 @@ Please take a look at the commit history for more details.
 <li>Add <tt>LJ_GC64</tt> mode: 64 bit GC object references (really: 47 bit). Interpreter-only for now.</li>
 <li>Add <tt>LJ_FR2</tt> mode: Two-slot frame info. Required by <tt>LJ_GC64</tt> mode.</li>
 <li>Add <tt>table.new()</tt> and <tt>table.clear()</tt>.</li>
-<li>Parse Unicode escape <tt>'\u{XX...}'</tt> in string literals.</li>
 <li>Parse binary number literals (<tt>0bxxx</tt>).</li>
 </ul></li>
 <li>Improvements to the JIT compiler:
 <ul>
-<li>Add trace stitching.</li>
+<li>Add trace stitching (disabled for now).</li>
 <li>Compile various builtins: <tt>string.char()</tt>, <tt>string.reverse()</tt>, <tt>string.lower()</tt>, <tt>string.upper()</tt>, <tt>string.rep()</tt>, <tt>string.format()</tt>, <tt>table.concat()</tt>, <tt>bit.tohex()</tt>, <tt>getfenv(0)</tt>, <tt>debug.getmetatable()</tt>.</li>
 <li>Compile <tt>string.find()</tt> for fixed string searches (no patterns).</li>
 <li>Compile <tt>BC_TSETM</tt>, e.g. <tt>{1,2,3,f()}</tt>.</li>
@@ -113,7 +125,6 @@ Please take a look at the commit history for more details.
 <li>x64: Add separate port of the interpreter to <tt>LJ_GC64</tt> mode.</li>
 <li>x86/x64: Drop internal x87 math functions. Use libm functions.</li>
 <li>x86: Remove x87 support from interpreter. SSE2 is mandatory now.</li>
-<li>x86/x64: Add support for AES-NI, AVX and AVX2 to DynASM.</li>
 <li>PPC/e500: Drop support for this architecture.</li>
 </ul></li>
 <li>FFI library:
@@ -124,7 +135,6 @@ Please take a look at the commit history for more details.
 <li>FFI: Compile lightuserdata to <tt>void *</tt> conversion.</li>
 <li>FFI: Compile <tt>ffi.gc(cdata, nil)</tt>, too.</li>
 <li>FFI: Add <tt>ffi.typeinfo()</tt>.</li>
-<li>FFI: Add <tt>ssize_t</tt> declaration.</li>
 </ul></li>
 </ul>
 </div>
@@ -797,7 +807,7 @@ no point in listing differences over earlier versions.</li>
 </div>
 <div id="foot">
 <hr class="hide">
-Copyright &copy; 2005-2015 Mike Pall
+Copyright &copy; 2005-2016 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

@@ -1,6 +1,6 @@
 /*
 ** Base and coroutine library.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2011 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -495,11 +495,10 @@ LJLIB_CF(print)
   shortcut = (tvisfunc(tv) && funcV(tv)->c.ffid == FF_tostring);
   for (i = 0; i < nargs; i++) {
     cTValue *o = &L->base[i];
-    char buf[STRFMT_MAXBUF_NUM];
     const char *str;
     size_t size;
     MSize len;
-    if (shortcut && (str = lj_strfmt_wstrnum(buf, o, &len)) != NULL) {
+    if (shortcut && (str = lj_strfmt_wstrnum(L, o, &len)) != NULL) {
       size = len;
     } else {
       copyTV(L, L->top+1, o);

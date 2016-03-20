@@ -1,6 +1,6 @@
 |// Low-level VM code for x64 CPUs in LJ_GC64 mode.
 |// Bytecode interpreter, fast functions and helper functions.
-|// Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+|// Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 |
 |.arch x64
 |.section code_op, code_sub
@@ -1804,7 +1804,11 @@ static void build_subroutines(BuildCtx *ctx)
   |  jmp ->fff_res1
   |
   |.ffunc_n math_frexp
+  |.if X64WIN
+  |  lea CARG2, TMP1
+  |.else
   |  lea CARG1, TMP1
+  |.endif
   |  mov RB, BASE
   |  call extern frexp
   |  mov BASE, RB
@@ -1822,7 +1826,11 @@ static void build_subroutines(BuildCtx *ctx)
   |  jmp ->fff_res
   |
   |.ffunc_n math_modf
+  |.if X64WIN
+  |  lea CARG2, [BASE-16]
+  |.else
   |  lea CARG1, [BASE-16]
+  |.endif
   |  mov PC, [BASE-8]
   |  mov RB, BASE
   |  call extern modf

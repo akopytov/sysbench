@@ -1,6 +1,6 @@
 /*
 ** Target architecture selection.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_ARCH_H
@@ -511,7 +511,7 @@
 #endif
 
 /* Various workarounds for embedded operating systems or weak C runtimes. */
-#if (defined(__ANDROID__) && !defined(LJ_TARGET_X86ORX64)) || defined(__symbian__) || LJ_TARGET_XBOX360 || LJ_TARGET_WINDOWS
+#if defined(__ANDROID__) || defined(__symbian__) || LJ_TARGET_XBOX360 || LJ_TARGET_WINDOWS
 #define LUAJIT_NO_LOG2
 #endif
 #if defined(__symbian__) || LJ_TARGET_WINDOWS

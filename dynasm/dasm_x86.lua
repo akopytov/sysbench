@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- DynASM x86/x64 module.
 --
--- Copyright (C) 2005-2015 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2016 Mike Pall. All rights reserved.
 -- See dynasm.lua for full copyright notice.
 ------------------------------------------------------------------------------
 
@@ -1673,6 +1673,10 @@ local map_op = {
   vpsravd_3 =	"rrmoy:660F38V46rM",
   vpsrlvd_3 =	"rrmoy:660F38V45rM",
   vpsrlvq_3 =	"rrmoy:660F38VX45rM",
+
+  -- Intel ADX
+  adcx_2 =	"rmqd:660F38F6rM",
+  adox_2 =	"rmqd:F30F38F6rM",
 }
 
 ------------------------------------------------------------------------------

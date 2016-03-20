@@ -1,6 +1,6 @@
 /*
 ** Error handling.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_err_c
@@ -310,7 +310,6 @@ static void err_raise_ext(int errcode)
 #define _US_FORCE_UNWIND		8
 
 typedef struct _Unwind_Control_Block _Unwind_Control_Block;
-typedef struct _Unwind_Context _Unwind_Context;
 
 struct _Unwind_Control_Block {
   uint64_t exclass;

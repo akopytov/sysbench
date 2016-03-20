@@ -1,6 +1,6 @@
 /*
 ** Buffer handling.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_BUF_H
@@ -67,9 +67,7 @@ static LJ_AINLINE char *lj_buf_more(SBuf *sb, MSize sz)
 
 /* Low-level buffer put operations */
 LJ_FUNC SBuf *lj_buf_putmem(SBuf *sb, const void *q, MSize len);
-#if LJ_HASJIT
 LJ_FUNC SBuf * LJ_FASTCALL lj_buf_putchar(SBuf *sb, int c);
-#endif
 LJ_FUNC SBuf * LJ_FASTCALL lj_buf_putstr(SBuf *sb, GCstr *s);
 
 static LJ_AINLINE char *lj_buf_wmem(char *p, const void *q, MSize len)

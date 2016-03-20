@@ -1,6 +1,6 @@
 /*
 ** I/O library.
-** Copyright (C) 2005-2015 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2011 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -232,9 +232,8 @@ static int io_file_write(lua_State *L, FILE *fp, int start)
   cTValue *tv;
   int status = 1;
   for (tv = L->base+start; tv < L->top; tv++) {
-    char buf[STRFMT_MAXBUF_NUM];
     MSize len;
-    const char *p = lj_strfmt_wstrnum(buf, tv, &len);
+    const char *p = lj_strfmt_wstrnum(L, tv, &len);
     if (!p)
       lj_err_argt(L, (int)(tv - L->base) + 1, LUA_TSTRING);
     status = status && (fwrite(p, 1, len, fp) == len);
