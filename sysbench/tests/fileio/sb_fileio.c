@@ -362,7 +362,7 @@ int file_prepare(void)
     files[i] = sb_open(file_name);
     if (!VALID_FILE(files[i]))
     {
-      log_errno(LOG_FATAL, "Cannot open file");
+      log_errno(LOG_FATAL, "Cannot open file '%s'", file_name);
       return 1; 
     }
   }
@@ -2055,11 +2055,10 @@ static FILE_DESCRIPTOR sb_open(const char *name)
     return SB_INVALID_FILE;
 
 #ifndef _WIN32
-  file = open(name, O_CREAT | O_RDWR | flags,
-              S_IRUSR | S_IWUSR);
+  file = open(name, O_RDWR | flags, S_IRUSR | S_IWUSR);
 #else
-  file = CreateFile(name, GENERIC_READ|GENERIC_WRITE, 0, NULL,
-                    OPEN_ALWAYS, flags, NULL);
+  file = CreateFile(name, GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+                    flags, NULL);
 #endif
 
 #ifdef HAVE_DIRECTIO
