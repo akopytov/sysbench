@@ -1,7 +1,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT([sysbench],[0.9],[akopytov@gmail.com])
+AC_INIT([sysbench],[0.9],[https://github.com/akopytov/sysbench/issues],
+        [sysbench], [https://github.com/akopytov/sysbench])
 AC_CONFIG_AUX_DIR([config])
 # Setting CFLAGS here prevents AC_CANONICAL_TARGET from injecting them
 SAVE_CFLAGS=${CFLAGS}
