@@ -12,14 +12,15 @@ addons:
   apt:
     packages:
     - libmysqlclient-dev
+    - libpq-dev
 
 before_install:
   - >
     case "${TRAVIS_OS_NAME:-linux}" in
     osx)
       brew update --quiet
-      brew install mysql
+      brew install mysql postgresql
       ;;
     esac
 
-script: ./autogen.sh && ./configure && make
+script: ./autogen.sh && ./configure --with-mysql --with-pgsql && make
