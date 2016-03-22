@@ -100,9 +100,9 @@ AC_ARG_WITH([mysql],
             [], [with_mysql=yes])
 AC_MSG_CHECKING([whether to compile with MySQL support])
 AS_IF([test "x$with_mysql" != "xno"],
-   [AC_MSG_RESULT([yes])],
-   [AC_MSG_RESULT([no])]
-)
+   [mysql_support=yes],
+   [mysql_support=no])
+AC_MSG_RESULT([$mysql_support])
 
 # Check if we should compile with Drizzle support
 AC_ARG_WITH([drizzle],
@@ -111,9 +111,9 @@ AC_ARG_WITH([drizzle],
             [], [with_drizzle=no])
 AC_MSG_CHECKING([whether to compile with Drizzle support])
 AS_IF([test "x$with_drizzle" != "xno"],
-   [AC_MSG_RESULT([yes])],
-   [AC_MSG_RESULT([no])]
-)
+   [drizzle_support=yes],
+   [drizzle_support=no])
+AC_MSG_RESULT([$drizzle_support])
 
 # Check if we should compile with libattachsql support
 AC_ARG_WITH([attachsql],
@@ -122,8 +122,9 @@ AC_ARG_WITH([attachsql],
             [], [with_attachsql=no])
 AC_MSG_CHECKING([whether to compile with libattachsql support])
 AS_IF([test "x$with_attachsql" != "xno"],
-   [AC_MSG_RESULT([yes])],
-   [AC_MSG_RESULT([no])])
+   [attachsql_support=yes],
+   [attachsql_support=no])
+AC_MSG_RESULT([$attachsql_support])
 
 
 # Check if we should compile with Oracle support
@@ -133,8 +134,9 @@ AC_ARG_WITH([oracle],
             [], [with_oracle=no])
 AC_MSG_CHECKING([whether to compile with Oracle support])
 AS_IF([test "x$with_oracle" != "xno"],
-   [AC_MSG_RESULT([yes])],
-   [AC_MSG_RESULT([no])])
+   [oracle_support=yes],
+   [oracle_support=no])
+AC_MSG_RESULT([$oracle_support])
 
 # Check if we should compile with PostgreSQL support
 AC_ARG_WITH([pgsql],
@@ -143,8 +145,9 @@ AC_ARG_WITH([pgsql],
             [], [with_pgsql=no])
 AC_MSG_CHECKING([whether to compile with PostgreSQL support])
 AS_IF([test "x$with_pgsql" != "xno"],
-   [AC_MSG_RESULT([yes])],
-   [AC_MSG_RESULT([no])])
+   [pgsql_support=yes],
+   [pgsql_support=no])
+AC_MSG_RESULT([$pgsql_support])
 
 # Set LuaJIT flags
 SB_LUAJIT
@@ -483,3 +486,29 @@ sysbench/tests/db/Makefile
 sysbench/scripting/Makefile
 ])
 AC_OUTPUT
+
+AC_MSG_RESULT([===============================================================================])
+AC_MSG_RESULT([sysbench version   : ${PACKAGE_VERSION}])
+AC_MSG_RESULT([CC                 : ${CC}])
+AC_MSG_RESULT([CFLAGS             : ${CFLAGS} ${AM_CFLAGS}])
+AC_MSG_RESULT([CPPFLAGS           : ${CPPFLAGS} ${AM_CPPFLAGS}])
+AC_MSG_RESULT([LDFLAGS            : ${LDFLAGS} ${AM_LDFLAGS}])
+AC_MSG_RESULT([LIBS               : ${LIBS}])
+AC_MSG_RESULT([EXTRA_LDFLAGS      : ${EXTRA_LDFLAGS}])
+AC_MSG_RESULT([])
+AC_MSG_RESULT([prefix             : $(eval echo ${prefix})])
+AC_MSG_RESULT([bindir             : $(eval echo ${bindir})])
+AC_MSG_RESULT([libexecdir         : $(eval echo ${libexecdir})])
+AC_MSG_RESULT([mandir             : $(eval echo ${mandir})])
+AC_MSG_RESULT([])
+AC_MSG_RESULT([MySQL support      : ${mysql_support}])
+AC_MSG_RESULT([Drizzle support    : ${drizzle_support}])
+AC_MSG_RESULT([AttachSQL support  : ${attachsql_support}])
+AC_MSG_RESULT([Oracle support     : ${oracle_support}])
+AC_MSG_RESULT([PostgreSQL support : ${pgsql_support}])
+AC_MSG_RESULT([])
+AC_MSG_RESULT([LuaJIT             : ${sb_use_luajit}])
+AC_MSG_RESULT([LUAJIT_CFLAGS      : ${LUAJIT_CFLAGS}])
+AC_MSG_RESULT([LUAJIT_LIBS        : ${LUAJIT_LIBS}])
+AC_MSG_RESULT([LUAJIT_LDFLAGS     : ${LUAJIT_LDFLAGS}])
+AC_MSG_RESULT([===============================================================================])

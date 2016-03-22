@@ -64,6 +64,8 @@
 # include <limits.h>
 #endif
 
+#include <luajit.h>
+
 #include "sysbench.h"
 #include "sb_options.h"
 #include "scripting/sb_script.h"
@@ -71,7 +73,6 @@
 #include "sb_rnd.h"
 #include "sb_thread.h"
 #include "sb_barrier.h"
-#include "luajit.h"
 
 #define VERSION_STRING PACKAGE" "PACKAGE_VERSION
 
