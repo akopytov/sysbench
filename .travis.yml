@@ -22,4 +22,4 @@ before_install:
       ;;
     esac
 
-script: true
+script: ./autogen.sh && ./configure && make
