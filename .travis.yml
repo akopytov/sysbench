@@ -19,7 +19,7 @@ before_install:
     case "${TRAVIS_OS_NAME:-linux}" in
     osx)
       brew update --quiet
-      brew install mysql postgresql
+      brew install mysql
       ;;
     esac
 
