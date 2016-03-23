@@ -396,7 +396,7 @@ char *sb_print_value_size(char *buf, unsigned int buflen, double value)
     /* empty */ ;
 
   if (i > 0)
-    snprintf(buf, buflen, "%.5g%c", value, sizemods[i-1]);
+    snprintf(buf, buflen, "%.5g%ci", value, sizemods[i-1]);
   else
     snprintf(buf, buflen, "%.5g", value);
 
