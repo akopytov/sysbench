@@ -308,7 +308,8 @@ static unsigned long sb_getpagesize(void);
 static unsigned long sb_get_allocation_granularity(void);
 static void *sb_memalign(size_t size);
 static void sb_free_memaligned(void *buf);
-static FILE_DESCRIPTOR sb_open(const char *name);
+static FILE_DESCRIPTOR sb_open(const char *);
+static FILE_DESCRIPTOR sb_create(const char *);
 
 int register_test_fileio(sb_list_t *tests)
 {
@@ -354,8 +355,15 @@ int file_prepare(void)
   {
     snprintf(file_name, sizeof(file_name), "test_file.%d",i);
     /* remove test files for creation test if they exist */
-    if (test_mode == MODE_WRITE)  
+    if (test_mode == MODE_WRITE)
+    {
       unlink(file_name);
+      if (sb_create(file_name))
+      {
+        log_errno(LOG_FATAL, "Cannot create file '%s'", file_name);
+        return 1;
+      }
+    }
 
     log_text(LOG_DEBUG, "Opening file: %s", file_name);
     files[i] = sb_open(file_name);
@@ -2073,6 +2081,30 @@ static FILE_DESCRIPTOR sb_open(const char *name)
 #endif
 
   return file;
+}
+
+/*
+  Create a file with a given path. Signal an error if the file already
+  exists. Return a non-zero value on error.
+*/
+
+static int sb_create(const char *path)
+{
+  FILE_DESCRIPTOR file;
+  int res;
+
+#ifndef _WIN32
+  file = open(path, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+  res = !VALID_FILE(file);
+  close(file);
+#else
+  file = CreateFile(name, GENERIC_READ|GENERIC_WRITE, 0, NULL, CREATE_NEW,
+                    flags, NULL);
+  res = !VALID_FILE(file);
+  CloseHandle(file);
+#endif
+
+  return res;
 }
 
 
