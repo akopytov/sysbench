@@ -801,15 +801,15 @@ void file_print_mode(void)
   char sizestr[16];
   
   log_text(LOG_NOTICE, "Extra file open flags: %x", file_extra_flags);
-  log_text(LOG_NOTICE, "%d files, %sb each", num_files,
+  log_text(LOG_NOTICE, "%d files, %sB each", num_files,
            sb_print_value_size(sizestr, sizeof(sizestr), file_size));
-  log_text(LOG_NOTICE, "%sb total file size",
+  log_text(LOG_NOTICE, "%sB total file size",
            sb_print_value_size(sizestr, sizeof(sizestr),
                                file_size * num_files));
-  log_text(LOG_NOTICE, "Block size %sb",
+  log_text(LOG_NOTICE, "Block size %sB",
            sb_print_value_size(sizestr, sizeof(sizestr), file_block_size));
   if (file_merged_requests > 0)
-    log_text(LOG_NOTICE, "Merging requests  up to %sb for sequential IO.",
+    log_text(LOG_NOTICE, "Merging requests  up to %sB for sequential IO.",
              sb_print_value_size(sizestr, sizeof(sizestr),
                                  file_max_request_size));
 
@@ -877,7 +877,7 @@ void file_print_stats(sb_stat_t type)
       SB_THREAD_MUTEX_UNLOCK();
 
       log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
-                    "reads: %4.2f MB/s writes: %4.2f MB/s fsyncs: %4.2f/s "
+                    "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "
                     "response time: %4.3fms (%u%%)",
                     diff_read / megabyte / seconds,
                     diff_written / megabyte / seconds,
@@ -897,8 +897,8 @@ void file_print_stats(sb_stat_t type)
     log_text(LOG_NOTICE,
              "Operations performed:  %d reads, %d writes, %d Other = %d Total",
              read_ops, write_ops, other_ops, read_ops + write_ops + other_ops);
-    log_text(LOG_NOTICE, "Read %sb  Written %sb  Total transferred %sb  "
-             "(%sb/sec)",
+    log_text(LOG_NOTICE, "Read %sB  Written %sB  Total transferred %sB  "
+             "(%sB/sec)",
              sb_print_value_size(s1, sizeof(s1), bytes_read),
              sb_print_value_size(s2, sizeof(s2), bytes_written),
              sb_print_value_size(s3, sizeof(s3), bytes_read + bytes_written),
@@ -1092,7 +1092,7 @@ int create_files(void)
   seconds = NS2SEC(sb_timer_value(&t));
 
   if (written > 0)
-    log_text(LOG_NOTICE, "%llu bytes written in %.2f seconds (%.2f MB/sec).",
+    log_text(LOG_NOTICE, "%llu bytes written in %.2f seconds (%.2f MiB/sec).",
              written, seconds,
              (double) (written / megabyte) / seconds);
   else
