@@ -751,8 +751,8 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
           file_validate_buffer(per_thread[thread_id].buffer, file_req->size, file_req->pos))
       {
         log_text(LOG_FATAL,
-          "Validation failed on file " FD_FMT ", block offset 0x%x, exiting...",
-           file_req->file_id, file_req->pos);
+          "Validation failed on file " FD_FMT ", block offset %lld, exiting...",
+                 file_req->file_id, (long long) file_req->pos);
         return 1;
       }
 
@@ -2139,7 +2139,8 @@ int file_validate_buffer(unsigned char  *buf, unsigned int len, size_t offset)
 
   if (checksum != *(unsigned int *)(void *)(buf + cs_offset))
   {
-    log_text(LOG_FATAL, "Checksum mismatch in block: ", offset);
+    log_text(LOG_FATAL, "Checksum mismatch in block with offset: %lld",
+             (long long) offset);
     log_text(LOG_FATAL, "    Calculated value: 0x%x    Stored value: 0x%x",
              checksum, *(unsigned int *)(void *)(buf + cs_offset));
     return 1;

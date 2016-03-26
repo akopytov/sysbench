@@ -23,6 +23,7 @@
 # include "config.h"
 #endif
 
+#include "sb_global.h"
 #include "sb_options.h"
 #include "sb_timer.h"
 
@@ -144,7 +145,8 @@ void log_msg(log_msg_t *);
 
 /* printf-like wrapper to log text messages */
 
-void log_text(log_msg_priority_t priority, const char *fmt, ...);
+void log_text(log_msg_priority_t priority, const char *fmt, ...)
+  SB_ATTRIBUTE_FORMAT(printf, 2, 3);
 
 /*
   variant of log_text() which prepends log lines with a elapsed time of the
@@ -152,11 +154,13 @@ void log_text(log_msg_priority_t priority, const char *fmt, ...);
 */
 
 void log_timestamp(log_msg_priority_t priority, const sb_timer_t *timer,
-                   const char *fmt, ...);
+                   const char *fmt, ...)
+  SB_ATTRIBUTE_FORMAT(printf, 3, 4);
 
 /* printf-like wrapper to log system error messages */
 
-void log_errno(log_msg_priority_t priority, const char *fmt, ...);
+void log_errno(log_msg_priority_t priority, const char *fmt, ...)
+  SB_ATTRIBUTE_FORMAT(printf, 2, 3);
 
 /* Uninitialize logger */
 

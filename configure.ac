@@ -268,6 +268,10 @@ AX_TLS([],
   AC_MSG_ERROR([Thread-local storage is not suppored by the target platform!])
 )
 
+# Define HAVE_FUNC_ATTRIBUTE_FORMAT if compiler supports the
+# __attribute__((format...)) function attribute
+AX_GCC_FUNC_ATTRIBUTE(format)
+
 if test "$enable_largefile" = yes; then
     AC_SYS_LARGEFILE
 fi

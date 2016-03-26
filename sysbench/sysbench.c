@@ -659,7 +659,7 @@ static void *report_thread_proc(void *arg)
 
   if (current_test->ops.print_stats == NULL)
   {
-    log_text(LOG_DEBUG, "Reporting not supported by the current test, ",
+    log_text(LOG_DEBUG, "Reporting not supported by the current test, "
              "terminating the reporting thread");
     return NULL;
   }
@@ -709,7 +709,7 @@ static void *checkpoints_thread_proc(void *arg)
 
   if (current_test->ops.print_stats == NULL)
   {
-    log_text(LOG_DEBUG, "Reporting not supported by the current test, ",
+    log_text(LOG_DEBUG, "Reporting not supported by the current test, "
              "terminating the checkpoints thread");
     return NULL;
   }
