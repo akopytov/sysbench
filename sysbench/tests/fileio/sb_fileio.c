@@ -809,7 +809,7 @@ void file_print_mode(void)
   log_text(LOG_NOTICE, "Block size %sB",
            sb_print_value_size(sizestr, sizeof(sizestr), file_block_size));
   if (file_merged_requests > 0)
-    log_text(LOG_NOTICE, "Merging requests  up to %sB for sequential IO.",
+    log_text(LOG_NOTICE, "Merging requests up to %sB for sequential IO.",
              sb_print_value_size(sizestr, sizeof(sizestr),
                                  file_max_request_size));
 
@@ -854,7 +854,6 @@ void file_print_mode(void)
 void file_print_stats(sb_stat_t type)
 {
   double seconds;
-  char   s1[16], s2[16], s3[16], s4[16];
   unsigned long long diff_read;
   unsigned long long diff_written;
   unsigned long long diff_other_ops;
@@ -878,7 +877,7 @@ void file_print_stats(sb_stat_t type)
 
       log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
                     "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "
-                    "response time: %4.3fms (%u%%)",
+                    "latency: %4.3f ms (%uth pct.)",
                     diff_read / megabyte / seconds,
                     diff_written / megabyte / seconds,
                     diff_other_ops / seconds,
@@ -894,18 +893,19 @@ void file_print_stats(sb_stat_t type)
   case SB_STAT_CUMULATIVE:
     seconds = NS2SEC(sb_timer_split(&sb_globals.cumulative_timer1));
 
-    log_text(LOG_NOTICE,
-             "Operations performed:  %d reads, %d writes, %d Other = %d Total",
-             read_ops, write_ops, other_ops, read_ops + write_ops + other_ops);
-    log_text(LOG_NOTICE, "Read %sB  Written %sB  Total transferred %sB  "
-             "(%sB/sec)",
-             sb_print_value_size(s1, sizeof(s1), bytes_read),
-             sb_print_value_size(s2, sizeof(s2), bytes_written),
-             sb_print_value_size(s3, sizeof(s3), bytes_read + bytes_written),
-             sb_print_value_size(s4, sizeof(s4),
-                                 (bytes_read + bytes_written) / seconds));
-    log_text(LOG_NOTICE, "%8.2f Requests/sec executed",
-             (read_ops + write_ops) / seconds);
+    log_text(LOG_NOTICE, "\n"
+             "File operations:\n"
+             "    reads/s:                      %4.2f\n"
+             "    writes/s:                     %4.2f\n"
+             "    fsyncs/s:                     %4.2f\n"
+             "\n"
+             "Throughput:\n"
+             "    read, MiB/s:                  %4.2f\n"
+             "    written, MiB/s:               %4.2f",
+             read_ops / seconds, write_ops / seconds, other_ops / seconds,
+             bytes_read / megabyte / seconds,
+             bytes_written / megabyte / seconds);
+
     clear_stats();
 
     break;
