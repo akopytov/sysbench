@@ -474,7 +474,6 @@ static void *runner_thread(void *arg)
   thread_id = ctxt->id;
 
   log_text(LOG_DEBUG, "Runner thread started (%d)!", thread_id);
-  pthread_mutex_lock(&thread_start_mutex);
   if (test->ops.thread_init != NULL && test->ops.thread_init(thread_id) != 0)
   {
     sb_globals.error = 1;
@@ -485,11 +484,9 @@ static void *runner_thread(void *arg)
     We do this to make sure all threads get to this barrier 
     about the same time 
   */
+  pthread_mutex_lock(&thread_start_mutex);
   sb_globals.num_running++;
   pthread_mutex_unlock(&thread_start_mutex);
-  while(sb_globals.num_running < sb_globals.num_threads) {
-	sleep(1);
-  }
 
   do
   {
