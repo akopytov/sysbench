@@ -128,7 +128,7 @@ int log_register(void);
 
 /* Display command line options for all register log handlers */
 
-void log_usage(void);
+void log_print_help(void);
 
 /* Initialize logger */
 
