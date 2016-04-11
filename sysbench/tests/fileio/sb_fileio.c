@@ -310,7 +310,7 @@ static unsigned long sb_get_allocation_granularity(void);
 static void *sb_memalign(size_t size);
 static void sb_free_memaligned(void *buf);
 static FILE_DESCRIPTOR sb_open(const char *);
-static FILE_DESCRIPTOR sb_create(const char *);
+static int sb_create(const char *);
 
 int register_test_fileio(sb_list_t *tests)
 {
@@ -2096,8 +2096,8 @@ static int sb_create(const char *path)
   res = !VALID_FILE(file);
   close(file);
 #else
-  file = CreateFile(name, GENERIC_READ|GENERIC_WRITE, 0, NULL, CREATE_NEW,
-                    flags, NULL);
+  file = CreateFile(path, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW,
+                    0, NULL);
   res = !VALID_FILE(file);
   CloseHandle(file);
 #endif
