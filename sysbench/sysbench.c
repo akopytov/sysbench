@@ -606,15 +606,16 @@ static void *eventgen_thread_proc(void *arg)
 
     next_ns = next_ns + intr_ns*1000;
     if (next_ns > curr_ns)
+    {
       pause_ns = next_ns - curr_ns;
+      usleep(pause_ns / 1000);
+    }
     else
     {
-      pause_ns = 1000;
       log_timestamp(LOG_DEBUG, &sb_globals.exec_timer,
                     "Event generation thread is too slow");
     }
 
-    usleep(pause_ns / 1000);
 
     queue_array[i].event_time = sb_timer_value(&sb_globals.exec_timer);
     pthread_mutex_lock(&event_queue_mutex);
