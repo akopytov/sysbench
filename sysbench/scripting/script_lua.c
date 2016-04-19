@@ -369,6 +369,10 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   char           *tmp;
 
   state = luaL_newstate();
+  if (state == NULL) {
+    puts("cannot create state: not enough memory\n");
+    return 0;
+  }
   
   luaL_openlibs(state);
   luaopen_math(state);
@@ -485,10 +489,11 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   
   if (luaL_loadfile(state, scriptname) || lua_pcall(state, 0, 0, 0))
   {
-    lua_error(state);
+    size_t len;
+    puts(luaL_tolstring(state, -1, &len));
     return NULL;
   }
-    
+
   /* Create new state context */
   ctxt = (sb_lua_ctxt_t *)calloc(1, sizeof(sb_lua_ctxt_t));
   if (ctxt == NULL)
