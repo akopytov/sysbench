@@ -51,7 +51,18 @@ then
     ac_cv_mysql_libs=`echo ${ac_cv_mysql_libs} | sed -e 's/.libs$//' \
                       -e 's+.libs/$++'`
     AC_CACHE_CHECK([MySQL libraries], [ac_cv_mysql_libs], [ac_cv_mysql_libs=""])
-    MYSQL_LIBS="-L$ac_cv_mysql_libs -lmysqlclient_r"
+
+    save_LIBS="$LIBS"
+    LIBS="-L$ac_cv_mysql_libs"
+
+    AC_CHECK_LIB([mysqlclient_r], [mysql_real_connect],
+        [MYSQL_LIBS="-L$ac_cv_mysql_libs -lmysqlclient_r"],
+        AC_CHECK_LIB([mysqlclient], [mysql_real_connect],
+            [MYSQL_LIBS="-L$ac_cv_mysql_libs -lmysqlclient  -lpthread -lm -lrt -lssl -lcrypto -ldl"],
+            [AC_MSG_ERROR(["Can't find mysql_real_connect in mysql client library"])]))
+
+    LIBS="$save_LIBS"
+
 fi
 
 # If some path is missing, try to autodetermine with mysql_config
