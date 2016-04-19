@@ -897,7 +897,7 @@ int sb_lua_db_execute(lua_State *L)
         break;
       case DB_TYPE_CHAR:
         str = luaL_checkstring(L, -1);
-        length = lua_objlen(L, -1);
+        length = lua_rawlen(L, -1);
         if (length > param->buflen)
         {
           param->buf = realloc(param->buf, length);
