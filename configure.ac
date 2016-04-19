@@ -466,7 +466,5 @@ sysbench/tests/threads/Makefile
 sysbench/tests/mutex/Makefile
 sysbench/tests/db/Makefile
 sysbench/scripting/Makefile
-sysbench/scripting/lua/Makefile
-sysbench/scripting/lua/src/Makefile
 ])
 AC_OUTPUT

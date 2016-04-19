@@ -16,9 +16,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 if USE_LUA
-SUBDIRS = lua .
 lua_sources = script_lua.c script_lua.h
-AM_CPPFLAGS += -I$(srcdir)/lua/src
 endif
 
 noinst_LIBRARIES = libsbscript.a
