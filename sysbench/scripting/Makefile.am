@@ -17,6 +17,7 @@
 
 if USE_LUA
 lua_sources = script_lua.c script_lua.h
+libsbscript_a_CFLAGS = @LUA_CFLAGS@
 endif
 
 noinst_LIBRARIES = libsbscript.a
