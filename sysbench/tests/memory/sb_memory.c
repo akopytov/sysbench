@@ -415,7 +415,7 @@ void * hugetlb_alloc(size_t size)
   if (shmid < 0)
   {
       log_errno(LOG_FATAL,
-                "Failed to allocate %d bytes from HugeTLB memory.", size);
+                "Failed to allocate %zd bytes from HugeTLB memory.", size);
 
       return NULL;
   }
