@@ -21,7 +21,7 @@ before_install:
     osx)
       brew update --quiet
       brew install mysql
-      brew install lua52
+      brew install lua
       ;;
     esac
 
