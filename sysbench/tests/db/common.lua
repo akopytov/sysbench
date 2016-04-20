@@ -7,7 +7,7 @@
 function create_insert(table_id)
 
    local index_name
-   local i
+   local table_name
    local j
    local query
 
@@ -17,12 +17,12 @@ function create_insert(table_id)
      index_name = "PRIMARY KEY"
    end
 
-   i = table_id
+   table_name = string.format("sbtest%d", table_id)
 
-   print("Creating table 'sbtest" .. i .. "'...")
+   print("Creating table '" .. table_name .. "'...")
    if ((db_driver == "mysql") or (db_driver == "attachsql")) then
       query = [[
-CREATE TABLE sbtest]] .. i .. [[ (
+CREATE TABLE ]] .. table_name .. [[ (
 id INTEGER UNSIGNED NOT NULL ]] ..
 ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
 k INTEGER UNSIGNED DEFAULT '0' NOT NULL,
@@ -30,12 +30,12 @@ c CHAR(120) DEFAULT '' NOT NULL,
 pad CHAR(60) DEFAULT '' NOT NULL,
 ]] .. index_name .. [[ (id)
 ) /*! ENGINE = ]] .. mysql_table_engine ..
-" MAX_ROWS = " .. myisam_max_rows .. " */ " ..
+" MAX_ROWS = " .. string.format("%d", myisam_max_rows) .. " */ " ..
    (mysql_table_options or "")
 
    elseif (db_driver == "pgsql") then
       query = [[
-CREATE TABLE sbtest]] .. i .. [[ (
+CREATE TABLE ]] .. table_name .. [[ (
 id SERIAL NOT NULL,
 k INTEGER DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
@@ -45,7 +45,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    elseif (db_driver == "drizzle") then
       query = [[
-CREATE TABLE sbtest (
+CREATE TABLE ]] .. table_name .. [[ (
 id INTEGER NOT NULL ]] .. ((oltp_auto_inc and "AUTO_INCREMENT") or "") .. [[,
 k INTEGER DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
@@ -59,14 +59,14 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    db_query(query)
 
-   db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
+   db_query("CREATE INDEX k_" .. string.format("%d", table_id) .. " on " .. table_name .. "(k)")
 
-   print("Inserting " .. oltp_table_size .. " records into 'sbtest" .. i .. "'")
+   print("Inserting " .. oltp_table_size .. " records into '" .. table_name .. "'")
 
    if (oltp_auto_inc) then
-      db_bulk_insert_init("INSERT INTO sbtest" .. i .. "(k, c, pad) VALUES")
+      db_bulk_insert_init("INSERT INTO " .. table_name .. "(k, c, pad) VALUES")
    else
-      db_bulk_insert_init("INSERT INTO sbtest" .. i .. "(id, k, c, pad) VALUES")
+      db_bulk_insert_init("INSERT INTO " .. table_name .. "(id, k, c, pad) VALUES")
    end
 
    local c_val
@@ -81,9 +81,9 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 ###########-###########-###########-###########-###########]])
 
       if (oltp_auto_inc) then
-	 db_bulk_insert_next("(" .. sb_rand(1, oltp_table_size) .. ", '".. c_val .."', '" .. pad_val .. "')")
+	 db_bulk_insert_next(string.format("( %d, '%s', '%s')", sb_rand(1, oltp_table_size), c_val, pad_val))
       else
-	 db_bulk_insert_next("("..j.."," .. sb_rand(1, oltp_table_size) .. ",'".. c_val .."', '" .. pad_val .. "'  )")
+	 db_bulk_insert_next(string.format("( %d, %d, '%s', '%s')", j, sb_rand(1, oltp_table_size), c_val, pad_val))
       end
    end
 
@@ -112,12 +112,13 @@ end
 
 function cleanup()
    local i
-
+   local table_name
    set_vars()
 
    for i = 1,oltp_tables_count do
-   print("Dropping table 'sbtest" .. i .. "'...")
-   db_query("DROP TABLE sbtest".. i )
+   table_name = string.format("sbtest%d")
+   print("Dropping table '" .. table_name .. "'...")
+   db_query("DROP TABLE ".. table_name )
    end
 end
 
