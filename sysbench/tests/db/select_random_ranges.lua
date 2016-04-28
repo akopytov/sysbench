@@ -22,7 +22,7 @@ function prepare()
           c CHAR(120) DEFAULT '' NOT NULL,
           pad CHAR(60) DEFAULT '' NOT NULL,
           PRIMARY KEY (id)
-        ) /*! ENGINE = ]] .. mysql_table_engine .. " MAX_ROWS = " .. myisam_max_rows .. " */"
+        ) /*! ENGINE = ]] .. mysql_table_engine .. " MAX_ROWS = " .. string.format("%d", myisam_max_rows) .. " */"
 
    elseif (db_driver == "oracle") then
       query = [[

@@ -24,7 +24,7 @@ function event(thread_id)
    local i
 
    if (cursize == 0) then
-      db_bulk_insert_init("INSERT INTO sbtest" .. thread_id .. " VALUES")
+      db_bulk_insert_init(string.format("INSERT INTO sbtest%d VALUES", thread_id))
    end
 
    cursize = cursize + 1

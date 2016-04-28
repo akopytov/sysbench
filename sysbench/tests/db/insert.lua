@@ -13,7 +13,7 @@ function event(thread_id)
    local k_val
    local pad_val
 
-   table_name = "sbtest".. sb_rand_uniform(1, oltp_tables_count)
+   table_name = string.format("sbtest%d", sb_rand_uniform(1, oltp_tables_count))
 
    k_val = sb_rand(1, oltp_table_size)
    c_val = sb_rand_str([[

@@ -13,6 +13,7 @@ addons:
     packages:
     - libmysqlclient-dev
     - libpq-dev
+    - liblua5.2-dev
 
 before_install:
   - >
@@ -20,6 +21,7 @@ before_install:
     osx)
       brew update --quiet
       brew install mysql
+      brew install lua
       ;;
     esac
 
