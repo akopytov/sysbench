@@ -448,13 +448,13 @@ void print_run_mode(sb_test_t *test)
   if (rand_seed)
   {
     log_text(LOG_NOTICE, "Initializing random number generator from seed (%d).\n", rand_seed);
-    sb_srnd(rand_seed);
+    srandom(rand_seed);
   }
   else
   {
     log_text(LOG_NOTICE,
              "Initializing random number generator from current time\n");
-    sb_srnd(time(NULL));
+    srandom(time(NULL));
   }
 
   if (sb_globals.force_shutdown)
@@ -486,7 +486,7 @@ static void *worker_thread(void *arg)
   thread_id = ctxt->id;
 
   /* Initialize thread-local RNG state */
-  sb_srnd(thread_id);
+  sb_srnd(random());
 
   log_text(LOG_DEBUG, "Worker thread started (%d)!", thread_id);
 
