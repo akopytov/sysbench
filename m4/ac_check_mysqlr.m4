@@ -10,7 +10,7 @@ AC_DEFUN([AC_CHECK_MYSQLR],[
 
 PKG_CHECK_MODULES([MYSQL], [mysqlclient >= 5.0],
 [
-dnl work around for lack of --static option in M4 language
+dnl work around for lack of --static option in M4 pkg-config macro
 MYSQL_LIBS=`$PKG_CONFIG --static --libs "mysqlclient >= 5.0"`
 ],
 [
@@ -20,10 +20,17 @@ MYSQL_LIBS=`$PKG_CONFIG --static --libs "mysqlclient >= 5.0"`
     then
         ac_cv_mysql_root=`echo $1 | sed -e 's+/$++'`
         if test [ -d "$ac_cv_mysql_root/include" -a \
-                  -d "$ac_cv_mysql_root/libmysql_r" ]
+                  \( -d "$ac_cv_mysql_root/libmysql_r" -o \
+                     -d "$ac_cv_mysql_root/libmysql" \) ]
         then
             ac_cv_mysql_includes="$ac_cv_mysql_root/include"
-            ac_cv_mysql_libs="$ac_cv_mysql_root/libmysql_r"
+            if [ -d "$ac_cv_mysql_root/libmysql" ]
+            then
+               ac_cv_mysql_libs="$ac_cv_mysql_root/libmysql"
+            elif [ -d "$ac_cv_mysql_root/libmysql_r" ]
+            then
+               ac_cv_mysql_libs="$ac_cv_mysql_root/libmysql_r"
+            fi
         elif test [ -x "$ac_cv_mysql_root/bin/mysql_config" ]
         then
             mysqlconfig="$ac_cv_mysql_root/bin/mysql_config"
@@ -63,10 +70,10 @@ MYSQL_LIBS=`$PKG_CONFIG --static --libs "mysqlclient >= 5.0"`
         save_LIBS="$LIBS"
         LIBS="-L$ac_cv_mysql_libs"
     
-        AC_CHECK_LIB([mysqlclient_r], [mysql_real_connect],
-            [MYSQL_LIBS="-L$ac_cv_mysql_libs -lmysqlclient_r"],
-            AC_CHECK_LIB([mysqlclient], [mysql_real_connect],
-                [MYSQL_LIBS="-L$ac_cv_mysql_libs -lmysqlclient  -lpthread -lm -lrt -lssl -lcrypto -ldl"],
+        AC_CHECK_LIB([mysqlclient], [mysql_real_connect],
+            [MYSQL_LIBS="-L$ac_cv_mysql_libs -lmysqlclient  -lpthread -lm -lrt -lssl -lcrypto -ldl"],
+            AC_CHECK_LIB([mysqlclient_r], [mysql_real_connect],
+                [MYSQL_LIBS="-L$ac_cv_mysql_libs -lmysqlclient_r"],
                 [AC_MSG_ERROR(["Can't find mysql_real_connect in mysql client library"])]))
     
         LIBS="$save_LIBS"
