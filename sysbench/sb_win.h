@@ -20,8 +20,6 @@
 #define PACKAGE_VERSION "0.5"
 #endif
 
-#define snprintf(buffer, count,  format,...)  \
-  _snprintf_s(buffer,count, _TRUNCATE,format, __VA_ARGS__)
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define srandom(seed) srand(seed)
@@ -39,11 +37,6 @@ typedef intptr_t ssize_t;
 #endif
 #endif
 
-struct  timespec
-{
-  time_t     tv_sec;
-  long long  tv_nsec;
-};
 typedef HANDLE pthread_t;
 typedef CRITICAL_SECTION pthread_mutex_t;
 
