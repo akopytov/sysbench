@@ -40,11 +40,11 @@ function event(thread_id)
    end
 
    for i=1, oltp_simple_ranges do
-      rs = db_query("SELECT c FROM ".. table_name .. get_range_str()
+      rs = db_query("SELECT c FROM ".. table_name .. get_range_str())
    end
 
    for i=1, oltp_sum_ranges do
-      rs = db_query("SELECT SUM(K) FROM ".. table_name .. get_range_str()
+      rs = db_query("SELECT SUM(K) FROM ".. table_name .. get_range_str())
    end
 
    for i=1, oltp_order_ranges do
