@@ -15,11 +15,16 @@ function thread_init(thread_id)
 
 end
 
+function get_range_str()
+   local start = sb_rand(1, oltp_table_size)
+   return string.format(" WHERE id BETWEEN %u AND %u",
+                        start, start + oltp_range_size - 1)
+end
+
 function event(thread_id)
    local rs
    local i
    local table_name
-   local range_start
    local c_val
    local pad_val
    local query
@@ -30,27 +35,26 @@ function event(thread_id)
    end
 
    for i=1, oltp_point_selects do
-      rs = db_query("SELECT c FROM ".. table_name .." WHERE id=" .. sb_rand(1, oltp_table_size))
+      rs = db_query("SELECT c FROM ".. table_name .." WHERE id=" ..
+                       sb_rand(1, oltp_table_size))
    end
 
    for i=1, oltp_simple_ranges do
-      range_start = sb_rand(1, oltp_table_size)
-      rs = db_query("SELECT c FROM ".. table_name .." WHERE id BETWEEN " .. range_start .. " AND " .. range_start .. "+" .. oltp_range_size - 1)
+      rs = db_query("SELECT c FROM ".. table_name .. get_range_str()
    end
-  
+
    for i=1, oltp_sum_ranges do
-      range_start = sb_rand(1, oltp_table_size)
-      rs = db_query("SELECT SUM(K) FROM ".. table_name .." WHERE id BETWEEN " .. range_start .. " AND " .. range_start .. "+" .. oltp_range_size - 1)
+      rs = db_query("SELECT SUM(K) FROM ".. table_name .. get_range_str()
    end
-   
+
    for i=1, oltp_order_ranges do
-      range_start = sb_rand(1, oltp_table_size)
-      rs = db_query("SELECT c FROM ".. table_name .." WHERE id BETWEEN " .. range_start .. " AND " .. range_start .. "+" .. oltp_range_size - 1 .. " ORDER BY c")
+      rs = db_query("SELECT c FROM ".. table_name .. get_range_str() ..
+                    " ORDER BY c")
    end
 
    for i=1, oltp_distinct_ranges do
-      range_start = sb_rand(1, oltp_table_size)
-      rs = db_query("SELECT DISTINCT c FROM ".. table_name .." WHERE id BETWEEN " .. range_start .. " AND " .. range_start .. "+" .. oltp_range_size - 1 .. " ORDER BY c")
+      rs = db_query("SELECT DISTINCT c FROM ".. table_name .. get_range_str() ..
+                    " ORDER BY c")
    end
 
    if not oltp_read_only then
