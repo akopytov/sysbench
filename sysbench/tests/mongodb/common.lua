@@ -19,14 +19,15 @@ function insert(table_id)
  ###########-###########-###########-###########-###########-###########-###########-###########-###########-###########]])
     pad_val = sb_rand_str([[
  ###########-###########-###########-###########-###########]])
-    if bulk_pos >= oltp_bulk_size then
-       bulk_pos = 0
-       mongodb_bulk_execute()
-    end
-    bulk_pos = bulk_pos + 1
-    mongodb_bulk_insert("sbtest" .. i, j, sb_rand(1, oltp_table_size), c_val, pad_val)
+--    if bulk_pos >= oltp_bulk_size then
+--       bulk_pos = 0
+--       mongodb_bulk_execute()
+--    end
+--    bulk_pos = bulk_pos + 1
+    mongodb_insert("sbtest" .. i, j, sb_rand(1, oltp_table_size), c_val, pad_val)
+--    mongodb_bulk_insert("sbtest" .. i, j, sb_rand(1, oltp_table_size), c_val, pad_val)
    end
-   mongodb_bulk_execute()
+--   mongodb_bulk_execute()
 end
 
 function prepare()
