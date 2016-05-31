@@ -241,15 +241,22 @@ sb_request_t sb_lua_get_request(int thread_id)
 
   (void) thread_id; /* unused */
 
-  if (sb_globals.max_requests != 0 && nevents >= sb_globals.max_requests)
+  if (sb_globals.max_requests > 0)
   {
-    req.type = SB_REQ_TYPE_NULL;
-    return req;
+    SB_THREAD_MUTEX_LOCK();
+    if (nevents >= sb_globals.max_requests)
+    {
+      req.type = SB_REQ_TYPE_NULL;
+      SB_THREAD_MUTEX_UNLOCK();
+      return req;
+    }
+    SB_THREAD_MUTEX_UNLOCK();
   }
 
   req.type = SB_REQ_TYPE_SCRIPT;
   nevents++;
-  
+  SB_THREAD_MUTEX_UNLOCK();
+ 
   return req;
 }
 
