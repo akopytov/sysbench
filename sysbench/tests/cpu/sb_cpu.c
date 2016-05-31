@@ -70,8 +70,6 @@ static sb_test_t cpu_test =
 static unsigned int    max_prime;
 /* Request counter */
 static unsigned int    req_performed;
-/* Counter mutex */
-static pthread_mutex_t request_mutex;
 
 int register_test_cpu(sb_list_t * tests)
 {
@@ -92,8 +90,6 @@ int cpu_init(void)
 
   req_performed = 0;
 
-  pthread_mutex_init(&request_mutex, NULL);
-  
   return 0;
 }
 
@@ -104,15 +100,20 @@ sb_request_t cpu_get_request(int thread_id)
 
   (void) thread_id; /* unused */
 
-  if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
+  if (sb_globals.max_requests > 0)
   {
-    req.type = SB_REQ_TYPE_NULL;
-    return req;
+    SB_THREAD_MUTEX_LOCK();
+    if (req_performed >= sb_globals.max_requests)
+    {
+      req.type = SB_REQ_TYPE_NULL;
+      SB_THREAD_MUTEX_UNLOCK();
+      return req;
+    }
+    req_performed++;
+    SB_THREAD_MUTEX_UNLOCK();
   }
+
   req.type = SB_REQ_TYPE_CPU;
-  pthread_mutex_lock(&request_mutex);
-  req_performed++;
-  pthread_mutex_unlock(&request_mutex);
 
   return req;
 }
@@ -158,7 +159,5 @@ void cpu_print_mode(void)
 
 int cpu_done(void)
 {
-  pthread_mutex_destroy(&request_mutex);
-
   return 0;
 }
