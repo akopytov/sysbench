@@ -1126,6 +1126,7 @@ int mongodb_insert_document(db_conn_t *con, const char *database_name, const cha
   }
   //db_update_thread_stats();
   mongoc_collection_destroy(collection);
+  bson_destroy(doc);
   // commented for now, because this is not part of the oltp test execution 
   //db_update_thread_stats(con->thread_id, DB_QUERY_TYPE_WRITE);
   return res;
