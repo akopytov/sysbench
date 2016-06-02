@@ -12,11 +12,9 @@ function event(thread_id)
    local i
    print("thread prepare"..thread_id)
 
-   db_connect()
-   insert(thread_id+1)
---   for i=thread_id+1, oltp_tables_count, num_threads  do
---      insert(i)
---  end
---
+   for i=thread_id+1, oltp_tables_count, num_threads  do
+    db_connect()
+    insert(i)
+   end
 
 end
