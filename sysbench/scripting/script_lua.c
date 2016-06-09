@@ -250,13 +250,12 @@ sb_request_t sb_lua_get_request(int thread_id)
       SB_THREAD_MUTEX_UNLOCK();
       return req;
     }
+    nevents++;
     SB_THREAD_MUTEX_UNLOCK();
   }
 
   req.type = SB_REQ_TYPE_SCRIPT;
-  nevents++;
-  SB_THREAD_MUTEX_UNLOCK();
- 
+
   return req;
 }
 
