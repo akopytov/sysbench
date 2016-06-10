@@ -247,7 +247,7 @@ sb_request_t memory_get_request(int thread_id)
 int memory_execute_request(sb_request_t *sb_req, int thread_id)
 {
   sb_mem_request_t    *mem_req = &sb_req->u.mem_request;
-  int                 tmp = 0;
+  volatile int        tmp = 0;
   int                 idx; 
   int                 *buf, *end;
   log_msg_t           msg;
