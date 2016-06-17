@@ -1058,7 +1058,7 @@ void db_reset_stats(void)
 void mongodb_init_driver()
 {
   log_text(LOG_DEBUG,"mongodb_init_driver");
-  int i, wc;
+  int i, wc, journal;
   mongoc_init();
   /* Initialize per-thread stats */
   
@@ -1072,8 +1072,10 @@ void mongodb_init_driver()
 
   mongodb_write_concern = mongoc_write_concern_new();  
   wc = sb_get_value_int("mongo-write-concern");
+  journal = sb_get_value_int("mongo-journal");
   log_text(LOG_NOTICE,"setting write concern to %d",wc);
   mongoc_write_concern_set_w(mongodb_write_concern, wc);
+  mongoc_write_concern_set_journal(mongodb_write_concern, journal);
 }
 
 void mongodb_cleanup()
