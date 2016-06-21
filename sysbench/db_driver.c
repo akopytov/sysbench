@@ -1384,9 +1384,10 @@ bool mongodb_distinct_range(db_conn_t *con, const char *database_name, const cha
   res = mongoc_cursor_next(rs, &doc);
   if (!res) {
     bson_error_t error;
-    if (mongoc_cursor_error(rs, &error)) 
+    if (mongoc_cursor_error(rs, &error)) { 
       log_text(LOG_FATAL,"error in distinct range (%s)",error.message);
-    thread_stats[con->thread_id].errors++;
+      thread_stats[con->thread_id].errors++;
+    }
   } else {
     mongoc_cursor_destroy(rs);
     mongoc_database_destroy(database);
