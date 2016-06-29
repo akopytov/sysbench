@@ -48,7 +48,7 @@ function insert(table_id)
  ###########-###########-###########-###########-###########-###########-###########-###########-###########-###########]])
     pad_val = sb_rand_str([[
  ###########-###########-###########-###########-###########]])
-    mongodb_insert("sbtest" .. i, j, sb_rand(1, oltp_table_size), c_val, pad_val)
+    if not mongodb_insert("sbtest" .. i, j, sb_rand(1, oltp_table_size), c_val, pad_val) then return end
    end
 end
 
