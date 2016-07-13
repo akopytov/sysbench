@@ -1,5 +1,6 @@
 /* Copyright (C) 2006 MySQL AB
    Copyright (C) 2006 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2016 Percona
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,6 +22,14 @@
 #endif
 
 #include "sysbench.h"
+#include "db_driver.h"
+
+/* Interpreter context */
+
+typedef struct {
+  int       thread_id; /* SysBench thread ID */
+  db_conn_t *con;      /* Database connection */
+} sb_lua_ctxt_t;
 
 /* Load a specified Lua script */
 

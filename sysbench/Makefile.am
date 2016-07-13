@@ -1,5 +1,6 @@
 # Copyright (C) 2004 MySQL AB
 # Copyright (C) 2004-2014 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2016 Percona
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -55,7 +56,7 @@ sb_thread.c sb_thread.h sb_barrier.c sb_barrier.h
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     tests/memory/libsbmemory.a tests/cpu/libsbcpu.a \
     tests/mutex/libsbmutex.a scripting/libsbscript.a \
-    $(mysql_ldadd) $(drizzle_ldadd) $(attachsql_ldadd) $(pgsql_ldadd) $(ora_ldadd) $(lua_ldadd)
+    $(mysql_ldadd) $(mongodb_ldadd) $(drizzle_ldadd) $(attachsql_ldadd) $(pgsql_ldadd) $(ora_ldadd) $(lua_ldadd)
 
 sysbench_LDFLAGS = $(EXTRA_LDFLAGS) $(mysql_ldflags) $(attachsql_ldflags) $(pgsql_ldflags) $(ora_ldflags) $(lua_ldflags)
 

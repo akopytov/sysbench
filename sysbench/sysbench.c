@@ -1,5 +1,6 @@
 /* Copyright (C) 2004 MySQL AB
    Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2016 Percona
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -153,6 +154,10 @@ sb_arg_t general_args[] =
   {"rand-pareto-h", "parameter h for pareto distibution", SB_ARG_TYPE_FLOAT,
    "0.2"},
   {"config-file", "File containing command line options", SB_ARG_TYPE_FILE, NULL},
+  {"mongo-database-name", "MongoDB Database Name", SB_ARG_TYPE_STRING, NULL},
+  {"mongo-url", "MongoDB Connection URL", SB_ARG_TYPE_STRING, NULL},
+  {"mongo-write-concern", "MongoDB Write Concern", SB_ARG_TYPE_INT, NULL},
+  {"mongo-journal", "MongoDB Journal value to be used with the Write Concern", SB_ARG_TYPE_INT, NULL},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
 

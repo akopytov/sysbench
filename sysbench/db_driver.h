@@ -1,5 +1,6 @@
 /* Copyright (C) 2004 MySQL AB
    Copyright (C) 2008 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2016 Percona
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -27,6 +28,11 @@
 #include "sb_list.h"
 #include "sb_percentile.h"
 
+#ifdef USE_MONGODB
+#include <bson.h>
+#include <bcon.h>
+#include <mongoc.h>
+#endif
 
 /* Prepared statements usage modes */
 
@@ -286,6 +292,10 @@ db_error_t db_errno(db_conn_t *);
 
 int db_print_value(db_bind_t *, char *, int);
 
+// moved from db_driver.c so that mongodb.c can use them
+void db_update_thread_stats(int, db_query_type_t);
+void db_reset_stats(void);
+
 /* Initialize multi-row insert operation */
 int db_bulk_insert_init(db_conn_t *, const char *);
 
@@ -328,3 +338,26 @@ int register_driver_pgsql(sb_list_t *);
 #endif
 
 #endif /* DB_DRIVER_H */
+
+/* mongodb functions */
+
+#ifdef USE_MONGODB
+#define MONGOC_BULK_OP_SIZE 1000
+void mongodb_init_driver(void);
+void mongodb_cleanup(void);
+int mongodb_insert_document(db_conn_t *, const char *, const char *, bson_t *);
+void mongodb_bulk_insert(db_conn_t *, const char *, const char *, bson_t *);
+void mongodb_bulk_execute(void);
+void mongodb_fake_commit(db_conn_t *);
+bool mongodb_drop_collection(db_conn_t *, const char *, const char *);
+bool mongodb_create_index(db_conn_t *, const char *, const char *, const char *);
+bool mongodb_point_select(db_conn_t *, const char *, const char *, const int);
+bool mongodb_simple_range(db_conn_t *, const char *, const char *, const int, const int);
+bool mongodb_sum_range(db_conn_t *, const char *, const char *, const int, const int);
+bool mongodb_order_range(db_conn_t *, const char *, const char *, const int, const int);
+bool mongodb_distinct_range(db_conn_t *, const char *, const char *, const int, const int);
+bool mongodb_index_update(db_conn_t *, const char *, const char *, const int);
+bool mongodb_non_index_update(db_conn_t *, const char *, const char *, const int);
+bool mongodb_oltp_insert_document(db_conn_t *, const char *, const char *, bson_t *);
+bool mongodb_remove_document(db_conn_t *, const char *, const char *, const int);
+#endif
