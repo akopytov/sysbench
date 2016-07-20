@@ -488,7 +488,7 @@ static void *worker_thread(void *arg)
   /* Initialize thread-local RNG state */
   sb_srnd(random());
 
-  log_text(LOG_DEBUG, "Worker thread started (%d)!", thread_id);
+  log_text(LOG_DEBUG, "Worker thread (#%d) started", thread_id);
 
   if (test->ops.thread_init != NULL && test->ops.thread_init(thread_id) != 0)
   {
@@ -499,7 +499,7 @@ static void *worker_thread(void *arg)
     return NULL;
   }
 
-  log_text(LOG_DEBUG, "Worker thread (#%d) started!", thread_id);
+  log_text(LOG_DEBUG, "Worker thread (#%d) initialized", thread_id);
 
   /* Wait for other threads to initialize */
   if (sb_barrier_wait(&thread_start_barrier) < 0)
