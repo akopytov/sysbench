@@ -10,7 +10,7 @@ end
 
 function event(thread_id)
 
-   local upper = oltp_inserts 
+   local upper = tonumber(oltp_inserts)
    if upper < 3 then
       upper = 3
    end
