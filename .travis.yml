@@ -18,8 +18,10 @@ before_install:
   - >
     case "${TRAVIS_OS_NAME:-linux}" in
     osx)
+      # Workaround for https://github.com/Homebrew/legacy-homebrew/issues/43874
+      brew uninstall libtool
       brew update --quiet
-      brew install mysql
+      brew install libtool mysql
       ;;
     esac
 
