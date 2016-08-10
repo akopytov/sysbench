@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+#export DH_VERBOSE=1
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	dh_testdir
+	autoreconf -vif
+	dh_auto_configure
+
+override_dh_compress:
+	dh_compress -X.lua
