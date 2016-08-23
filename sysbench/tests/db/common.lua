@@ -59,8 +59,6 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    db_query(query)
 
-   db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
-
    print("Inserting " .. oltp_table_size .. " records into 'sbtest" .. i .. "'")
 
    if (oltp_auto_inc) then
@@ -89,6 +87,8 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    db_bulk_insert_done()
 
+   print("Creating secondary indexes on 'sbtest" .. i .. "'...")
+   db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
 
 end
 
