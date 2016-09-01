@@ -134,12 +134,12 @@ function set_vars()
    oltp_non_index_updates = oltp_non_index_updates or 1
    oltp_delete_inserts = oltp_delete_inserts or 1
 
-   if (oltp_range_selets = 'off') then
-   	oltp_range_selects = false
+   if (oltp_range_selects == 'off') then
+      oltp_range_selects = false
    else
-   	oltp_range_selects = true
+      oltp_range_selects = true
    end
-   
+
    if (oltp_auto_inc == 'off') then
       oltp_auto_inc = false
    else
@@ -150,6 +150,12 @@ function set_vars()
       oltp_read_only = true
    else
       oltp_read_only = false
+   end
+
+   if (oltp_write_only == 'on') then
+      oltp_write_only = true
+   else
+      oltp_write_only = false
    end
 
    if (oltp_skip_trx == 'on') then

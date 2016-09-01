@@ -18,7 +18,6 @@ end
 function event(thread_id)
    local rs
    local i
-   local idx
    local table_name
    local range_start
    local c_val
@@ -30,12 +29,14 @@ function event(thread_id)
       db_query(begin_query)
    end
 
+   if not oltp_write_only then
+
    for i=1, oltp_point_selects do
       rs = db_query("SELECT c FROM ".. table_name .." WHERE id=" .. sb_rand(1, oltp_table_size))
    end
 
    if oltp_range_selects then
-      
+
    for i=1, oltp_simple_ranges do
       range_start = sb_rand(1, oltp_table_size)
       rs = db_query("SELECT c FROM ".. table_name .." WHERE id BETWEEN " .. range_start .. " AND " .. range_start .. "+" .. oltp_range_size - 1)
@@ -58,6 +59,8 @@ function event(thread_id)
 
    end
 
+   end
+   
    if not oltp_read_only then
 
    for i=1, oltp_index_updates do
@@ -73,8 +76,8 @@ function event(thread_id)
       end
    end
 
-   for idx=1, oltp_delete_inserts do
-      
+   for i=1, oltp_delete_inserts do
+
    i = sb_rand(1, oltp_table_size)
 
    rs = db_query("DELETE FROM " .. table_name .. " WHERE id=" .. i)
