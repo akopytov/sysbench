@@ -1070,6 +1070,10 @@ sb_request_t get_request_complex(int tid)
   for (i = 0; i < args.delete_inserts; i++)
   {
 
+  range = GET_RANDOM_ID();
+
+  if (!strcmp(driver->sname, "pgsql"))
+  {
   /* FIXME: generate one more UPDATE with the same ID as DELETE/INSERT to make
      PostgreSQL work */
   query = (sb_sql_query_t *)malloc(sizeof(sb_sql_query_t));
@@ -1078,9 +1082,9 @@ sb_request_t get_request_complex(int tid)
   query->num_times = 1;
   query->think_time = get_think_time();
   query->type = SB_SQL_QUERY_UPDATE_INDEX;
-  range = GET_RANDOM_ID();
   query->u.update_query.id = range;
   SB_LIST_ADD_TAIL(&query->listitem, sql_req->queries);
+  }
   
   /* Generate delete */
   query = (sb_sql_query_t *)malloc(sizeof(sb_sql_query_t));
