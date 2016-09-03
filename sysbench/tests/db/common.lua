@@ -158,6 +158,10 @@ function set_vars()
       oltp_write_only = false
    end
 
+   if (oltp_read_only and oltp_write_only) then
+      error("--oltp-read-only and --oltp-write-only are mutually exclusive")
+   end
+
    if (oltp_skip_trx == 'on') then
       oltp_skip_trx = true
    else
