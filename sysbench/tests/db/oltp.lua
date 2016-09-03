@@ -34,10 +34,14 @@ function event(thread_id)
       db_query(begin_query)
    end
 
+   if not oltp_write_only then
+
    for i=1, oltp_point_selects do
       rs = db_query("SELECT c FROM ".. table_name .." WHERE id=" ..
                        sb_rand(1, oltp_table_size))
    end
+
+   if oltp_range_selects then
 
    for i=1, oltp_simple_ranges do
       rs = db_query("SELECT c FROM ".. table_name .. get_range_str())
@@ -57,6 +61,10 @@ function event(thread_id)
                     " ORDER BY c")
    end
 
+   end
+
+   end
+   
    if not oltp_read_only then
 
    for i=1, oltp_index_updates do
@@ -72,6 +80,8 @@ function event(thread_id)
       end
    end
 
+   for i=1, oltp_delete_inserts do
+
    i = sb_rand(1, oltp_table_size)
 
    rs = db_query("DELETE FROM " .. table_name .. " WHERE id=" .. i)
@@ -82,6 +92,8 @@ function event(thread_id)
 ###########-###########-###########-###########-###########]])
 
    rs = db_query("INSERT INTO " .. table_name ..  " (id, k, c, pad) VALUES " .. string.format("(%d, %d, '%s', '%s')",i, sb_rand(1, oltp_table_size) , c_val, pad_val))
+
+   end
 
    end -- oltp_read_only
 
