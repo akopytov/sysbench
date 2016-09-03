@@ -46,7 +46,9 @@ static sb_arg_t oltp_args[] =
    "session"},
   {"oltp-sp-name", "name of store procedure to call in SP test mode", SB_ARG_TYPE_STRING, ""},
   {"oltp-read-only", "generate only 'read' queries (do not modify database)", SB_ARG_TYPE_FLAG, "off"},
+  {"oltp-write-only", "generate only 'write' queries (insert, update, delete)", SB_ARG_TYPE_FLAG, "off"},
   {"oltp-skip-trx", "skip BEGIN/COMMIT statements", SB_ARG_TYPE_FLAG, "off"},
+  {"oltp-range-selects", "flag to do range select statements", SB_ARG_TYPE_FLAG, "on"},
   {"oltp-range-size", "range size for range queries", SB_ARG_TYPE_INT, "100"},
   {"oltp-point-selects", "number of point selects", SB_ARG_TYPE_INT, "10"},
   {"oltp-simple-ranges", "number of simple ranges", SB_ARG_TYPE_INT, "1"},
@@ -55,6 +57,8 @@ static sb_arg_t oltp_args[] =
   {"oltp-distinct-ranges", "number of distinct ranges", SB_ARG_TYPE_INT, "1"},
   {"oltp-index-updates", "number of index update", SB_ARG_TYPE_INT, "1"},
   {"oltp-non-index-updates", "number of non-index updates", SB_ARG_TYPE_INT, "1"},
+  {"oltp-delete-inserts", "number of delete-insert pairs", SB_ARG_TYPE_INT, "1"},
+  
   {"oltp-nontrx-mode",
    "mode for non-transactional test {select, update_key, update_nokey, insert, delete}",
    SB_ARG_TYPE_STRING, "select"},
@@ -126,8 +130,10 @@ typedef struct
   oltp_mode_t      test_mode;
   reconnect_mode_t reconnect_mode;
   unsigned int     read_only;
+  unsigned int     write_only;
   unsigned int     skip_trx;
   unsigned int     auto_inc;
+  unsigned int     range_selects;
   unsigned int     range_size;
   unsigned int     point_selects;
   unsigned int     simple_ranges;
@@ -136,6 +142,7 @@ typedef struct
   unsigned int     distinct_ranges;
   unsigned int     index_updates;
   unsigned int     non_index_updates;
+  unsigned int     delete_inserts;
   nontrx_mode_t    nontrx_mode;
   unsigned int     connect_delay;
   unsigned int     user_delay_min;
@@ -706,6 +713,9 @@ void oltp_print_mode(void)
 
   if (args.read_only)
     log_text(LOG_NOTICE, "Doing read-only test");
+
+  if (args.write_only)
+    log_text(LOG_NOTICE, "Doing write-only test");
   
   switch (args.dist_type) {
     case DIST_TYPE_UNIFORM:
@@ -907,6 +917,10 @@ sb_request_t get_request_complex(int tid)
     SB_LIST_ADD_TAIL(&query->listitem, sql_req->queries);
   }
   
+  /* Skip all read queries for write-only test mode */
+  if (args.write_only)
+    goto writeonly;
+
   /* Generate set of point selects */
   for(i = 0; i < args.point_selects; i++)
   {
@@ -923,6 +937,9 @@ sb_request_t get_request_complex(int tid)
       add_reconnect_req(sql_req->queries);
   }
   
+  if (!args.range_selects)
+    goto rangeselectend;
+
   /* Generate range queries */
   for(i = 0; i < args.simple_ranges; i++)
   {
@@ -1011,9 +1028,13 @@ sb_request_t get_request_complex(int tid)
       add_reconnect_req(sql_req->queries);
   }
 
+  rangeselectend:
+  
   /* Skip all write queries for read-only test mode */
   if (args.read_only)
     goto readonly;
+  
+  writeonly:
   
   /* Generate index update */
   for (i = 0; i < args.index_updates; i++)
@@ -1045,6 +1066,14 @@ sb_request_t get_request_complex(int tid)
       add_reconnect_req(sql_req->queries);
   }
   
+  /* Generate delete and insert pair */
+  for (i = 0; i < args.delete_inserts; i++)
+  {
+
+  range = GET_RANDOM_ID();
+
+  if (!strcmp(driver->sname, "pgsql"))
+  {
   /* FIXME: generate one more UPDATE with the same ID as DELETE/INSERT to make
      PostgreSQL work */
   query = (sb_sql_query_t *)malloc(sizeof(sb_sql_query_t));
@@ -1053,9 +1082,9 @@ sb_request_t get_request_complex(int tid)
   query->num_times = 1;
   query->think_time = get_think_time();
   query->type = SB_SQL_QUERY_UPDATE_INDEX;
-  range = GET_RANDOM_ID();
   query->u.update_query.id = range;
   SB_LIST_ADD_TAIL(&query->listitem, sql_req->queries);
+  }
   
   /* Generate delete */
   query = (sb_sql_query_t *)malloc(sizeof(sb_sql_query_t));
@@ -1078,6 +1107,8 @@ sb_request_t get_request_complex(int tid)
   query->u.insert_query.id = range;
   SB_LIST_ADD_TAIL(&query->listitem, sql_req->queries);
 
+  }
+  
  readonly:
   
   if (!args.skip_trx)
@@ -1556,8 +1587,10 @@ int parse_arguments(void)
   }
 
   args.read_only = sb_get_value_flag("oltp-read-only");
+  args.write_only = sb_get_value_flag("oltp-write-only");
   args.skip_trx = sb_get_value_flag("oltp-skip-trx");
   args.auto_inc = sb_get_value_flag("oltp-auto-inc");
+  args.range_selects = sb_get_value_flag("oltp-range-selects");
   args.range_size = sb_get_value_int("oltp-range-size");
   args.point_selects = sb_get_value_int("oltp-point-selects");
   args.simple_ranges = sb_get_value_int("oltp-simple-ranges");
@@ -1566,6 +1599,7 @@ int parse_arguments(void)
   args.distinct_ranges = sb_get_value_int("oltp-distinct-ranges");
   args.index_updates = sb_get_value_int("oltp-index-updates");
   args.non_index_updates = sb_get_value_int("oltp-non-index-updates");
+  args.delete_inserts = sb_get_value_int("oltp-delete-inserts");
   s = sb_get_value_string("oltp-nontrx-mode");
   if (!strcmp(s, "select"))
     args.nontrx_mode = NONTRX_MODE_SELECT;
