@@ -468,5 +468,6 @@ sysbench/tests/db/Makefile
 sysbench/scripting/Makefile
 sysbench/scripting/lua/Makefile
 sysbench/scripting/lua/src/Makefile
+tests/Makefile
 ])
 AC_OUTPUT

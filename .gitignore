@@ -57,3 +57,7 @@ GRTAGS
 GTAGS
 /config/ar-lib
 /sysbench/drivers/attachsql/.deps/
+/config/test-driver
+*.DS_Store
+/tests/*.log
+/tests/*.trs
