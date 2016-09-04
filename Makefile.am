@@ -19,4 +19,4 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = doc sysbench
 
-EXTRA_DIST = autogen.sh README README-WIN.txt ChangeLog
+EXTRA_DIST = autogen.sh README.md README-WIN.txt ChangeLog
