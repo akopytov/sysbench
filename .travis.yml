@@ -25,4 +25,14 @@ before_install:
       ;;
     esac
 
-script: ./autogen.sh && ./configure --with-mysql --with-pgsql && make
+install:
+  - pip install --user cram
+  - >
+    case "${TRAVIS_OS_NAME:-linux}" in
+    osx)
+      # OS X requires this for user-local pip packages
+      export PATH=~/Library/Python/2.7/bin:$PATH
+      ;;
+    esac
+
+script: ./autogen.sh && ./configure --with-mysql --with-pgsql && make && make test
