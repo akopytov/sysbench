@@ -1,3 +1,4 @@
+[![Coverage Status](https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=0.5)](https://coveralls.io/github/akopytov/sysbench?branch=0.5)
 [![Build Status](https://travis-ci.org/akopytov/sysbench.svg?branch=0.5)](https://travis-ci.org/akopytov/sysbench)
 
 About
