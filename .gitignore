@@ -61,3 +61,4 @@ GTAGS
 *.DS_Store
 /tests/*.log
 /tests/*.trs
+/config/config.h.in
