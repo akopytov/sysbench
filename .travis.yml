@@ -26,7 +26,7 @@ before_install:
     esac
 
 install:
-  - pip install --user cram
+  - pip install --user cram cpp-coveralls
   - >
     case "${TRAVIS_OS_NAME:-linux}" in
     osx)
@@ -35,4 +35,10 @@ install:
       ;;
     esac
 
-script: ./autogen.sh && ./configure --with-mysql --with-pgsql && make && make test
+script:
+  - ./autogen.sh && ./configure --enable-coverage --with-mysql --with-pgsql
+  - make
+  - make test
+
+after_success:
+  - coveralls --gcov-options '\-lp'
