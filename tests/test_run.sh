@@ -18,18 +18,21 @@
 
 set -eu
 
-if [ -x "$PWD/../sysbench/sysbench" ]
+testroot=$(cd $(dirname "$0"); echo $PWD)
+
+# Find the sysbench binary to use
+if [ -x "$testroot/../sysbench/sysbench" ]
 then
     # Invoked from a source directory?
-    export PATH=$PWD/../sysbench:$PATH
-elif  [ -x "$PWD/../bin" ]
+    export PATH="$testroot/../sysbench:$PATH"
+elif  [ -x "$testroot/../bin" ]
 then
     # Invoked from a standalone install root directory?
-    export PATH=$PWD/../bin:$PATH
-elif [ -x "$PWD/../../../bin/sysbench" ]
+    export PATH="$testroot/../bin:$PATH"
+elif [ -x "$testroot/../../../bin/sysbench" ]
 then
     # Invoked from a system-wide install (e.g. /usr/local/share/sysbench/tests)?
-    export PATH=$PWD/../../../bin:$PATH
+    export PATH="$testroot/../../../bin:$PATH"
 fi
 
 if ! which sysbench >/dev/null 2>&1
@@ -40,16 +43,17 @@ fi
 
 if [ $# -lt 1 ]
 then
-    # Automake defines $srcdir where test datafiles are located on 'make check'
     if [ -z ${srcdir+x} ]
     then
-        testroot="."
+        tests="*.t"
     else
-        testroot="$srcdir"
+        tests="$srcdir/*.t"
     fi
-    tests="${testroot}/*.t"
 else
     tests="$*"
 fi
+
+export SBTEST_INCDIR="$PWD/include"
+export SBTEST_CONFIG="$SBTEST_INCDIR/config.sh"
 
 cram --shell=/bin/bash --verbose $tests
