@@ -462,5 +462,6 @@ sysbench/scripting/Makefile
 sysbench/scripting/lua/Makefile
 sysbench/scripting/lua/src/Makefile
 tests/Makefile
+tests/include/config.sh
 ])
 AC_OUTPUT
