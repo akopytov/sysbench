@@ -1,0 +1,38 @@
+language: c
+
+os:
+  - linux
+  - osx
+
+compiler:
+  - gcc
+  - clang
+
+addons:
+  apt:
+    packages:
+    - libmysqlclient-dev
+    - libpq-dev
+
+before_install:
+  - >
+    case "${TRAVIS_OS_NAME:-linux}" in
+    osx)
+      # Workaround for https://github.com/Homebrew/legacy-homebrew/issues/43874
+      brew uninstall libtool
+      brew update --quiet
+      brew install libtool mysql
+      ;;
+    esac
+
+install:
+  - pip install --user cram
+  - >
+    case "${TRAVIS_OS_NAME:-linux}" in
+    osx)
+      # OS X requires this for user-local pip packages
+      export PATH=~/Library/Python/2.7/bin:$PATH
+      ;;
+    esac
+
+script: ./autogen.sh && ./configure --with-mysql --with-pgsql && make && make test

@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/akopytov/sysbench.svg?branch=1.0)](https://travis-ci.org/akopytov/sysbench)
+
 About
 =====
 
