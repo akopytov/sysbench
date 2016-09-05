@@ -53,6 +53,7 @@ else
     tests="$*"
 fi
 
+export SBTEST_ROOTDIR="$testroot"
 export SBTEST_INCDIR="$PWD/include"
 export SBTEST_CONFIG="$SBTEST_INCDIR/config.sh"
 

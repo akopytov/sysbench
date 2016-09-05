@@ -61,6 +61,6 @@ GTAGS
 *.DS_Store
 /tests/*.log
 /tests/*.trs
-/config/config.h.in
 *.gcda
 *.gcno
+/tests/include/config.sh
