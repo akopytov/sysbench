@@ -1,4 +1,11 @@
-  $ sysbench help
+########################################################################
+Skip everything between "Compiled-in database drivers:" and
+"Compiled-in tests:" as that part depends on available database
+drivers and thus, build options. Driver-specific options is tested
+separately.
+########################################################################
+
+  $ sysbench help | sed '/Compiled-in database drivers:/,/Compiled-in tests:/d' 
   sysbench 0.5:  multi-threaded system evaluation benchmark
   
   Usage:
@@ -41,26 +48,6 @@
     --db-debug=[on|off] print database-specific debug information [off]
   
   
-  Compiled-in database drivers:
-    mysql - MySQL driver
-  
-  mysql options:
-    --mysql-host=[LIST,...]      MySQL server host [localhost]
-    --mysql-port=N               MySQL server port [3306]
-    --mysql-socket=[LIST,...]    MySQL socket
-    --mysql-user=STRING          MySQL user [sbtest]
-    --mysql-password=STRING      MySQL password []
-    --mysql-db=STRING            MySQL database name [sbtest]
-    --mysql-table-engine=STRING  storage engine to use for the test table {myisam,innodb,bdb,heap,ndbcluster,federated} [innodb]
-    --mysql-engine-trx=STRING    whether storage engine used is transactional or not {yes,no,auto} [auto]
-    --mysql-ssl=[on|off]         use SSL connections, if available in the client library [off]
-    --mysql-compression=[on|off] use compression, if available in the client library [off]
-    --myisam-max-rows=N          max-rows parameter for MyISAM tables [1000000]
-    --mysql-debug=[on|off]       dump all client library calls [off]
-    --mysql-ignore-errors=[LIST,...]list of errors to ignore, or "all" [1213,1020,1205]
-    --mysql-dry-run=[on|off]     Dry run, pretent that all MySQL client API calls are successful without executing them [off]
-  
-  Compiled-in tests:
     fileio - File I/O test
     cpu - CPU performance test
     memory - Memory functions speed test
@@ -69,3 +56,16 @@
   
   See 'sysbench --test=<name> help' for a list of options for each test.
   
+
+########################################################################
+Test driver-specific options
+########################################################################
+  $ drivers=$(sysbench help | sed -n '/Compiled-in database drivers:/,/^$/p' | tail -n +2 | cut -d ' ' -f 3)
+  $ for drv in $drivers
+  > do
+  >   if [ ! -r ${SBTEST_ROOTDIR}/help_drv_${drv}.t ]
+  >   then
+  >     echo "Cannot find test(s) for $drv driver options!"
+  >     exit 1
+  >   fi
+  > done
