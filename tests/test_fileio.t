@@ -14,7 +14,7 @@ fileio tests
   Creating file test_file.1
   Creating file test_file.2
   Creating file test_file.3
-  33554432 bytes written in * seconds (*.* MB/sec). (glob)
+  33554432 bytes written in * seconds (*.* MiB/sec). (glob)
 
   $ ls test_file.*
   test_file.0
@@ -39,13 +39,13 @@ fileio tests
   
   Running the test with following options:
   Number of threads: 1
-  Random number generator seed is 0 and will be ignored
+  Initializing random number generator from current time
   
   
   Extra file open flags: 0
-  4 files, 8Mb each
-  32Mb total file size
-  Block size 16Kb
+  4 files, 8MiB each
+  32MiB total file size
+  Block size 16KiB
   Number of IO requests: 150
   Read/Write ratio for combined random IO test: 1.50
   Periodic FSYNC enabled, calling fsync() each 100 requests.
@@ -56,9 +56,15 @@ fileio tests
   
   Threads started!
   
-  Operations performed:  90 reads, 60 writes, 8 Other = 158 Total
-  Read *.*Mb  Written *Kb  Total transferred *.*Mb  (*.*Mb/sec) (glob)
-  *.* Requests/sec executed (glob)
+  
+  File operations:
+      reads/s:                      *.* (glob)
+      writes/s:                     *.* (glob)
+      fsyncs/s:                     *.* (glob)
+  
+  Throughput:
+      read, MiB/s:                  *.* (glob)
+      written, MiB/s:               *.* (glob)
   
   General statistics:
       total time:                          *.*s (glob)
