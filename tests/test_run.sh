@@ -38,6 +38,12 @@ fi
 if ! which sysbench >/dev/null 2>&1
 then
     echo "Cannot find sysbench in PATH=$PATH"
+    echo "testroot=$testroot"
+    echo "PWD=$PWD"
+    ls -l $PWD
+    ls -l $testroot
+    ls -l $testroot/..
+    ls -l $testroot/../sysbench
     exit 1
 fi
 
