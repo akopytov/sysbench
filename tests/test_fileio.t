@@ -23,8 +23,8 @@ fileio tests
   test_file.3
   $ for i in $(seq 0 3)
   > do
-  >   echo -n "test_file.$i:"
-  >   wc -c < test_file.$i
+  >   echo -n "test_file.$i: "
+  >   echo $(wc -c < test_file.$i)
   > done
   test_file.0: 8388608
   test_file.1: 8388608
