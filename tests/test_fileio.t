@@ -75,7 +75,7 @@ fileio tests
       execution time (avg/stddev):   *.*/0.00 (glob)
   
   $ sysbench $fileio_args cleanup
-  sysbench 0.5:  multi-threaded system evaluation benchmark
+  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
   
   Removing test files...
   $ ls
