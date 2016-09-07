@@ -1934,6 +1934,12 @@ int parse_arguments(void)
   for (i = 0; i < sb_globals.num_threads; i++)
   {
     per_thread[i].buffer = sb_memalign(file_max_request_size);
+    if (per_thread[i].buffer == NULL)
+    {
+      log_text(LOG_FATAL, "Failed to allocate a memory buffer");
+      return 1;
+    }
+    memset(per_thread[i].buffer, 0, file_max_request_size);
   }
 
   return 0;
