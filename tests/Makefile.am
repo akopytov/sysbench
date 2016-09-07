@@ -19,11 +19,11 @@ TESTS = test_run.sh
 test_SCRIPTS = test_run.sh
 
 EXTRA_DIST = $(test_SCRIPTS) \
-             README.org
+             README.md
 
 testroot = 	$(datadir)
 testdir = 	$(testroot)/sysbench/tests
-test_dirs= 	.
+test_dirs= 	t
 
 # Used by dist-hook and install-data-local to copy all
 # test files into either dist or install directory

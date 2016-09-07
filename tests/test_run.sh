@@ -24,20 +24,31 @@ testroot=$(cd $(dirname "$0"); echo $PWD)
 if [ -x "$testroot/../sysbench/sysbench" ]
 then
     # Invoked from a source directory?
-    export PATH="$testroot/../sysbench:$PATH"
+    PATH="$testroot/../sysbench:$PATH"
 elif  [ -x "$testroot/../bin" ]
 then
     # Invoked from a standalone install root directory?
-    export PATH="$testroot/../bin:$PATH"
+    PATH="$testroot/../bin:$PATH"
 elif [ -x "$testroot/../../../bin/sysbench" ]
 then
     # Invoked from a system-wide install (e.g. /usr/local/share/sysbench/tests)?
-    export PATH="$testroot/../../../bin:$PATH"
+    PATH="$testroot/../../../bin:$PATH"
+elif [ -x "$PWD/../sysbench/sysbench" ]
+then
+    # Invoked from the build directory by 'make distcheck'?
+    PATH="$PWD/../sysbench:$PATH"
 fi
 
 if ! which sysbench >/dev/null 2>&1
 then
     echo "Cannot find sysbench in PATH=$PATH"
+    echo "testroot=$testroot"
+    echo "PWD=$PWD"
+    ls -l $PWD
+    ls -l $PWD/../sysbench
+    ls -l $testroot
+    ls -l $testroot/..
+    ls -l $testroot/../sysbench
     exit 1
 fi
 
@@ -45,15 +56,16 @@ if [ $# -lt 1 ]
 then
     if [ -z ${srcdir+x} ]
     then
-        tests="*.t"
+        tests="t/*.t"
     else
-        tests="$srcdir/*.t"
+        tests="$srcdir/t/*.t"
     fi
 else
     tests="$*"
 fi
 
 export SBTEST_ROOTDIR="$testroot"
+export SBTEST_SUITEDIR="$testroot/t"
 export SBTEST_INCDIR="$PWD/include"
 export SBTEST_CONFIG="$SBTEST_INCDIR/config.sh"
 
