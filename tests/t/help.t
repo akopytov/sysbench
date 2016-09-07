@@ -63,7 +63,7 @@ Test driver-specific options
   $ drivers=$(sysbench help | sed -n '/Compiled-in database drivers:/,/^$/p' | tail -n +2 | cut -d ' ' -f 3)
   $ for drv in $drivers
   > do
-  >   if [ ! -r ${SBTEST_ROOTDIR}/help_drv_${drv}.t ]
+  >   if [ ! -r ${SBTEST_SUITEDIR}/help_drv_${drv}.t ]
   >   then
   >     echo "Cannot find test(s) for $drv driver options!"
   >     exit 1

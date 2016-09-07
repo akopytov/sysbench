@@ -45,15 +45,16 @@ if [ $# -lt 1 ]
 then
     if [ -z ${srcdir+x} ]
     then
-        tests="*.t"
+        tests="t/*.t"
     else
-        tests="$srcdir/*.t"
+        tests="$srcdir/t/*.t"
     fi
 else
     tests="$*"
 fi
 
 export SBTEST_ROOTDIR="$testroot"
+export SBTEST_SUITEDIR="$testroot/t"
 export SBTEST_INCDIR="$PWD/include"
 export SBTEST_CONFIG="$SBTEST_INCDIR/config.sh"
 
