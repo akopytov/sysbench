@@ -38,6 +38,7 @@ install:
 script:
   - ./autogen.sh && ./configure --enable-coverage --with-mysql --with-pgsql
   - make
+  - make distcheck
   - make test
 
 after_success:
