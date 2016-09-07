@@ -1,4 +1,8 @@
 language: c
+cache:
+  directories:
+  - $HOME/.cache/pip
+  - /usr/local
 
 os:
   - linux
