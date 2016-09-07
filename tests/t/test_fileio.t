@@ -85,13 +85,13 @@ fileio tests
   
   Running the test with following options:
   Number of threads: 1
-  Random number generator seed is 0 and will be ignored
+  Initializing random number generator from current time
   
   
   Extra file open flags: 0
-  4 files, 8Mb each
-  32Mb total file size
-  Block size 16Kb
+  4 files, 8MiB each
+  32MiB total file size
+  Block size 16KiB
   Number of IO requests: 150
   Read/Write ratio for combined random IO test: 1.50
   Periodic FSYNC enabled, calling fsync() each 100 requests.
@@ -102,9 +102,15 @@ fileio tests
   
   Threads started!
   
-  Operations performed:  150 reads, 0 writes, 0 Other = 150 Total
-  Read *.*b  Written 0b  Total transferred *.*b  (*.*b/sec) (glob)
-  *.* Requests/sec executed (glob)
+  
+  File operations:
+      reads/s:                      *.* (glob)
+      writes/s:                     0.00
+      fsyncs/s:                     0.00
+  
+  Throughput:
+      read, MiB/s:                  *.* (glob)
+      written, MiB/s:               0.00
   
   General statistics:
       total time:                          *.*s (glob)
@@ -126,13 +132,13 @@ fileio tests
   
   Running the test with following options:
   Number of threads: 1
-  Random number generator seed is 0 and will be ignored
+  Initializing random number generator from current time
   
   
   Extra file open flags: 0
-  4 files, 8Mb each
-  32Mb total file size
-  Block size 16Kb
+  4 files, 8MiB each
+  32MiB total file size
+  Block size 16KiB
   Periodic FSYNC enabled, calling fsync() each 100 requests.
   Calling fsync() at the end of test, Enabled.
   Using synchronous I/O mode
@@ -141,9 +147,15 @@ fileio tests
   
   Threads started!
   
-  Operations performed:  150 reads, 0 writes, 0 Other = 150 Total
-  Read *.*b  Written 0b  Total transferred *.*b  (*.*b/sec) (glob)
-  *.* Requests/sec executed (glob)
+  
+  File operations:
+      reads/s:                      *.* (glob)
+      writes/s:                     0.00
+      fsyncs/s:                     0.00
+  
+  Throughput:
+      read, MiB/s:                  *.* (glob)
+      written, MiB/s:               0.00
   
   General statistics:
       total time:                          *.*s (glob)
@@ -165,13 +177,13 @@ fileio tests
   
   Running the test with following options:
   Number of threads: 1
-  Random number generator seed is 0 and will be ignored
+  Initializing random number generator from current time
   
   
   Extra file open flags: 0
-  4 files, 8Mb each
-  32Mb total file size
-  Block size 16Kb
+  4 files, 8MiB each
+  32MiB total file size
+  Block size 16KiB
   Number of IO requests: 150
   Read/Write ratio for combined random IO test: 1.50
   Periodic FSYNC enabled, calling fsync() each 100 requests.
@@ -182,9 +194,15 @@ fileio tests
   
   Threads started!
   
-  Operations performed:  0 reads, 150 writes, 8 Other = 158 Total
-  Read 0b  Written *.*b  Total transferred *.*b  (*.*b/sec) (glob)
-  *.* Requests/sec executed (glob)
+  
+  File operations:
+      reads/s:                      0.00
+      writes/s:                     *.* (glob)
+      fsyncs/s:                     *.* (glob)
+  
+  Throughput:
+      read, MiB/s:                  0.00
+      written, MiB/s:               *.* (glob)
   
   General statistics:
       total time:                          *.*s (glob)
