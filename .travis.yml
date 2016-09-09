@@ -22,9 +22,6 @@ services:
   - mysql
   - postgresql
 
-env:
-  - SBTEST_MYSQL_ARGS="--mysql-user=root --mysql-password" SBTEST_PGSQL_ARGS="--pgsql-user=postgres --pgsql-password"
-
 before_install:
   - >
     case "${TRAVIS_OS_NAME:-linux}" in
@@ -33,6 +30,8 @@ before_install:
       brew uninstall libtool
       brew update --quiet
       brew install libtool mysql
+      # OS X requires mysqld to be started explicitly
+      brew services start mysql
       ;;
     esac
 
@@ -53,7 +52,8 @@ before_script:
 script:
   - ./autogen.sh && ./configure --enable-coverage --with-mysql --with-pgsql
   - make
-  - make test
+  - make distcheck
+  - SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
 
 after_success:
   - coveralls --gcov-options '\-lp'
