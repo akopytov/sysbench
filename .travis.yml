@@ -23,8 +23,7 @@ services:
   - postgresql
 
 env:
-  - SBTEST_MYSQL_ARGS="--mysql-user=root --mysql-password"
-  - SBTEST_PGSQL_ARGS="--pgsql-user=postgres --pgsql-password"
+  - SBTEST_MYSQL_ARGS="--mysql-user=root --mysql-password" SBTEST_PGSQL_ARGS="--pgsql-user=postgres --pgsql-password"
 
 before_install:
   - >
