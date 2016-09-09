@@ -18,6 +18,14 @@ addons:
     - libmysqlclient-dev
     - libpq-dev
 
+services:
+  - mysql
+  - postgresql
+
+env:
+  - SBTEST_MYSQL_ARGS="--mysql-user=root --mysql-password"
+  - SBTEST_PGSQL_ARGS="--pgsql-user=postgres --pgsql-password"
+
 before_install:
   - >
     case "${TRAVIS_OS_NAME:-linux}" in
@@ -38,6 +46,10 @@ install:
       export PATH=~/Library/Python/2.7/bin:$PATH
       ;;
     esac
+
+before_script:
+  - mysql -u root -e 'CREATE DATABASE sbtest;'
+  - psql -U postgres -c 'CREATE DATABASE sbtest;'
 
 script:
   - ./autogen.sh && ./configure --enable-coverage --with-mysql --with-pgsql
