@@ -18,6 +18,10 @@ addons:
     - libmysqlclient-dev
     - libpq-dev
 
+services:
+  - mysql
+  - postgresql
+
 before_install:
   - >
     case "${TRAVIS_OS_NAME:-linux}" in
@@ -26,6 +30,10 @@ before_install:
       brew uninstall libtool
       brew update --quiet
       brew install libtool mysql
+      # OS X requires servers to be started explicitly
+      brew services start mysql
+      pg_ctl -wD /usr/local/var/postgres start
+      createuser -s postgres;
       ;;
     esac
 
@@ -39,11 +47,15 @@ install:
       ;;
     esac
 
+before_script:
+  - mysql -u root -e 'CREATE DATABASE sbtest;'
+  - psql -U postgres -c 'CREATE DATABASE sbtest;'
+
 script:
   - ./autogen.sh && ./configure --enable-coverage --with-mysql --with-pgsql
   - make
   - make distcheck
-  - make test
+  - SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
 
 after_success:
   - coveralls --gcov-options '\-lp'
