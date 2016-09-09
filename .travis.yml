@@ -30,8 +30,10 @@ before_install:
       brew uninstall libtool
       brew update --quiet
       brew install libtool mysql
-      # OS X requires mysqld to be started explicitly
+      # OS X requires servers to be started explicitly
       brew services start mysql
+      pg_ctl -D /usr/local/var/postgres start
+      createuser -s postgres;
       ;;
     esac
 
