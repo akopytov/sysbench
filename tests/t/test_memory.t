@@ -3,7 +3,19 @@ memory benchmark tests
 ########################################################################
 
   $ args="--test=memory --memory-block-size=4K --memory-total-size=1G --max-requests=100 --num-threads=2"
-  $ sysbench $args help
+
+The --memory-hugetlb option is supported and printed by 'sysbench
+help' only on Linux.
+
+  $ if [ "$(uname -s)" = "Linux" ]
+  > then
+  >   sysbench $args help | grep hugetlb
+  > else
+  >   echo "  --memory-hugetlb=[on|off]   allocate memory from HugeTLB pool [off]"
+  > fi
+    --memory-hugetlb=[on|off]   allocate memory from HugeTLB pool [off]
+
+  $ sysbench $args help | grep -v hugetlb
   sysbench *.*:  multi-threaded system evaluation benchmark (glob)
   
   memory options:
@@ -40,10 +52,10 @@ memory benchmark tests
       total number of events:              262144 (glob)
       total time taken by event execution: *s (glob)
       response time:
-           min:                                  *ms (glob)
-           avg:                                  *ms (glob)
-           max:                                  *ms (glob)
-           approx.  95 percentile:               *ms (glob)
+           min:                                *ms (glob)
+           avg:                                *ms (glob)
+           max:                                *ms (glob)
+           approx.  95 percentile:             *ms (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
