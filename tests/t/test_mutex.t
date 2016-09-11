@@ -1,7 +1,7 @@
 ########################################################################
 mutex benchmark tests
 ########################################################################
-  $ args="--test=mutex --max-requests=100 --num-threads=2"
+  $ args="--test=mutex --max-requests=10 --num-threads=2"
   $ sysbench $args help
   sysbench *.*:  multi-threaded system evaluation benchmark (glob)
   
@@ -33,10 +33,10 @@ mutex benchmark tests
       total number of events:              2
       total time taken by event execution: *s (glob)
       response time:
-           min:                                  *ms (glob)
-           avg:                                  *ms (glob)
-           max:                                  *ms (glob)
-           approx.  95 percentile:               *ms (glob)
+           min:                                *ms (glob)
+           avg:                                *ms (glob)
+           max:                                *ms (glob)
+           approx.  95 percentile:             *ms (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
