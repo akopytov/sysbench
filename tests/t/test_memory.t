@@ -35,7 +35,7 @@ help' only on Linux.
   
   Running the test with following options:
   Number of threads: 2
-  Random number generator seed is 0 and will be ignored
+  Initializing random number generator from current time
   
   
   Initializing worker threads...
@@ -44,7 +44,7 @@ help' only on Linux.
   
   Operations performed: 262144 (* ops/sec) (glob)
   
-  1024.00 MB transferred (* MB/sec) (glob)
+  1024.00 MiB transferred (* MiB/sec) (glob)
   
   
   General statistics:

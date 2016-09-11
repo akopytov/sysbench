@@ -18,7 +18,7 @@ cpu benchmark tests
   
   Running the test with following options:
   Number of threads: 2
-  Random number generator seed is 0 and will be ignored
+  Initializing random number generator from current time
   
   
   Prime numbers limit: 1000
@@ -43,7 +43,7 @@ cpu benchmark tests
       execution time (avg/stddev):   */* (glob)
   
   $ sysbench $args cleanup
-  sysbench 0.5:  multi-threaded system evaluation benchmark
+  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
   
   'cpu' test does not have the 'cleanup' command.
   [1]
