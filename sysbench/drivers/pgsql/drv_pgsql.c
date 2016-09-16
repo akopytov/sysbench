@@ -519,7 +519,7 @@ int pgsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
     /* Convert SysBench bind structures to PgSQL data */
     for (i = 0; i < (unsigned)pgstmt->nparams; i++)
     {
-      if (stmt->bound_param[i].is_null)
+      if (stmt->bound_param[i].is_null && *(stmt->bound_param[i].is_null))
         continue;
 
       switch (stmt->bound_param[i].type) {
