@@ -65,6 +65,7 @@ else
 fi
 
 export SBTEST_ROOTDIR="$testroot"
+export SBTEST_SCRIPTDIR="$testroot/../sysbench/tests/db"
 export SBTEST_SUITEDIR="$testroot/t"
 export SBTEST_INCDIR="$PWD/include"
 export SBTEST_CONFIG="$SBTEST_INCDIR/config.sh"
