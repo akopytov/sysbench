@@ -39,7 +39,7 @@ oltp.lua + PostgreSQL tests
   
   Running the test with following options:
   Number of threads: 1
-  Random number generator seed is 0 and will be ignored
+  Initializing random number generator from current time
   
   
   Initializing worker threads...
