@@ -6,7 +6,12 @@ function thread_init(thread_id)
    set_vars()
 
    if (((db_driver == "mysql") or (db_driver == "attachsql")) and mysql_table_engine == "myisam") then
-      begin_query = "LOCK TABLES sbtest WRITE"
+      local i
+      local tables = {}
+      for i=1, oltp_tables_count do
+         tables[i] = string.format("sbtest%i WRITE", i)
+      end
+      begin_query = "LOCK TABLES " .. table.concat(tables, " ,")
       commit_query = "UNLOCK TABLES"
    else
       begin_query = "BEGIN"
