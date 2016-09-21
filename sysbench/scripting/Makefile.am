@@ -18,7 +18,7 @@
 if USE_LUA
 SUBDIRS = lua .
 lua_sources = script_lua.c script_lua.h
-AM_CPPFLAGS += -I$(srcdir)/lua/src
+AM_CPPFLAGS += -I$(srcdir)/lua/src -DDATA_PATH=\"$(pkgdatadir)\"
 endif
 
 noinst_LIBRARIES = libsbscript.a
