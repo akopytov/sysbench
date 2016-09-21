@@ -1,8 +1,12 @@
 -- for proper initialization use --max-requests = N, where N is --num-threads
 --
-pathtest = string.match(test, "(.*/)") or ""
+pathtest = string.match(test, "(.*/)")
 
-dofile(pathtest .. "common.lua")
+if pathtest then
+   dofile(pathtest .. "common.lua")
+else
+   require("common")
+end
 
 function thread_init(thread_id)
    set_vars()
