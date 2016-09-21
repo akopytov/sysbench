@@ -15,7 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-EXTRA_DIST = delete.lua insert.lua oltp.lua \
+dist_pkgdata_DATA = common.lua delete.lua insert.lua bulk_insert.lua \
+             oltp.lua \
              oltp_simple.lua \
              parallel_prepare.lua \
              select_random_points.lua \
