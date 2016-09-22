@@ -17,6 +17,7 @@ addons:
     packages:
     - libmysqlclient-dev
     - libpq-dev
+    - libaio-dev
 
 services:
   - mysql
