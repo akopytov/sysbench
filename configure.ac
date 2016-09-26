@@ -216,7 +216,7 @@ AM_CONDITIONAL(USE_ORACLE, test x$ac_cv_use_oracle != xno)
 if test x$ac_cv_use_oracle != xno; then
     AC_DEFINE(USE_ORACLE,1,[Define to 1 if you want to compile with Oracle support])
     ORA_LIBS="-L${ac_cv_use_oracle}/lib -lclntsh"
-    ORA_CFLAGS="-I${ac_cv_use_oracle}/rdbms/demo -I${ac_cv_use_oracle}/rdbms/public"
+    ORA_CFLAGS="-I${ac_cv_use_oracle}/include -I${ac_cv_use_oracle}/rdbms/demo -I${ac_cv_use_oracle}/rdbms/public"
     AC_SUBST([ORA_LIBS])
     AC_SUBST([ORA_CFLAGS])
 fi
