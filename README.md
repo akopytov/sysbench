@@ -86,3 +86,47 @@ The table below lists the supported common options, their descriptions and defau
 
 Note that numerical values for all *size* options (like `--thread-stack-size` in this table) may be specified by appending the corresponding multiplicative suffix (K for kilobytes, M for megabytes, G for gigabytes and T for terabytes).
 
+
+--------------------------------------------------------------
+Oracle Build steps
+--------------------------------------------------------------
+
+Using Ubuntu 14.04 - intructions dated for 21/09/2016 (Was built on AWS in an r3.xlarge These actions were done against 0.5 checkout)
+
+* Setup Oracleclient - https://help.ubuntu.com/community/Oracle%20Instant%20Client
+download from http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html. the following RPM's and upload them to the server. 
+oracle-instantclient12.1-basic-12.1.0.2.0-1.x86_64.rpm
+oracle-instantclient12.1-devel-12.1.0.2.0-1.x86_64.rpm
+
+alien -i oracle-instantclient12.1-basic-12.1.0.2.0-1.x86_64.rpm
+alien -i oracle-instantclient12.1-devel-12.1.0.2.0-1.x86_64.rpm
+
+* Install Cuda - http://www.r-tutor.com/gpu-computing/cuda-installation/cuda7.5-ubuntu
+wget http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_7.5-18_amd64.deb
+sudo dpkg -i cuda-repo-ubuntu1404_7.5-18_amd64.deb 
+sudo apt-get update
+sudo apt-get install cuda
+export CUDA_HOME=/usr/local/cuda-7.5 
+export LD_LIBRARY_PATH=${CUDA_HOME}/lib64 
+ 
+PATH=${CUDA_HOME}/bin:${PATH}
+export PATH
+echo "/usr/lib/oracle/12.1/client64/lib" > /etc/ld.so.conf.d/oracle-client-12.1.conf
+ldconfig
+
+* Login and install sys bench
+ apt-get update
+ apt-get -y install automake libtool git libmysqlclient15-dev make libaio1 libaio-dev
+ git clone https://github.com/akopytov/sysbench.git
+ cd sysbench
+ vi configure.ac
+> Replace line - ORA_CFLAGS="-I${ac_cv_use_oracle}/rdbms/demo -I${ac_cv_use_oracle}/rdbms/public"
+> With line - ORA_CFLAGS="-I${ac_cv_use_oracle}/include -I${ac_cv_use_oracle}/rdbms/demo -I${ac_cv_use_oracle}/rdbms/public"
+./autogen.sh
+./configure --with-oracle="/usr/lib/oracle/12.1/client64"
+make
+Run the following commands to allow sysbench use the full number of cores.
+sudo sh -c 'for x in /sys/class/net/eth0/queues/rx-*; do echo ffffffff> $x/rps_cpus; done'
+sudo sh -c "echo 32768 > /proc/sys/net/core/rps_sock_flow_entries"
+sudo sh -c "echo 4096 > /sys/class/net/eth0/queues/rx-0/rps_flow_cnt"
+
