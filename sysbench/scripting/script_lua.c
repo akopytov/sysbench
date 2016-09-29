@@ -498,11 +498,11 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
     /* first location failed - look in DATA_PATH */
     char p[PATH_MAX + 1];
     strncpy(p, DATA_PATH LUA_DIRSEP, sizeof(p));
-    strncat(p, scriptname, sizeof(p));
+    strncat(p, scriptname, sizeof(p)-strlen(p)-1);
     if (!strrchr(scriptname, '.'))
     {
       /* add .lua extension if there isn't one */
-      strncat(p, ".lua", sizeof(p));
+      strncat(p, ".lua", sizeof(p)-strlen(p)-1);
     }
 
     if (luaL_loadfile(state, p))
