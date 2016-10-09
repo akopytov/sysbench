@@ -21,6 +21,9 @@ if USE_BUNDLED_LUAJIT
   LUAJIT_DIR = third_party/luajit
 endif
 
-SUBDIRS = doc $(LUAJIT_DIR) sysbench
+SUBDIRS = doc $(LUAJIT_DIR) sysbench tests
 
 EXTRA_DIST = autogen.sh README.md README-WIN.txt ChangeLog
+
+test:
+	cd tests && $(MAKE) test

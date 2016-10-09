@@ -309,7 +309,8 @@ static unsigned long sb_getpagesize(void);
 static unsigned long sb_get_allocation_granularity(void);
 static void *sb_memalign(size_t size);
 static void sb_free_memaligned(void *buf);
-static FILE_DESCRIPTOR sb_open(const char *name);
+static FILE_DESCRIPTOR sb_open(const char *);
+static int sb_create(const char *);
 
 int register_test_fileio(sb_list_t *tests)
 {
@@ -355,14 +356,21 @@ int file_prepare(void)
   {
     snprintf(file_name, sizeof(file_name), "test_file.%d",i);
     /* remove test files for creation test if they exist */
-    if (test_mode == MODE_WRITE)  
+    if (test_mode == MODE_WRITE)
+    {
       unlink(file_name);
+      if (sb_create(file_name))
+      {
+        log_errno(LOG_FATAL, "Cannot create file '%s'", file_name);
+        return 1;
+      }
+    }
 
     log_text(LOG_DEBUG, "Opening file: %s", file_name);
     files[i] = sb_open(file_name);
     if (!VALID_FILE(files[i]))
     {
-      log_errno(LOG_FATAL, "Cannot open file");
+      log_errno(LOG_FATAL, "Cannot open file '%s'", file_name);
       return 1; 
     }
   }
@@ -743,8 +751,8 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
           file_validate_buffer(per_thread[thread_id].buffer, file_req->size, file_req->pos))
       {
         log_text(LOG_FATAL,
-          "Validation failed on file " FD_FMT ", block offset 0x%x, exiting...",
-           file_req->file_id, file_req->pos);
+          "Validation failed on file " FD_FMT ", block offset %lld, exiting...",
+                 file_req->file_id, (long long) file_req->pos);
         return 1;
       }
 
@@ -793,15 +801,15 @@ void file_print_mode(void)
   char sizestr[16];
   
   log_text(LOG_NOTICE, "Extra file open flags: %x", file_extra_flags);
-  log_text(LOG_NOTICE, "%d files, %sb each", num_files,
+  log_text(LOG_NOTICE, "%d files, %sB each", num_files,
            sb_print_value_size(sizestr, sizeof(sizestr), file_size));
-  log_text(LOG_NOTICE, "%sb total file size",
+  log_text(LOG_NOTICE, "%sB total file size",
            sb_print_value_size(sizestr, sizeof(sizestr),
                                file_size * num_files));
-  log_text(LOG_NOTICE, "Block size %sb",
+  log_text(LOG_NOTICE, "Block size %sB",
            sb_print_value_size(sizestr, sizeof(sizestr), file_block_size));
   if (file_merged_requests > 0)
-    log_text(LOG_NOTICE, "Merging requests  up to %sb for sequential IO.",
+    log_text(LOG_NOTICE, "Merging requests up to %sB for sequential IO.",
              sb_print_value_size(sizestr, sizeof(sizestr),
                                  file_max_request_size));
 
@@ -846,7 +854,6 @@ void file_print_mode(void)
 void file_print_stats(sb_stat_t type)
 {
   double seconds;
-  char   s1[16], s2[16], s3[16], s4[16];
   unsigned long long diff_read;
   unsigned long long diff_written;
   unsigned long long diff_other_ops;
@@ -869,8 +876,8 @@ void file_print_stats(sb_stat_t type)
       SB_THREAD_MUTEX_UNLOCK();
 
       log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
-                    "reads: %4.2f MB/s writes: %4.2f MB/s fsyncs: %4.2f/s "
-                    "response time: %4.3fms (%u%%)",
+                    "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "
+                    "latency: %4.3f ms (%uth pct.)",
                     diff_read / megabyte / seconds,
                     diff_written / megabyte / seconds,
                     diff_other_ops / seconds,
@@ -886,18 +893,19 @@ void file_print_stats(sb_stat_t type)
   case SB_STAT_CUMULATIVE:
     seconds = NS2SEC(sb_timer_split(&sb_globals.cumulative_timer1));
 
-    log_text(LOG_NOTICE,
-             "Operations performed:  %d reads, %d writes, %d Other = %d Total",
-             read_ops, write_ops, other_ops, read_ops + write_ops + other_ops);
-    log_text(LOG_NOTICE, "Read %sb  Written %sb  Total transferred %sb  "
-             "(%sb/sec)",
-             sb_print_value_size(s1, sizeof(s1), bytes_read),
-             sb_print_value_size(s2, sizeof(s2), bytes_written),
-             sb_print_value_size(s3, sizeof(s3), bytes_read + bytes_written),
-             sb_print_value_size(s4, sizeof(s4),
-                                 (bytes_read + bytes_written) / seconds));
-    log_text(LOG_NOTICE, "%8.2f Requests/sec executed",
-             (read_ops + write_ops) / seconds);
+    log_text(LOG_NOTICE, "\n"
+             "File operations:\n"
+             "    reads/s:                      %4.2f\n"
+             "    writes/s:                     %4.2f\n"
+             "    fsyncs/s:                     %4.2f\n"
+             "\n"
+             "Throughput:\n"
+             "    read, MiB/s:                  %4.2f\n"
+             "    written, MiB/s:               %4.2f",
+             read_ops / seconds, write_ops / seconds, other_ops / seconds,
+             bytes_read / megabyte / seconds,
+             bytes_written / megabyte / seconds);
+
     clear_stats();
 
     break;
@@ -1084,7 +1092,7 @@ int create_files(void)
   seconds = NS2SEC(sb_timer_value(&t));
 
   if (written > 0)
-    log_text(LOG_NOTICE, "%llu bytes written in %.2f seconds (%.2f MB/sec).",
+    log_text(LOG_NOTICE, "%llu bytes written in %.2f seconds (%.2f MiB/sec).",
              written, seconds,
              (double) (written / megabyte) / seconds);
   else
@@ -1918,7 +1926,7 @@ int parse_arguments(void)
   file_rw_ratio = sb_get_value_float("file-rw-ratio");
   if (file_rw_ratio < 0)
   {
-    log_text(LOG_FATAL, "Invalid value file file-rw-ratio: %f.", file_rw_ratio);
+    log_text(LOG_FATAL, "Invalid value for --file-rw-ratio: %f.", file_rw_ratio);
     return 1;
   }
 
@@ -1926,6 +1934,12 @@ int parse_arguments(void)
   for (i = 0; i < sb_globals.num_threads; i++)
   {
     per_thread[i].buffer = sb_memalign(file_max_request_size);
+    if (per_thread[i].buffer == NULL)
+    {
+      log_text(LOG_FATAL, "Failed to allocate a memory buffer");
+      return 1;
+    }
+    memset(per_thread[i].buffer, 0, file_max_request_size);
   }
 
   return 0;
@@ -2055,11 +2069,10 @@ static FILE_DESCRIPTOR sb_open(const char *name)
     return SB_INVALID_FILE;
 
 #ifndef _WIN32
-  file = open(name, O_CREAT | O_RDWR | flags,
-              S_IRUSR | S_IWUSR);
+  file = open(name, O_RDWR | flags, S_IRUSR | S_IWUSR);
 #else
-  file = CreateFile(name, GENERIC_READ|GENERIC_WRITE, 0, NULL,
-                    OPEN_ALWAYS, flags, NULL);
+  file = CreateFile(name, GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+                    flags, NULL);
 #endif
 
 #ifdef HAVE_DIRECTIO
@@ -2072,6 +2085,30 @@ static FILE_DESCRIPTOR sb_open(const char *name)
 #endif
 
   return file;
+}
+
+/*
+  Create a file with a given path. Signal an error if the file already
+  exists. Return a non-zero value on error.
+*/
+
+static int sb_create(const char *path)
+{
+  FILE_DESCRIPTOR file;
+  int res;
+
+#ifndef _WIN32
+  file = open(path, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+  res = !VALID_FILE(file);
+  close(file);
+#else
+  file = CreateFile(path, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW,
+                    0, NULL);
+  res = !VALID_FILE(file);
+  CloseHandle(file);
+#endif
+
+  return res;
 }
 
 
@@ -2108,7 +2145,8 @@ int file_validate_buffer(unsigned char  *buf, unsigned int len, size_t offset)
 
   if (checksum != *(unsigned int *)(void *)(buf + cs_offset))
   {
-    log_text(LOG_FATAL, "Checksum mismatch in block: ", offset);
+    log_text(LOG_FATAL, "Checksum mismatch in block with offset: %lld",
+             (long long) offset);
     log_text(LOG_FATAL, "    Calculated value: 0x%x    Stored value: 0x%x",
              checksum, *(unsigned int *)(void *)(buf + cs_offset));
     return 1;

@@ -29,6 +29,8 @@
 #include "db_driver.h"
 #include "sb_rnd.h"
 
+#include <stdlib.h>
+
 #define EVENT_FUNC "event"
 #define PREPARE_FUNC "prepare"
 #define CLEANUP_FUNC "cleanup"
@@ -169,6 +171,8 @@ int script_load_lua(const char *testname, sb_test_t *test)
 {
   unsigned int i;
 
+  setenv("LUA_PATH", DATA_PATH LUA_DIRSEP "?.lua", 0);
+
   /* Initialize global interpreter state */
   gstate = sb_lua_new_state(testname, -1);
   if (gstate == NULL)
@@ -241,15 +245,21 @@ sb_request_t sb_lua_get_request(int thread_id)
 
   (void) thread_id; /* unused */
 
-  if (sb_globals.max_requests != 0 && nevents >= sb_globals.max_requests)
+  if (sb_globals.max_requests > 0)
   {
-    req.type = SB_REQ_TYPE_NULL;
-    return req;
+    SB_THREAD_MUTEX_LOCK();
+    if (nevents >= sb_globals.max_requests)
+    {
+      req.type = SB_REQ_TYPE_NULL;
+      SB_THREAD_MUTEX_UNLOCK();
+      return req;
+    }
+    nevents++;
+    SB_THREAD_MUTEX_UNLOCK();
   }
 
   req.type = SB_REQ_TYPE_SCRIPT;
-  nevents++;
-  
+
   return req;
 }
 
@@ -482,8 +492,27 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   luaL_newmetatable(state, "sysbench.stmt");
 
   luaL_newmetatable(state, "sysbench.rs");
-  
-  if (luaL_loadfile(state, scriptname) || lua_pcall(state, 0, 0, 0))
+
+  if (luaL_loadfile(state, scriptname))
+  {
+    /* first location failed - look in DATA_PATH */
+    char p[PATH_MAX + 1];
+    strncpy(p, DATA_PATH LUA_DIRSEP, sizeof(p));
+    strncat(p, scriptname, sizeof(p)-strlen(p)-1);
+    if (!strrchr(scriptname, '.'))
+    {
+      /* add .lua extension if there isn't one */
+      strncat(p, ".lua", sizeof(p)-strlen(p)-1);
+    }
+
+    if (luaL_loadfile(state, p))
+    {
+      lua_error(state);
+      return NULL;
+    }
+  }
+
+  if (lua_pcall(state, 0, 0, 0))
   {
     lua_error(state);
     return NULL;

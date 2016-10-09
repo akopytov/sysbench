@@ -1,4 +1,8 @@
 language: c
+cache:
+  directories:
+  - $HOME/.cache/pip
+  - /usr/local
 
 os:
   - linux
@@ -12,14 +16,47 @@ addons:
   apt:
     packages:
     - libmysqlclient-dev
+    - libpq-dev
+    - libaio-dev
+
+services:
+  - mysql
+  - postgresql
 
 before_install:
   - >
     case "${TRAVIS_OS_NAME:-linux}" in
     osx)
+      # Workaround for https://github.com/Homebrew/legacy-homebrew/issues/43874
+      brew uninstall libtool
       brew update --quiet
-      brew install mysql
+      brew install libtool mysql
+      # OS X requires servers to be started explicitly
+      brew services start mysql
+      pg_ctl -wD /usr/local/var/postgres start
+      createuser -s postgres;
       ;;
     esac
 
-script: ./autogen.sh && ./configure && make
+install:
+  - pip install --user cram cpp-coveralls
+  - >
+    case "${TRAVIS_OS_NAME:-linux}" in
+    osx)
+      # OS X requires this for user-local pip packages
+      export PATH=~/Library/Python/2.7/bin:$PATH
+      ;;
+    esac
+
+before_script:
+  - mysql -u root -e 'CREATE DATABASE sbtest;'
+  - psql -U postgres -c 'CREATE DATABASE sbtest;'
+
+script:
+  - ./autogen.sh && ./configure --enable-coverage --with-mysql --with-pgsql
+  - make
+  - make distcheck
+  - SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
+
+after_success:
+  - coveralls --gcov-options '\-lp'

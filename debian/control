@@ -1,0 +1,27 @@
+Source: sysbench
+Section: misc
+Priority: extra
+Maintainer: Alexey Kopytov <akopytov@gmail.com>
+Build-Depends: debhelper, autoconf, automake, libtool, libmysqlclient-dev
+Standards-Version: 3.9.5
+Homepage: https://github.com/akopytov/sysbench
+
+Package: sysbench
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Cross-platform and multi-threaded benchmark tool
+ SysBench is a modular, cross-platform and multi-threaded benchmark tool for
+ evaluating OS parameters that are important for a system running a database
+ under intensive load.
+ .
+ The idea of this benchmark suite is to quickly get an impression about system
+ performance without setting up complex database benchmarks or even without
+ installing a database at all.
+ .
+ Current features allow to test the following system parameters:
+ .
+  * file I/O performance
+  * scheduler performance
+  * memory allocation and transfer speed
+  * POSIX threads implementation performance
+  * database server performance (OLTP benchmark)

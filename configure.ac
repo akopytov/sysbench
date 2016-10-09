@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT([sysbench],[0.9],[https://github.com/akopytov/sysbench/issues],
+AC_INIT([sysbench],[1.0],[https://github.com/akopytov/sysbench/issues],
         [sysbench], [https://github.com/akopytov/sysbench])
 AC_CONFIG_AUX_DIR([config])
 # Setting CFLAGS here prevents AC_CANONICAL_TARGET from injecting them
@@ -70,6 +70,7 @@ then
   CFLAGS="-ggdb3 ${CFLAGS}"
   DEBUG_CFLAGS="-O0"
   OPTIMIZE_CFLAGS="-O2"
+  GCOV_CFLAGS="-O0 --coverage"
 fi
 if test "$SUNCC" = "yes"
 then
@@ -91,6 +92,7 @@ then
   CFLAGS="-g -mt ${IS_64} ${MEMALIGN_FLAGS} ${CFLAGS}"
   DEBUG_CFLAGS="-xO0"
   OPTIMIZE_CFLAGS="-xO2 -xlibmil -xdepend -Xa -mt -xstrconst"
+# TODO: Set flags for Gcov-enabled builds, if supported by Sun Studio
 fi
 
 
@@ -235,7 +237,7 @@ AM_CONDITIONAL(USE_ATTACHSQL, test x$ac_cv_libattachsql = xyes)
 AS_IF([test x$with_oracle != xno], [
     AC_DEFINE(USE_ORACLE,1,[Define to 1 if you want to compile with Oracle support])
     ORA_LIBS="-L${sb_with_oracle}/lib -lclntsh"
-    ORA_CFLAGS="-I${with_oracle}/rdbms/demo -I${with_oracle}/rdbms/public"
+    ORA_CFLAGS="-I${with_oracle}/include -I${with_oracle}/rdbms/demo -I${with_oracle}/rdbms/public"
     AC_SUBST([ORA_LIBS])
     AC_SUBST([ORA_CFLAGS])
 ])
@@ -289,6 +291,10 @@ AC_HEADER_TIME
 AX_TLS([],
   AC_MSG_ERROR([Thread-local storage is not suppored by the target platform!])
 )
+
+# Define HAVE_FUNC_ATTRIBUTE_FORMAT if compiler supports the
+# __attribute__((format...)) function attribute
+AX_GCC_FUNC_ATTRIBUTE(format)
 
 if test "$enable_largefile" = yes; then
     AC_SYS_LARGEFILE
@@ -348,14 +354,6 @@ AC_ARG_WITH([debug],
        [Add debug code/turns off optimizations (yes|no) @<:@default=no@:>@])],
     [with_debug=$withval],
     [with_debug=no])
-if test "$with_debug" = "yes"
-then
-  # Debugging. No optimization.
-  CFLAGS="${DEBUG_CFLAGS} -DDEBUG ${CFLAGS}"
-else
-  # Optimized version. No debug
-  CFLAGS="${OPTIMIZE_CFLAGS} ${CFLAGS}"
-fi
 
 AC_ARG_ENABLE([profiling],
     [AS_HELP_STRING([--enable-profiling],
@@ -400,6 +398,19 @@ AC_ARG_ENABLE([go-crazy],
     [ac_warn_go_crazy="$enableval"],
     [ac_warn_go_crazy="no"])
 
+if test "$with_debug" = "yes"
+then
+  # Debugging. No optimization.
+  CFLAGS="${DEBUG_CFLAGS} -DDEBUG ${CFLAGS}"
+elif test "$ac_coverage" = "yes"
+then
+  # Gcov-enabled build. No optimization.
+  CFLAGS="${GCOV_CFLAGS} ${CFLAGS}"
+else
+  # Optimized version. No debug
+  CFLAGS="${OPTIMIZE_CFLAGS} ${CFLAGS}"
+fi
+
 if test "$GCC" = "yes"
 then
   if test "$ac_warn_fail" = "yes"
@@ -419,7 +430,7 @@ then
 
   if test "$ac_coverage" = "yes"
   then
-    GPROF_COVERAGE="-fprofile-arcs -ftest-coverage"
+    GPROF_COVERAGE="--coverage"
   else
     GPROF_COVERAGE=" "
   fi
@@ -444,7 +455,7 @@ then
     W_CRAZY="-Wshadow -Wconversion"
   fi
 
-  CC_WARNINGS="${BASE_WARNINGS} ${W_PEDANTIC} ${W_UNREACHABLE} ${GPROF_PROFILING} ${GPROF_COVERAGE} ${W_CRAZY}"
+  CC_WARNINGS="${BASE_WARNINGS} ${W_PEDANTIC} ${W_UNREACHABLE} ${W_CRAZY}"
 
   NO_REDUNDANT_DECLS="-Wno-redundant-decls"
   CPPFLAGS="${CPPFLAGS}"
@@ -454,7 +465,7 @@ then
   CC_WARNINGS="-v -errtags=yes -errwarn=%all -erroff=E_INTEGER_OVERFLOW_DETECTED"
 fi
 
-AM_CFLAGS="${CC_WARNINGS} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
+AM_CFLAGS="${CC_WARNINGS} ${GPROF_PROFILING} ${GPROF_COVERAGE} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
 
 AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/sysbench ${LUAJIT_CFLAGS}"
 
@@ -485,6 +496,8 @@ sysbench/tests/threads/Makefile
 sysbench/tests/mutex/Makefile
 sysbench/tests/db/Makefile
 sysbench/scripting/Makefile
+tests/Makefile
+tests/include/config.sh
 ])
 AC_OUTPUT
 

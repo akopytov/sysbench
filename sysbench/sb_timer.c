@@ -130,11 +130,16 @@ void sb_timer_stop(sb_timer_t *t)
 }
 
 
-/* get the current timer value in nanoseconds */
+/*
+   get the current timer value in nanoseconds without affecting is state, i.e.
+   is safe to be used concurrently on a shared timer.
+*/
 
 
 unsigned long long  sb_timer_value(sb_timer_t *t)
 {
+  struct timespec ts;
+
   switch (t->state) {
     case TIMER_INITIALIZED:
       log_text(LOG_WARNING, "timer was never started");
@@ -148,9 +153,8 @@ unsigned long long  sb_timer_value(sb_timer_t *t)
       abort();
   }
 
-  sb_timer_update(t);
-
-  return t->elapsed;
+  SB_GETTIME(&ts);
+  return TIMESPEC_DIFF(ts, t->time_start) + t->queue_time;
 }
 
 

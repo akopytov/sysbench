@@ -892,24 +892,24 @@ void db_print_stats(sb_stat_t type)
 
   log_text(LOG_NOTICE, "OLTP test statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
-  log_text(LOG_NOTICE, "        read:                            %d",
+  log_text(LOG_NOTICE, "        read:                            %lu",
            read_ops);
-  log_text(LOG_NOTICE, "        write:                           %d",
+  log_text(LOG_NOTICE, "        write:                           %lu",
            write_ops);
-  log_text(LOG_NOTICE, "        other:                           %d",
+  log_text(LOG_NOTICE, "        other:                           %lu",
            other_ops);
-  log_text(LOG_NOTICE, "        total:                           %d",
+  log_text(LOG_NOTICE, "        total:                           %lu",
            read_ops + write_ops + other_ops);
-  log_text(LOG_NOTICE, "    transactions:                        %-6d"
+  log_text(LOG_NOTICE, "    transactions:                        %-6lu"
            " (%.2f per sec.)", transactions, transactions / seconds);
-  log_text(LOG_NOTICE, "    read/write requests:                 %-6d"
+  log_text(LOG_NOTICE, "    read/write requests:                 %-6lu"
            " (%.2f per sec.)", read_ops + write_ops,
            (read_ops + write_ops) / seconds);  
-  log_text(LOG_NOTICE, "    other operations:                    %-6d"
+  log_text(LOG_NOTICE, "    other operations:                    %-6lu"
            " (%.2f per sec.)", other_ops, other_ops / seconds);
-  log_text(LOG_NOTICE, "    ignored errors:                      %-6d"
+  log_text(LOG_NOTICE, "    ignored errors:                      %-6lu"
            " (%.2f per sec.)", errors, errors / seconds);
-  log_text(LOG_NOTICE, "    reconnects:                          %-6d"
+  log_text(LOG_NOTICE, "    reconnects:                          %-6lu"
            " (%.2f per sec.)", reconnects, reconnects / seconds);
 
   if (db_globals.debug)

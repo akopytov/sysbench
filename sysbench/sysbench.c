@@ -451,13 +451,13 @@ void print_run_mode(sb_test_t *test)
   if (rand_seed)
   {
     log_text(LOG_NOTICE, "Initializing random number generator from seed (%d).\n", rand_seed);
-    sb_srnd(rand_seed);
+    srandom(rand_seed);
   }
   else
   {
     log_text(LOG_NOTICE,
              "Initializing random number generator from current time\n");
-    sb_srnd(time(NULL));
+    srandom(time(NULL));
   }
 
   if (sb_globals.force_shutdown)
@@ -489,9 +489,9 @@ static void *worker_thread(void *arg)
   thread_id = ctxt->id;
 
   /* Initialize thread-local RNG state */
-  sb_srnd(thread_id);
+  sb_srnd(random());
 
-  log_text(LOG_DEBUG, "Worker thread started (%d)!", thread_id);
+  log_text(LOG_DEBUG, "Worker thread (#%d) started", thread_id);
 
   if (test->ops.thread_init != NULL && test->ops.thread_init(thread_id) != 0)
   {
@@ -502,7 +502,7 @@ static void *worker_thread(void *arg)
     return NULL;
   }
 
-  log_text(LOG_DEBUG, "Worker thread (#%d) started!", thread_id);
+  log_text(LOG_DEBUG, "Worker thread (#%d) initialized", thread_id);
 
   /* Wait for other threads to initialize */
   if (sb_barrier_wait(&thread_start_barrier) < 0)
@@ -609,15 +609,16 @@ static void *eventgen_thread_proc(void *arg)
 
     next_ns = next_ns + intr_ns*1000;
     if (next_ns > curr_ns)
+    {
       pause_ns = next_ns - curr_ns;
+      usleep(pause_ns / 1000);
+    }
     else
     {
-      pause_ns = 1000;
       log_timestamp(LOG_DEBUG, &sb_globals.exec_timer,
                     "Event generation thread is too slow");
     }
 
-    usleep(pause_ns / 1000);
 
     queue_array[i].event_time = sb_timer_value(&sb_globals.exec_timer);
     pthread_mutex_lock(&event_queue_mutex);
@@ -662,7 +663,7 @@ static void *report_thread_proc(void *arg)
 
   if (current_test->ops.print_stats == NULL)
   {
-    log_text(LOG_DEBUG, "Reporting not supported by the current test, ",
+    log_text(LOG_DEBUG, "Reporting not supported by the current test, "
              "terminating the reporting thread");
     return NULL;
   }
@@ -712,7 +713,7 @@ static void *checkpoints_thread_proc(void *arg)
 
   if (current_test->ops.print_stats == NULL)
   {
-    log_text(LOG_DEBUG, "Reporting not supported by the current test, ",
+    log_text(LOG_DEBUG, "Reporting not supported by the current test, "
              "terminating the checkpoints thread");
     return NULL;
   }
@@ -1224,9 +1225,6 @@ int main(int argc, char *argv[])
       }
       if (test->cmds.help != NULL)
         test->cmds.help();
-      else
-        fprintf(stderr, "No help available for test '%s'.\n",
-                test->sname);
     }
     exit(0);
   }

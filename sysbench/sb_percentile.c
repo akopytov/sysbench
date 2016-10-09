@@ -32,12 +32,16 @@
 # include <math.h>
 #endif
 
+#include "sysbench.h"
 #include "sb_percentile.h"
 #include "sb_logger.h"
 
 int sb_percentile_init(sb_percentile_t *percentile,
                        unsigned int size, double range_min, double range_max)
 {
+  if (sb_globals.percentile_rank == 0)
+    return 0;
+
   percentile->values = (unsigned long long *)
     calloc(size, sizeof(unsigned long long));
   percentile->tmp = (unsigned long long *)
@@ -65,6 +69,9 @@ void sb_percentile_update(sb_percentile_t *percentile, double value)
 {
   unsigned int n;
 
+  if (sb_globals.percentile_rank == 0)
+    return;
+
   if (value < percentile->range_min)
     value= percentile->range_min;
   else if (value > percentile->range_max)
@@ -83,6 +90,9 @@ double sb_percentile_calculate(sb_percentile_t *percentile, double percent)
 {
   unsigned long long ncur, nmax;
   unsigned int       i;
+
+  if (sb_globals.percentile_rank == 0)
+    return 0.0;
 
   pthread_mutex_lock(&percentile->mutex);
 
@@ -111,6 +121,9 @@ double sb_percentile_calculate(sb_percentile_t *percentile, double percent)
 
 void sb_percentile_reset(sb_percentile_t *percentile)
 {
+  if (sb_globals.percentile_rank == 0)
+    return;
+
   pthread_mutex_lock(&percentile->mutex);
   percentile->total = 0;
   memset(percentile->values, 0, percentile->size * sizeof(unsigned long long));
@@ -119,6 +132,9 @@ void sb_percentile_reset(sb_percentile_t *percentile)
 
 void sb_percentile_done(sb_percentile_t *percentile)
 {
+  if (sb_globals.percentile_rank == 0)
+    return;
+
   pthread_mutex_destroy(&percentile->mutex);
   free(percentile->values);
   free(percentile->tmp);

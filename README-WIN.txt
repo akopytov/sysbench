@@ -1,8 +1,8 @@
 How to build on Windows
 
 
-You need CMake (download from http://www.cmake.org/) and Visual Studio 2005 or 
-later (free Express edition should work ok)
+You need CMake (download from http://www.cmake.org/) and Visual Studio 2015 or 
+later.
 
 1.Open Visual Studio command line prompt
 2.To build with MySQL support, you will need mysql.h header file and client 

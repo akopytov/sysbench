@@ -15,6 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+AM_CPPFLAGS += -DDATA_PATH=\"$(pkgdatadir)\"
+
 noinst_LIBRARIES = libsbscript.a
 
 libsbscript_a_SOURCES = sb_script.c sb_script.h script_lua.c script_lua.h

@@ -59,8 +59,6 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    db_query(query)
 
-   db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
-
    print("Inserting " .. oltp_table_size .. " records into 'sbtest" .. i .. "'")
 
    if (oltp_auto_inc) then
@@ -89,6 +87,8 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    db_bulk_insert_done()
 
+   print("Creating secondary indexes on 'sbtest" .. i .. "'...")
+   db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
 
 end
 
@@ -132,6 +132,13 @@ function set_vars()
    oltp_distinct_ranges = oltp_distinct_ranges or 1
    oltp_index_updates = oltp_index_updates or 1
    oltp_non_index_updates = oltp_non_index_updates or 1
+   oltp_delete_inserts = oltp_delete_inserts or 1
+
+   if (oltp_range_selects == 'off') then
+      oltp_range_selects = false
+   else
+      oltp_range_selects = true
+   end
 
    if (oltp_auto_inc == 'off') then
       oltp_auto_inc = false
@@ -143,6 +150,16 @@ function set_vars()
       oltp_read_only = true
    else
       oltp_read_only = false
+   end
+
+   if (oltp_write_only == 'on') then
+      oltp_write_only = true
+   else
+      oltp_write_only = false
+   end
+
+   if (oltp_read_only and oltp_write_only) then
+      error("--oltp-read-only and --oltp-write-only are mutually exclusive")
    end
 
    if (oltp_skip_trx == 'on') then

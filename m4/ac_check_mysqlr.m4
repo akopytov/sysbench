@@ -1,9 +1,9 @@
 dnl ---------------------------------------------------------------------------
 dnl Macro: AC_CHECK_MYSQLR
-dnl First check for custom MySQL paths in --with-mysql-* options.
-dnl If some paths are missing,  check if mysql_config exists. 
-dnl Then check for the libraries and replace -lmysqlclient with 
-dnl -lmysqlclient_r, to enable threaded client library.
+dnl First check if the MySQL root directory is specified with --with-mysql.
+dnl Otherwise check for custom MySQL paths in --with-mysql-includes and
+dnl --with-mysql-libs. If some paths are not specified explicitly, try to get
+dnl them from mysql_config.
 dnl ---------------------------------------------------------------------------
 
 AC_DEFUN([AC_CHECK_MYSQLR],[
@@ -51,7 +51,20 @@ then
     ac_cv_mysql_libs=`echo ${ac_cv_mysql_libs} | sed -e 's/.libs$//' \
                       -e 's+.libs/$++'`
     AC_CACHE_CHECK([MySQL libraries], [ac_cv_mysql_libs], [ac_cv_mysql_libs=""])
-    MYSQL_LIBS="-L$ac_cv_mysql_libs -lmysqlclient_r"
+    save_LDFLAGS="$LDFLAGS"
+    save_LIBS="$LIBS"
+    LDFLAGS="-L$ac_cv_mysql_libs"
+    LIBS=""
+
+    # libmysqlclient_r has been removed in MySQL 5.7
+    AC_SEARCH_LIBS([mysql_real_connect],
+      [mysqlclient_r mysqlclient],
+      [],
+      AC_MSG_ERROR([cannot find MySQL client libraries in $ac_cv_mysql_libs]))
+
+    MYSQL_LIBS="$LDFLAGS $LIBS"
+    LIBS="$save_LIBS"
+    LDFLAGS="$save_LDFLAGS"
 fi
 
 # If some path is missing, try to autodetermine with mysql_config

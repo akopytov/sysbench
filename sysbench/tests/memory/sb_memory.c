@@ -247,7 +247,7 @@ sb_request_t memory_get_request(int thread_id)
 int memory_execute_request(sb_request_t *sb_req, int thread_id)
 {
   sb_mem_request_t    *mem_req = &sb_req->u.mem_request;
-  int                 tmp = 0;
+  volatile int        tmp = 0;
   int                 idx; 
   int                 *buf, *end;
   log_msg_t           msg;
@@ -322,9 +322,9 @@ void memory_print_mode(void)
   char *str;
   
   log_text(LOG_INFO, "Doing memory operations speed test");
-  log_text(LOG_INFO, "Memory block size: %ldK\n",
+  log_text(LOG_INFO, "Memory block size: %ldKiB\n",
            (long)(memory_block_size / 1024));
-  log_text(LOG_INFO, "Memory transfer size: %ldM\n",
+  log_text(LOG_INFO, "Memory transfer size: %ldMiB\n",
            (long)(memory_total_size / 1024 / 1024));
 
   switch (memory_oper) {
@@ -369,7 +369,7 @@ void memory_print_stats(sb_stat_t type)
     seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
 
     log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
-                  "%4.2f MB/sec,",
+                  "%4.2f MiB/sec,",
                   (double)(total_bytes - last_bytes) / megabyte / seconds);
     last_bytes = total_bytes;
     SB_THREAD_MUTEX_UNLOCK();
@@ -382,7 +382,7 @@ void memory_print_stats(sb_stat_t type)
     log_text(LOG_NOTICE, "Operations performed: %d (%8.2f ops/sec)\n",
              total_ops, total_ops / seconds);
     if (memory_oper != SB_MEM_OP_NONE)
-      log_text(LOG_NOTICE, "%4.2f MB transferred (%4.2f MB/sec)\n",
+      log_text(LOG_NOTICE, "%4.2f MiB transferred (%4.2f MiB/sec)\n",
                total_bytes / megabyte,
                total_bytes / megabyte / seconds);
     total_ops = 0;
@@ -415,7 +415,7 @@ void * hugetlb_alloc(size_t size)
   if (shmid < 0)
   {
       log_errno(LOG_FATAL,
-                "Failed to allocate %d bytes from HugeTLB memory.", size);
+                "Failed to allocate %zd bytes from HugeTLB memory.", size);
 
       return NULL;
   }

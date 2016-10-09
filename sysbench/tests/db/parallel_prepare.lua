@@ -1,12 +1,20 @@
-pathtest = string.match(test, "(.*/)") or ""
+-- for proper initialization use --max-requests = N, where N is --num-threads
+--
+pathtest = string.match(test, "(.*/)")
 
-dofile(pathtest .. "common.lua")
+if pathtest then
+   dofile(pathtest .. "common.lua")
+else
+   require("common")
+end
 
 function thread_init(thread_id)
+   set_vars()
+end
+
+function event(thread_id)
    local index_name
    local i
-   set_vars()
-   
    print("thread prepare"..thread_id)
 
    if (oltp_secondary) then
@@ -18,9 +26,5 @@ function thread_init(thread_id)
    for i=thread_id+1, oltp_tables_count, num_threads  do
    create_insert(i)
    end
-
-end
-
-function event(thread_id)
 
 end

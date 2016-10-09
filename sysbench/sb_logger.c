@@ -105,7 +105,8 @@ static log_handler_t text_handler = {
 
 static sb_arg_t oper_handler_args[] =
 {
-  {"percentile", "percentile rank of query response times to count",
+  {"percentile", "percentile rank of query response times to count. "
+   "Use the special value of 0 to disable percentile statistics.",
    SB_ARG_TYPE_INT, "95"},
 
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
@@ -485,7 +486,7 @@ int oper_handler_init(void)
   unsigned int i, tmp;
 
   tmp = sb_get_value_int("percentile");
-  if (tmp < 1 || tmp > 100)
+  if (tmp < 0 || tmp > 100)
   {
     log_text(LOG_FATAL, "Invalid value for percentile option: %d",
              tmp);
@@ -641,7 +642,7 @@ int print_global_stats(void)
            NS2MS(get_max_time(&t)));
 
   /* Print approx. percentile value for event execution times */
-  if (t.events > 0)
+  if (t.events > 0 && sb_globals.percentile_rank > 0)
   {
     log_text(LOG_NOTICE, "         approx. %3d percentile:         %10.2fms",
              sb_globals.percentile_rank, NS2MS(percentile_val));

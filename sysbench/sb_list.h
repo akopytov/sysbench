@@ -22,7 +22,6 @@
 
 typedef struct sb_list_item_t
 {
-//    char c;
     struct sb_list_item_t *next_p;
     struct sb_list_item_t *prev_p;
 }

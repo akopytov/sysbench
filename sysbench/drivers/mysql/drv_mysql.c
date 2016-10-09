@@ -481,7 +481,8 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query)
       return 1;
     }
     stmt->ptr = (void *)mystmt;
-    DEBUG("mysql_stmt_prepare(%p, \"%s\", %d) = %p", mystmt, query, strlen(query), stmt->ptr);
+    DEBUG("mysql_stmt_prepare(%p, \"%s\", %u) = %p", mystmt, query,
+          (unsigned int) strlen(query), stmt->ptr);
     if (mysql_stmt_prepare(mystmt, query, strlen(query)))
     {
       /* Check if this statement in not supported */
@@ -842,7 +843,8 @@ int mysql_drv_query(db_conn_t *sb_conn, const char *query,
   con = db_mysql_con->mysql;
 
   rc = (unsigned int)mysql_real_query(con, query, strlen(query));
-  DEBUG("mysql_real_query(%p, \"%s\", %u) = %u", con, query, strlen(query), rc);
+  DEBUG("mysql_real_query(%p, \"%s\", %u) = %u", con, query,
+        (unsigned int) strlen(query), rc);
 
   if (rc)
     return check_error(sb_conn, "mysql_drv_query()", query);
@@ -924,7 +926,7 @@ int mysql_drv_store_results(db_result_set_t *rs)
       return check_error(rs->connection, "mysql_stmt_store_result()", NULL);
     }
     rs->nrows = mysql_stmt_num_rows(rs->statement->ptr);
-    DEBUG("mysql_stmt_num_rows(%p) = %d", rs->statement->ptr, rs->nrows);
+    DEBUG("mysql_stmt_num_rows(%p) = %llu", rs->statement->ptr, rs->nrows);
     do {
       rc = (unsigned int)mysql_stmt_fetch(rs->statement->ptr);
       DEBUG("mysql_stmt_fetch(%p) = %d", rs->statement->ptr, rc);
@@ -950,7 +952,7 @@ int mysql_drv_store_results(db_result_set_t *rs)
   rs->ptr = (void *)res;
 
   rs->nrows = mysql_num_rows(res);
-  DEBUG("mysql_num_rows(%p) = %u", res, rs->nrows);
+  DEBUG("mysql_num_rows(%p) = %llu", res, rs->nrows);
 
   /* just fetch result */
   while((row = mysql_fetch_row(res)))
