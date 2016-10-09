@@ -9,7 +9,7 @@ oltp.lua + MySQL tests
 
   $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-table-engine=myisam $SBTEST_MYSQL_ARGS"
   $ . $SBTEST_INCDIR/script_oltp_common.sh
-  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Creating table 'sbtest1'...
   Inserting 10000 records into 'sbtest1'
@@ -35,7 +35,7 @@ oltp.lua + MySQL tests
   Creating table 'sbtest8'...
   Inserting 10000 records into 'sbtest8'
   Creating secondary indexes on 'sbtest8'...
-  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 1
@@ -72,7 +72,7 @@ oltp.lua + MySQL tests
       events (avg/stddev):           */* (glob)
       execution time (avg/stddev):   */* (glob)
   
-  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Dropping table 'sbtest1'...
   Dropping table 'sbtest2'...
@@ -85,7 +85,7 @@ oltp.lua + MySQL tests
 
   $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-table-engine=innodb $SBTEST_MYSQL_ARGS"
   $ . $SBTEST_INCDIR/script_oltp_common.sh
-  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Creating table 'sbtest1'...
   Inserting 10000 records into 'sbtest1'
@@ -111,7 +111,7 @@ oltp.lua + MySQL tests
   Creating table 'sbtest8'...
   Inserting 10000 records into 'sbtest8'
   Creating secondary indexes on 'sbtest8'...
-  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 1
@@ -148,7 +148,7 @@ oltp.lua + MySQL tests
       events (avg/stddev):           */* (glob)
       execution time (avg/stddev):   */* (glob)
   
-  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Dropping table 'sbtest1'...
   Dropping table 'sbtest2'...

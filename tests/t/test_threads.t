@@ -4,19 +4,19 @@ threads benchmark tests
 
   $ args="--test=threads --max-requests=100 --num-threads=2"
   $ sysbench $args help
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   threads options:
     --thread-yields=N      number of yields to do per request [1000]
     --thread-locks=N       number of locks per thread [8]
   
   $ sysbench $args prepare
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   'threads' test does not have the 'prepare' command.
   [1]
   $ sysbench $args run
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 2
@@ -43,7 +43,7 @@ threads benchmark tests
       execution time (avg/stddev):   */* (glob)
   
   $ sysbench $args cleanup
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   'threads' test does not have the 'cleanup' command.
   [1]

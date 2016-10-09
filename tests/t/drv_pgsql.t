@@ -8,7 +8,7 @@ PostgreSQL driver tests
   > fi
   $ DB_DRIVER_ARGS="--db-driver=pgsql $SBTEST_PGSQL_ARGS"
   $ . $SBTEST_INCDIR/drv_common.sh
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 2

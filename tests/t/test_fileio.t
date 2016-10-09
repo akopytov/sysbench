@@ -5,7 +5,7 @@ fileio benchmark tests
   $ fileio_args="--test=fileio --file-num=4 --file-total-size=32M"
 
   $ sysbench $fileio_args prepare
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   4 files, 8192Kb each, 32Mb total
   Creating files for the test...
@@ -35,7 +35,7 @@ fileio benchmark tests
   FATAL: Missing required argument: --file-test-mode
 
   $ sysbench $fileio_args --max-requests=150 --file-test-mode=rndrw run
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 1
@@ -81,7 +81,7 @@ fileio benchmark tests
       execution time (avg/stddev):   *.*/0.00 (glob)
   
   $ sysbench $fileio_args --max-requests=150 --file-test-mode=rndrd run
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 1
@@ -128,7 +128,7 @@ fileio benchmark tests
   
 
   $ sysbench $fileio_args --max-requests=150 --file-test-mode=seqrd run
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 1
@@ -173,7 +173,7 @@ fileio benchmark tests
   
 
   $ sysbench $fileio_args --max-requests=150 --file-test-mode=rndwr run
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 1
@@ -220,12 +220,12 @@ fileio benchmark tests
   
 
   $ sysbench $fileio_args --max-requests=150 --file-test-mode=foo run
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   FATAL: Invalid IO operations mode: foo.
   [1]
   $ sysbench $fileio_args cleanup
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Removing test files...
   $ ls

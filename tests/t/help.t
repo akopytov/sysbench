@@ -6,7 +6,7 @@ separately.
 ########################################################################
 
   $ sysbench help | sed '/Compiled-in database drivers:/,/Compiled-in tests:/d' 
-  sysbench 1.0:  multi-threaded system evaluation benchmark
+  sysbench *.* * (glob)
   
   Usage:
     sysbench --test=<test-name> [options]... <command>

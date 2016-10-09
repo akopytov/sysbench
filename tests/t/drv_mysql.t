@@ -8,7 +8,7 @@ MySQL driver tests
   > fi
   $ DB_DRIVER_ARGS="--db-driver=mysql $SBTEST_MYSQL_ARGS"
   $ . $SBTEST_INCDIR/drv_common.sh
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 2

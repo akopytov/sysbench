@@ -3,18 +3,18 @@ cpu benchmark tests
 ########################################################################
   $ args="--test=cpu --cpu-max-prime=1000 --max-requests=100 --num-threads=2"
   $ sysbench $args help
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   cpu options:
     --cpu-max-prime=N      upper limit for primes generator [10000]
   
   $ sysbench $args prepare
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   'cpu' test does not have the 'prepare' command.
   [1]
   $ sysbench $args run
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 2
@@ -43,7 +43,7 @@ cpu benchmark tests
       execution time (avg/stddev):   */* (glob)
   
   $ sysbench $args cleanup
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   'cpu' test does not have the 'cleanup' command.
   [1]

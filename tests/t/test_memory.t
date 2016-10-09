@@ -16,7 +16,7 @@ help' only on Linux.
     --memory-hugetlb=[on|off]   allocate memory from HugeTLB pool [off]
 
   $ sysbench $args help | grep -v hugetlb
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   memory options:
     --memory-block-size=SIZE    size of memory block for test [1K]
@@ -26,12 +26,12 @@ help' only on Linux.
     --memory-access-mode=STRING memory access mode {seq,rnd} [seq]
   
   $ sysbench $args prepare
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   'memory' test does not have the 'prepare' command.
   [1]
   $ sysbench $args run
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Running the test with following options:
   Number of threads: 2
@@ -62,7 +62,7 @@ help' only on Linux.
       execution time (avg/stddev):   */* (glob)
   
   $ sysbench $args cleanup
-  sysbench *.*:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   'memory' test does not have the 'cleanup' command.
   [1]
