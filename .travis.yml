@@ -1,3 +1,7 @@
+# vim ft=yaml
+#
+# Travis CI configuration
+
 language: c
 
 os:
@@ -62,3 +66,7 @@ script:
 
 after_success:
   - coveralls --gcov-options '\-lp'
+
+# Local variables:
+# mode: yaml
+# End:
