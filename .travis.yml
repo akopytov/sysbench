@@ -27,10 +27,16 @@ before_install:
       brew uninstall libtool
       brew update --quiet
       brew install libtool mysql
+
       # OS X requires servers to be started explicitly
       brew services start mysql
+
+      # Avoid PostgreSQL upgrade woes, just recreate the database
+      rm -rf /usr/local/var/postgres
+      brew postinstall postgresql
+
       pg_ctl -wD /usr/local/var/postgres start
-      createuser -s postgres;
+      createuser -s postgres
       ;;
     esac
 
@@ -45,8 +51,8 @@ install:
     esac
 
 before_script:
-  - mysql -u root -e 'CREATE DATABASE sbtest;'
-  - psql -U postgres -c 'CREATE DATABASE sbtest;'
+  - mysql -u root -e 'CREATE DATABASE sbtest'
+  - psql -U postgres -c 'CREATE DATABASE sbtest'
 
 script:
   - ./autogen.sh && ./configure --enable-coverage --with-mysql --with-pgsql
