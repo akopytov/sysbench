@@ -55,7 +55,7 @@ AC_ARG_WITH([extra-ldflags],
 )
 AC_SUBST(EXTRA_LDFLAGS)
 
-CPPFLAGS="-D_XOPEN_SOURCE=500 -D_GNU_SOURCE ${CPPFLAGS}"
+CPPFLAGS="-D_GNU_SOURCE ${CPPFLAGS}"
 
 # Mac OS X requires _DARWIN_C_SOURCE for valloc(3) to be visible
 case "${host_cpu}-${host_os}" in
@@ -440,7 +440,7 @@ then
 fi
 if test "$SUNCC" = "yes"
 then
-  CC_WARNINGS="-v -errtags=yes -errwarn=%all -erroff=E_INTEGER_OVERFLOW_DETECTED"
+  CC_WARNINGS="-v -errtags=yes -errwarn=%all -erroff=E_INTEGER_OVERFLOW_DETECTED -erroff=E_STATEMENT_NOT_REACHED"
 fi
 
 AM_CFLAGS="${CC_WARNINGS} ${GPROF_PROFILING} ${GPROF_COVERAGE} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
