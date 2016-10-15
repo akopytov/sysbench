@@ -17,13 +17,18 @@
 EXTRA_DIST = luajit
 
 all-local: $(builddir)/lib/libluajit-5.1.a
+
+# LuaJIT does not support VPATH builds
 $(builddir)/lib/libluajit-5.1.a: luajit/src
-	$(MAKE) -C $(srcdir)/luajit
-	$(MAKE) -C $(srcdir)/luajit \
+	$(MAKE) -C $(srcdir)/luajit clean
+	rm -rf tmp
+	mkdir tmp
+	tar -C $(srcdir) -cf - luajit | tar -xf - -C tmp/
+	chmod -R u+w tmp
+	$(MAKE) -C tmp/luajit \
                 PREFIX=$(abs_top_builddir)/third_party/luajit \
                 INSTALL_INC=$(abs_top_builddir)/third_party/luajit/inc \
                 install
 
 clean-local:
-	$(MAKE) -C luajit clean
-	rm -rf bin inc lib share
+	rm -rf tmp bin inc lib share
