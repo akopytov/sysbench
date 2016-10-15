@@ -155,6 +155,9 @@ AC_MSG_RESULT([$pgsql_support])
 # Set LuaJIT flags
 SB_LUAJIT
 
+# Set Concurrency Kit flags
+SB_CONCURRENCY_KIT
+
 # Check if we should enable large files support
 AC_ARG_ENABLE(largefile,
     AS_HELP_STRING([--enable-largefile],[enable large files support (default is enabled)]), ,
@@ -467,7 +470,8 @@ fi
 
 AM_CFLAGS="${CC_WARNINGS} ${GPROF_PROFILING} ${GPROF_COVERAGE} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
 
-AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/sysbench ${LUAJIT_CFLAGS}"
+AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/sysbench ${LUAJIT_CFLAGS} \
+${CK_CFLAGS}"
 
 AM_LDFLAGS="$PTHREAD_LIBS"
 
@@ -481,6 +485,7 @@ doc/xsl/Makefile
 doc/xsl/catalog.xml
 doc/Makefile
 third_party/luajit/Makefile
+third_party/concurrency_kit/Makefile
 sysbench/Makefile
 sysbench/drivers/Makefile
 sysbench/drivers/mysql/Makefile
@@ -525,4 +530,8 @@ AC_MSG_RESULT([LuaJIT             : ${sb_use_luajit}])
 AC_MSG_RESULT([LUAJIT_CFLAGS      : ${LUAJIT_CFLAGS}])
 AC_MSG_RESULT([LUAJIT_LIBS        : ${LUAJIT_LIBS}])
 AC_MSG_RESULT([LUAJIT_LDFLAGS     : ${LUAJIT_LDFLAGS}])
+AC_MSG_RESULT([])
+AC_MSG_RESULT([Concurrency Kit    : ${sb_use_ck}])
+AC_MSG_RESULT([CK_CFLAGS          : ${CK_CFLAGS}])
+AC_MSG_RESULT([CK_LIBS            : ${CK_LIBS}])
 AC_MSG_RESULT([===============================================================================])

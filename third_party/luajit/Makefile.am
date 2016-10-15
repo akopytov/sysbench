@@ -19,7 +19,7 @@ EXTRA_DIST = luajit
 all-local: $(builddir)/lib/libluajit-5.1.a
 
 # LuaJIT does not support VPATH builds
-$(builddir)/lib/libluajit-5.1.a: luajit/src
+$(builddir)/lib/libluajit-5.1.a:
 	$(MAKE) -C $(srcdir)/luajit clean
 	rm -rf tmp
 	mkdir tmp
