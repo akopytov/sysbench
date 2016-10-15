@@ -91,12 +91,6 @@ hooks for non-Lua functions) and shows slightly different behavior
 in LuaJIT (no per-coroutine hooks, no tail call counting).
 </li>
 <li>
-Some checks are missing in the JIT-compiled code for obscure situations
-with <b>open upvalues aliasing</b> one of the SSA slots later on (or
-vice versa). Bonus points, if you can find a real world test case for
-this.
-</li>
-<li>
 Currently some <b>out-of-memory</b> errors from <b>on-trace code</b> are not
 handled correctly. The error may fall through an on-trace
 <tt>pcall</tt> or it may be passed on to the function set with

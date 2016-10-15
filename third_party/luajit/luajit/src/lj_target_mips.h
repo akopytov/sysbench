@@ -82,11 +82,15 @@ enum {
 #if LJ_SOFTFP
 #define RSET_FPR	0
 #else
+#if LJ_32
 #define RSET_FPR \
   (RID2RSET(RID_F0)|RID2RSET(RID_F2)|RID2RSET(RID_F4)|RID2RSET(RID_F6)|\
    RID2RSET(RID_F8)|RID2RSET(RID_F10)|RID2RSET(RID_F12)|RID2RSET(RID_F14)|\
    RID2RSET(RID_F16)|RID2RSET(RID_F18)|RID2RSET(RID_F20)|RID2RSET(RID_F22)|\
    RID2RSET(RID_F24)|RID2RSET(RID_F26)|RID2RSET(RID_F28)|RID2RSET(RID_F30))
+#else
+#define RSET_FPR	RSET_RANGE(RID_MIN_FPR, RID_MAX_FPR)
+#endif
 #endif
 #define RSET_ALL	(RSET_GPR|RSET_FPR)
 #define RSET_INIT	RSET_ALL
@@ -97,23 +101,37 @@ enum {
 #if LJ_SOFTFP
 #define RSET_SCRATCH_FPR	0
 #else
+#if LJ_32
 #define RSET_SCRATCH_FPR \
   (RID2RSET(RID_F0)|RID2RSET(RID_F2)|RID2RSET(RID_F4)|RID2RSET(RID_F6)|\
    RID2RSET(RID_F8)|RID2RSET(RID_F10)|RID2RSET(RID_F12)|RID2RSET(RID_F14)|\
    RID2RSET(RID_F16)|RID2RSET(RID_F18))
+#else
+#define RSET_SCRATCH_FPR	RSET_RANGE(RID_F0, RID_F24)
+#endif
 #endif
 #define RSET_SCRATCH		(RSET_SCRATCH_GPR|RSET_SCRATCH_FPR)
 #define REGARG_FIRSTGPR		RID_R4
+#if LJ_32
 #define REGARG_LASTGPR		RID_R7
 #define REGARG_NUMGPR		4
+#else
+#define REGARG_LASTGPR		RID_R11
+#define REGARG_NUMGPR		8
+#endif
 #if LJ_ABI_SOFTFP
 #define REGARG_FIRSTFPR		0
 #define REGARG_LASTFPR		0
 #define REGARG_NUMFPR		0
 #else
 #define REGARG_FIRSTFPR		RID_F12
+#if LJ_32
 #define REGARG_LASTFPR		RID_F14
 #define REGARG_NUMFPR		2
+#else
+#define REGARG_LASTFPR		RID_F19
+#define REGARG_NUMFPR		8
+#endif
 #endif
 
 /* -- Spill slots --------------------------------------------------------- */
@@ -125,7 +143,11 @@ enum {
 **
 ** SPS_FIRST: First spill slot for general use.
 */
+#if LJ_32
 #define SPS_FIXED	5
+#else
+#define SPS_FIXED	4
+#endif
 #define SPS_FIRST	4
 
 #define SPOFS_TMP	0
@@ -140,7 +162,7 @@ typedef struct {
 #if !LJ_SOFTFP
   lua_Number fpr[RID_NUM_FPR];	/* Floating-point registers. */
 #endif
-  int32_t gpr[RID_NUM_GPR];	/* General-purpose registers. */
+  intptr_t gpr[RID_NUM_GPR];	/* General-purpose registers. */
   int32_t spill[256];		/* Spill slots. */
 } ExitState;
 
@@ -172,7 +194,7 @@ static LJ_AINLINE uint32_t *exitstub_trace_addr_(uint32_t *p)
 
 typedef enum MIPSIns {
   /* Integer instructions. */
-  MIPSI_MOVE = 0x00000021,
+  MIPSI_MOVE = 0x00000025,
   MIPSI_NOP = 0x00000000,
 
   MIPSI_LI = 0x24000000,
@@ -204,19 +226,20 @@ typedef enum MIPSIns {
   MIPSI_SLL = 0x00000000,
   MIPSI_SRL = 0x00000002,
   MIPSI_SRA = 0x00000003,
-  MIPSI_ROTR = 0x00200002,	/* MIPS32R2 */
+  MIPSI_ROTR = 0x00200002,	/* MIPSXXR2 */
   MIPSI_SLLV = 0x00000004,
   MIPSI_SRLV = 0x00000006,
   MIPSI_SRAV = 0x00000007,
-  MIPSI_ROTRV = 0x00000046,	/* MIPS32R2 */
+  MIPSI_ROTRV = 0x00000046,	/* MIPSXXR2 */
 
-  MIPSI_SEB = 0x7c000420,	/* MIPS32R2 */
-  MIPSI_SEH = 0x7c000620,	/* MIPS32R2 */
-  MIPSI_WSBH = 0x7c0000a0,	/* MIPS32R2 */
+  MIPSI_SEB = 0x7c000420,	/* MIPSXXR2 */
+  MIPSI_SEH = 0x7c000620,	/* MIPSXXR2 */
+  MIPSI_WSBH = 0x7c0000a0,	/* MIPSXXR2 */
 
   MIPSI_B = 0x10000000,
   MIPSI_J = 0x08000000,
   MIPSI_JAL = 0x0c000000,
+  MIPSI_JALX = 0x74000000,
   MIPSI_JR = 0x00000008,
   MIPSI_JALR = 0x0000f809,
 
@@ -240,6 +263,15 @@ typedef enum MIPSIns {
   MIPSI_SWC1 = 0xe4000000,
   MIPSI_LDC1 = 0xd4000000,
   MIPSI_SDC1 = 0xf4000000,
+
+  /* MIPS64 instructions. */
+  MIPSI_DSLL = 0x00000038,
+  MIPSI_LD = 0xdc000000,
+  MIPSI_DADDIU = 0x64000000,
+  MIPSI_SD = 0xfc000000,
+  MIPSI_DMFC1 = 0x44200000,
+  MIPSI_DSRA32 = 0x0000003f,
+  MIPSI_MFHC1 = 0x44600000,
 
   /* FP instructions. */
   MIPSI_MOV_S = 0x46000006,

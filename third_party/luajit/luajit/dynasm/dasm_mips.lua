@@ -1,17 +1,19 @@
 ------------------------------------------------------------------------------
--- DynASM MIPS module.
+-- DynASM MIPS32/MIPS64 module.
 --
 -- Copyright (C) 2005-2016 Mike Pall. All rights reserved.
 -- See dynasm.lua for full copyright notice.
 ------------------------------------------------------------------------------
 
+local mips64 = mips64
+
 -- Module information:
 local _info = {
-  arch =	"mips",
-  description =	"DynASM MIPS module",
+  arch =	mips64 and "mips64" or "mips",
+  description =	"DynASM MIPS32/MIPS64 module",
   version =	"1.4.0",
   vernum =	 10400,
-  release =	"2015-10-18",
+  release =	"2016-05-24",
   author =	"Mike Pall",
   license =	"MIT",
 }
@@ -27,7 +29,8 @@ local sub, format, byte, char = _s.sub, _s.format, _s.byte, _s.char
 local match, gmatch = _s.match, _s.gmatch
 local concat, sort = table.concat, table.sort
 local bit = bit or require("bit")
-local band, shl, sar, tohex = bit.band, bit.lshift, bit.arshift, bit.tohex
+local band, shl, shr, sar = bit.band, bit.lshift, bit.rshift, bit.arshift
+local tohex = bit.tohex
 
 -- Inherited tables and callbacks.
 local g_opt, g_arch
@@ -38,7 +41,7 @@ local wline, werror, wfatal, wwarn
 local action_names = {
   "STOP", "SECTION", "ESC", "REL_EXT",
   "ALIGN", "REL_LG", "LABEL_LG",
-  "REL_PC", "LABEL_PC", "IMM",
+  "REL_PC", "LABEL_PC", "IMM", "IMMS",
 }
 
 -- Maximum number of section buffer positions for dasm_put().
@@ -251,6 +254,10 @@ local map_op = {
   bnel_3 =	"54000000STB",
   blezl_2 =	"58000000SB",
   bgtzl_2 =	"5c000000SB",
+  daddi_3 =	mips64 and "60000000TSI",
+  daddiu_3 =	mips64 and "64000000TSI",
+  ldl_2 =	mips64 and "68000000TO",
+  ldr_2 =	mips64 and "6c000000TO",
   lb_2 =	"80000000TO",
   lh_2 =	"84000000TO",
   lwl_2 =	"88000000TO",
@@ -258,23 +265,30 @@ local map_op = {
   lbu_2 =	"90000000TO",
   lhu_2 =	"94000000TO",
   lwr_2 =	"98000000TO",
+  lwu_2 =	mips64 and "9c000000TO",
   sb_2 =	"a0000000TO",
   sh_2 =	"a4000000TO",
   swl_2 =	"a8000000TO",
   sw_2 =	"ac000000TO",
+  sdl_2 =	mips64 and "b0000000TO",
+  sdr_2 =	mips64 and "b1000000TO",
   swr_2 =	"b8000000TO",
   cache_2 =	"bc000000NO",
   ll_2 =	"c0000000TO",
   lwc1_2 =	"c4000000HO",
   pref_2 =	"cc000000NO",
   ldc1_2 =	"d4000000HO",
+  ld_2 =	mips64 and "dc000000TO",
   sc_2 =	"e0000000TO",
   swc1_2 =	"e4000000HO",
+  scd_2 =	mips64 and "f0000000TO",
   sdc1_2 =	"f4000000HO",
+  sd_2 =	mips64 and "fc000000TO",
 
   -- Opcode SPECIAL.
   nop_0 =	"00000000",
   sll_3 =	"00000000DTA",
+  sextw_2 =	"00000000DT",
   movf_2 =	"00000001DS",
   movf_3 =	"00000001DSC",
   movt_2 =	"00010001DS",
@@ -285,6 +299,7 @@ local map_op = {
   sllv_3 =	"00000004DTS",
   srlv_3 =	"00000006DTS",
   rotrv_3 =	"00000046DTS",
+  drotrv_3 =	mips64 and "00000056DTS",
   srav_3 =	"00000007DTS",
   jr_1 =	"00000008S",
   jalr_1 =	"0000f809S",
@@ -300,15 +315,22 @@ local map_op = {
   mthi_1 =	"00000011S",
   mflo_1 =	"00000012D",
   mtlo_1 =	"00000013S",
+  dsllv_3 =	mips64 and "00000014DTS",
+  dsrlv_3 =	mips64 and "00000016DTS",
+  dsrav_3 =	mips64 and "00000017DTS",
   mult_2 =	"00000018ST",
   multu_2 =	"00000019ST",
   div_2 =	"0000001aST",
   divu_2 =	"0000001bST",
+  dmult_2 =	mips64 and "0000001cST",
+  dmultu_2 =	mips64 and "0000001dST",
+  ddiv_2 =	mips64 and "0000001eST",
+  ddivu_2 =	mips64 and "0000001fST",
   add_3 =	"00000020DST",
-  move_2 =	"00000021DS",
+  move_2 =	mips64 and "00000025DS" or "00000021DS",
   addu_3 =	"00000021DST",
   sub_3 =	"00000022DST",
-  negu_2 =	"00000023DT",
+  negu_2 =	mips64 and "0000002fDT" or "00000023DT",
   subu_3 =	"00000023DST",
   and_3 =	"00000024DST",
   or_3 =	"00000025DST",
@@ -317,6 +339,10 @@ local map_op = {
   nor_3 =	"00000027DST",
   slt_3 =	"0000002aDST",
   sltu_3 =	"0000002bDST",
+  dadd_3 =	mips64 and "0000002cDST",
+  daddu_3 =	mips64 and "0000002dDST",
+  dsub_3 =	mips64 and "0000002eDST",
+  dsubu_3 =	mips64 and "0000002fDST",
   tge_2 =	"00000030ST",
   tge_3 =	"00000030STZ",
   tgeu_2 =	"00000031ST",
@@ -329,6 +355,14 @@ local map_op = {
   teq_3 =	"00000034STZ",
   tne_2 =	"00000036ST",
   tne_3 =	"00000036STZ",
+  dsll_3 =	mips64 and "00000038DTa",
+  dsrl_3 =	mips64 and "0000003aDTa",
+  drotr_3 =	mips64 and "0020003aDTa",
+  dsra_3 =	mips64 and "0000003bDTa",
+  dsll32_3 =	mips64 and "0000003cDTA",
+  dsrl32_3 =	mips64 and "0000003eDTA",
+  drotr32_3 =	mips64 and "0020003eDTA",
+  dsra32_3 =	mips64 and "0000003fDTA",
 
   -- Opcode REGIMM.
   bltz_2 =	"04000000SB",
@@ -356,13 +390,24 @@ local map_op = {
   msubu_2 =	"70000005ST",
   clz_2 =	"70000020DS=",
   clo_2 =	"70000021DS=",
+  dclz_2 =	mips64 and "70000024DS=",
+  dclo_2 =	mips64 and "70000025DS=",
   sdbbp_0 =	"7000003f",
   sdbbp_1 =	"7000003fY",
 
   -- Opcode SPECIAL3.
   ext_4 =	"7c000000TSAM", -- Note: last arg is msbd = size-1
+  dextm_4 =	mips64 and "7c000001TSAM", -- Args: pos    | size-1-32
+  dextu_4 =	mips64 and "7c000002TSAM", -- Args: pos-32 | size-1
+  dext_4 =	mips64 and "7c000003TSAM", -- Args: pos    | size-1
+  zextw_2 =	mips64 and "7c00f803TS",
   ins_4 =	"7c000004TSAM", -- Note: last arg is msb = pos+size-1
+  dinsm_4 =	mips64 and "7c000005TSAM", -- Args: pos    | pos+size-33
+  dinsu_4 =	mips64 and "7c000006TSAM", -- Args: pos-32 | pos+size-33
+  dins_4 =	mips64 and "7c000007TSAM", -- Args: pos    | pos+size-1
   wsbh_2 =	"7c0000a0DT",
+  dsbh_2 =	mips64 and "7c0000a4DT",
+  dshd_2 =	mips64 and "7c000164DT",
   seb_2 =	"7c000420DT",
   seh_2 =	"7c000620DT",
   rdhwr_2 =	"7c00003bTD",
@@ -370,8 +415,12 @@ local map_op = {
   -- Opcode COP0.
   mfc0_2 =	"40000000TD",
   mfc0_3 =	"40000000TDW",
+  dmfc0_2 =	mips64 and "40200000TD",
+  dmfc0_3 =	mips64 and "40200000TDW",
   mtc0_2 =	"40800000TD",
   mtc0_3 =	"40800000TDW",
+  dmtc0_2 =	mips64 and "40a00000TD",
+  dmtc0_3 =	mips64 and "40a00000TDW",
   rdpgpr_2 =	"41400000DT",
   di_0 =	"41606000",
   di_1 =	"41606000T",
@@ -388,9 +437,11 @@ local map_op = {
 
   -- Opcode COP1.
   mfc1_2 =	"44000000TG",
+  dmfc1_2 =	mips64 and "44200000TG",
   cfc1_2 =	"44400000TG",
   mfhc1_2 =	"44600000TG",
   mtc1_2 =	"44800000TG",
+  dmtc1_2 =	mips64 and "44a00000TG",
   ctc1_2 =	"44c00000TG",
   mthc1_2 =	"44e00000TG",
 
@@ -633,7 +684,7 @@ local function parse_fpr(expr)
   werror("bad register name `"..expr.."'")
 end
 
-local function parse_imm(imm, bits, shift, scale, signed)
+local function parse_imm(imm, bits, shift, scale, signed, action)
   local n = tonumber(imm)
   if n then
     local m = sar(n, scale)
@@ -651,7 +702,8 @@ local function parse_imm(imm, bits, shift, scale, signed)
 	 match(imm, "^([%w_]+):([rf][1-3]?[0-9])$") then
     werror("expected immediate operand, got register")
   else
-    waction("IMM", (signed and 32768 or 0)+scale*1024+bits*32+shift, imm)
+    waction(action or "IMM",
+	    (signed and 32768 or 0)+shl(scale, 10)+shl(bits, 5)+shift, imm)
     return 0
   end
 end
@@ -763,6 +815,9 @@ map_op[".template__"] = function(params, template, nparams)
       n = n + 1
     elseif p == "A" then
       op = op + parse_imm(params[n], 5, 6, 0, false); n = n + 1
+    elseif p == "a" then
+      local m = parse_imm(params[n], 6, 6, 0, false, "IMMS"); n = n + 1
+      op = op + band(m, 0x7c0) + band(shr(m, 9), 4)
     elseif p == "M" then
       op = op + parse_imm(params[n], 5, 11, 0, false); n = n + 1
     elseif p == "N" then

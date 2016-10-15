@@ -78,13 +78,13 @@ typedef struct CCallInfo {
 #define IRCALLCOND_SOFTFP_FFI(x)	NULL
 #endif
 
-#if LJ_SOFTFP && LJ_TARGET_MIPS
+#if LJ_SOFTFP && LJ_TARGET_MIPS32
 #define IRCALLCOND_SOFTFP_MIPS(x)	x
 #else
 #define IRCALLCOND_SOFTFP_MIPS(x)	NULL
 #endif
 
-#define LJ_NEED_FP64	(LJ_TARGET_ARM || LJ_TARGET_PPC || LJ_TARGET_MIPS)
+#define LJ_NEED_FP64	(LJ_TARGET_ARM || LJ_TARGET_PPC || LJ_TARGET_MIPS32)
 
 #if LJ_HASFFI && (LJ_SOFTFP || LJ_NEED_FP64)
 #define IRCALLCOND_FP64_FFI(x)		x
@@ -102,12 +102,6 @@ typedef struct CCallInfo {
 #else
 #define IRCALLCOND_FFI(x)		NULL
 #define IRCALLCOND_FFI32(x)		NULL
-#endif
-
-#if LJ_TARGET_X86
-#define CCI_RANDFPR	0	/* Clang on OSX/x86 is overzealous. */
-#else
-#define CCI_RANDFPR	CCI_NOFPRCLOBBER
 #endif
 
 #if LJ_SOFTFP
@@ -129,40 +123,40 @@ typedef struct CCallInfo {
 /* Function definitions for CALL* instructions. */
 #define IRCALLDEF(_) \
   _(ANY,	lj_str_cmp,		2,  FN, INT, CCI_NOFPRCLOBBER) \
-  _(ANY,	lj_str_find,		4,   N, P32, 0) \
+  _(ANY,	lj_str_find,		4,   N, PGC, 0) \
   _(ANY,	lj_str_new,		3,   S, STR, CCI_L) \
   _(ANY,	lj_strscan_num,		2,  FN, INT, 0) \
   _(ANY,	lj_strfmt_int,		2,  FN, STR, CCI_L) \
   _(ANY,	lj_strfmt_num,		2,  FN, STR, CCI_L) \
   _(ANY,	lj_strfmt_char,		2,  FN, STR, CCI_L) \
-  _(ANY,	lj_strfmt_putint,	2,  FL, P32, 0) \
-  _(ANY,	lj_strfmt_putnum,	2,  FL, P32, 0) \
-  _(ANY,	lj_strfmt_putquoted,	2,  FL, P32, 0) \
-  _(ANY,	lj_strfmt_putfxint,	3,   L, P32, XA_64) \
-  _(ANY,	lj_strfmt_putfnum_int,	3,   L, P32, XA_FP) \
-  _(ANY,	lj_strfmt_putfnum_uint,	3,   L, P32, XA_FP) \
-  _(ANY,	lj_strfmt_putfnum,	3,   L, P32, XA_FP) \
-  _(ANY,	lj_strfmt_putfstr,	3,   L, P32, 0) \
-  _(ANY,	lj_strfmt_putfchar,	3,   L, P32, 0) \
-  _(ANY,	lj_buf_putmem,		3,   S, P32, 0) \
-  _(ANY,	lj_buf_putstr,		2,  FL, P32, 0) \
-  _(ANY,	lj_buf_putchar,		2,  FL, P32, 0) \
-  _(ANY,	lj_buf_putstr_reverse,	2,  FL, P32, 0) \
-  _(ANY,	lj_buf_putstr_lower,	2,  FL, P32, 0) \
-  _(ANY,	lj_buf_putstr_upper,	2,  FL, P32, 0) \
-  _(ANY,	lj_buf_putstr_rep,	3,   L, P32, 0) \
-  _(ANY,	lj_buf_puttab,		5,   L, P32, 0) \
+  _(ANY,	lj_strfmt_putint,	2,  FL, PGC, 0) \
+  _(ANY,	lj_strfmt_putnum,	2,  FL, PGC, 0) \
+  _(ANY,	lj_strfmt_putquoted,	2,  FL, PGC, 0) \
+  _(ANY,	lj_strfmt_putfxint,	3,   L, PGC, XA_64) \
+  _(ANY,	lj_strfmt_putfnum_int,	3,   L, PGC, XA_FP) \
+  _(ANY,	lj_strfmt_putfnum_uint,	3,   L, PGC, XA_FP) \
+  _(ANY,	lj_strfmt_putfnum,	3,   L, PGC, XA_FP) \
+  _(ANY,	lj_strfmt_putfstr,	3,   L, PGC, 0) \
+  _(ANY,	lj_strfmt_putfchar,	3,   L, PGC, 0) \
+  _(ANY,	lj_buf_putmem,		3,   S, PGC, 0) \
+  _(ANY,	lj_buf_putstr,		2,  FL, PGC, 0) \
+  _(ANY,	lj_buf_putchar,		2,  FL, PGC, 0) \
+  _(ANY,	lj_buf_putstr_reverse,	2,  FL, PGC, 0) \
+  _(ANY,	lj_buf_putstr_lower,	2,  FL, PGC, 0) \
+  _(ANY,	lj_buf_putstr_upper,	2,  FL, PGC, 0) \
+  _(ANY,	lj_buf_putstr_rep,	3,   L, PGC, 0) \
+  _(ANY,	lj_buf_puttab,		5,   L, PGC, 0) \
   _(ANY,	lj_buf_tostr,		1,  FL, STR, 0) \
   _(ANY,	lj_tab_new_ah,		3,   A, TAB, CCI_L) \
   _(ANY,	lj_tab_new1,		2,  FS, TAB, CCI_L) \
   _(ANY,	lj_tab_dup,		2,  FS, TAB, CCI_L) \
   _(ANY,	lj_tab_clear,		1,  FS, NIL, 0) \
-  _(ANY,	lj_tab_newkey,		3,   S, P32, CCI_L) \
+  _(ANY,	lj_tab_newkey,		3,   S, PGC, CCI_L) \
   _(ANY,	lj_tab_len,		1,  FL, INT, 0) \
   _(ANY,	lj_gc_step_jit,		2,  FS, NIL, CCI_L) \
   _(ANY,	lj_gc_barrieruv,	2,  FS, NIL, 0) \
-  _(ANY,	lj_mem_newgco,		2,  FS, P32, CCI_L) \
-  _(ANY,	lj_math_random_step, 1, FS, NUM, CCI_CASTU64|CCI_RANDFPR)\
+  _(ANY,	lj_mem_newgco,		2,  FS, PGC, CCI_L) \
+  _(ANY,	lj_math_random_step, 1, FS, NUM, CCI_CASTU64) \
   _(ANY,	lj_vm_modi,		2,  FN, INT, 0) \
   _(ANY,	sinh,			1,   N, NUM, XA_FP) \
   _(ANY,	cosh,			1,   N, NUM, XA_FP) \

@@ -116,6 +116,17 @@ enum { LJ_CONT_TAILCALL, LJ_CONT_FFI_CALLBACK };  /* Special continuations. */
 
 /* These definitions must match with the arch-specific *.dasc files. */
 #if LJ_TARGET_X86
+#if LJ_ABI_WIN
+#define CFRAME_OFS_ERRF		(19*4)
+#define CFRAME_OFS_NRES		(18*4)
+#define CFRAME_OFS_PREV		(17*4)
+#define CFRAME_OFS_L		(16*4)
+#define CFRAME_OFS_SEH		(9*4)
+#define CFRAME_OFS_PC		(6*4)
+#define CFRAME_OFS_MULTRES	(5*4)
+#define CFRAME_SIZE		(16*4)
+#define CFRAME_SHIFT_MULTRES	0
+#else
 #define CFRAME_OFS_ERRF		(15*4)
 #define CFRAME_OFS_NRES		(14*4)
 #define CFRAME_OFS_PREV		(13*4)
@@ -124,6 +135,7 @@ enum { LJ_CONT_TAILCALL, LJ_CONT_FFI_CALLBACK };  /* Special continuations. */
 #define CFRAME_OFS_MULTRES	(5*4)
 #define CFRAME_SIZE		(12*4)
 #define CFRAME_SHIFT_MULTRES	0
+#endif
 #elif LJ_TARGET_X64
 #if LJ_ABI_WIN
 #define CFRAME_OFS_PREV		(13*8)
@@ -180,6 +192,7 @@ enum { LJ_CONT_TAILCALL, LJ_CONT_FFI_CALLBACK };  /* Special continuations. */
 #endif
 #define CFRAME_SHIFT_MULTRES	3
 #elif LJ_TARGET_ARM64
+#define CFRAME_OFS_TMPD		184
 #define CFRAME_OFS_ERRF		196
 #define CFRAME_OFS_NRES		200
 #define CFRAME_OFS_PREV		160
@@ -217,26 +230,41 @@ enum { LJ_CONT_TAILCALL, LJ_CONT_FFI_CALLBACK };  /* Special continuations. */
 #define CFRAME_SIZE		272
 #define CFRAME_SHIFT_MULTRES	3
 #endif
-#elif LJ_TARGET_MIPS
+#elif LJ_TARGET_MIPS32
 #if LJ_ARCH_HASFPU
 #define CFRAME_OFS_ERRF		124
 #define CFRAME_OFS_NRES		120
 #define CFRAME_OFS_PREV		116
 #define CFRAME_OFS_L		112
-#define CFRAME_OFS_PC		20
-#define CFRAME_OFS_MULTRES	16
 #define CFRAME_SIZE		112
-#define CFRAME_SHIFT_MULTRES	3
 #else
 #define CFRAME_OFS_ERRF		76
 #define CFRAME_OFS_NRES		72
 #define CFRAME_OFS_PREV		68
 #define CFRAME_OFS_L		64
+#define CFRAME_SIZE		64
+#endif
 #define CFRAME_OFS_PC		20
 #define CFRAME_OFS_MULTRES	16
-#define CFRAME_SIZE		64
 #define CFRAME_SHIFT_MULTRES	3
+#elif LJ_TARGET_MIPS64
+#if LJ_ARCH_HASFPU
+#define CFRAME_OFS_ERRF		188
+#define CFRAME_OFS_NRES		184
+#define CFRAME_OFS_PREV		176
+#define CFRAME_OFS_L		168
+#define CFRAME_OFS_PC		160
+#define CFRAME_SIZE		192
+#else
+#define CFRAME_OFS_ERRF		124
+#define CFRAME_OFS_NRES		120
+#define CFRAME_OFS_PREV		112
+#define CFRAME_OFS_L		104
+#define CFRAME_OFS_PC		96
+#define CFRAME_SIZE		128
 #endif
+#define CFRAME_OFS_MULTRES	0
+#define CFRAME_SHIFT_MULTRES	3
 #else
 #error "Missing CFRAME_* definitions for this architecture"
 #endif

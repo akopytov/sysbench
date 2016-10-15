@@ -220,7 +220,7 @@ IRFLDEF(FLENUM)
 
 /* SLOAD mode bits, stored in op2. */
 #define IRSLOAD_PARENT		0x01	/* Coalesce with parent trace. */
-#define IRSLOAD_FRAME		0x02	/* Load hiword of frame. */
+#define IRSLOAD_FRAME		0x02	/* Load 32 bits of ftsz. */
 #define IRSLOAD_TYPECHECK	0x04	/* Needs type check. */
 #define IRSLOAD_CONVERT		0x08	/* Number to integer conversion. */
 #define IRSLOAD_READONLY	0x10	/* Read-only, omit slot store. */
@@ -294,7 +294,9 @@ LJ_DATA const uint8_t lj_ir_mode[IR__MAX+1];
 
 /* -- IR instruction types ------------------------------------------------ */
 
-/* Map of itypes to non-negative numbers. ORDER LJ_T.
+#define IRTSIZE_PGC		(LJ_GC64 ? 8 : 4)
+
+/* Map of itypes to non-negative numbers and their sizes. ORDER LJ_T.
 ** LJ_TUPVAL/LJ_TTRACE never appear in a TValue. Use these itypes for
 ** IRT_P32 and IRT_P64, which never escape the IR.
 ** The various integers are only used in the IR and can only escape to
@@ -302,12 +304,13 @@ LJ_DATA const uint8_t lj_ir_mode[IR__MAX+1];
 ** contiguous and next to IRT_NUM (see the typerange macros below).
 */
 #define IRTDEF(_) \
-  _(NIL, 4) _(FALSE, 4) _(TRUE, 4) _(LIGHTUD, LJ_64 ? 8 : 4) _(STR, 4) \
-  _(P32, 4) _(THREAD, 4) _(PROTO, 4) _(FUNC, 4) _(P64, 8) _(CDATA, 4) \
-  _(TAB, 4) _(UDATA, 4) \
+  _(NIL, 4) _(FALSE, 4) _(TRUE, 4) _(LIGHTUD, LJ_64 ? 8 : 4) \
+  _(STR, IRTSIZE_PGC) _(P32, 4) _(THREAD, IRTSIZE_PGC) _(PROTO, IRTSIZE_PGC) \
+  _(FUNC, IRTSIZE_PGC) _(P64, 8) _(CDATA, IRTSIZE_PGC) _(TAB, IRTSIZE_PGC) \
+  _(UDATA, IRTSIZE_PGC) \
   _(FLOAT, 4) _(NUM, 8) _(I8, 1) _(U8, 1) _(I16, 2) _(U16, 2) \
   _(INT, 4) _(U32, 4) _(I64, 8) _(U64, 8) \
-  _(SOFTFP, 4)  /* There is room for 9 more types. */
+  _(SOFTFP, 4)  /* There is room for 8 more types. */
 
 /* IR result type and flags (8 bit). */
 typedef enum {
@@ -318,9 +321,10 @@ IRTDEF(IRTENUM)
 
   /* Native pointer type and the corresponding integer type. */
   IRT_PTR = LJ_64 ? IRT_P64 : IRT_P32,
+  IRT_PGC = LJ_GC64 ? IRT_P64 : IRT_P32,
+  IRT_IGC = LJ_GC64 ? IRT_I64 : IRT_INT,
   IRT_INTP = LJ_64 ? IRT_I64 : IRT_INT,
   IRT_UINTP = LJ_64 ? IRT_U64 : IRT_U32,
-  /* TODO_GC64: major changes required for all uses of IRT_P32. */
 
   /* Additional flags. */
   IRT_MARK = 0x20,	/* Marker for misc. purposes. */
@@ -408,7 +412,7 @@ static LJ_AINLINE IRType itype2irt(const TValue *tv)
 
 static LJ_AINLINE uint32_t irt_toitype_(IRType t)
 {
-  lua_assert(!LJ_64 || t != IRT_LIGHTUD);
+  lua_assert(!LJ_64 || LJ_GC64 || t != IRT_LIGHTUD);
   if (LJ_DUALNUM && t > IRT_NUM) {
     return LJ_TISNUM;
   } else {
@@ -521,7 +525,9 @@ typedef uint32_t TRef;
 ** +-------+-------+---+---+---+---+
 ** |  op1  |  op2  | t | o | r | s |
 ** +-------+-------+---+---+---+---+
-** |  op12/i/gco   |   ot  | prev  | (alternative fields in union)
+** |  op12/i/gco32 |   ot  | prev  | (alternative fields in union)
+** +-------+-------+---+---+---+---+
+** |  TValue/gco64                 | (2nd IR slot for 64 bit constants)
 ** +---------------+-------+-------+
 **        32           16      16
 **
@@ -549,22 +555,27 @@ typedef union IRIns {
     )
   };
   int32_t i;		/* 32 bit signed integer literal (overlaps op12). */
-  GCRef gcr;		/* GCobj constant (overlaps op12). */
-  MRef ptr;		/* Pointer constant (overlaps op12). */
+  GCRef gcr;		/* GCobj constant (overlaps op12 or entire slot). */
+  MRef ptr;		/* Pointer constant (overlaps op12 or entire slot). */
+  TValue tv;		/* TValue constant (overlaps entire slot). */
 } IRIns;
 
-/* TODO_GC64: major changes required. */
-#define ir_kgc(ir)	check_exp((ir)->o == IR_KGC, gcref((ir)->gcr))
+#define ir_kgc(ir)	check_exp((ir)->o == IR_KGC, gcref((ir)[LJ_GC64].gcr))
 #define ir_kstr(ir)	(gco2str(ir_kgc((ir))))
 #define ir_ktab(ir)	(gco2tab(ir_kgc((ir))))
 #define ir_kfunc(ir)	(gco2func(ir_kgc((ir))))
 #define ir_kcdata(ir)	(gco2cd(ir_kgc((ir))))
-#define ir_knum(ir)	check_exp((ir)->o == IR_KNUM, mref((ir)->ptr, cTValue))
-#define ir_kint64(ir)	check_exp((ir)->o == IR_KINT64, mref((ir)->ptr,cTValue))
+#define ir_knum(ir)	check_exp((ir)->o == IR_KNUM, &(ir)[1].tv)
+#define ir_kint64(ir)	check_exp((ir)->o == IR_KINT64, &(ir)[1].tv)
 #define ir_k64(ir) \
-  check_exp((ir)->o == IR_KNUM || (ir)->o == IR_KINT64, mref((ir)->ptr,cTValue))
+  check_exp((ir)->o == IR_KNUM || (ir)->o == IR_KINT64 || \
+	    (LJ_GC64 && \
+	     ((ir)->o == IR_KGC || \
+	      (ir)->o == IR_KPTR || (ir)->o == IR_KKPTR)), \
+	    &(ir)[1].tv)
 #define ir_kptr(ir) \
-  check_exp((ir)->o == IR_KPTR || (ir)->o == IR_KKPTR, mref((ir)->ptr, void))
+  check_exp((ir)->o == IR_KPTR || (ir)->o == IR_KKPTR, \
+    mref((ir)[LJ_GC64].ptr, void))
 
 /* A store or any other op with a non-weak guard has a side-effect. */
 static LJ_AINLINE int ir_sideeff(IRIns *ir)

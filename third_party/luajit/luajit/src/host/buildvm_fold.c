@@ -9,7 +9,7 @@
 
 /* Context for the folding hash table generator. */
 static int lineno;
-static int funcidx;
+static uint32_t funcidx;
 static uint32_t foldkeys[BUILD_MAX_FOLD];
 static uint32_t nkeys;
 

@@ -98,7 +98,7 @@ static void emit_loadi(ASMState *as, Reg r, int32_t i)
 
 #define emit_loada(as, r, addr)		emit_loadi(as, (r), i32ptr((addr)))
 
-static Reg ra_allock(ASMState *as, int32_t k, RegSet allow);
+static Reg ra_allock(ASMState *as, intptr_t k, RegSet allow);
 
 /* Get/set from constant pointer. */
 static void emit_lsptr(ASMState *as, PPCIns pi, Reg r, void *p, RegSet allow)
@@ -115,8 +115,8 @@ static void emit_lsptr(ASMState *as, PPCIns pi, Reg r, void *p, RegSet allow)
   emit_tai(as, pi, r, base, i);
 }
 
-#define emit_loadn(as, r, tv) \
-  emit_lsptr(as, PPCI_LFD, ((r) & 31), (void *)(tv), RSET_GPR)
+#define emit_loadk64(as, r, ir) \
+  emit_lsptr(as, PPCI_LFD, ((r) & 31), (void *)&ir_knum((ir))->u64, RSET_GPR)
 
 /* Get/set global_State fields. */
 static void emit_lsglptr(ASMState *as, PPCIns pi, Reg r, int32_t ofs)

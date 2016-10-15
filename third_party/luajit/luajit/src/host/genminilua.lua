@@ -300,6 +300,7 @@ local function strip_unused3(src)
   src = gsub(src, "if%([^\n]*hookmask[^\n]*&&\n[^\n]*%b{}\n", "")
   src = gsub(src, "(twoto%b()%()", "%1(size_t)")
   src = gsub(src, "i<sizenode", "i<(int)sizenode")
+  src = gsub(src, "cast%(unsigned int,key%-1%)", "cast(unsigned int,key)-1")
   return gsub(src, "\n\n+", "\n")
 end
 

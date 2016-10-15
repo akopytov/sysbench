@@ -244,6 +244,7 @@ nil,"||psrlvVSXrvm","||psravdXrvm","||psllvVSXrvm",
 [0xde] = "||aesdecXrvm", [0xdf] = "||aesdeclastXrvm",
 --Fx
 [0xf0] = "|||crc32TrBmt",[0xf1] = "|||crc32TrVmt",
+[0xf7] = "| sarxVrmv| shlxVrmv| shrxVrmv",
 },
 
 ["3a"] = { -- [66] 0f 3a xx
@@ -273,6 +274,8 @@ nil,nil,nil,nil,
 [0x60] = "||pcmpestrmXrmu",[0x61] = "||pcmpestriXrmu",
 [0x62] = "||pcmpistrmXrmu",[0x63] = "||pcmpistriXrmu",
 [0xdf] = "||aeskeygenassistXrmu",
+--Fx
+[0xf0] = "||| rorxVrmu",
 },
 }
 
@@ -414,8 +417,8 @@ local function putop(ctx, text, operands)
 	      (ctx.rexx and "x" or "")..(ctx.rexb and "b" or "")..
 	      (ctx.vexl and "l" or "")
     if ctx.vexv and ctx.vexv ~= 0 then t = t.."v"..ctx.vexv end
-    if t ~= "" then text = ctx.rex.."."..t.." "..text
-    elseif ctx.rex == "vex" then text = "v"..text end
+    if t ~= "" then text = ctx.rex.."."..t.." "..gsub(text, "^ ", "")
+    elseif ctx.rex == "vex" then text = gsub("v"..text, "^v ", "") end
     ctx.rexw = false; ctx.rexr = false; ctx.rexx = false; ctx.rexb = false
     ctx.rex = false; ctx.vexl = false; ctx.vexv = false
   end

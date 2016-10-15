@@ -110,7 +110,7 @@ static const char *sym_decorate(BuildCtx *ctx,
   if (p) {
 #if LJ_TARGET_X86ORX64
     if (!LJ_64 && (ctx->mode == BUILD_coffasm || ctx->mode == BUILD_peobj))
-      name[0] = '@';
+      name[0] = name[1] == 'R' ? '_' : '@';  /* Just for _RtlUnwind@16. */
     else
       *p = '\0';
 #elif LJ_TARGET_PPC && !LJ_TARGET_CONSOLE

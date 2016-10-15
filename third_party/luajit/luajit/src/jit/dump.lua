@@ -34,6 +34,7 @@
 --    r  Augment the IR with register/stack slots.
 --    s  Dump the snapshot map.
 --  * m  Dump the generated machine code.
+--  * M  Dump the IR with interleaved machine code
 --    x  Print each taken trace exit.
 --    X  Print each taken trace exit and the contents of all registers.
 --    a  Print the IR of aborted traces, too.
@@ -59,7 +60,7 @@ assert(jit.version_num == 20100, "LuaJIT core/library version mismatch")
 local jutil = require("jit.util")
 local vmdef = require("jit.vmdef")
 local funcinfo, funcbc = jutil.funcinfo, jutil.funcbc
-local traceinfo, traceir, tracek = jutil.traceinfo, jutil.traceir, jutil.tracek
+local traceinfo, traceir, traceirmc, tracek = jutil.traceinfo, jutil.traceir, jutil.traceirmc, jutil.tracek
 local tracemc, tracesnap = jutil.tracemc, jutil.tracesnap
 local traceexitstub, ircalladdr = jutil.traceexitstub, jutil.ircalladdr
 local bit = require("bit")
@@ -310,15 +311,17 @@ local function fmtfunc(func, pc)
   end
 end
 
-local function formatk(tr, idx)
+local function formatk(tr, idx, sn)
   local k, t, slot = tracek(tr, idx)
   local tn = type(k)
   local s
   if tn == "number" then
-    if k == 2^52+2^51 then
+    if band(sn or 0, 0x30000) ~= 0 then
+      s = band(sn, 0x20000) ~= 0 and "contpc" or "ftsz"
+    elseif k == 2^52+2^51 then
       s = "bias"
     else
-      s = format("%+.14g", k)
+      s = format(0 < k and k < 0x1p-1026 and "%+a" or "%+.14g", k)
     end
   elseif tn == "string" then
     s = format(#k > 20 and '"%.20s"~' or '"%s"', gsub(k, "%c", ctlsub))
@@ -331,7 +334,7 @@ local function formatk(tr, idx)
       s = format("userdata:%p", k)
     else
       s = format("[%p]", k)
-      if s == "[0x00000000]" then s = "NULL" end
+      if s == "[NULL]" then s = "NULL" end
     end
   elseif t == 21 then -- int64_t
     s = sub(tostring(k), 1, -3)
@@ -354,7 +357,7 @@ local function printsnap(tr, snap)
       n = n + 1
       local ref = band(sn, 0xffff) - 0x8000 -- REF_BIAS
       if ref < 0 then
-	out:write(formatk(tr, ref))
+	out:write(formatk(tr, ref, sn))
       elseif band(sn, 0x80000) ~= 0 then -- SNAP_SOFTFPNUM
 	out:write(colorize(format("%04d/%04d", ref, ref+1), 14))
       else
@@ -431,6 +434,47 @@ local function dumpcallargs(tr, ins)
   end
 end
 
+local function dump_ir_write(s)
+  out:write(format("\t@ %s", s))
+end
+
+local function validate_addr(mcode, ofs, length)
+  if ofs <= 0 then
+    -- TODO When ofs is not positive, there may be "fix up" in luajit IR assembler.
+    -- This is not handled in interleaved IR dump part.
+    out:write(format("Warning: ofs (%s) is not positive.\n", ofs))
+    return false
+  elseif ofs + length > #mcode then
+    out:write("Warning: out of mcode range.\n")
+    return false
+  else
+    return true
+  end
+end
+
+-- Dump machine code for one single IR.
+local function dump_single_ir(tr, ins, addr, ctx, mcode)
+  local addr_ir_start, addr_ir_end = traceirmc(tr, ins)
+  if addr_ir_start < 0 then addr_ir_start = addr_ir_start + 2^32 end
+  if addr_ir_end < 0 then addr_ir_end = addr_ir_end + 2^32 end
+
+  local length
+  local ofs = addr_ir_start - addr
+  -- TODO use macro defined in native code:
+  --   JIT_DUMP_MCODE_EMPTY_IR 0
+  --   JIT_DUMP_MCODE_END 1
+  if addr_ir_start ~= 0 then
+    if addr_ir_end ~= 1 then
+      length = addr_ir_end - addr_ir_start
+    else
+      length = addr + #mcode - addr_ir_start
+    end
+    if validate_addr(mcode, ofs, length) then
+      ctx:disass(ofs, length)
+    end
+  end
+end
+
 -- Dump IR and interleaved snapshots.
 local function dump_ir(tr, dumpsnap, dumpreg)
   local info = traceinfo(tr)
@@ -445,6 +489,25 @@ local function dump_ir(tr, dumpsnap, dumpreg)
     snapref = snap[0]
     snapno = 0
   end
+
+  -- Create machine code dump context
+  if not disass then disass = require("jit.dis_"..jit.arch) end
+  local first_ins = 1
+  local addr_ir_start1 = traceirmc(tr, first_ins)
+  local mcode, addr = tracemc(tr)
+
+  if addr < 0 then addr = addr + 2^32 end
+  if addr_ir_start1 < 0 then addr_ir_start1 = addr_ir_start1 + 2^32 end
+
+  local ctx = disass.create(mcode, addr, dump_ir_write)
+  ctx.hexdump = 0
+  ctx.symtab = fillsymtab(tr, info.nexit)
+
+  if dumpmode.M then
+    out:write("0000\tTrace head\n")
+    ctx:disass(0, addr_ir_start1 - addr)
+  end
+
   for ins=1,nins do
     if ins >= snapref then
       if dumpreg then
@@ -462,9 +525,9 @@ local function dump_ir(tr, dumpsnap, dumpreg)
     local op = sub(irnames, oidx+1, oidx+6)
     if op == "LOOP  " then
       if dumpreg then
-	out:write(format("%04d ------------ LOOP ------------\n", ins))
+	out:write(format("%04d ------------ LOOP ------------", ins))
       else
-	out:write(format("%04d ------ LOOP ------------\n", ins))
+	out:write(format("%04d ------ LOOP ------------", ins))
       end
     elseif op ~= "NOP   " and op ~= "CARG  " and
 	   (dumpreg or op ~= "RENAME") then
@@ -514,10 +577,13 @@ local function dump_ir(tr, dumpsnap, dumpreg)
 	    out:write(format("  %04d", op2))
 	  end
 	end
-      end
-      out:write("\n")
+      end -- end if sub() == "CALL" ... ... elseif ...
+    end -- end if op == "LOOP" ... elseif ...
+    out:write("\n")
+    if dumpmode.M then
+      dump_single_ir(tr, ins, addr, ctx, mcode)
     end
-  end
+  end -- end for loop.
   if snap then
     if dumpreg then
       out:write(format("....              SNAP   #%-3d [ ", snapno))
@@ -656,7 +722,7 @@ local function dumpon(opt, outfile)
     opt = gsub(opt, "[TAH]", function(mode) colormode = mode; return ""; end)
   end
 
-  local m = { t=true, b=true, i=true, m=true, }
+  local m = { t=true, b=true, i=true, M=true, }
   if opt and opt ~= "" then
     local o = sub(opt, 1, 1)
     if o ~= "+" and o ~= "-" then m = {} end

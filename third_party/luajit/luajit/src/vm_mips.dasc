@@ -57,7 +57,7 @@
 |.define TMP2,		r14
 |.define TMP3,		r15
 |
-|// Calling conventions.
+|// MIPS o32 calling convention.
 |.define CFUNCADDR,	r25
 |.define CARG1,		r4
 |.define CARG2,		r5
@@ -1875,7 +1875,8 @@ static void build_subroutines(BuildCtx *ctx)
   |
   |.ffunc string_char			// Only handle the 1-arg case here.
   |  ffgccheck
-  |.  lw CARG3, HI(BASE)
+  |.  nop
+  |  lw CARG3, HI(BASE)
   |   lw CARG1, LO(BASE)
   |  li TMP1, 255
   |  xori AT, NARGS8:RC, 8		// Exactly 1 argument.
@@ -1902,7 +1903,8 @@ static void build_subroutines(BuildCtx *ctx)
   |
   |.ffunc string_sub
   |  ffgccheck
-  |.  addiu AT, NARGS8:RC, -16
+  |.  nop
+  |  addiu AT, NARGS8:RC, -16
   |   lw CARG3, 16+HI(BASE)
   |   lw TMP0, HI(BASE)
   |    lw STR:CARG1, LO(BASE)
@@ -1946,7 +1948,8 @@ static void build_subroutines(BuildCtx *ctx)
   |.macro ffstring_op, name
   |  .ffunc string_ .. name
   |  ffgccheck
-  |.  lw CARG3, HI(BASE)
+  |.  nop
+  |  lw CARG3, HI(BASE)
   |   lw STR:CARG2, LO(BASE)
   |  beqz NARGS8:RC, ->fff_fallback
   |.  li AT, LJ_TSTR
@@ -4543,24 +4546,24 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
   case BC_ISNEXT:
     |  // RA = base*8, RD = target (points to ITERN)
     |  addu RA, BASE, RA
-    |  lw TMP0, -24+HI(RA)
-    |  lw CFUNC:TMP1, -24+LO(RA)
-    |   lw TMP2, -16+HI(RA)
-    |    lw TMP3, -8+HI(RA)
+    |    srl TMP0, RD, 1
+    |  lw CARG1, -24+HI(RA)
+    |  lw CFUNC:CARG2, -24+LO(RA)
+    |    addu TMP0, PC, TMP0
+    |   lw CARG3, -16+HI(RA)
+    |   lw CARG4, -8+HI(RA)
     |  li AT, LJ_TFUNC
-    |  bne TMP0, AT, >5
-    |.  addiu TMP2, TMP2, -LJ_TTAB
-    |  lbu TMP1, CFUNC:TMP1->ffid
-    |  addiu TMP3, TMP3, -LJ_TNIL
-    |   srl TMP0, RD, 1
-    |  or TMP2, TMP2, TMP3
-    |  addiu TMP1, TMP1, -FF_next_N
-    |   addu TMP0, PC, TMP0
-    |  or TMP1, TMP1, TMP2
-    |  bnez TMP1, >5
-    |.  lui TMP2, (-(BCBIAS_J*4 >> 16) & 65535)
+    |  bne CARG1, AT, >5
+    |.   lui TMP2, (-(BCBIAS_J*4 >> 16) & 65535)
+    |  lbu CARG2, CFUNC:CARG2->ffid
+    |   addiu CARG3, CARG3, -LJ_TTAB
+    |   addiu CARG4, CARG4, -LJ_TNIL
+    |   or CARG3, CARG3, CARG4
+    |  addiu CARG2, CARG2, -FF_next_N
+    |  or CARG2, CARG2, CARG3
+    |  bnez CARG2, >5
+    |.  lui TMP1, 0xfffe
     |  addu PC, TMP0, TMP2
-    |  lui TMP1, 0xfffe
     |  ori TMP1, TMP1, 0x7fff
     |  sw r0, -8+LO(RA)			// Initialize control var.
     |  sw TMP1, -8+HI(RA)
@@ -4570,7 +4573,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  li TMP3, BC_JMP
     |   li TMP1, BC_ITERC
     |  sb TMP3, -4+OFS_OP(PC)
-    |   addu PC, TMP0, TMP2
+    |    addu PC, TMP0, TMP2
     |  b <1
     |.  sb TMP1, OFS_OP(PC)
     break;

@@ -324,6 +324,31 @@ LJLIB_CF(jit_util_traceir)
   }
   return 0;
 }
+/* local addr_ir_start, addr_ir_end = jit.util.traceirmc(tr, idx) */
+LJLIB_CF(jit_util_traceirmc)
+{
+  GCtrace *T = jit_checktrace(L);
+  IRRef ref = (IRRef)lj_lib_checkint(L, 2) + REF_BIAS;
+  if (T && ref >= REF_BIAS && ref < T->nins && T->mcode != NULL) {
+    // addr_ir_start: start address for current ir
+    setintptrV(L->top-2, (intptr_t)T->ir_maddr[ref - REF_BIAS]);
+    // addr_ir_end: end address for current ir
+    if ((ref - REF_BIAS + 1) < T->szir_maddr) {
+        MCode *addr_ir_end = T->ir_maddr[ref - REF_BIAS + 1];
+        int32_t i = 0;
+        while (addr_ir_end == JIT_DUMP_MCODE_EMPTY_IR) {
+          addr_ir_end = T->ir_maddr[ref - REF_BIAS + 1 + i];
+          ++i;
+        }
+        setintptrV(L->top-1, (intptr_t)addr_ir_end);
+    } else {
+        setintptrV(L->top-1, JIT_DUMP_MCODE_END);
+    }
+    return 2;
+  } else {
+      return 0;
+  }
+}
 
 /* local k, t [, slot] = jit.util.tracek(tr, idx) */
 LJLIB_CF(jit_util_tracek)
@@ -668,6 +693,11 @@ static uint32_t jit_cpudetect(lua_State *L)
       if (fam >= 0x00000f00)  /* K8, K10. */
 	flags |= JIT_F_PREFER_IMUL;
     }
+    if (vendor[0] >= 7) {
+      uint32_t xfeatures[4];
+      lj_vm_cpuid(7, xfeatures);
+      flags |= ((xfeatures[1] >> 8)&1) * JIT_F_BMI2;
+    }
 #endif
   }
   /* Check for required instruction set support on x86 (unnecessary on x64). */
@@ -710,15 +740,19 @@ static uint32_t jit_cpudetect(lua_State *L)
 #if LJ_HASJIT
   /* Compile-time MIPS CPU detection. */
 #if LJ_ARCH_VERSION >= 20
-  flags |= JIT_F_MIPS32R2;
+  flags |= JIT_F_MIPSXXR2;
 #endif
   /* Runtime MIPS CPU detection. */
 #if defined(__GNUC__)
-  if (!(flags & JIT_F_MIPS32R2)) {
+  if (!(flags & JIT_F_MIPSXXR2)) {
     int x;
+#ifdef __mips16
+    x = 0;  /* Runtime detection is difficult. Ensure optimal -march flags. */
+#else
     /* On MIPS32R1 rotr is treated as srl. rotr r2,r2,1 -> srl r2,r2,1. */
     __asm__("li $2, 1\n\t.long 0x00221042\n\tmove %0, $2" : "=r"(x) : : "$2");
-    if (x) flags |= JIT_F_MIPS32R2;  /* Either 0x80000000 (R2) or 0 (R1). */
+#endif
+    if (x) flags |= JIT_F_MIPSXXR2;  /* Either 0x80000000 (R2) or 0 (R1). */
   }
 #endif
 #endif

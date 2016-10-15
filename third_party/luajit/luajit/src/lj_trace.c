@@ -117,15 +117,27 @@ static void perftools_addtrace(GCtrace *T)
 }
 #endif
 
-/* Allocate space for copy of trace. */
-static GCtrace *trace_save_alloc(jit_State *J)
+/* Allocate space for copy of T. */
+GCtrace * LJ_FASTCALL lj_trace_alloc(lua_State *L, GCtrace *T)
 {
   size_t sztr = ((sizeof(GCtrace)+7)&~7);
-  size_t szins = (J->cur.nins-J->cur.nk)*sizeof(IRIns);
+  size_t szins = (T->nins-T->nk)*sizeof(IRIns);
   size_t sz = sztr + szins +
-	      J->cur.nsnap*sizeof(SnapShot) +
-	      J->cur.nsnapmap*sizeof(SnapEntry);
-  return lj_mem_newt(J->L, (MSize)sz, GCtrace);
+	      T->nsnap*sizeof(SnapShot) +
+	      T->nsnapmap*sizeof(SnapEntry);
+  GCtrace *T2 = lj_mem_newt(L, (MSize)sz, GCtrace);
+  char *p = (char *)T2 + sztr;
+  T2->gct = ~LJ_TTRACE;
+  T2->marked = 0;
+  T2->traceno = 0;
+  T2->ir = (IRIns *)p - T->nk;
+  T2->nins = T->nins;
+  T2->nk = T->nk;
+  T2->nsnap = T->nsnap;
+  T2->nsnapmap = T->nsnapmap;
+  memcpy(p, T->ir + T->nk, szins);
+  T->ir_maddr = NULL;
+  return T2;
 }
 
 /* Save current trace by copying and compacting it. */
@@ -139,12 +151,12 @@ static void trace_save(jit_State *J, GCtrace *T)
   setgcrefp(J2G(J)->gc.root, T);
   newwhite(J2G(J), T);
   T->gct = ~LJ_TTRACE;
-  T->ir = (IRIns *)p - J->cur.nk;
-  memcpy(p, J->cur.ir+J->cur.nk, szins);
+  T->ir = (IRIns *)p - J->cur.nk;  /* The IR has already been copied above. */
   p += szins;
   TRACE_APPENDVEC(snap, nsnap, SnapShot)
   TRACE_APPENDVEC(snapmap, nsnapmap, SnapEntry)
   J->cur.traceno = 0;
+  J->curfinal = NULL;
   setgcrefp(J->trace[T->traceno], T);
   lj_gc_barriertrace(J2G(J), T->traceno);
   lj_gdbjit_addtrace(J, T);
@@ -161,6 +173,9 @@ void LJ_FASTCALL lj_trace_free(global_State *g, GCtrace *T)
     if (T->traceno < J->freetrace)
       J->freetrace = T->traceno;
     setgcrefnull(J->trace[T->traceno]);
+  }
+  if (T->ir_maddr) {
+    lj_mem_free(g, T->ir_maddr, sizeof(MCode *) * T->szir_maddr);
   }
   lj_mem_free(g, T,
     ((sizeof(GCtrace)+7)&~7) + (T->nins-T->nk)*sizeof(IRIns) +
@@ -284,7 +299,6 @@ int lj_trace_flushall(lua_State *L)
   memset(J->penalty, 0, sizeof(J->penalty));
   /* Free the whole machine code and invalidate all exit stub groups. */
   lj_mcode_free(J);
-  lj_ir_k64_freeall(J);
   memset(J->exitstubgroup, 0, sizeof(J->exitstubgroup));
   lj_vmevent_send(L, TRACE,
     setstrV(L, L->top++, lj_str_newlit(L, "flush"));
@@ -297,13 +311,35 @@ void lj_trace_initstate(global_State *g)
 {
   jit_State *J = G2J(g);
   TValue *tv;
-  /* Initialize SIMD constants. */
+
+  /* Initialize aligned SIMD constants. */
   tv = LJ_KSIMD(J, LJ_KSIMD_ABS);
   tv[0].u64 = U64x(7fffffff,ffffffff);
   tv[1].u64 = U64x(7fffffff,ffffffff);
   tv = LJ_KSIMD(J, LJ_KSIMD_NEG);
   tv[0].u64 = U64x(80000000,00000000);
   tv[1].u64 = U64x(80000000,00000000);
+
+  /* Initialize 32/64 bit constants. */
+#if LJ_TARGET_X86ORX64
+  J->k64[LJ_K64_TOBIT].u64 = U64x(43380000,00000000);
+  J->k64[LJ_K64_2P64].u64 = U64x(43f00000,00000000);
+  J->k64[LJ_K64_M2P64].u64 = U64x(c3f00000,00000000);
+#if LJ_32
+  J->k64[LJ_K64_M2P64_31].u64 = U64x(c1e00000,00000000);
+#endif
+  J->k32[LJ_K32_M2P64_31] = LJ_64 ? 0xdf800000 : 0xcf000000;
+#endif
+#if LJ_TARGET_PPC
+  J->k32[LJ_K32_2P52_2P31] = 0x59800004;
+  J->k32[LJ_K32_2P52] = 0x59800000;
+#endif
+#if LJ_TARGET_PPC || LJ_TARGET_MIPS
+  J->k32[LJ_K32_2P31] = 0x4f000000;
+#endif
+#if LJ_TARGET_MIPS
+  J->k64[LJ_K64_2P31].u64 = U64x(41e00000,00000000);
+#endif
 }
 
 /* Free everything associated with the JIT compiler state. */
@@ -318,7 +354,6 @@ void lj_trace_freestate(global_State *g)
   }
 #endif
   lj_mcode_free(J);
-  lj_ir_k64_freeall(J);
   lj_mem_freevec(g, J->snapmapbuf, J->sizesnapmap, SnapEntry);
   lj_mem_freevec(g, J->snapbuf, J->sizesnap, SnapShot);
   lj_mem_freevec(g, J->irbuf + J->irbotlim, J->irtoplim - J->irbotlim, IRIns);
@@ -403,7 +438,7 @@ static void trace_start(jit_State *J)
   J->postproc = LJ_POST_NONE;
   lj_resetsplit(J);
   J->retryrec = 0;
-  J->ktracep = NULL;
+  J->ktrace = 0;
   setgcref(J->cur.startpt, obj2gco(J->pt));
 
   L = J->L;
@@ -427,7 +462,7 @@ static void trace_stop(jit_State *J)
   BCOp op = bc_op(J->cur.startins);
   GCproto *pt = &gcref(J->cur.startpt)->pt;
   TraceNo traceno = J->cur.traceno;
-  GCtrace *T = trace_save_alloc(J);  /* Do this first. May throw OOM. */
+  GCtrace *T = J->curfinal;
   lua_State *L;
 
   switch (op) {
@@ -479,9 +514,6 @@ static void trace_stop(jit_State *J)
   lj_mcode_commit(J, J->cur.mcode);
   J->postproc = LJ_POST_NONE;
   trace_save(J, T);
-  if (J->ktracep) {  /* Patch K64Array slot with the final GCtrace pointer. */
-    setgcV(J->L, J->ktracep, obj2gco(T), LJ_TTRACE);
-  }
 
   L = J->L;
   lj_vmevent_send(L, TRACE,
@@ -515,6 +547,10 @@ static int trace_abort(jit_State *J)
 
   J->postproc = LJ_POST_NONE;
   lj_mcode_abort(J);
+  if (J->curfinal) {
+    lj_trace_free(J2G(J), J->curfinal);
+    J->curfinal = NULL;
+  }
   if (tvisnumber(L->top-1))
     e = (TraceError)numberVint(L->top-1);
   if (e == LJ_TRERR_MCODELM) {

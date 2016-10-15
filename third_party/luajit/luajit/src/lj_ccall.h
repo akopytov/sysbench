@@ -95,13 +95,29 @@ typedef union FPRArg {
 typedef intptr_t GPRArg;
 typedef double FPRArg;
 
-#elif LJ_TARGET_MIPS
+#elif LJ_TARGET_MIPS32
 
 #define CCALL_NARG_GPR		4
 #define CCALL_NARG_FPR		(LJ_ABI_SOFTFP ? 0 : 2)
-#define CCALL_NRET_GPR		2
+#define CCALL_NRET_GPR		(LJ_ABI_SOFTFP ? 4 : 2)
 #define CCALL_NRET_FPR		(LJ_ABI_SOFTFP ? 0 : 2)
 #define CCALL_SPS_EXTRA		7
+#define CCALL_SPS_FREE		1
+
+typedef intptr_t GPRArg;
+typedef union FPRArg {
+  double d;
+  struct { LJ_ENDIAN_LOHI(float f; , float g;) };
+} FPRArg;
+
+#elif LJ_TARGET_MIPS64
+
+/* FP args are positional and overlay the GPR array. */
+#define CCALL_NARG_GPR		8
+#define CCALL_NARG_FPR		0
+#define CCALL_NRET_GPR		2
+#define CCALL_NRET_FPR		(LJ_ABI_SOFTFP ? 0 : 2)
+#define CCALL_SPS_EXTRA		3
 #define CCALL_SPS_FREE		1
 
 typedef intptr_t GPRArg;

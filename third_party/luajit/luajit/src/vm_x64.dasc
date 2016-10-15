@@ -250,11 +250,11 @@
 |// Macros to clear or set tags.
 |.macro cleartp, reg; shl reg, 17; shr reg, 17; .endmacro
 |.macro settp, reg, tp
-|  mov64 ITYPE, ((int64_t)tp<<47)
+|  mov64 ITYPE, ((uint64_t)tp<<47)
 |  or reg, ITYPE
 |.endmacro
 |.macro settp, dst, reg, tp
-|  mov64 dst, ((int64_t)tp<<47)
+|  mov64 dst, ((uint64_t)tp<<47)
 |  or dst, reg
 |.endmacro
 |.macro setint, reg
@@ -1105,11 +1105,11 @@ static void build_subroutines(BuildCtx *ctx)
   |  mov BASE, L:RB->base
   |  mov NARGS:RDd, TMP1d
   |  mov LFUNC:RB, [RA-16]
-  |  cleartp LFUNC:RB
   |  add NARGS:RDd, 1
   |  // This is fragile. L->base must not move, KBASE must always be defined.
   |  cmp KBASE, BASE			// Continue with CALLT if flag set.
   |  je ->BC_CALLT_Z
+  |  cleartp LFUNC:RB
   |  mov BASE, RA
   |  ins_call				// Otherwise call resolved metamethod.
   |
@@ -1804,12 +1804,12 @@ static void build_subroutines(BuildCtx *ctx)
   |  jmp ->fff_res1
   |
   |.ffunc_n math_frexp
+  |  mov RB, BASE
   |.if X64WIN
-  |  lea CARG2, TMP1
+  |  lea CARG2, TMP1		// Caveat: CARG2 == BASE
   |.else
   |  lea CARG1, TMP1
   |.endif
-  |  mov RB, BASE
   |  call extern frexp
   |  mov BASE, RB
   |  mov RBd, TMP1d
@@ -1826,13 +1826,12 @@ static void build_subroutines(BuildCtx *ctx)
   |  jmp ->fff_res
   |
   |.ffunc_n math_modf
+  |  mov RB, BASE
   |.if X64WIN
-  |  lea CARG2, [BASE-16]
+  |  lea CARG2, [BASE-16]	// Caveat: CARG2 == BASE
   |.else
   |  lea CARG1, [BASE-16]
   |.endif
-  |  mov PC, [BASE-8]
-  |  mov RB, BASE
   |  call extern modf
   |  mov BASE, RB
   |  mov PC, [BASE-8]
@@ -2325,7 +2324,8 @@ static void build_subroutines(BuildCtx *ctx)
   |->cont_stitch:			// Trace stitching.
   |.if JIT
   |  // BASE = base, RC = result, RB = mbase
-  |  mov ITYPEd, [RB-24]		// Save previous trace number.
+  |  mov TRACE:ITYPE, [RB-40]		// Save previous trace.
+  |  cleartp TRACE:ITYPE
   |  mov TMPRd, MULTRES
   |  movzx RAd, PC_RA
   |  lea RA, [BASE+RA*8]		// Call base.
@@ -2347,11 +2347,10 @@ static void build_subroutines(BuildCtx *ctx)
   |  cmp RC, RA
   |  ja >9				// More results wanted?
   |
-  |  mov RA, [DISPATCH+DISPATCH_J(trace)]
-  |  mov TRACE:RD, [RA+ITYPE*8]
-  |  test TRACE:RD, TRACE:RD
+  |  test TRACE:ITYPE, TRACE:ITYPE
   |  jz ->cont_nop
-  |  movzx RDd, word TRACE:RD->link
+  |  movzx RBd, word TRACE:ITYPE->traceno
+  |  movzx RDd, word TRACE:ITYPE->link
   |  cmp RDd, RBd
   |  je ->cont_nop			// Blacklisted.
   |  test RDd, RDd
@@ -2402,12 +2401,11 @@ static void build_subroutines(BuildCtx *ctx)
   |  movzx RCd, byte [rbp-8]		// Reconstruct exit number.
   |  mov RCH, byte [rbp-16]
   |  mov [rbp-8], r15; mov [rbp-16], r14
-  |  // Caveat: DISPATCH is rbx.
-  |  mov DISPATCH, [ebp]
-  |  mov RA, [DISPATCH+DISPATCH_GL(vmstate)]	// Get trace number.
+  |  // DISPATCH is preserved on-trace in LJ_GC64 mode.
+  |  mov RAd, [DISPATCH+DISPATCH_GL(vmstate)]	// Get trace number.
   |  set_vmstate EXIT
-  |  mov [DISPATCH+DISPATCH_J(exitno)], RC
-  |  mov [DISPATCH+DISPATCH_J(parent)], RA
+  |  mov [DISPATCH+DISPATCH_J(exitno)], RCd
+  |  mov [DISPATCH+DISPATCH_J(parent)], RAd
   |.if X64WIN
   |  sub rsp, 16*8+4*8			// Room for SSE regs + save area.
   |.else
@@ -2433,7 +2431,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  mov CARG2, rsp
   |.endif
   |  lea CARG1, [DISPATCH+GG_DISP2J]
-  |  mov dword [DISPATCH+DISPATCH_GL(jit_base)], 0
+  |  mov qword [DISPATCH+DISPATCH_GL(jit_base)], 0
   |  call extern lj_trace_exit		// (jit_State *J, ExitState *ex)
   |  // MULTRES or negated error code returned in eax (RD).
   |  mov RA, L:RB->cframe
@@ -2480,7 +2478,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  mov KBASE, LFUNC:KBASE->pc
   |  mov KBASE, [KBASE+PC2PROTO(k)]
   |  mov L:RB->base, BASE
-  |  mov dword [DISPATCH+DISPATCH_GL(jit_base)], 0
+  |  mov qword [DISPATCH+DISPATCH_GL(jit_base)], 0
   |  set_vmstate INTERP
   |  // Modified copy of ins_next which handles function header dispatch, too.
   |  mov RCd, [PC]
@@ -2504,7 +2502,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  // Otherwise set KBASE for Lua function below fast function.
   |  movzx RCd, byte [RC-3]
   |  neg RC
-  |  mov LFUNC:KBASE, [BASE+RC*8-24]
+  |  mov LFUNC:KBASE, [BASE+RC*8-32]
   |  cleartp LFUNC:KBASE
   |  mov KBASE, LFUNC:KBASE->pc
   |  mov KBASE, [KBASE+PC2PROTO(k)]
@@ -2639,6 +2637,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  mov eax, CARG1d
   |  .if X64WIN; push rsi; mov rsi, CARG2; .endif
   |  push rbx
+  |  xor ecx, ecx
   |  cpuid
   |  mov [rsi], eax
   |  mov [rsi+4], ebx
@@ -3516,7 +3515,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  ins_AD	// RA = level, RD = target
     |  branchPC RD			// Do this first to free RD.
     |  mov L:RB, SAVE_L
-    |  cmp dword L:RB->openupval, 0
+    |  cmp aword L:RB->openupval, 0
     |  je >1
     |  mov L:RB->base, BASE
     |  lea CARG2, [BASE+RA*8]		// Caveat: CARG2 == BASE
@@ -4050,7 +4049,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  mov RC, [RA-24]			// Copy control var. fb[1] = fb[-3].
     |  mov [RA], RB
     |  mov [RA+8], RC
-    |  mov LFUNC:RB, [RA-40]		// Copy callable. fb[-1] = fb[-5]
+    |  mov LFUNC:RB, [RA-40]		// Copy callable. fb[-2] = fb[-5]
     |  mov [RA-16], LFUNC:RB
     |  mov NARGS:RDd, 2+1		// Handle like a regular 2-arg call.
     |  checkfunc LFUNC:RB, ->vmeta_call

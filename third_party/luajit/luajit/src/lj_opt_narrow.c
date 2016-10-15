@@ -517,18 +517,24 @@ static int numisint(lua_Number n)
   return (n == (lua_Number)lj_num2int(n));
 }
 
+/* Convert string to number. Error out for non-numeric string values. */
+static TRef conv_str_tonum(jit_State *J, TRef tr, TValue *o)
+{
+  if (tref_isstr(tr)) {
+    tr = emitir(IRTG(IR_STRTO, IRT_NUM), tr, 0);
+    /* Would need an inverted STRTO for this rare and useless case. */
+    if (!lj_strscan_num(strV(o), o))  /* Convert in-place. Value used below. */
+      lj_trace_err(J, LJ_TRERR_BADTYPE);  /* Punt if non-numeric. */
+  }
+  return tr;
+}
+
 /* Narrowing of arithmetic operations. */
 TRef lj_opt_narrow_arith(jit_State *J, TRef rb, TRef rc,
 			 TValue *vb, TValue *vc, IROp op)
 {
-  if (tref_isstr(rb)) {
-    rb = emitir(IRTG(IR_STRTO, IRT_NUM), rb, 0);
-    lj_strscan_num(strV(vb), vb);
-  }
-  if (tref_isstr(rc)) {
-    rc = emitir(IRTG(IR_STRTO, IRT_NUM), rc, 0);
-    lj_strscan_num(strV(vc), vc);
-  }
+  rb = conv_str_tonum(J, rb, vb);
+  rc = conv_str_tonum(J, rc, vc);
   /* Must not narrow MUL in non-DUALNUM variant, because it loses -0. */
   if ((op >= IR_ADD && op <= (LJ_DUALNUM ? IR_MUL : IR_SUB)) &&
       tref_isinteger(rb) && tref_isinteger(rc) &&
@@ -543,24 +549,21 @@ TRef lj_opt_narrow_arith(jit_State *J, TRef rb, TRef rc,
 /* Narrowing of unary minus operator. */
 TRef lj_opt_narrow_unm(jit_State *J, TRef rc, TValue *vc)
 {
-  if (tref_isstr(rc)) {
-    rc = emitir(IRTG(IR_STRTO, IRT_NUM), rc, 0);
-    lj_strscan_num(strV(vc), vc);
-  }
+  rc = conv_str_tonum(J, rc, vc);
   if (tref_isinteger(rc)) {
     if ((uint32_t)numberVint(vc) != 0x80000000u)
       return emitir(IRTGI(IR_SUBOV), lj_ir_kint(J, 0), rc);
     rc = emitir(IRTN(IR_CONV), rc, IRCONV_NUM_INT);
   }
-  return emitir(IRTN(IR_NEG), rc, lj_ir_knum_neg(J));
+  return emitir(IRTN(IR_NEG), rc, lj_ir_ksimd(J, LJ_KSIMD_NEG));
 }
 
 /* Narrowing of modulo operator. */
-TRef lj_opt_narrow_mod(jit_State *J, TRef rb, TRef rc, TValue *vc)
+TRef lj_opt_narrow_mod(jit_State *J, TRef rb, TRef rc, TValue *vb, TValue *vc)
 {
   TRef tmp;
-  if (tvisstr(vc) && !lj_strscan_num(strV(vc), vc))
-    lj_trace_err(J, LJ_TRERR_BADTYPE);
+  rb = conv_str_tonum(J, rb, vb);
+  rc = conv_str_tonum(J, rc, vc);
   if ((LJ_DUALNUM || (J->flags & JIT_F_OPT_NARROW)) &&
       tref_isinteger(rb) && tref_isinteger(rc) &&
       (tvisint(vc) ? intV(vc) != 0 : !tviszero(vc))) {
@@ -577,10 +580,11 @@ TRef lj_opt_narrow_mod(jit_State *J, TRef rb, TRef rc, TValue *vc)
 }
 
 /* Narrowing of power operator or math.pow. */
-TRef lj_opt_narrow_pow(jit_State *J, TRef rb, TRef rc, TValue *vc)
+TRef lj_opt_narrow_pow(jit_State *J, TRef rb, TRef rc, TValue *vb, TValue *vc)
 {
-  if (tvisstr(vc) && !lj_strscan_num(strV(vc), vc))
-    lj_trace_err(J, LJ_TRERR_BADTYPE);
+  rb = conv_str_tonum(J, rb, vb);
+  rb = lj_ir_tonum(J, rb);  /* Left arg is always treated as an FP number. */
+  rc = conv_str_tonum(J, rc, vc);
   /* Narrowing must be unconditional to preserve (-x)^i semantics. */
   if (tvisint(vc) || numisint(numV(vc))) {
     int checkrange = 0;
@@ -591,8 +595,6 @@ TRef lj_opt_narrow_pow(jit_State *J, TRef rb, TRef rc, TValue *vc)
       checkrange = 1;
     }
     if (!tref_isinteger(rc)) {
-      if (tref_isstr(rc))
-	rc = emitir(IRTG(IR_STRTO, IRT_NUM), rc, 0);
       /* Guarded conversion to integer! */
       rc = emitir(IRTGI(IR_CONV), rc, IRCONV_INT_NUM|IRCONV_CHECK);
     }

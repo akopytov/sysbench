@@ -331,7 +331,7 @@
 
 #define CCALL_HANDLE_COMPLEXARG \
   /* Pass complex by value in separate (!) FPRs or on stack. */ \
-  isfp = ctr->size == 2*sizeof(float) ? 2 : 1;
+  isfp = sz == 2*sizeof(float) ? 2 : 1;
 
 #define CCALL_HANDLE_REGARG \
   if (LJ_TARGET_IOS && isva) { \
@@ -407,8 +407,8 @@
   if (ctype_isfp(ctr->info) && ctr->size == sizeof(float)) \
     ctr = ctype_get(cts, CTID_DOUBLE);  /* FPRs always hold doubles. */
 
-#elif LJ_TARGET_MIPS
-/* -- MIPS calling conventions -------------------------------------------- */
+#elif LJ_TARGET_MIPS32
+/* -- MIPS o32 calling conventions ---------------------------------------- */
 
 #define CCALL_HANDLE_STRUCTRET \
   cc->retref = 1;  /* Return all structs by reference. */ \
@@ -482,6 +482,78 @@
   if (ctype_isfp(ctr->info) && ctr->size == sizeof(float)) \
     sp = (uint8_t *)&cc->fpr[0].f;
 #endif
+
+#elif LJ_TARGET_MIPS64
+/* -- MIPS n64 calling conventions ---------------------------------------- */
+
+#define CCALL_HANDLE_STRUCTRET \
+  cc->retref = !(sz <= 16); \
+  if (cc->retref) cc->gpr[ngpr++] = (GPRArg)dp;
+
+#define CCALL_HANDLE_STRUCTRET2 \
+  ccall_copy_struct(cc, ctr, dp, sp, ccall_classify_struct(cts, ctr, ct));
+
+#define CCALL_HANDLE_COMPLEXRET \
+  /* Complex values are returned in 1 or 2 FPRs. */ \
+  cc->retref = 0;
+
+#if LJ_ABI_SOFTFP	/* MIPS64 soft-float */
+
+#define CCALL_HANDLE_COMPLEXRET2 \
+  if (ctr->size == 2*sizeof(float)) {  /* Copy complex float from GPRs. */ \
+    ((intptr_t *)dp)[0] = cc->gpr[0]; \
+  } else {  /* Copy complex double from GPRs. */ \
+    ((intptr_t *)dp)[0] = cc->gpr[0]; \
+    ((intptr_t *)dp)[1] = cc->gpr[1]; \
+  }
+
+#define CCALL_HANDLE_COMPLEXARG \
+  /* Pass complex by value in 2 or 4 GPRs. */
+
+/* Position of soft-float 'float' return value depends on endianess.  */
+#define CCALL_HANDLE_RET \
+  if (ctype_isfp(ctr->info) && ctr->size == sizeof(float)) \
+    sp = (uint8_t *)cc->gpr + LJ_ENDIAN_SELECT(0, 4);
+
+#else			/* MIPS64 hard-float */
+
+#define CCALL_HANDLE_COMPLEXRET2 \
+  if (ctr->size == 2*sizeof(float)) {  /* Copy complex float from FPRs. */ \
+    ((float *)dp)[0] = cc->fpr[0].f; \
+    ((float *)dp)[1] = cc->fpr[1].f; \
+  } else {  /* Copy complex double from FPRs. */ \
+    ((double *)dp)[0] = cc->fpr[0].d; \
+    ((double *)dp)[1] = cc->fpr[1].d; \
+  }
+
+#define CCALL_HANDLE_COMPLEXARG \
+  if (sz == 2*sizeof(float)) { \
+    isfp = 2; \
+    if (ngpr < maxgpr) \
+      sz *= 2; \
+  }
+
+#define CCALL_HANDLE_RET \
+  if (ctype_isfp(ctr->info) && ctr->size == sizeof(float)) \
+    sp = (uint8_t *)&cc->fpr[0].f;
+
+#endif
+
+#define CCALL_HANDLE_STRUCTARG \
+  /* Pass all structs by value in registers and/or on the stack. */
+
+#define CCALL_HANDLE_REGARG \
+  if (ngpr < maxgpr) { \
+    dp = &cc->gpr[ngpr]; \
+    if (ngpr + n > maxgpr) { \
+      nsp += ngpr + n - maxgpr;  /* Assumes contiguous gpr/stack fields. */ \
+      if (nsp > CCALL_MAXSTACK) goto err_nyi;  /* Too many arguments. */ \
+      ngpr = maxgpr; \
+    } else { \
+      ngpr += n; \
+    } \
+    goto done; \
+  }
 
 #else
 #error "Missing calling convention definitions for this architecture"
@@ -722,6 +794,78 @@ noth:  /* Not a homogeneous float/double aggregate. */
 
 #endif
 
+/* -- MIPS64 ABI struct classification ---------------------------- */
+
+#if LJ_TARGET_MIPS64
+
+#define FTYPE_FLOAT	1
+#define FTYPE_DOUBLE	2
+
+/* Classify FP fields (max. 2) and their types. */
+static unsigned int ccall_classify_struct(CTState *cts, CType *ct, CType *ctf)
+{
+  int n = 0, ft = 0;
+  if ((ctf->info & CTF_VARARG) || (ct->info & CTF_UNION))
+    goto noth;
+  while (ct->sib) {
+    CType *sct;
+    ct = ctype_get(cts, ct->sib);
+    if (n == 2) {
+      goto noth;
+    } else if (ctype_isfield(ct->info)) {
+      sct = ctype_rawchild(cts, ct);
+      if (ctype_isfp(sct->info)) {
+	ft |= (sct->size == 4 ? FTYPE_FLOAT : FTYPE_DOUBLE) << 2*n;
+	n++;
+      } else {
+	goto noth;
+      }
+    } else if (ctype_isbitfield(ct->info) ||
+	       ctype_isxattrib(ct->info, CTA_SUBTYPE)) {
+      goto noth;
+    }
+  }
+  if (n <= 2)
+    return ft;
+noth:  /* Not a homogeneous float/double aggregate. */
+  return 0;  /* Struct is in GPRs. */
+}
+
+void ccall_copy_struct(CCallState *cc, CType *ctr, void *dp, void *sp, int ft)
+{
+  if (LJ_ABI_SOFTFP ? ft :
+      ((ft & 3) == FTYPE_FLOAT || (ft >> 2) == FTYPE_FLOAT)) {
+    int i, ofs = 0;
+    for (i = 0; ft != 0; i++, ft >>= 2) {
+      if ((ft & 3) == FTYPE_FLOAT) {
+#if LJ_ABI_SOFTFP
+	/* The 2nd FP struct result is in CARG1 (gpr[2]) and not CRET2. */
+	memcpy((uint8_t *)dp + ofs,
+	       (uint8_t *)&cc->gpr[2*i] + LJ_ENDIAN_SELECT(0, 4), 4);
+#else
+	*(float *)((uint8_t *)dp + ofs) = cc->fpr[i].f;
+#endif
+	ofs += 4;
+      } else {
+	ofs = (ofs + 7) & ~7;  /* 64 bit alignment. */
+#if LJ_ABI_SOFTFP
+	*(intptr_t *)((uint8_t *)dp + ofs) = cc->gpr[2*i];
+#else
+	*(double *)((uint8_t *)dp + ofs) = cc->fpr[i].d;
+#endif
+	ofs += 8;
+      }
+    }
+  } else {
+#if !LJ_ABI_SOFTFP
+    if (ft) sp = (uint8_t *)&cc->fpr[0];
+#endif
+    memcpy(dp, sp, ctr->size);
+  }
+}
+
+#endif
+
 /* -- Common C call handling ---------------------------------------------- */
 
 /* Infer the destination CTypeID for a vararg argument. */
@@ -889,6 +1033,12 @@ static int ccall_set_args(lua_State *L, CTState *cts, CType *ct,
 	*(int32_t *)dp = d->size == 1 ? (int32_t)*(int8_t *)dp :
 					(int32_t)*(int16_t *)dp;
     }
+#if LJ_TARGET_MIPS64
+    if ((ctype_isinteger_or_bool(d->info) || ctype_isenum(d->info) ||
+	 (isfp && nsp == 0)) && d->size <= 4) {
+      *(int64_t *)dp = (int64_t)*(int32_t *)dp;  /* Sign-extend to 64 bit. */
+    }
+#endif
 #if LJ_TARGET_X64 && LJ_ABI_WIN
     if (isva) {  /* Windows/x64 mirrors varargs in both register sets. */
       if (nfpr == ngpr)
@@ -904,7 +1054,7 @@ static int ccall_set_args(lua_State *L, CTState *cts, CType *ct,
       cc->fpr[nfpr-1].d[0] = cc->fpr[nfpr-2].d[1];  /* Split complex double. */
       cc->fpr[nfpr-2].d[1] = 0;
     }
-#elif LJ_TARGET_ARM64
+#elif LJ_TARGET_ARM64 || (LJ_TARGET_MIPS64 && !LJ_ABI_SOFTFP)
     if (isfp == 2 && (uint8_t *)dp < (uint8_t *)cc->stack) {
       /* Split float HFA or complex float into separate registers. */
       CTSize i = (sz >> 2) - 1;
@@ -951,7 +1101,8 @@ static int ccall_get_results(lua_State *L, CTState *cts, CType *ct,
     CCALL_HANDLE_COMPLEXRET2
     return 1;  /* One GC step. */
   }
-  if (LJ_BE && ctype_isinteger_or_bool(ctr->info) && ctr->size < CTSIZE_PTR)
+  if (LJ_BE && ctr->size < CTSIZE_PTR &&
+      (ctype_isinteger_or_bool(ctr->info) || ctype_isenum(ctr->info)))
     sp += (CTSIZE_PTR - ctr->size);
 #if CCALL_NUM_FPR
   if (ctype_isfp(ctr->info) || ctype_isvector(ctr->info))

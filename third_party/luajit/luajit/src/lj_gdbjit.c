@@ -719,6 +719,20 @@ static void gdbjit_buildobj(GDBJITctx *ctx)
 
 /* -- Interface to GDB JIT API -------------------------------------------- */
 
+static int gdbjit_lock;
+
+static void gdbjit_lock_acquire()
+{
+  while (__sync_lock_test_and_set(&gdbjit_lock, 1)) {
+    /* Just spin; futexes or pthreads aren't worth the portability cost. */
+  }
+}
+
+static void gdbjit_lock_release()
+{
+  __sync_lock_release(&gdbjit_lock);
+}
+
 /* Add new entry to GDB JIT symbol chain. */
 static void gdbjit_newentry(lua_State *L, GDBJITctx *ctx)
 {
@@ -730,6 +744,7 @@ static void gdbjit_newentry(lua_State *L, GDBJITctx *ctx)
   ctx->T->gdbjit_entry = (void *)eo;
   /* Link new entry to chain and register it. */
   eo->entry.prev_entry = NULL;
+  gdbjit_lock_acquire();
   eo->entry.next_entry = __jit_debug_descriptor.first_entry;
   if (eo->entry.next_entry)
     eo->entry.next_entry->prev_entry = &eo->entry;
@@ -739,6 +754,7 @@ static void gdbjit_newentry(lua_State *L, GDBJITctx *ctx)
   __jit_debug_descriptor.relevant_entry = &eo->entry;
   __jit_debug_descriptor.action_flag = GDBJIT_REGISTER;
   __jit_debug_register_code();
+  gdbjit_lock_release();
 }
 
 /* Add debug info for newly compiled trace and notify GDB. */
@@ -770,6 +786,7 @@ void lj_gdbjit_deltrace(jit_State *J, GCtrace *T)
 {
   GDBJITentryobj *eo = (GDBJITentryobj *)T->gdbjit_entry;
   if (eo) {
+    gdbjit_lock_acquire();
     if (eo->entry.prev_entry)
       eo->entry.prev_entry->next_entry = eo->entry.next_entry;
     else
@@ -779,6 +796,7 @@ void lj_gdbjit_deltrace(jit_State *J, GCtrace *T)
     __jit_debug_descriptor.relevant_entry = &eo->entry;
     __jit_debug_descriptor.action_flag = GDBJIT_UNREGISTER;
     __jit_debug_register_code();
+    gdbjit_lock_release();
     lj_mem_free(J2G(J), eo, eo->sz);
   }
 }

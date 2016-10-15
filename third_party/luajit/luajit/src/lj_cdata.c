@@ -93,11 +93,13 @@ void lj_cdata_setfin(lua_State *L, GCcdata *cd, GCobj *obj, uint32_t it)
     setcdataV(L, &tmp, cd);
     lj_gc_anybarriert(L, t);
     tv = lj_tab_set(L, t, &tmp);
-    setgcV(L, tv, obj, it);
-    if (!tvisnil(tv))
-      cd->marked |= LJ_GC_CDATA_FIN;
-    else
+    if (it == LJ_TNIL) {
+      setnilV(tv);
       cd->marked &= ~LJ_GC_CDATA_FIN;
+    } else {
+      setgcV(L, tv, obj, it);
+      cd->marked |= LJ_GC_CDATA_FIN;
+    }
   }
 }
 

@@ -297,13 +297,17 @@ static CPToken cp_next_(CPState *cp)
       else return '/';
       break;
     case '|':
-      if (cp_get(cp) != '|') return '|'; cp_get(cp); return CTOK_OROR;
+      if (cp_get(cp) != '|') return '|';
+      cp_get(cp); return CTOK_OROR;
     case '&':
-      if (cp_get(cp) != '&') return '&'; cp_get(cp); return CTOK_ANDAND;
+      if (cp_get(cp) != '&') return '&';
+      cp_get(cp); return CTOK_ANDAND;
     case '=':
-      if (cp_get(cp) != '=') return '='; cp_get(cp); return CTOK_EQ;
+      if (cp_get(cp) != '=') return '=';
+      cp_get(cp); return CTOK_EQ;
     case '!':
-      if (cp_get(cp) != '=') return '!'; cp_get(cp); return CTOK_NE;
+      if (cp_get(cp) != '=') return '!';
+      cp_get(cp); return CTOK_NE;
     case '<':
       if (cp_get(cp) == '=') { cp_get(cp); return CTOK_LE; }
       else if (cp->c == '<') { cp_get(cp); return CTOK_SHL; }
@@ -313,7 +317,8 @@ static CPToken cp_next_(CPState *cp)
       else if (cp->c == '>') { cp_get(cp); return CTOK_SHR; }
       return '>';
     case '-':
-      if (cp_get(cp) != '>') return '-'; cp_get(cp); return CTOK_DEREF;
+      if (cp_get(cp) != '>') return '-';
+      cp_get(cp); return CTOK_DEREF;
     case '$':
       return cp_param(cp);
     case '\0': return CTOK_EOF;

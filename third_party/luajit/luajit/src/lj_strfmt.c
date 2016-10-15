@@ -98,11 +98,15 @@ char * LJ_FASTCALL lj_strfmt_wint(char *p, int32_t k)
   uint32_t u = (uint32_t)k;
   if (k < 0) { u = (uint32_t)-k; *p++ = '-'; }
   if (u < 10000) {
-    if (u < 10) goto dig1; if (u < 100) goto dig2; if (u < 1000) goto dig3;
+    if (u < 10) goto dig1;
+    if (u < 100) goto dig2;
+    if (u < 1000) goto dig3;
   } else {
     uint32_t v = u / 10000; u -= v * 10000;
     if (v < 10000) {
-      if (v < 10) goto dig5; if (v < 100) goto dig6; if (v < 1000) goto dig7;
+      if (v < 10) goto dig5;
+      if (v < 100) goto dig6;
+      if (v < 1000) goto dig7;
     } else {
       uint32_t w = v / 10000; v -= w * 10000;
       if (w >= 10) WINT_R(w, 10, 10)

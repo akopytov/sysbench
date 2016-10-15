@@ -46,7 +46,8 @@
 **   the wrapper function feature. Lua errors thrown through C++ frames
 **   cannot be caught by C++ code and C++ destructors are not run.
 **
-** EXT is the default on x64 systems, INT is the default on all other systems.
+** EXT is the default on x64 systems and on Windows, INT is the default on all
+** other systems.
 **
 ** EXT can be manually enabled on POSIX systems using GCC and DWARF2 stack
 ** unwinding with -DLUAJIT_UNWIND_EXTERNAL. *All* C code must be compiled
@@ -55,7 +56,6 @@
 ** and all C libraries that have callbacks which may be used to call back
 ** into Lua. C++ code must *not* be compiled with -fno-exceptions.
 **
-** EXT cannot be enabled on WIN32 since system exceptions use code-driven SEH.
 ** EXT is mandatory on WIN64 since the calling convention has an abundance
 ** of callee-saved registers (rbx, rbp, rsi, rdi, r12-r15, xmm6-xmm15).
 ** The POSIX/x64 interpreter only saves r12/r13 for INT (e.g. PS4).
@@ -63,7 +63,7 @@
 
 #if defined(__GNUC__) && (LJ_TARGET_X64 || defined(LUAJIT_UNWIND_EXTERNAL)) && !LJ_NO_UNWIND
 #define LJ_UNWIND_EXT	1
-#elif LJ_TARGET_X64 && LJ_TARGET_WINDOWS
+#elif LJ_TARGET_WINDOWS
 #define LJ_UNWIND_EXT	1
 #endif
 
@@ -384,7 +384,7 @@ static void err_raise_ext(int errcode)
 
 #endif /* LJ_TARGET_ARM */
 
-#elif LJ_TARGET_X64 && LJ_ABI_WIN
+#elif LJ_ABI_WIN
 
 /*
 ** Someone in Redmond owes me several days of my life. A lot of this is
@@ -402,6 +402,7 @@ static void err_raise_ext(int errcode)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+#if LJ_TARGET_X64
 /* Taken from: http://www.nynaeve.net/?p=99 */
 typedef struct UndocumentedDispatcherContext {
   ULONG64 ControlPc;
@@ -416,11 +417,14 @@ typedef struct UndocumentedDispatcherContext {
   ULONG ScopeIndex;
   ULONG Fill0;
 } UndocumentedDispatcherContext;
+#else
+typedef void *UndocumentedDispatcherContext;
+#endif
 
 /* Another wild guess. */
 extern void __DestructExceptionObject(EXCEPTION_RECORD *rec, int nothrow);
 
-#ifdef MINGW_SDK_INIT
+#if LJ_TARGET_X64 && defined(MINGW_SDK_INIT)
 /* Workaround for broken MinGW64 declaration. */
 VOID RtlUnwindEx_FIXED(PVOID,PVOID,PVOID,PVOID,PVOID,PVOID) asm("RtlUnwindEx");
 #define RtlUnwindEx RtlUnwindEx_FIXED
@@ -434,10 +438,15 @@ VOID RtlUnwindEx_FIXED(PVOID,PVOID,PVOID,PVOID,PVOID,PVOID) asm("RtlUnwindEx");
 #define LJ_EXCODE_CHECK(cl)	(((cl) ^ LJ_EXCODE) <= 0xff)
 #define LJ_EXCODE_ERRCODE(cl)	((int)((cl) & 0xff))
 
-/* Win64 exception handler for interpreter frame. */
-LJ_FUNCA EXCEPTION_DISPOSITION lj_err_unwind_win64(EXCEPTION_RECORD *rec,
-  void *cf, CONTEXT *ctx, UndocumentedDispatcherContext *dispatch)
+/* Windows exception handler for interpreter frame. */
+LJ_FUNCA int lj_err_unwind_win(EXCEPTION_RECORD *rec,
+  void *f, CONTEXT *ctx, UndocumentedDispatcherContext *dispatch)
 {
+#if LJ_TARGET_X64
+  void *cf = f;
+#else
+  void *cf = (char *)f - CFRAME_OFS_SEH;
+#endif
   lua_State *L = cframe_L(cf);
   int errcode = LJ_EXCODE_CHECK(rec->ExceptionCode) ?
 		LJ_EXCODE_ERRCODE(rec->ExceptionCode) : LUA_ERRRUN;
@@ -455,8 +464,9 @@ LJ_FUNCA EXCEPTION_DISPOSITION lj_err_unwind_win64(EXCEPTION_RECORD *rec,
 	setstrV(L, L->top++, lj_err_str(L, LJ_ERR_ERRCPP));
       } else if (!LJ_EXCODE_CHECK(rec->ExceptionCode)) {
 	/* Don't catch access violations etc. */
-	return ExceptionContinueSearch;
+	return 1;  /* ExceptionContinueSearch */
       }
+#if LJ_TARGET_X64
       /* Unwind the stack and call all handlers for all lower C frames
       ** (including ourselves) again with EH_UNWINDING set. Then set
       ** rsp = cf, rax = errcode and jump to the specified target.
@@ -466,9 +476,21 @@ LJ_FUNCA EXCEPTION_DISPOSITION lj_err_unwind_win64(EXCEPTION_RECORD *rec,
 			       lj_vm_unwind_c_eh),
 		  rec, (void *)(uintptr_t)errcode, ctx, dispatch->HistoryTable);
       /* RtlUnwindEx should never return. */
+#else
+      UNUSED(ctx);
+      UNUSED(dispatch);
+      /* Call all handlers for all lower C frames (including ourselves) again
+      ** with EH_UNWINDING set. Then call the specified function, passing cf
+      ** and errcode.
+      */
+      lj_vm_rtlunwind(cf, (void *)rec,
+	(cframe_unwind_ff(cf2) && errcode != LUA_YIELD) ?
+	(void *)lj_vm_unwind_ff : (void *)lj_vm_unwind_c, errcode);
+      /* lj_vm_rtlunwind does not return. */
+#endif
     }
   }
-  return ExceptionContinueSearch;
+  return 1;  /* ExceptionContinueSearch */
 }
 
 /* Raise Windows exception. */

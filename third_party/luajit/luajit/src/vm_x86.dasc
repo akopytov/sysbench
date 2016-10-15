@@ -121,19 +121,68 @@
 |//-----------------------------------------------------------------------
 |.if not X64		// x86 stack layout.
 |
+|.if WIN
+|
+|.define CFRAME_SPACE,	aword*9			// Delta for esp (see <--).
+|.macro saveregs_
+|  push edi; push esi; push ebx
+|  push extern lj_err_unwind_win
+|  fs; push dword [0]
+|  fs; mov [0], esp
+|  sub esp, CFRAME_SPACE
+|.endmacro
+|.macro restoreregs
+|  add esp, CFRAME_SPACE
+|  fs; pop dword [0]
+|  pop edi	// Short for esp += 4.
+|  pop ebx; pop esi; pop edi; pop ebp
+|.endmacro
+|
+|.else
+|
 |.define CFRAME_SPACE,	aword*7			// Delta for esp (see <--).
 |.macro saveregs_
 |  push edi; push esi; push ebx
 |  sub esp, CFRAME_SPACE
-|.endmacro
-|.macro saveregs
-|  push ebp; saveregs_
 |.endmacro
 |.macro restoreregs
 |  add esp, CFRAME_SPACE
 |  pop ebx; pop esi; pop edi; pop ebp
 |.endmacro
 |
+|.endif
+|
+|.macro saveregs
+|  push ebp; saveregs_
+|.endmacro
+|
+|.if WIN
+|.define SAVE_ERRF,	aword [esp+aword*19]	// vm_pcall/vm_cpcall only.
+|.define SAVE_NRES,	aword [esp+aword*18]
+|.define SAVE_CFRAME,	aword [esp+aword*17]
+|.define SAVE_L,	aword [esp+aword*16]
+|//----- 16 byte aligned, ^^^ arguments from C caller
+|.define SAVE_RET,	aword [esp+aword*15]	//<-- esp entering interpreter.
+|.define SAVE_R4,	aword [esp+aword*14]
+|.define SAVE_R3,	aword [esp+aword*13]
+|.define SAVE_R2,	aword [esp+aword*12]
+|//----- 16 byte aligned
+|.define SAVE_R1,	aword [esp+aword*11]
+|.define SEH_FUNC,	aword [esp+aword*10]
+|.define SEH_NEXT,	aword [esp+aword*9]	//<-- esp after register saves.
+|.define UNUSED2,	aword [esp+aword*8]
+|//----- 16 byte aligned
+|.define UNUSED1,	aword [esp+aword*7]
+|.define SAVE_PC,	aword [esp+aword*6]
+|.define TMP2,		aword [esp+aword*5]
+|.define TMP1,		aword [esp+aword*4]
+|//----- 16 byte aligned
+|.define ARG4,		aword [esp+aword*3]
+|.define ARG3,		aword [esp+aword*2]
+|.define ARG2,		aword [esp+aword*1]
+|.define ARG1,		aword [esp]		//<-- esp while in interpreter.
+|//----- 16 byte aligned, ^^^ arguments for C callee
+|.else
 |.define SAVE_ERRF,	aword [esp+aword*15]	// vm_pcall/vm_cpcall only.
 |.define SAVE_NRES,	aword [esp+aword*14]
 |.define SAVE_CFRAME,	aword [esp+aword*13]
@@ -154,6 +203,7 @@
 |.define ARG2,		aword [esp+aword*1]
 |.define ARG1,		aword [esp]		//<-- esp while in interpreter.
 |//----- 16 byte aligned, ^^^ arguments for C callee
+|.endif
 |
 |// FPARGx overlaps ARGx and ARG(x+1) on x86.
 |.define FPARG3,	qword [esp+qword*1]
@@ -554,6 +604,10 @@ static void build_subroutines(BuildCtx *ctx)
   |.else
   |  mov eax, FCARG2			// Error return status for vm_pcall.
   |  mov esp, FCARG1
+  |.if WIN
+  |  lea FCARG1, SEH_NEXT
+  |  fs; mov [0], FCARG1
+  |.endif
   |.endif
   |->vm_unwind_c_eh:			// Landing pad for external unwinder.
   |  mov L:RB, SAVE_L
@@ -577,6 +631,10 @@ static void build_subroutines(BuildCtx *ctx)
   |.else
   |  and FCARG1, CFRAME_RAWMASK
   |  mov esp, FCARG1
+  |.if WIN
+  |  lea FCARG1, SEH_NEXT
+  |  fs; mov [0], FCARG1
+  |.endif
   |.endif
   |->vm_unwind_ff_eh:			// Landing pad for external unwinder.
   |  mov L:RB, SAVE_L
@@ -589,6 +647,19 @@ static void build_subroutines(BuildCtx *ctx)
   |  mov dword [BASE-4], LJ_TFALSE	// Prepend false to error message.
   |  set_vmstate INTERP
   |  jmp ->vm_returnc			// Increments RD/MULTRES and returns.
+  |
+  |.if WIN and not X64
+  |->vm_rtlunwind@16:			// Thin layer around RtlUnwind.
+  |  // (void *cframe, void *excptrec, void *unwinder, int errcode)
+  |  mov [esp], FCARG1			// Return value for RtlUnwind.
+  |  push FCARG2			// Exception record for RtlUnwind.
+  |  push 0				// Ignored by RtlUnwind.
+  |  push dword [FCARG1+CFRAME_OFS_SEH]
+  |  call extern RtlUnwind@16		// Violates ABI (clobbers too much).
+  |  mov FCARG1, eax
+  |  mov FCARG2, [esp+4]		// errcode (for vm_unwind_c).
+  |  ret				// Jump to unwinder.
+  |.endif
   |
   |//-----------------------------------------------------------------------
   |//-- Grow stack for calls -----------------------------------------------
@@ -3026,6 +3097,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  mov eax, CARG1d
   |  .if X64WIN; push rsi; mov rsi, CARG2; .endif
   |  push rbx
+  |  xor ecx, ecx
   |  cpuid
   |  mov [rsi], eax
   |  mov [rsi+4], ebx
@@ -3049,6 +3121,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  mov eax, [esp+4]			// Argument 1 is function number.
   |  push edi
   |  push ebx
+  |  xor ecx, ecx
   |  cpuid
   |  mov edi, [esp+16]			// Argument 2 is result area.
   |  mov [edi], eax

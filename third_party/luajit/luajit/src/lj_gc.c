@@ -238,6 +238,8 @@ static void gc_traverse_trace(global_State *g, GCtrace *T)
     IRIns *ir = &T->ir[ref];
     if (ir->o == IR_KGC)
       gc_markobj(g, ir_kgc(ir));
+    if (irt_is64(ir->t) && ir->o != IR_KNULL)
+      ref++;
   }
   if (T->link) gc_marktrace(g, T->link);
   if (T->nextroot) gc_marktrace(g, T->nextroot);

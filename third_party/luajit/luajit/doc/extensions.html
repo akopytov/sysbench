@@ -365,25 +365,30 @@ the toolchain used to compile LuaJIT:
 </tr>
 <tr class="odd separate">
 <td class="excplatform">POSIX/x64, DWARF2 unwinding</td>
-<td class="exccompiler">GCC 4.3+</td>
+<td class="exccompiler">GCC 4.3+, Clang</td>
 <td class="excinterop"><b style="color: #00a000;">Full</b></td>
 </tr>
 <tr class="even">
-<td class="excplatform">Other platforms, DWARF2 unwinding</td>
-<td class="exccompiler">GCC</td>
-<td class="excinterop"><b style="color: #c06000;">Limited</b></td>
+<td class="excplatform">ARM <tt>-DLUAJIT_UNWIND_EXTERNAL</tt></td>
+<td class="exccompiler">GCC, Clang</td>
+<td class="excinterop"><b style="color: #00a000;">Full</b></td>
 </tr>
 <tr class="odd">
+<td class="excplatform">Other platforms, DWARF2 unwinding</td>
+<td class="exccompiler">GCC, Clang</td>
+<td class="excinterop"><b style="color: #c06000;">Limited</b></td>
+</tr>
+<tr class="even">
 <td class="excplatform">Windows/x64</td>
 <td class="exccompiler">MSVC or WinSDK</td>
 <td class="excinterop"><b style="color: #00a000;">Full</b></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td class="excplatform">Windows/x86</td>
 <td class="exccompiler">Any</td>
-<td class="excinterop"><b style="color: #a00000;">No</b></td>
+<td class="excinterop"><b style="color: #00a000;">Full</b></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td class="excplatform">Other platforms</td>
 <td class="exccompiler">Other compilers</td>
 <td class="excinterop"><b style="color: #a00000;">No</b></td>
@@ -432,14 +437,6 @@ C++ destructors.</li>
 <li>Lua errors <b>cannot</b> be caught on the C++ side.</li>
 <li>Throwing Lua errors across C++ frames will <b>not</b> call
 C++ destructors.</li>
-<li>Additionally, on Windows/x86 with SEH-based C++&nbsp;exceptions:
-it's <b>not</b> safe to throw a Lua error across any frames containing
-a C++ function with any try/catch construct or using variables with
-(implicit) destructors. This also applies to any functions which may be
-inlined in such a function. It doesn't matter whether <tt>lua_error()</tt>
-is called inside or outside of a try/catch or whether any object actually
-needs to be destroyed: the SEH chain is corrupted and this will eventually
-lead to the termination of the process.</li>
 </ul>
 <br class="flush">
 </div>

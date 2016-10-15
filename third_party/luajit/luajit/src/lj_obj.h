@@ -843,12 +843,16 @@ static LJ_AINLINE void setlightudV(TValue *o, void *p)
 #endif
 
 #if LJ_FR2
-#define setcont(o, f)		((o)->u64 = (uint64_t)(uintptr_t)(void *)(f))
+#define contptr(f)		((void *)(f))
+#define setcont(o, f)		((o)->u64 = (uint64_t)(uintptr_t)contptr(f))
 #elif LJ_64
+#define contptr(f) \
+  ((void *)(uintptr_t)(uint32_t)((intptr_t)(f) - (intptr_t)lj_vm_asm_begin))
 #define setcont(o, f) \
   ((o)->u64 = (uint64_t)(void *)(f) - (uint64_t)lj_vm_asm_begin)
 #else
-#define setcont(o, f)		setlightudV((o), (void *)(f))
+#define contptr(f)		((void *)(f))
+#define setcont(o, f)		setlightudV((o), contptr(f))
 #endif
 
 #define tvchecklive(L, o) \

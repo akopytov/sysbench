@@ -102,42 +102,41 @@ static void recff_stitch(jit_State *J)
   ASMFunction cont = lj_cont_stitch;
   lua_State *L = J->L;
   TValue *base = L->base;
+  BCReg nslot = J->maxslot + 1 + LJ_FR2;
+  TValue *nframe = base + 1 + LJ_FR2;
   const BCIns *pc = frame_pc(base-1);
   TValue *pframe = frame_prevl(base-1);
-  TRef trcont;
 
-  lua_assert(!LJ_FR2);  /* TODO_FR2: handle frame shift. */
   /* Move func + args up in Lua stack and insert continuation. */
-  memmove(&base[1], &base[-1], sizeof(TValue)*(J->maxslot+1));
-  setframe_ftsz(base+1, ((char *)(base+1) - (char *)pframe) + FRAME_CONT);
-  setcont(base, cont);
+  memmove(&base[1], &base[-1-LJ_FR2], sizeof(TValue)*nslot);
+  setframe_ftsz(nframe, ((char *)nframe - (char *)pframe) + FRAME_CONT);
+  setcont(base-LJ_FR2, cont);
   setframe_pc(base, pc);
-  setnilV(base-1);  /* Incorrect, but rec_check_slots() won't run anymore. */
-  L->base += 2;
-  L->top += 2;
+  setnilV(base-1-LJ_FR2);  /* Incorrect, but rec_check_slots() won't run anymore. */
+  L->base += 2 + LJ_FR2;
+  L->top += 2 + LJ_FR2;
 
   /* Ditto for the IR. */
-  memmove(&J->base[1], &J->base[-1], sizeof(TRef)*(J->maxslot+1));
-#if LJ_64
-  trcont = lj_ir_kptr(J, (void *)((int64_t)cont-(int64_t)lj_vm_asm_begin));
+  memmove(&J->base[1], &J->base[-1-LJ_FR2], sizeof(TRef)*nslot);
+#if LJ_FR2
+  J->base[2] = TREF_FRAME;
+  J->base[-1] = lj_ir_k64(J, IR_KNUM, u64ptr(contptr(cont)));
+  J->base[0] = lj_ir_k64(J, IR_KNUM, u64ptr(pc)) | TREF_CONT;
 #else
-  trcont = lj_ir_kptr(J, (void *)cont);
+  J->base[0] = lj_ir_kptr(J, contptr(cont)) | TREF_CONT;
 #endif
-  J->base[0] = trcont | TREF_CONT;
-  J->ktracep = lj_ir_k64_reserve(J);
-  lua_assert(irt_toitype_(IRT_P64) == LJ_TTRACE);
-  J->base[-1] = emitir(IRT(IR_XLOAD, IRT_P64), lj_ir_kptr(J, &J->ktracep->gcr), 0);
-  J->base += 2;
-  J->baseslot += 2;
+  J->ktrace = tref_ref((J->base[-1-LJ_FR2] = lj_ir_ktrace(J)));
+  J->base += 2 + LJ_FR2;
+  J->baseslot += 2 + LJ_FR2;
   J->framedepth++;
 
   lj_record_stop(J, LJ_TRLINK_STITCH, 0);
 
   /* Undo Lua stack changes. */
-  memmove(&base[-1], &base[1], sizeof(TValue)*(J->maxslot+1));
+  memmove(&base[-1-LJ_FR2], &base[1], sizeof(TValue)*nslot);
   setframe_pc(base-1, pc);
-  L->base -= 2;
-  L->top -= 2;
+  L->base -= 2 + LJ_FR2;
+  L->top -= 2 + LJ_FR2;
 }
 
 /* Fallback handler for fast functions that are not recorded (yet). */
@@ -179,7 +178,7 @@ static void LJ_FASTCALL recff_nyi(jit_State *J, RecordFFData *rd)
 /* Emit BUFHDR for the global temporary buffer. */
 static TRef recff_bufhdr(jit_State *J)
 {
-  return emitir(IRT(IR_BUFHDR, IRT_P32),
+  return emitir(IRT(IR_BUFHDR, IRT_PGC),
 		lj_ir_kptr(J, &J2G(J)->tmpbuf), IRBUFHDR_RESET);
 }
 
@@ -229,7 +228,7 @@ static void LJ_FASTCALL recff_setmetatable(jit_State *J, RecordFFData *rd)
     ix.tab = tr;
     copyTV(J->L, &ix.tabv, &rd->argv[0]);
     lj_record_mm_lookup(J, &ix, MM_metatable); /* Guard for no __metatable. */
-    fref = emitir(IRT(IR_FREF, IRT_P32), tr, IRFL_TAB_META);
+    fref = emitir(IRT(IR_FREF, IRT_PGC), tr, IRFL_TAB_META);
     mtref = tref_isnil(mt) ? lj_ir_knull(J, IRT_TAB) : mt;
     emitir(IRT(IR_FSTORE, IRT_TAB), fref, mtref);
     if (!tref_isnil(mt))
@@ -295,7 +294,7 @@ int32_t lj_ffrecord_select_mode(jit_State *J, TRef tr, TValue *tv)
     if (strV(tv)->len == 1) {
       emitir(IRTG(IR_EQ, IRT_STR), tr, lj_ir_kstr(J, strV(tv)));
     } else {
-      TRef trptr = emitir(IRT(IR_STRREF, IRT_P32), tr, lj_ir_kint(J, 0));
+      TRef trptr = emitir(IRT(IR_STRREF, IRT_PGC), tr, lj_ir_kint(J, 0));
       TRef trchar = emitir(IRT(IR_XLOAD, IRT_U8), trptr, IRXLOAD_READONLY);
       emitir(IRTG(IR_EQ, IRT_INT), trchar, lj_ir_kint(J, '#'));
     }
@@ -380,10 +379,10 @@ static int recff_metacall(jit_State *J, RecordFFData *rd, MMS mm)
     int errcode;
     TValue argv0;
     /* Temporarily insert metamethod below object. */
-    J->base[1] = J->base[0];
+    J->base[1+LJ_FR2] = J->base[0];
     J->base[0] = ix.mobj;
     copyTV(J->L, &argv0, &rd->argv[0]);
-    copyTV(J->L, &rd->argv[1], &rd->argv[0]);
+    copyTV(J->L, &rd->argv[1+LJ_FR2], &rd->argv[0]);
     copyTV(J->L, &rd->argv[0], &ix.mobjv);
     /* Need to protect lj_record_tailcall because it may throw. */
     errcode = lj_vm_cpcall(J->L, NULL, J, recff_metacall_cp);
@@ -450,6 +449,10 @@ static void LJ_FASTCALL recff_xpairs(jit_State *J, RecordFFData *rd)
 static void LJ_FASTCALL recff_pcall(jit_State *J, RecordFFData *rd)
 {
   if (J->maxslot >= 1) {
+#if LJ_FR2
+    /* Shift function arguments up. */
+    memmove(J->base + 1, J->base, sizeof(TRef) * J->maxslot);
+#endif
     lj_record_call(J, 0, J->maxslot - 1);
     rd->nres = -1;  /* Pending call. */
   }  /* else: Interpreter will throw. */
@@ -469,13 +472,16 @@ static void LJ_FASTCALL recff_xpcall(jit_State *J, RecordFFData *rd)
     TValue argv0, argv1;
     TRef tmp;
     int errcode;
-    lua_assert(!LJ_FR2);  /* TODO_FR2: handle different frame setup. */
     /* Swap function and traceback. */
     tmp = J->base[0]; J->base[0] = J->base[1]; J->base[1] = tmp;
     copyTV(J->L, &argv0, &rd->argv[0]);
     copyTV(J->L, &argv1, &rd->argv[1]);
     copyTV(J->L, &rd->argv[0], &argv1);
     copyTV(J->L, &rd->argv[1], &argv0);
+#if LJ_FR2
+    /* Shift function arguments up. */
+    memmove(J->base + 2, J->base + 1, sizeof(TRef) * (J->maxslot-1));
+#endif
     /* Need to protect lj_record_call because it may throw. */
     errcode = lj_vm_cpcall(J->L, NULL, J, recff_xpcall_cp);
     /* Always undo Lua stack swap to avoid confusing the interpreter. */
@@ -504,7 +510,7 @@ static void LJ_FASTCALL recff_getfenv(jit_State *J, RecordFFData *rd)
 static void LJ_FASTCALL recff_math_abs(jit_State *J, RecordFFData *rd)
 {
   TRef tr = lj_ir_tonum(J, J->base[0]);
-  J->base[0] = emitir(IRTN(IR_ABS), tr, lj_ir_knum_abs(J));
+  J->base[0] = emitir(IRTN(IR_ABS), tr, lj_ir_ksimd(J, LJ_KSIMD_ABS));
   UNUSED(rd);
 }
 
@@ -613,10 +619,8 @@ static void LJ_FASTCALL recff_math_modf(jit_State *J, RecordFFData *rd)
 
 static void LJ_FASTCALL recff_math_pow(jit_State *J, RecordFFData *rd)
 {
-  TRef tr = lj_ir_tonum(J, J->base[0]);
-  if (!tref_isnumber_str(J->base[1]))
-    lj_trace_err(J, LJ_TRERR_BADTYPE);
-  J->base[0] = lj_opt_narrow_pow(J, tr, J->base[1], &rd->argv[1]);
+  J->base[0] = lj_opt_narrow_pow(J, J->base[0], J->base[1],
+				 &rd->argv[0], &rd->argv[1]);
   UNUSED(rd);
 }
 
@@ -822,7 +826,7 @@ static void LJ_FASTCALL recff_string_range(jit_State *J, RecordFFData *rd)
       /* Also handle empty range here, to avoid extra traces. */
       TRef trptr, trslen = emitir(IRTI(IR_SUB), trend, trstart);
       emitir(IRTGI(IR_GE), trslen, tr0);
-      trptr = emitir(IRT(IR_STRREF, IRT_P32), trstr, trstart);
+      trptr = emitir(IRT(IR_STRREF, IRT_PGC), trstr, trstart);
       J->base[0] = emitir(IRT(IR_SNEW, IRT_STR), trptr, trslen);
     } else {  /* Range underflow: return empty string. */
       emitir(IRTGI(IR_LT), trend, trstart);
@@ -838,7 +842,7 @@ static void LJ_FASTCALL recff_string_range(jit_State *J, RecordFFData *rd)
       rd->nres = len;
       for (i = 0; i < len; i++) {
 	TRef tmp = emitir(IRTI(IR_ADD), trstart, lj_ir_kint(J, (int32_t)i));
-	tmp = emitir(IRT(IR_STRREF, IRT_P32), trstr, tmp);
+	tmp = emitir(IRT(IR_STRREF, IRT_PGC), trstr, tmp);
 	J->base[i] = emitir(IRT(IR_XLOAD, IRT_U8), tmp, IRXLOAD_READONLY);
       }
     } else {  /* Empty range or range underflow: return no results. */
@@ -860,7 +864,7 @@ static void LJ_FASTCALL recff_string_char(jit_State *J, RecordFFData *rd)
   if (i > 1) {  /* Concatenate the strings, if there's more than one. */
     TRef hdr = recff_bufhdr(J), tr = hdr;
     for (i = 0; J->base[i] != 0; i++)
-      tr = emitir(IRT(IR_BUFPUT, IRT_P32), tr, J->base[i]);
+      tr = emitir(IRT(IR_BUFPUT, IRT_PGC), tr, J->base[i]);
     J->base[0] = emitir(IRT(IR_BUFSTR, IRT_STR), tr, hdr);
   }
   UNUSED(rd);
@@ -877,14 +881,14 @@ static void LJ_FASTCALL recff_string_rep(jit_State *J, RecordFFData *rd)
     emitir(IRTGI(vrep > 1 ? IR_GT : IR_LE), rep, lj_ir_kint(J, 1));
     if (vrep > 1) {
       TRef hdr2 = recff_bufhdr(J);
-      TRef tr2 = emitir(IRT(IR_BUFPUT, IRT_P32), hdr2, sep);
-      tr2 = emitir(IRT(IR_BUFPUT, IRT_P32), tr2, str);
+      TRef tr2 = emitir(IRT(IR_BUFPUT, IRT_PGC), hdr2, sep);
+      tr2 = emitir(IRT(IR_BUFPUT, IRT_PGC), tr2, str);
       str2 = emitir(IRT(IR_BUFSTR, IRT_STR), tr2, hdr2);
     }
   }
   tr = hdr = recff_bufhdr(J);
   if (str2) {
-    tr = emitir(IRT(IR_BUFPUT, IRT_P32), tr, str);
+    tr = emitir(IRT(IR_BUFPUT, IRT_PGC), tr, str);
     str = str2;
     rep = emitir(IRTI(IR_ADD), rep, lj_ir_kint(J, -1));
   }
@@ -935,8 +939,8 @@ static void LJ_FASTCALL recff_string_find(jit_State *J, RecordFFData *rd)
   if ((J->base[2] && tref_istruecond(J->base[3])) ||
       (emitir(IRTG(IR_EQ, IRT_STR), trpat, lj_ir_kstr(J, pat)),
        !lj_str_haspattern(pat))) {  /* Search for fixed string. */
-    TRef trsptr = emitir(IRT(IR_STRREF, IRT_P32), trstr, trstart);
-    TRef trpptr = emitir(IRT(IR_STRREF, IRT_P32), trpat, tr0);
+    TRef trsptr = emitir(IRT(IR_STRREF, IRT_PGC), trstr, trstart);
+    TRef trpptr = emitir(IRT(IR_STRREF, IRT_PGC), trpat, tr0);
     TRef trslen = emitir(IRTI(IR_SUB), trlen, trstart);
     TRef trplen = emitir(IRTI(IR_FLOAD), trpat, IRFL_STR_LEN);
     TRef tr = lj_ir_call(J, IRCALL_lj_str_find, trsptr, trpptr, trslen, trplen);
@@ -944,13 +948,13 @@ static void LJ_FASTCALL recff_string_find(jit_State *J, RecordFFData *rd)
     if (lj_str_find(strdata(str)+(MSize)start, strdata(pat),
 		    str->len-(MSize)start, pat->len)) {
       TRef pos;
-      emitir(IRTG(IR_NE, IRT_P32), tr, trp0);
-      pos = emitir(IRTI(IR_SUB), tr, emitir(IRT(IR_STRREF, IRT_P32), trstr, tr0));
+      emitir(IRTG(IR_NE, IRT_PGC), tr, trp0);
+      pos = emitir(IRTI(IR_SUB), tr, emitir(IRT(IR_STRREF, IRT_PGC), trstr, tr0));
       J->base[0] = emitir(IRTI(IR_ADD), pos, lj_ir_kint(J, 1));
       J->base[1] = emitir(IRTI(IR_ADD), pos, trplen);
       rd->nres = 2;
     } else {
-      emitir(IRTG(IR_EQ, IRT_P32), tr, trp0);
+      emitir(IRTG(IR_EQ, IRT_PGC), tr, trp0);
       J->base[0] = TREF_NIL;
     }
   } else {  /* Search for pattern. */
@@ -977,7 +981,7 @@ static void LJ_FASTCALL recff_string_format(jit_State *J, RecordFFData *rd)
     IRCallID id;
     switch (STRFMT_TYPE(sf)) {
     case STRFMT_LIT:
-      tr = emitir(IRT(IR_BUFPUT, IRT_P32), tr,
+      tr = emitir(IRT(IR_BUFPUT, IRT_PGC), tr,
 		  lj_ir_kstr(J, lj_str_new(J->L, fs.str, fs.len)));
       break;
     case STRFMT_INT:
@@ -986,7 +990,7 @@ static void LJ_FASTCALL recff_string_format(jit_State *J, RecordFFData *rd)
       if (!tref_isinteger(tra))
 	goto handle_num;
       if (sf == STRFMT_INT) { /* Shortcut for plain %d. */
-	tr = emitir(IRT(IR_BUFPUT, IRT_P32), tr,
+	tr = emitir(IRT(IR_BUFPUT, IRT_PGC), tr,
 		    emitir(IRT(IR_TOSTR, IRT_STR), tra, IRTOSTR_INT));
       } else {
 #if LJ_HASFFI
@@ -1016,7 +1020,7 @@ static void LJ_FASTCALL recff_string_format(jit_State *J, RecordFFData *rd)
 	return;
       }
       if (sf == STRFMT_STR)  /* Shortcut for plain %s. */
-	tr = emitir(IRT(IR_BUFPUT, IRT_P32), tr, tra);
+	tr = emitir(IRT(IR_BUFPUT, IRT_PGC), tr, tra);
       else if ((sf & STRFMT_T_QUOTED))
 	tr = lj_ir_call(J, IRCALL_lj_strfmt_putquoted, tr, tra);
       else
@@ -1025,7 +1029,7 @@ static void LJ_FASTCALL recff_string_format(jit_State *J, RecordFFData *rd)
     case STRFMT_CHAR:
       tra = lj_opt_narrow_toint(J, tra);
       if (sf == STRFMT_CHAR)  /* Shortcut for plain %c. */
-	tr = emitir(IRT(IR_BUFPUT, IRT_P32), tr,
+	tr = emitir(IRT(IR_BUFPUT, IRT_PGC), tr,
 		    emitir(IRT(IR_TOSTR, IRT_STR), tra, IRTOSTR_CHAR));
       else
 	tr = lj_ir_call(J, IRCALL_lj_strfmt_putfchar, tr, trsf, tra);
@@ -1110,8 +1114,13 @@ static TRef recff_io_fp(jit_State *J, TRef *udp, int32_t id)
 {
   TRef tr, ud, fp;
   if (id) {  /* io.func() */
+#if LJ_GC64
+    /* TODO: fix ARM32 asm_fload(), so we can use this for all archs. */
+    ud = lj_ir_ggfload(J, IRT_UDATA, GG_OFS(g.gcroot[id]));
+#else
     tr = lj_ir_kptr(J, &J2G(J)->gcroot[id]);
     ud = emitir(IRT(IR_XLOAD, IRT_UDATA), tr, 0);
+#endif
   } else {  /* fp:method() */
     ud = J->base[0];
     if (!tref_isudata(ud))
@@ -1133,7 +1142,7 @@ static void LJ_FASTCALL recff_io_write(jit_State *J, RecordFFData *rd)
   ptrdiff_t i = rd->data == 0 ? 1 : 0;
   for (; J->base[i]; i++) {
     TRef str = lj_ir_tostr(J, J->base[i]);
-    TRef buf = emitir(IRT(IR_STRREF, IRT_P32), str, zero);
+    TRef buf = emitir(IRT(IR_STRREF, IRT_PGC), str, zero);
     TRef len = emitir(IRTI(IR_FLOAD), str, IRFL_STR_LEN);
     if (tref_isk(len) && IR(tref_ref(len))->i == 1) {
       IRIns *irs = IR(tref_ref(str));

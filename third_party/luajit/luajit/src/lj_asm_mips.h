@@ -459,12 +459,10 @@ static void asm_conv(ASMState *as, IRIns *ir)
 	      dest, dest);
       if (irt_isfloat(ir->t))
 	emit_lsptr(as, MIPSI_LWC1, (tmp & 31),
-		   (void *)lj_ir_k64_find(as->J, U64x(4f000000,4f000000)),
-		   RSET_GPR);
+		   (void *)&as->J->k32[LJ_K32_2P31], RSET_GPR);
       else
 	emit_lsptr(as, MIPSI_LDC1, (tmp & 31),
-		   (void *)lj_ir_k64_find(as->J, U64x(41e00000,00000000)),
-		   RSET_GPR);
+		   (void *)&as->J->k64[LJ_K64_2P31], RSET_GPR);
       emit_tg(as, MIPSI_MTC1, RID_TMP, dest);
       emit_dst(as, MIPSI_XOR, RID_TMP, RID_TMP, left);
       emit_ti(as, MIPSI_LUI, RID_TMP, 0x8000);
@@ -494,12 +492,10 @@ static void asm_conv(ASMState *as, IRIns *ir)
 		 tmp, left, tmp);
 	if (st == IRT_FLOAT)
 	  emit_lsptr(as, MIPSI_LWC1, (tmp & 31),
-		     (void *)lj_ir_k64_find(as->J, U64x(4f000000,4f000000)),
-		     RSET_GPR);
+		     (void *)&as->J->k32[LJ_K32_2P31], RSET_GPR);
 	else
 	  emit_lsptr(as, MIPSI_LDC1, (tmp & 31),
-		     (void *)lj_ir_k64_find(as->J, U64x(41e00000,00000000)),
-		     RSET_GPR);
+		     (void *)&as->J->k64[LJ_K64_2P31], RSET_GPR);
       } else {
 	emit_tg(as, MIPSI_MFC1, dest, tmp);
 	emit_fg(as, st == IRT_FLOAT ? MIPSI_TRUNC_W_S : MIPSI_TRUNC_W_D,
@@ -514,7 +510,7 @@ static void asm_conv(ASMState *as, IRIns *ir)
       Reg left = ra_alloc1(as, ir->op1, RSET_GPR);
       lua_assert(irt_isint(ir->t) || irt_isu32(ir->t));
       if ((ir->op2 & IRCONV_SEXT)) {
-	if ((as->flags & JIT_F_MIPS32R2)) {
+	if ((as->flags & JIT_F_MIPSXXR2)) {
 	  emit_dst(as, st == IRT_I8 ? MIPSI_SEB : MIPSI_SEH, dest, 0, left);
 	} else {
 	  uint32_t shift = st == IRT_I8 ? 24 : 16;
@@ -743,7 +739,7 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
       emit_dst(as, MIPSI_SUBU, tmp2, tmp2, dest);
       if (LJ_SOFTFP ? (irkey[1].o == IR_HIOP) : irt_isnum(kt)) {
 	emit_dst(as, MIPSI_XOR, tmp2, tmp2, tmp1);
-	if ((as->flags & JIT_F_MIPS32R2)) {
+	if ((as->flags & JIT_F_MIPSXXR2)) {
 	  emit_dta(as, MIPSI_ROTR, dest, tmp1, (-HASH_ROT1)&31);
 	} else {
 	  emit_dst(as, MIPSI_OR, dest, dest, tmp1);
@@ -810,7 +806,6 @@ nolo:
 
 static void asm_uref(ASMState *as, IRIns *ir)
 {
-  /* NYI: Check that UREFO is still open and not aliasing a slot. */
   Reg dest = ra_dest(as, ir, RSET_GPR);
   if (irref_isk(ir->op1)) {
     GCfunc *fn = ir_kfunc(IR(ir->op1));
@@ -901,17 +896,23 @@ static MIPSIns asm_fxstoreins(IRIns *ir)
 static void asm_fload(ASMState *as, IRIns *ir)
 {
   Reg dest = ra_dest(as, ir, RSET_GPR);
-  Reg idx = ra_alloc1(as, ir->op1, RSET_GPR);
   MIPSIns mi = asm_fxloadins(ir);
+  Reg idx;
   int32_t ofs;
-  if (ir->op2 == IRFL_TAB_ARRAY) {
-    ofs = asm_fuseabase(as, ir->op1);
-    if (ofs) {  /* Turn the t->array load into an add for colocated arrays. */
-      emit_tsi(as, MIPSI_ADDIU, dest, idx, ofs);
-      return;
+  if (ir->op1 == REF_NIL) {
+    idx = RID_JGL;
+    ofs = ir->op2 - 32768;
+  } else {
+    idx = ra_alloc1(as, ir->op1, RSET_GPR);
+    if (ir->op2 == IRFL_TAB_ARRAY) {
+      ofs = asm_fuseabase(as, ir->op1);
+      if (ofs) {  /* Turn the t->array load into an add for colocated arrays. */
+	emit_tsi(as, MIPSI_ADDIU, dest, idx, ofs);
+	return;
+      }
     }
+    ofs = field_ofs[ir->op2];
   }
-  ofs = field_ofs[ir->op2];
   lua_assert(!irt_isfp(ir->t));
   emit_tsi(as, mi, dest, idx, ofs);
 }
@@ -1456,7 +1457,7 @@ static void asm_bswap(ASMState *as, IRIns *ir)
 {
   Reg dest = ra_dest(as, ir, RSET_GPR);
   Reg left = ra_alloc1(as, ir->op1, RSET_GPR);
-  if ((as->flags & JIT_F_MIPS32R2)) {
+  if ((as->flags & JIT_F_MIPSXXR2)) {
     emit_dta(as, MIPSI_ROTR, dest, RID_TMP, 16);
     emit_dst(as, MIPSI_WSBH, RID_TMP, 0, left);
   } else {
@@ -1512,7 +1513,7 @@ static void asm_bitshift(ASMState *as, IRIns *ir, MIPSIns mi, MIPSIns mik)
 
 static void asm_bror(ASMState *as, IRIns *ir)
 {
-  if ((as->flags & JIT_F_MIPS32R2)) {
+  if ((as->flags & JIT_F_MIPSXXR2)) {
     asm_bitshift(as, ir, MIPSI_ROTRV, MIPSI_ROTR);
   } else {
     Reg dest = ra_dest(as, ir, RSET_GPR);

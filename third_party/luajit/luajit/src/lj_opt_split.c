@@ -16,6 +16,7 @@
 #include "lj_jit.h"
 #include "lj_ircall.h"
 #include "lj_iropt.h"
+#include "lj_dispatch.h"
 #include "lj_vm.h"
 
 /* SPLIT pass:
@@ -353,6 +354,8 @@ static void split_ir(jit_State *J)
       ir->prev = ref;  /* Identity substitution for loword. */
       hisubst[ref] = 0;
     }
+    if (irt_is64(ir->t) && ir->o != IR_KNULL)
+      ref++;
   }
 
   /* Process old IR instructions. */
@@ -447,6 +450,11 @@ static void split_ir(jit_State *J)
       case IR_ALOAD: case IR_HLOAD: case IR_ULOAD: case IR_VLOAD:
       case IR_STRTO:
 	hi = split_emit(J, IRT(IR_HIOP, IRT_SOFTFP), nref, nref);
+	break;
+      case IR_FLOAD:
+	lua_assert(ir->op1 == REF_NIL);
+	hi = lj_ir_kint(J, *(int32_t*)((char*)J2GG(J) + ir->op2 + LJ_LE*4));
+	nir->op2 += LJ_BE*4;
 	break;
       case IR_XLOAD: {
 	IRIns inslo = *nir;  /* Save/undo the emit of the lo XLOAD. */
