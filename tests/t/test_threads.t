@@ -33,10 +33,10 @@ threads benchmark tests
       total number of events:              100
       total time taken by event execution: *s (glob)
       response time:
-           min:                                  *ms (glob)
-           avg:                                  *ms (glob)
-           max:                                  *ms (glob)
-           approx.  95 percentile:               *ms (glob)
+           min:                               *ms (glob)
+           avg:                               *ms (glob)
+           max:                               *ms (glob)
+           approx.  95 percentile:            *ms (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
