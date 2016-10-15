@@ -25,8 +25,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef CK_PR_ARM_H
-#define CK_PR_ARM_H
+#ifndef CK_PR_AARCH64_H
+#define CK_PR_AARCH64_H
 
 #ifndef CK_PR_H
 #error Do not include this file directly, use ck_pr.h
@@ -488,5 +488,5 @@ CK_PR_FAA(char, char, "b")
 
 #undef CK_PR_FAA
 
-#endif /* CK_PR_ARM_H */
+#endif /* CK_PR_AARCH64_H */
 
