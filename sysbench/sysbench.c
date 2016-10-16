@@ -74,7 +74,7 @@
 #include "sb_thread.h"
 #include "sb_barrier.h"
 
-#define VERSION_STRING PACKAGE" "PACKAGE_VERSION
+#define VERSION_STRING PACKAGE" "PACKAGE_VERSION SB_GIT_SHA
 
 /* Large prime number to generate unique random IDs */
 #define LARGE_PRIME 2147483647

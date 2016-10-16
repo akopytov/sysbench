@@ -479,6 +479,19 @@ AC_SUBST(AM_CFLAGS)
 AC_SUBST(AM_CPPFLAGS)
 AC_SUBST(AM_LDFLAGS)
 
+# Define SB_GIT_SHA
+git=$(which git)
+if test -n "$git"
+then
+        SB_GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null)
+        if test -n "$SB_GIT_SHA"
+        then
+          SB_GIT_SHA="-$SB_GIT_SHA"
+        fi
+fi
+AC_DEFINE_UNQUOTED([SB_GIT_SHA], ["$SB_GIT_SHA"], [Git commit hash, if available.])
+AC_SUBST([SB_GIT_SHA])
+
 AC_CONFIG_FILES([
 Makefile
 doc/xsl/Makefile
@@ -507,7 +520,7 @@ tests/include/config.sh
 AC_OUTPUT
 
 AC_MSG_RESULT([===============================================================================])
-AC_MSG_RESULT([sysbench version   : ${PACKAGE_VERSION}])
+AC_MSG_RESULT([sysbench version   : ${PACKAGE_VERSION}${SB_GIT_SHA}])
 AC_MSG_RESULT([CC                 : ${CC}])
 AC_MSG_RESULT([CFLAGS             : ${CFLAGS} ${AM_CFLAGS}])
 AC_MSG_RESULT([CPPFLAGS           : ${CPPFLAGS} ${AM_CPPFLAGS}])
