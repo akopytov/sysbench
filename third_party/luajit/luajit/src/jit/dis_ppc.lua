@@ -13,7 +13,7 @@
 ------------------------------------------------------------------------------
 
 local type = type
-local sub, byte, format = string.sub, string.byte, string.format
+local byte, format = string.byte, string.format
 local match, gmatch, gsub = string.match, string.gmatch, string.gsub
 local concat = table.concat
 local bit = require("bit")

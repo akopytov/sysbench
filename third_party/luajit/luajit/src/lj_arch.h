@@ -177,9 +177,9 @@
 #define LJ_TARGET_MASKROT	1
 #define LJ_TARGET_UNALIGNED	1
 #define LJ_ARCH_NUMMODE		LJ_NUMMODE_SINGLE_DUAL
-//#ifdef LUAJIT_ENABLE_GC64
+#ifdef LUAJIT_ENABLE_GC64
 #define LJ_TARGET_GC64		1
-//#endif
+#endif
 
 #elif LUAJIT_TARGET == LUAJIT_ARCH_ARM
 
@@ -226,6 +226,7 @@
 #define LJ_TARGET_UNIFYROT	2	/* Want only IR_BROR. */
 #define LJ_TARGET_GC64		1
 #define LJ_ARCH_NUMMODE		LJ_NUMMODE_DUAL
+#define LJ_ARCH_NOJIT		1	/* NYI */
 
 #define LJ_ARCH_VERSION		80
 
@@ -475,7 +476,6 @@
 /* Disable or enable the JIT compiler. */
 #if defined(LUAJIT_DISABLE_JIT) || defined(LJ_ARCH_NOJIT) || defined(LJ_OS_NOJIT)
 #define LJ_HASJIT		0
-#error foo
 #else
 #define LJ_HASJIT		1
 #endif

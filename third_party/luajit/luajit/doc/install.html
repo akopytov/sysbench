@@ -479,14 +479,15 @@ Or use Android. :-p
 ISDKP=$(xcrun --sdk iphoneos --show-sdk-path)
 ICC=$(xcrun --sdk iphoneos --find clang)
 ISDKF="-arch armv7 -isysroot $ISDKP"
-make HOST_CC="clang -m32 -arch i386" CROSS="$(dirname $ICC)/" \
-     TARGET_FLAGS="$ISDKF" TARGET_SYS=iOS
+make DEFAULT_CC=clang HOST_CC="clang -m32 -arch i386" \
+     CROSS="$(dirname $ICC)/" TARGET_FLAGS="$ISDKF" TARGET_SYS=iOS
 
 # iOS/ARM64
 ISDKP=$(xcrun --sdk iphoneos --show-sdk-path)
 ICC=$(xcrun --sdk iphoneos --find clang)
 ISDKF="-arch arm64 -isysroot $ISDKP"
-make CROSS="$(dirname $ICC)/" TARGET_FLAGS="$ISDKF" TARGET_SYS=iOS
+make DEFAULT_CC=clang CROSS="$(dirname $ICC)/" \
+     TARGET_FLAGS="$ISDKF" TARGET_SYS=iOS
 </pre>
 
 <h3 id="consoles">Cross-compiling for consoles</h3>

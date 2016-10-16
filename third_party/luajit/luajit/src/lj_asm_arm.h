@@ -209,17 +209,17 @@ static uint32_t asm_fuseopm(ASMState *as, ARMIns ai, IRRef ref, RegSet allow)
 		    ir->o == IR_BSHR ? ARMSH_LSR :
 		    ir->o == IR_BSAR ? ARMSH_ASR : ARMSH_ROR;
       if (irref_isk(ir->op2)) {
-	return ARMF_M(m) | ARMF_SH(sh, (IR(ir->op2)->i & 31));
+	return m | ARMF_SH(sh, (IR(ir->op2)->i & 31));
       } else {
 	Reg s = ra_alloc1(as, ir->op2, rset_exclude(allow, m));
-	return ARMF_M(m) | ARMF_RSH(sh, s);
+	return m | ARMF_RSH(sh, s);
       }
     } else if (ir->o == IR_ADD && ir->op1 == ir->op2) {
       Reg m = ra_alloc1(as, ir->op1, allow);
-      return ARMF_M(m) | ARMF_SH(ARMSH_LSL, 1);
+      return m | ARMF_SH(ARMSH_LSL, 1);
     }
   }
-  return ARMF_M(ra_allocref(as, ref, allow));
+  return ra_allocref(as, ref, allow);
 }
 
 /* Fuse shifts into loads/stores. Only bother with BSHL 2 => lsl #2. */
@@ -1735,7 +1735,7 @@ static void asm_intcomp(ASMState *as, IRIns *ir)
   int cmpprev0 = 0;
   lua_assert(irt_isint(ir->t) || irt_isu32(ir->t) || irt_isaddr(ir->t));
   if (asm_swapops(as, lref, rref)) {
-    IRRef tmp = lref; lref = rref; rref = tmp;
+    Reg tmp = lref; lref = rref; rref = tmp;
     if (cc >= CC_GE) cc ^= 7;  /* LT <-> GT, LE <-> GE */
     else if (cc > CC_NE) cc ^= 11;  /* LO <-> HI, LS <-> HS */
   }

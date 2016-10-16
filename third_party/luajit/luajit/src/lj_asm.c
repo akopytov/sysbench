@@ -91,7 +91,7 @@ typedef struct ASMState {
   MCode *realign;	/* Realign loop if not NULL. */
 
 #ifdef RID_NUM_KREF
-  intptr_t krefk[RID_NUM_KREF];
+  int32_t krefk[RID_NUM_KREF];
 #endif
   IRRef1 phireg[RID_MAX];  /* PHI register references. */
   uint16_t parentmap[LJ_MAX_JSLOTS];  /* Parent instruction to RegSP map. */
@@ -144,7 +144,7 @@ static LJ_AINLINE void checkmclim(ASMState *as)
 #define ra_krefreg(ref)		((Reg)(RID_MIN_KREF + (Reg)(ref)))
 #define ra_krefk(as, ref)	(as->krefk[(ref)])
 
-static LJ_AINLINE void ra_setkref(ASMState *as, Reg r, intptr_t k)
+static LJ_AINLINE void ra_setkref(ASMState *as, Reg r, int32_t k)
 {
   IRRef ref = (IRRef)(r - RID_MIN_KREF);
   as->krefk[ref] = k;
@@ -171,8 +171,6 @@ IRFLDEF(FLOFS)
 #include "lj_emit_x86.h"
 #elif LJ_TARGET_ARM
 #include "lj_emit_arm.h"
-#elif LJ_TARGET_ARM64
-#include "lj_emit_arm64.h"
 #elif LJ_TARGET_PPC
 #include "lj_emit_ppc.h"
 #elif LJ_TARGET_MIPS
@@ -324,11 +322,7 @@ static Reg ra_rematk(ASMState *as, IRRef ref)
     lua_assert(!rset_test(as->freeset, r));
     ra_free(as, r);
     ra_modified(as, r);
-#if LJ_64
-    emit_loadu64(as, r, ra_krefk(as, ref));
-#else
     emit_loadi(as, r, ra_krefk(as, ref));
-#endif
     return r;
   }
   ir = IR(ref);
@@ -530,7 +524,7 @@ static void ra_evictk(ASMState *as)
 
 #ifdef RID_NUM_KREF
 /* Allocate a register for a constant. */
-static Reg ra_allock(ASMState *as, intptr_t k, RegSet allow)
+static Reg ra_allock(ASMState *as, int32_t k, RegSet allow)
 {
   /* First try to find a register which already holds the same constant. */
   RegSet pick, work = ~as->freeset & RSET_GPR;
@@ -539,29 +533,9 @@ static Reg ra_allock(ASMState *as, intptr_t k, RegSet allow)
     IRRef ref;
     r = rset_pickbot(work);
     ref = regcost_ref(as->cost[r]);
-#if LJ_64
-    if (ref < ASMREF_L) {
-      if (ra_iskref(ref)) {
-	if (k == ra_krefk(as, ref))
-	  return r;
-      } else {
-        IRIns *ir = IR(ref);
-	if ((ir->o == IR_KINT64 && k == ir_kint64(ir)->u64) ||
-#if LJ_GC64
-	    (ir->o == IR_KINT && k == ir->i) ||
-	    (ir->o == IR_KGC && k == ir_kgc(ir)) ||
-	    ((ir->o == IR_KPTR || ir->o == IR_KKPTR) && k == ir_kptr(ir)))
-#else
-	    (ir->o != IR_KINT64 && k == ir->i))
-#endif
-	  return r;
-      }
-    }
-#else
     if (ref < ASMREF_L &&
 	k == (ra_iskref(ref) ? ra_krefk(as, ref) : IR(ref)->i))
       return r;
-#endif
     rset_clear(work, r);
   }
   pick = as->freeset & allow;
@@ -581,7 +555,7 @@ static Reg ra_allock(ASMState *as, intptr_t k, RegSet allow)
 }
 
 /* Allocate a specific register for a constant. */
-static void ra_allockreg(ASMState *as, intptr_t k, Reg r)
+static void ra_allockreg(ASMState *as, int32_t k, Reg r)
 {
   Reg kr = ra_allock(as, k, RID2RSET(r));
   if (kr != r) {
@@ -592,7 +566,6 @@ static void ra_allockreg(ASMState *as, intptr_t k, Reg r)
   }
 }
 #else
-/* TODO: This is an inconsistency (intptr_t vs int32_t). */
 #define ra_allockreg(as, k, r)		emit_loadi(as, (r), (k))
 #endif
 
@@ -1590,8 +1563,6 @@ static void asm_loop(ASMState *as)
 #include "lj_asm_x86.h"
 #elif LJ_TARGET_ARM
 #include "lj_asm_arm.h"
-#elif LJ_TARGET_ARM64
-#include "lj_asm_arm64.h"
 #elif LJ_TARGET_PPC
 #include "lj_asm_ppc.h"
 #elif LJ_TARGET_MIPS
@@ -2022,12 +1993,6 @@ static void asm_setup_regsp(ASMState *as)
   /* REF_BASE is used for implicit references to the BASE register. */
   lastir->prev = REGSP_HINT(RID_BASE);
 
-  ir = IR(nins-1);
-  if (ir->o == IR_RENAME) {
-    /* Remove any renames left over from ASM restart due to LJ_TRERR_MCODELM. */
-    do { ir--; nins--; } while (ir->o == IR_RENAME);
-    T->nins = nins;
-  }
   as->snaprename = nins;
   as->snapref = nins;
   as->snapno = T->nsnap;
@@ -2258,7 +2223,16 @@ void lj_asm_trace(jit_State *J, GCtrace *T)
   ASMState as_;
   ASMState *as = &as_;
   MCode *origtop;
-  int i;
+
+  /* Remove nops/renames left over from ASM restart due to LJ_TRERR_MCODELM. */
+  {
+    IRRef nins = T->nins;
+    IRIns *ir = &T->ir[nins-1];
+    if (ir->o == IR_NOP || ir->o == IR_RENAME) {
+      do { ir--; nins--; } while (ir->o == IR_NOP || ir->o == IR_RENAME);
+      T->nins = nins;
+    }
+  }
 
   /* Ensure an initialized instruction beyond the last one for HIOP checks. */
   /* This also allows one RENAME to be added without reallocating curfinal. */
@@ -2331,33 +2305,22 @@ void lj_asm_trace(jit_State *J, GCtrace *T)
     if (!as->loopref)
       asm_tail_link(as);
 
-    /* TODO Move ir_maddr allocation to lj_trace_alloc. */
-    T->szir_maddr = as->curins - REF_BIAS;
-    T->ir_maddr = (MCode **)lj_mem_new(J->L, sizeof(MCode *) * T->szir_maddr);
-    for (i = 0; i < T->szir_maddr; i++) {
-      T->ir_maddr[i] = JIT_DUMP_MCODE_EMPTY_IR;
-    }
-
     /* Assemble a trace in linear backwards order. */
     for (as->curins--; as->curins > as->stopins; as->curins--) {
       IRIns *ir = IR(as->curins);
       lua_assert(!(LJ_32 && irt_isint64(ir->t)));  /* Handled by SPLIT. */
-      if (!ra_used(ir) && !ir_sideeff(ir) && (as->flags & JIT_F_OPT_DCE)) {
-        T->ir_maddr[as->curins - REF_BIAS] = JIT_DUMP_MCODE_EMPTY_IR;
+      if (!ra_used(ir) && !ir_sideeff(ir) && (as->flags & JIT_F_OPT_DCE))
 	continue;  /* Dead-code elimination can be soooo easy. */
-      }
       if (irt_isguard(ir->t))
 	asm_snap_prep(as);
       RA_DBG_REF();
       checkmclim(as);
       asm_ir(as, ir);
-      T->ir_maddr[as->curins - REF_BIAS] = as->mcp;
     }
 
-    if (as->realign && J->curfinal->nins >= T->nins) {
-      lj_mem_free(J2G(J), T->ir_maddr, sizeof(MCode *) * T->szir_maddr);
+    if (as->realign && J->curfinal->nins >= T->nins)
       continue;  /* Retry in case only the MCode needs to be realigned. */
-    }
+
     /* Emit head of trace. */
     RA_DBG_REF();
     checkmclim(as);
@@ -2374,8 +2337,6 @@ void lj_asm_trace(jit_State *J, GCtrace *T)
       asm_head_root(as);
     asm_phi_fixup(as);
 
-    J->curfinal->ir_maddr = T->ir_maddr;
-    J->curfinal->szir_maddr = T->szir_maddr;
     if (J->curfinal->nins >= T->nins) {  /* IR didn't grow? */
       lua_assert(J->curfinal->nk == T->nk);
       memcpy(J->curfinal->ir + as->orignins, T->ir + as->orignins,

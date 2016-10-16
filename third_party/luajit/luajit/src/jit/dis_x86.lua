@@ -818,7 +818,7 @@ map_act = {
       m = b%32; b = (b-m)/32
       local nb = b%2; b = (b-nb)/2
       if nb == 0 then ctx.rexb = true end
-      local nx = b%2; b = (b-nx)/2
+      local nx = b%2
       if nx == 0 then ctx.rexx = true end
       b = byte(ctx.code, pos, pos)
       if not b then return incomplete(ctx) end

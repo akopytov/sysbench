@@ -69,9 +69,13 @@ static MSize snapshot_slots(jit_State *J, SnapEntry *map, BCReg nslots)
     TRef tr = J->slot[s];
     IRRef ref = tref_ref(tr);
 #if LJ_FR2
-    if (s == 1) continue;
+    if (s == 1) {  /* Ignore slot 1 in LJ_FR2 mode, except if tailcalled. */
+      if ((tr & TREF_FRAME))
+	map[n++] = SNAP(1, SNAP_FRAME | SNAP_NORESTORE, REF_NIL);
+      continue;
+    }
     if ((tr & (TREF_FRAME | TREF_CONT)) && !ref) {
-      TValue *base = J->L->base - J->baseslot;
+      cTValue *base = J->L->base - J->baseslot;
       tr = J->slot[s] = (tr & 0xff0000) | lj_ir_k64(J, IR_KNUM, base[s].u64);
       ref = tref_ref(tr);
     }
@@ -470,7 +474,11 @@ void lj_snap_replay(jit_State *J, GCtrace *T)
       goto setslot;
     bloomset(seen, ref);
     if (irref_isk(ref)) {
-      tr = snap_replay_const(J, ir);
+      /* See special treatment of LJ_FR2 slot 1 in snapshot_slots() above. */
+      if (LJ_FR2 && (sn == SNAP(1, SNAP_FRAME | SNAP_NORESTORE, REF_NIL)))
+	tr = 0;
+      else
+	tr = snap_replay_const(J, ir);
     } else if (!regsp_used(ir->prev)) {
       pass23 = 1;
       lua_assert(s != 0);
@@ -484,7 +492,7 @@ void lj_snap_replay(jit_State *J, GCtrace *T)
     }
   setslot:
     J->slot[s] = tr | (sn&(SNAP_CONT|SNAP_FRAME));  /* Same as TREF_* flags. */
-    J->framedepth += ((sn & (SNAP_CONT|SNAP_FRAME)) && s);
+    J->framedepth += ((sn & (SNAP_CONT|SNAP_FRAME)) && (s != LJ_FR2));
     if ((sn & SNAP_FRAME))
       J->baseslot = s+1;
   }

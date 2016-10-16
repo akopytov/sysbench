@@ -31,7 +31,7 @@ enum {
   FPRDEF(RIDENUM)		/* Floating-point registers (FPRs). */
   RID_MAX,
   RID_MRM = RID_MAX,		/* Pseudo-id for ModRM operand. */
-  RID_RIP = RID_MAX+1,		/* Pseudo-id for RIP (x64 only). */
+  RID_RIP = RID_MAX+5,		/* Pseudo-id for RIP (x64 only), rm bits = 5. */
 
   /* Calling conventions. */
   RID_SP = RID_ESP,

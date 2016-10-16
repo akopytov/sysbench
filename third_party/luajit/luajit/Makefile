@@ -25,7 +25,7 @@ ABIVER=  5.1
 # Change the installation path as needed. This automatically adjusts
 # the paths in src/luaconf.h, too. Note: PREFIX must be an absolute path!
 #
-export PREFIX= /home/cbaylis/work-local/luajit/install
+export PREFIX= /usr/local
 export MULTILIB= lib
 ##############################################################################
 
@@ -86,8 +86,8 @@ FILE_MAN= luajit.1
 FILE_PC= luajit.pc
 FILES_INC= lua.h lualib.h lauxlib.h luaconf.h lua.hpp luajit.h
 FILES_JITLIB= bc.lua bcsave.lua dump.lua p.lua v.lua zone.lua \
-	      dis_x86.lua dis_x64.lua dis_arm.lua dis_arm64.lua \
-	      dis_ppc.lua dis_mips.lua dis_mipsel.lua vmdef.lua
+	      dis_x86.lua dis_x64.lua dis_arm.lua dis_ppc.lua \
+	      dis_mips.lua dis_mipsel.lua vmdef.lua
 
 ifeq (,$(findstring Windows,$(OS)))
   HOST_SYS:= $(shell uname -s)
@@ -163,15 +163,3 @@ clean:
 .PHONY: all install amalg clean
 
 ##############################################################################
-
-LUAJIT?=$(shell pwd)/src/luajit
-define RUN_LUA_TEST
-$(MAKE) LUAJIT="$(LUA_EXECUTOR) $(LUAJIT)" LUA_PATH="$(shell pwd)/src/?.lua;;" -C test $@
-endef
-
-# Find all tests inside the test folder.
-LUA_TEST_SRC=$(wildcard test/*.lua)
-ALL_LUA_TEST=$(LUA_TEST_SRC:test/%.lua=test_%)
-
-$(ALL_LUA_TEST) test skipped: all
-	$(call RUN_LUA_TEST)

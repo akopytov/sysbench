@@ -153,10 +153,4 @@
 #define luai_apicheck(L, o)	{ (void)L; }
 #endif
 
-#define lua_unimpl() \
- do { extern int printf(const char*,...); printf("Unimplemented: %s\n", __FUNCTION__); __builtin_abort(); } while (0)
-
-#define lua_todo() \
- do { extern int printf(const char*,...); printf("todo: %s\n", __FUNCTION__); } while (0)
-
 #endif

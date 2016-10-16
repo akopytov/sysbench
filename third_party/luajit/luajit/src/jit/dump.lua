@@ -34,7 +34,6 @@
 --    r  Augment the IR with register/stack slots.
 --    s  Dump the snapshot map.
 --  * m  Dump the generated machine code.
---  * M  Dump the IR with interleaved machine code
 --    x  Print each taken trace exit.
 --    X  Print each taken trace exit and the contents of all registers.
 --    a  Print the IR of aborted traces, too.
@@ -60,13 +59,13 @@ assert(jit.version_num == 20100, "LuaJIT core/library version mismatch")
 local jutil = require("jit.util")
 local vmdef = require("jit.vmdef")
 local funcinfo, funcbc = jutil.funcinfo, jutil.funcbc
-local traceinfo, traceir, traceirmc, tracek = jutil.traceinfo, jutil.traceir, jutil.traceirmc, jutil.tracek
+local traceinfo, traceir, tracek = jutil.traceinfo, jutil.traceir, jutil.tracek
 local tracemc, tracesnap = jutil.tracemc, jutil.tracesnap
 local traceexitstub, ircalladdr = jutil.traceexitstub, jutil.ircalladdr
 local bit = require("bit")
-local band, shl, shr, tohex = bit.band, bit.lshift, bit.rshift, bit.tohex
+local band, shr, tohex = bit.band, bit.rshift, bit.tohex
 local sub, gsub, format = string.sub, string.gsub, string.format
-local byte, char, rep = string.byte, string.char, string.rep
+local byte, rep = string.byte, string.rep
 local type, tostring = type, tostring
 local stdout, stderr = io.stdout, io.stderr
 
@@ -214,7 +213,7 @@ local colortype_ansi = {
   "\027[35m%s\027[m",
 }
 
-local function colorize_text(s, t)
+local function colorize_text(s)
   return s
 end
 
@@ -339,6 +338,8 @@ local function formatk(tr, idx, sn)
   elseif t == 21 then -- int64_t
     s = sub(tostring(k), 1, -3)
     if sub(s, 1, 1) ~= "-" then s = "+"..s end
+  elseif sn == 0x1057fff then -- SNAP(1, SNAP_FRAME | SNAP_NORESTORE, REF_NIL)
+    return "----" -- Special case for LJ_FR2 slot 1.
   else
     s = tostring(k) -- For primitives.
   end
@@ -434,47 +435,6 @@ local function dumpcallargs(tr, ins)
   end
 end
 
-local function dump_ir_write(s)
-  out:write(format("\t@ %s", s))
-end
-
-local function validate_addr(mcode, ofs, length)
-  if ofs <= 0 then
-    -- TODO When ofs is not positive, there may be "fix up" in luajit IR assembler.
-    -- This is not handled in interleaved IR dump part.
-    out:write(format("Warning: ofs (%s) is not positive.\n", ofs))
-    return false
-  elseif ofs + length > #mcode then
-    out:write("Warning: out of mcode range.\n")
-    return false
-  else
-    return true
-  end
-end
-
--- Dump machine code for one single IR.
-local function dump_single_ir(tr, ins, addr, ctx, mcode)
-  local addr_ir_start, addr_ir_end = traceirmc(tr, ins)
-  if addr_ir_start < 0 then addr_ir_start = addr_ir_start + 2^32 end
-  if addr_ir_end < 0 then addr_ir_end = addr_ir_end + 2^32 end
-
-  local length
-  local ofs = addr_ir_start - addr
-  -- TODO use macro defined in native code:
-  --   JIT_DUMP_MCODE_EMPTY_IR 0
-  --   JIT_DUMP_MCODE_END 1
-  if addr_ir_start ~= 0 then
-    if addr_ir_end ~= 1 then
-      length = addr_ir_end - addr_ir_start
-    else
-      length = addr + #mcode - addr_ir_start
-    end
-    if validate_addr(mcode, ofs, length) then
-      ctx:disass(ofs, length)
-    end
-  end
-end
-
 -- Dump IR and interleaved snapshots.
 local function dump_ir(tr, dumpsnap, dumpreg)
   local info = traceinfo(tr)
@@ -489,25 +449,6 @@ local function dump_ir(tr, dumpsnap, dumpreg)
     snapref = snap[0]
     snapno = 0
   end
-
-  -- Create machine code dump context
-  if not disass then disass = require("jit.dis_"..jit.arch) end
-  local first_ins = 1
-  local addr_ir_start1 = traceirmc(tr, first_ins)
-  local mcode, addr = tracemc(tr)
-
-  if addr < 0 then addr = addr + 2^32 end
-  if addr_ir_start1 < 0 then addr_ir_start1 = addr_ir_start1 + 2^32 end
-
-  local ctx = disass.create(mcode, addr, dump_ir_write)
-  ctx.hexdump = 0
-  ctx.symtab = fillsymtab(tr, info.nexit)
-
-  if dumpmode.M then
-    out:write("0000\tTrace head\n")
-    ctx:disass(0, addr_ir_start1 - addr)
-  end
-
   for ins=1,nins do
     if ins >= snapref then
       if dumpreg then
@@ -525,9 +466,9 @@ local function dump_ir(tr, dumpsnap, dumpreg)
     local op = sub(irnames, oidx+1, oidx+6)
     if op == "LOOP  " then
       if dumpreg then
-	out:write(format("%04d ------------ LOOP ------------", ins))
+	out:write(format("%04d ------------ LOOP ------------\n", ins))
       else
-	out:write(format("%04d ------ LOOP ------------", ins))
+	out:write(format("%04d ------ LOOP ------------\n", ins))
       end
     elseif op ~= "NOP   " and op ~= "CARG  " and
 	   (dumpreg or op ~= "RENAME") then
@@ -577,13 +518,10 @@ local function dump_ir(tr, dumpsnap, dumpreg)
 	    out:write(format("  %04d", op2))
 	  end
 	end
-      end -- end if sub() == "CALL" ... ... elseif ...
-    end -- end if op == "LOOP" ... elseif ...
-    out:write("\n")
-    if dumpmode.M then
-      dump_single_ir(tr, ins, addr, ctx, mcode)
+      end
+      out:write("\n")
     end
-  end -- end for loop.
+  end
   if snap then
     if dumpreg then
       out:write(format("....              SNAP   #%-3d [ ", snapno))
@@ -717,12 +655,13 @@ end
 local function dumpon(opt, outfile)
   if active then dumpoff() end
 
-  local colormode = os.getenv("COLORTERM") and "A" or "T"
+  local term = os.getenv("TERM")
+  local colormode = (term and term:match("color") or os.getenv("COLORTERM")) and "A" or "T"
   if opt then
     opt = gsub(opt, "[TAH]", function(mode) colormode = mode; return ""; end)
   end
 
-  local m = { t=true, b=true, i=true, M=true, }
+  local m = { t=true, b=true, i=true, m=true, }
   if opt and opt ~= "" then
     local o = sub(opt, 1, 1)
     if o ~= "+" and o ~= "-" then m = {} end

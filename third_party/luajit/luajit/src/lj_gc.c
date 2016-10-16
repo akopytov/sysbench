@@ -310,7 +310,7 @@ static size_t propagatemark(global_State *g)
     if (gc_traverse_tab(g, t) > 0)
       black2gray(o);  /* Keep weak tables gray. */
     return sizeof(GCtab) + sizeof(TValue) * t->asize +
-			   sizeof(Node) * (t->hmask + 1);
+			   (t->hmask ? sizeof(Node) * (t->hmask + 1) : 0);
   } else if (LJ_LIKELY(gct == ~LJ_TFUNC)) {
     GCfunc *fn = gco2func(o);
     gc_traverse_func(g, fn);

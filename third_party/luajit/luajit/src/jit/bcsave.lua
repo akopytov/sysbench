@@ -125,12 +125,12 @@ extern "C"
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-const char %s%s[] = {
+const unsigned char %s%s[] = {
 ]], LJBC_PREFIX, ctx.modname))
   else
     fp:write(string.format([[
 #define %s%s_SIZE %d
-static const char %s%s[] = {
+static const unsigned char %s%s[] = {
 ]], LJBC_PREFIX, ctx.modname, #s, LJBC_PREFIX, ctx.modname))
   end
   local t, n, m = {}, 0, 0

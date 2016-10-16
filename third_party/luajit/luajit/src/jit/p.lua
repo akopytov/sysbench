@@ -120,7 +120,7 @@ end
 -- Show top N list.
 local function prof_top(count1, count2, samples, indent)
   local t, n = {}, 0
-  for k, v in pairs(count1) do
+  for k in pairs(count1) do
     n = n + 1
     t[n] = k
   end
@@ -156,6 +156,7 @@ local function prof_annotate(count1, samples)
     ms = math.max(ms, v)
     if pct >= prof_min then
       local file, line = k:match("^(.*):(%d+)$")
+      if not file then file = k; line = 0 end
       local fl = files[file]
       if not fl then fl = {}; files[file] = fl; files[#files+1] = file end
       line = tonumber(line)

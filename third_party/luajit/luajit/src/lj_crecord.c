@@ -1249,7 +1249,7 @@ void LJ_FASTCALL recff_cdata_call(jit_State *J, RecordFFData *rd)
 
 static TRef crec_arith_int64(jit_State *J, TRef *sp, CType **s, MMS mm)
 {
-  if (ctype_isnum(s[0]->info) && ctype_isnum(s[1]->info)) {
+  if (sp[0] && sp[1] && ctype_isnum(s[0]->info) && ctype_isnum(s[1]->info)) {
     IRType dt;
     CTypeID id;
     TRef tr;
@@ -1307,6 +1307,7 @@ static TRef crec_arith_ptr(jit_State *J, TRef *sp, CType **s, MMS mm)
 {
   CTState *cts = ctype_ctsG(J2G(J));
   CType *ctp = s[0];
+  if (!(sp[0] && sp[1])) return 0;
   if (ctype_isptr(ctp->info) || ctype_isrefarray(ctp->info)) {
     if ((mm == MM_sub || mm == MM_eq || mm == MM_lt || mm == MM_le) &&
 	(ctype_isptr(s[1]->info) || ctype_isrefarray(s[1]->info))) {

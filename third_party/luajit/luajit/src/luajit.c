@@ -152,22 +152,15 @@ static void print_jit_status(lua_State *L)
   putc('\n', stdout);
 }
 
-static int getargs(lua_State *L, char **argv, int n)
+static void createargtable(lua_State *L, char **argv, int argc, int argf)
 {
-  int narg;
   int i;
-  int argc = 0;
-  while (argv[argc]) argc++;  /* count total number of arguments */
-  narg = argc - (n + 1);  /* number of arguments to the script */
-  luaL_checkstack(L, narg + 3, "too many arguments to script");
-  for (i = n+1; i < argc; i++)
-    lua_pushstring(L, argv[i]);
-  lua_createtable(L, narg, n + 1);
+  lua_createtable(L, argc - argf, argf);
   for (i = 0; i < argc; i++) {
     lua_pushstring(L, argv[i]);
-    lua_rawseti(L, -2, i - n);
+    lua_rawseti(L, -2, i - argf);
   }
-  return narg;
+  lua_setglobal(L, "arg");
 }
 
 static int dofile(lua_State *L, const char *name)
@@ -273,21 +266,30 @@ static void dotty(lua_State *L)
   progname = oldprogname;
 }
 
-static int handle_script(lua_State *L, char **argv, int n)
+static int handle_script(lua_State *L, char **argx)
 {
   int status;
-  const char *fname;
-  int narg = getargs(L, argv, n);  /* collect arguments */
-  lua_setglobal(L, "arg");
-  fname = argv[n];
-  if (strcmp(fname, "-") == 0 && strcmp(argv[n-1], "--") != 0)
+  const char *fname = argx[0];
+  if (strcmp(fname, "-") == 0 && strcmp(argx[-1], "--") != 0)
     fname = NULL;  /* stdin */
   status = luaL_loadfile(L, fname);
-  lua_insert(L, -(narg+1));
-  if (status == 0)
+  if (status == 0) {
+    /* Fetch args from arg table. LUA_INIT or -e might have changed them. */
+    int narg = 0;
+    lua_getglobal(L, "arg");
+    if (lua_istable(L, -1)) {
+      do {
+	narg++;
+	lua_rawgeti(L, -narg, narg);
+      } while (!lua_isnil(L, -1));
+      lua_pop(L, 1);
+      lua_remove(L, -narg);
+      narg--;
+    } else {
+      lua_pop(L, 1);
+    }
     status = docall(L, narg, 0);
-  else
-    lua_pop(L, narg);
+  }
   return report(L, status);
 }
 
@@ -384,7 +386,8 @@ static int dobytecode(lua_State *L, char **argv)
   }
   for (argv++; *argv != NULL; narg++, argv++)
     lua_pushstring(L, *argv);
-  return report(L, lua_pcall(L, narg, 0, 0));
+  report(L, lua_pcall(L, narg, 0, 0));
+  return -1;
 }
 
 /* check that argument has no extra characters at the end */
@@ -405,7 +408,7 @@ static int collectargs(char **argv, int *flags)
     switch (argv[i][1]) {  /* Check option. */
     case '-':
       notail(argv[i]);
-      return (argv[i+1] != NULL ? i+1 : 0);
+      return i+1;
     case '\0':
       return i;
     case 'i':
@@ -430,23 +433,23 @@ static int collectargs(char **argv, int *flags)
     case 'b':  /* LuaJIT extension */
       if (*flags) return -1;
       *flags |= FLAGS_EXEC;
-      return 0;
+      return i+1;
     case 'E':
       *flags |= FLAGS_NOENV;
       break;
     default: return -1;  /* invalid option */
     }
   }
-  return 0;
+  return i;
 }
 
-static int runargs(lua_State *L, char **argv, int n)
+static int runargs(lua_State *L, char **argv, int argn)
 {
   int i;
-  for (i = 1; i < n; i++) {
+  for (i = 1; i < argn; i++) {
     if (argv[i] == NULL) continue;
     lua_assert(argv[i][0] == '-');
-    switch (argv[i][1]) {  /* option */
+    switch (argv[i][1]) {
     case 'e': {
       const char *chunk = argv[i] + 2;
       if (*chunk == '\0') chunk = argv[++i];
@@ -460,10 +463,10 @@ static int runargs(lua_State *L, char **argv, int n)
       if (*filename == '\0') filename = argv[++i];
       lua_assert(filename != NULL);
       if (dolibrary(L, filename))
-	return 1;  /* stop if file fails */
+	return 1;
       break;
       }
-    case 'j': {  /* LuaJIT extension */
+    case 'j': {  /* LuaJIT extension. */
       const char *cmd = argv[i] + 2;
       if (*cmd == '\0') cmd = argv[++i];
       lua_assert(cmd != NULL);
@@ -471,11 +474,11 @@ static int runargs(lua_State *L, char **argv, int n)
 	return 1;
       break;
       }
-    case 'O':  /* LuaJIT extension */
+    case 'O':  /* LuaJIT extension. */
       if (dojitopt(L, argv[i] + 2))
 	return 1;
       break;
-    case 'b':  /* LuaJIT extension */
+    case 'b':  /* LuaJIT extension. */
       return dobytecode(L, argv+i);
     default: break;
     }
@@ -508,45 +511,57 @@ static int pmain(lua_State *L)
 {
   struct Smain *s = &smain;
   char **argv = s->argv;
-  int script;
+  int argn;
   int flags = 0;
   globalL = L;
   if (argv[0] && argv[0][0]) progname = argv[0];
-  LUAJIT_VERSION_SYM();  /* linker-enforced version check */
-  script = collectargs(argv, &flags);
-  if (script < 0) {  /* invalid args? */
+
+  LUAJIT_VERSION_SYM();  /* Linker-enforced version check. */
+
+  argn = collectargs(argv, &flags);
+  if (argn < 0) {  /* Invalid args? */
     print_usage();
     s->status = 1;
     return 0;
   }
+
   if ((flags & FLAGS_NOENV)) {
     lua_pushboolean(L, 1);
     lua_setfield(L, LUA_REGISTRYINDEX, "LUA_NOENV");
   }
-  lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
-  luaL_openlibs(L);  /* open libraries */
+
+  /* Stop collector during library initialization. */
+  lua_gc(L, LUA_GCSTOP, 0);
+  luaL_openlibs(L);
   lua_gc(L, LUA_GCRESTART, -1);
+
+  createargtable(L, argv, s->argc, argn);
+
   if (!(flags & FLAGS_NOENV)) {
     s->status = handle_luainit(L);
     if (s->status != 0) return 0;
   }
+
   if ((flags & FLAGS_VERSION)) print_version();
-  s->status = runargs(L, argv, (script > 0) ? script : s->argc);
+
+  s->status = runargs(L, argv, argn);
   if (s->status != 0) return 0;
-  if (script) {
-    s->status = handle_script(L, argv, script);
+
+  if (s->argc > argn) {
+    s->status = handle_script(L, argv + argn);
     if (s->status != 0) return 0;
   }
+
   if ((flags & FLAGS_INTERACTIVE)) {
     print_jit_status(L);
     dotty(L);
-  } else if (script == 0 && !(flags & (FLAGS_EXEC|FLAGS_VERSION))) {
+  } else if (s->argc == argn && !(flags & (FLAGS_EXEC|FLAGS_VERSION))) {
     if (lua_stdin_is_tty()) {
       print_version();
       print_jit_status(L);
       dotty(L);
     } else {
-      dofile(L, NULL);  /* executes stdin as a file */
+      dofile(L, NULL);  /* Executes stdin as a file. */
     }
   }
   return 0;
@@ -555,7 +570,7 @@ static int pmain(lua_State *L)
 int main(int argc, char **argv)
 {
   int status;
-  lua_State *L = lua_open();  /* create state */
+  lua_State *L = lua_open();
   if (L == NULL) {
     l_message(argv[0], "cannot create state: not enough memory");
     return EXIT_FAILURE;
@@ -565,6 +580,6 @@ int main(int argc, char **argv)
   status = lua_cpcall(L, pmain, NULL);
   report(L, status);
   lua_close(L);
-  return (status || smain.status) ? EXIT_FAILURE : EXIT_SUCCESS;
+  return (status || smain.status > 0) ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

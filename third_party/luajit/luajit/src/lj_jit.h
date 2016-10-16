@@ -129,9 +129,6 @@ JIT_PARAMDEF(JIT_PARAMENUM)
 #define JIT_PARAMSTR(len, name, value)	#len #name
 #define JIT_P_STRING	JIT_PARAMDEF(JIT_PARAMSTR)
 
-#define JIT_DUMP_MCODE_EMPTY_IR 0
-#define JIT_DUMP_MCODE_END 1
-
 /* Trace compiler state. */
 typedef enum {
   LJ_TRACE_IDLE,	/* Trace compiler idle. */
@@ -261,8 +258,6 @@ typedef struct GCtrace {
 #ifdef LUAJIT_USE_GDBJIT
   void *gdbjit_entry;	/* GDB JIT entry. */
 #endif
-  MCode **ir_maddr;
-  MSize szir_maddr;
 } GCtrace;
 
 #define gco2trace(o)	check_exp((o)->gch.gct == ~LJ_TTRACE, (GCtrace *)(o))

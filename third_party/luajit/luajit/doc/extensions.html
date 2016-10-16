@@ -349,6 +349,7 @@ break the Lua/C API and ABI (e.g. <tt>_ENV</tt>).
 LuaJIT supports some extensions from Lua&nbsp;5.3:
 <ul>
 <li>Unicode escape <tt>'\u{XX...}'</tt> embeds the UTF-8 encoding in string literals.</li>
+<li>The argument table <tt>arg</tt> can be read (and modified) by <tt>LUA_INIT</tt> and <tt>-e</tt> chunks.</li>
 </ul>
 
 <h2 id="exceptions">C++ Exception Interoperability</h2>

@@ -324,31 +324,6 @@ LJLIB_CF(jit_util_traceir)
   }
   return 0;
 }
-/* local addr_ir_start, addr_ir_end = jit.util.traceirmc(tr, idx) */
-LJLIB_CF(jit_util_traceirmc)
-{
-  GCtrace *T = jit_checktrace(L);
-  IRRef ref = (IRRef)lj_lib_checkint(L, 2) + REF_BIAS;
-  if (T && ref >= REF_BIAS && ref < T->nins && T->mcode != NULL) {
-    // addr_ir_start: start address for current ir
-    setintptrV(L->top-2, (intptr_t)T->ir_maddr[ref - REF_BIAS]);
-    // addr_ir_end: end address for current ir
-    if ((ref - REF_BIAS + 1) < T->szir_maddr) {
-        MCode *addr_ir_end = T->ir_maddr[ref - REF_BIAS + 1];
-        int32_t i = 0;
-        while (addr_ir_end == JIT_DUMP_MCODE_EMPTY_IR) {
-          addr_ir_end = T->ir_maddr[ref - REF_BIAS + 1 + i];
-          ++i;
-        }
-        setintptrV(L->top-1, (intptr_t)addr_ir_end);
-    } else {
-        setintptrV(L->top-1, JIT_DUMP_MCODE_END);
-    }
-    return 2;
-  } else {
-      return 0;
-  }
-}
 
 /* local k, t [, slot] = jit.util.tracek(tr, idx) */
 LJLIB_CF(jit_util_tracek)

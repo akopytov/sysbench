@@ -50,7 +50,7 @@ CCOPT= -O2 -fomit-frame-pointer
 CCOPT_x86= -march=i686 -msse -msse2 -mfpmath=sse
 CCOPT_x64=
 CCOPT_arm=
-CCOPT_arm64= -fno-omit-frame-pointer
+CCOPT_arm64=
 CCOPT_ppc=
 CCOPT_mips=
 #
@@ -165,10 +165,6 @@ else
   ifneq (,$(findstring CYGWIN,$(HOST_SYS)))
     HOST_SYS= Windows
     HOST_MSYS= cygwin
-  endif
-  # Use Clang for OSX host.
-  ifeq (Darwin,$(HOST_SYS))
-    DEFAULT_CC= clang
   endif
 endif
 

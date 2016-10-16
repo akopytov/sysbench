@@ -105,7 +105,7 @@ static void rec_check_slots(jit_State *J)
 	lua_assert(tref_isfunc(tr));
 #if LJ_FR2
       } else if (s == 1) {
-	lua_assert(0);
+	lua_assert((tr & ~TREF_FRAME) == 0);
 #endif
       } else if ((tr & TREF_FRAME)) {
 	GCfunc *fn = gco2func(frame_gc(tv));
@@ -747,7 +747,7 @@ void lj_record_tailcall(jit_State *J, BCReg func, ptrdiff_t nargs)
   }
   /* Move func + args down. */
   if (LJ_FR2 && J->baseslot == 2)
-    J->base[func+1] = 0;
+    J->base[func+1] = TREF_FRAME;
   memmove(&J->base[-1-LJ_FR2], &J->base[func], sizeof(TRef)*(J->maxslot+1+LJ_FR2));
   /* Note: the new TREF_FRAME is now at J->base[-1] (even for slot #0). */
   /* Tailcalls can form a loop, so count towards the loop unroll limit. */
@@ -1765,6 +1765,8 @@ static void rec_varg(jit_State *J, BCReg dst, ptrdiff_t nresults)
   int32_t numparams = J->pt->numparams;
   ptrdiff_t nvararg = frame_delta(J->L->base-1) - numparams - 1 - LJ_FR2;
   lua_assert(frame_isvarg(J->L->base-1));
+  if (LJ_FR2 && dst > J->maxslot)
+    J->base[dst-1] = 0;  /* Prevent resurrection of unrelated slot. */
   if (J->framedepth > 0) {  /* Simple case: varargs defined on-trace. */
     ptrdiff_t i;
     if (nvararg < 0) nvararg = 0;

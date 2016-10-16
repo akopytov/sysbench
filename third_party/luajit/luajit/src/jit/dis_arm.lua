@@ -12,7 +12,7 @@
 
 local type = type
 local sub, byte, format = string.sub, string.byte, string.format
-local match, gmatch, gsub = string.match, string.gmatch, string.gsub
+local match, gmatch = string.match, string.gmatch
 local concat = table.concat
 local bit = require("bit")
 local band, bor, ror, tohex = bit.band, bit.bor, bit.ror, bit.tohex
