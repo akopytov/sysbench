@@ -38,7 +38,7 @@ oltp.lua + PostgreSQL tests
   sysbench *.* * (glob)
   
   Running the test with following options:
-  Number of threads: 1
+  Number of threads: 2
   Initializing random number generator from current time
   
   
