@@ -381,7 +381,6 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   state = luaL_newstate();
   
   luaL_openlibs(state);
-  luaopen_math(state);
 
   /* Export all global options */
   pos = sb_options_enum_start();
