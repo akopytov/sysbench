@@ -12,6 +12,6 @@ ARGS="--test=${SBTEST_SCRIPTDIR}/oltp.lua $DB_DRIVER_ARGS --oltp-tables-count=8"
 
 sysbench $ARGS prepare
 
-sysbench $ARGS --max-requests=100 --num-threads=1 run
+sysbench $ARGS --max-requests=100 --num-threads=2 run
 
 sysbench $ARGS cleanup

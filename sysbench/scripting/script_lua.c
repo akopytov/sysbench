@@ -20,6 +20,8 @@
 # include "config.h"
 #endif
 
+#include <stdlib.h>
+
 #include "script_lua.h"
 #include "lua.h"
 #include "lualib.h"
@@ -29,7 +31,7 @@
 #include "db_driver.h"
 #include "sb_rnd.h"
 
-#include <stdlib.h>
+#include "ck_pr.h"
 
 #define EVENT_FUNC "event"
 #define PREPARE_FUNC "prepare"
@@ -245,17 +247,11 @@ sb_request_t sb_lua_get_request(int thread_id)
 
   (void) thread_id; /* unused */
 
-  if (sb_globals.max_requests > 0)
+  if (sb_globals.max_requests > 0 &&
+      ck_pr_faa_uint(&nevents, 1) >= sb_globals.max_requests)
   {
-    SB_THREAD_MUTEX_LOCK();
-    if (nevents >= sb_globals.max_requests)
-    {
-      req.type = SB_REQ_TYPE_NULL;
-      SB_THREAD_MUTEX_UNLOCK();
-      return req;
-    }
-    nevents++;
-    SB_THREAD_MUTEX_UNLOCK();
+    req.type = SB_REQ_TYPE_NULL;
+    return req;
   }
 
   req.type = SB_REQ_TYPE_SCRIPT;
