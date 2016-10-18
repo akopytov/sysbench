@@ -18,6 +18,8 @@
 #ifndef SB_PERCENTILE_H
 #define SB_PERCENTILE_H
 
+#include <stdint.h>
+
 #ifdef HAVE_PTHREAD_H
 # include <pthread.h>
 #endif
