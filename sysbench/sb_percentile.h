@@ -23,15 +23,14 @@
 #endif
 
 typedef struct {
-  unsigned long long  *values;
-  unsigned long long  *tmp;
-  unsigned long long  total;
+  uint64_t            *values;
+  uint64_t            total;
   unsigned int        size;
   double              range_min;
   double              range_max;
   double              range_deduct;
   double              range_mult;
-  pthread_mutex_t     mutex;
+  pthread_rwlock_t    lock;
 } sb_percentile_t;
 
 int sb_percentile_init(sb_percentile_t *percentile,

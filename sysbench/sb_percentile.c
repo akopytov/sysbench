@@ -36,17 +36,17 @@
 #include "sb_percentile.h"
 #include "sb_logger.h"
 
+#include "ck_pr.h"
+
 int sb_percentile_init(sb_percentile_t *percentile,
                        unsigned int size, double range_min, double range_max)
 {
   if (sb_globals.percentile_rank == 0)
     return 0;
 
-  percentile->values = (unsigned long long *)
-    calloc(size, sizeof(unsigned long long));
-  percentile->tmp = (unsigned long long *)
-    calloc(size, sizeof(unsigned long long));
-  if (percentile->values == NULL || percentile->tmp == NULL)
+  percentile->values = (uint64_t *)
+    calloc(size, sizeof(uint64_t));
+  if (percentile->values == NULL)
   {
     log_text(LOG_FATAL, "Cannot allocate values array, size = %u", size);
     return 1;
@@ -60,7 +60,7 @@ int sb_percentile_init(sb_percentile_t *percentile,
   percentile->size = size;
   percentile->total = 0;
 
-  pthread_mutex_init(&percentile->mutex, NULL);
+  pthread_rwlock_init(&percentile->lock, NULL);
 
   return 0;
 }
@@ -80,41 +80,40 @@ void sb_percentile_update(sb_percentile_t *percentile, double value)
   n = floor((log(value) - percentile->range_deduct) * percentile->range_mult
             + 0.5);
 
-  pthread_mutex_lock(&percentile->mutex);
-  percentile->total++;
-  percentile->values[n]++;
-  pthread_mutex_unlock(&percentile->mutex);
+  pthread_rwlock_rdlock(&percentile->lock);
+
+  ck_pr_add_64(&percentile->total, 1);
+  ck_pr_add_64(&percentile->values[n], 1);
+
+  pthread_rwlock_unlock(&percentile->lock);
 }
 
 double sb_percentile_calculate(sb_percentile_t *percentile, double percent)
 {
-  unsigned long long ncur, nmax;
-  unsigned int       i;
+  uint64_t     ncur, nmax;
+  unsigned int i;
 
-  if (sb_globals.percentile_rank == 0)
+  if (sb_globals.percentile_rank)
     return 0.0;
 
-  pthread_mutex_lock(&percentile->mutex);
+  pthread_rwlock_rdlock(&percentile->lock);
 
-  if (percentile->total == 0)
+  nmax = floor(ck_pr_load_64(&percentile->total) * percent / 100 + 0.5);
+  if (nmax == 0)
   {
-    pthread_mutex_unlock(&percentile->mutex);
+    pthread_rwlock_unlock(&percentile->lock);
     return 0.0;
   }
 
-  memcpy(percentile->tmp, percentile->values,
-         percentile->size * sizeof(unsigned long long));
-  nmax = floor(percentile->total * percent / 100 + 0.5);
-
-  pthread_mutex_unlock(&percentile->mutex);
-
-  ncur = percentile->tmp[0];
+  ncur = ck_pr_load_64(&percentile->values[0]);
   for (i = 1; i < percentile->size; i++)
   {
-    ncur += percentile->tmp[i];
+    ncur += ck_pr_load_64(&percentile->values[i]);
     if (ncur >= nmax)
       break;
   }
+
+  pthread_rwlock_unlock(&percentile->lock);
 
   return exp((i) / percentile->range_mult + percentile->range_deduct);
 }
@@ -124,10 +123,16 @@ void sb_percentile_reset(sb_percentile_t *percentile)
   if (sb_globals.percentile_rank == 0)
     return;
 
-  pthread_mutex_lock(&percentile->mutex);
+  /*
+     Block all percentile updates so we don't lose any events on a concurrent
+     reset.
+  */
+  pthread_rwlock_wrlock(&percentile->lock);
+
   percentile->total = 0;
-  memset(percentile->values, 0, percentile->size * sizeof(unsigned long long));
-  pthread_mutex_unlock(&percentile->mutex);
+  memset(percentile->values, 0, percentile->size * sizeof(uint64_t));
+
+  pthread_rwlock_unlock(&percentile->lock);
 }
 
 void sb_percentile_done(sb_percentile_t *percentile)
@@ -135,7 +140,7 @@ void sb_percentile_done(sb_percentile_t *percentile)
   if (sb_globals.percentile_rank == 0)
     return;
 
-  pthread_mutex_destroy(&percentile->mutex);
+  pthread_rwlock_destroy(&percentile->lock);
+
   free(percentile->values);
-  free(percentile->tmp);
 }
