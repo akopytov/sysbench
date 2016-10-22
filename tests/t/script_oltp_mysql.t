@@ -7,6 +7,10 @@ oltp.lua + MySQL tests
   >   exit 80
   > fi
 
+  $ function db_show_table() {
+  >   mysql -uroot sbtest -Nse "SHOW CREATE TABLE $1"
+  > }
+
   $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-table-engine=myisam $SBTEST_MYSQL_ARGS"
   $ . $SBTEST_INCDIR/script_oltp_common.sh
   sysbench *:  multi-threaded system evaluation benchmark (glob)
@@ -35,6 +39,15 @@ oltp.lua + MySQL tests
   Creating table 'sbtest8'...
   Inserting 10000 records into 'sbtest8'
   Creating secondary indexes on 'sbtest8'...
+  sbtest1\tCREATE TABLE `sbtest1` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_1` (`k`)\\n) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest2\tCREATE TABLE `sbtest2` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_2` (`k`)\\n) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest3\tCREATE TABLE `sbtest3` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_3` (`k`)\\n) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest4\tCREATE TABLE `sbtest4` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_4` (`k`)\\n) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest5\tCREATE TABLE `sbtest5` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_5` (`k`)\\n) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest6\tCREATE TABLE `sbtest6` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_6` (`k`)\\n) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest7\tCREATE TABLE `sbtest7` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_7` (`k`)\\n) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest8\tCREATE TABLE `sbtest8` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_8` (`k`)\\n) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
   sysbench *:  multi-threaded system evaluation benchmark (glob)
   
   Running the test with following options:
@@ -82,6 +95,22 @@ oltp.lua + MySQL tests
   Dropping table 'sbtest6'...
   Dropping table 'sbtest7'...
   Dropping table 'sbtest8'...
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest1' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest2' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest3' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest4' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest5' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest6' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest7' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest8' doesn't exist
+  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  
+  Creating table 'sbtest1'...
+  Inserting 10000 records into 'sbtest1'
+  sbtest1\tCREATE TABLE `sbtest1` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`)\\n) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  
+  Dropping table 'sbtest1'...
 
   $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-table-engine=innodb $SBTEST_MYSQL_ARGS"
   $ . $SBTEST_INCDIR/script_oltp_common.sh
@@ -111,6 +140,15 @@ oltp.lua + MySQL tests
   Creating table 'sbtest8'...
   Inserting 10000 records into 'sbtest8'
   Creating secondary indexes on 'sbtest8'...
+  sbtest1\tCREATE TABLE `sbtest1` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_1` (`k`)\\n) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest2\tCREATE TABLE `sbtest2` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_2` (`k`)\\n) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest3\tCREATE TABLE `sbtest3` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_3` (`k`)\\n) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest4\tCREATE TABLE `sbtest4` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_4` (`k`)\\n) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest5\tCREATE TABLE `sbtest5` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_5` (`k`)\\n) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest6\tCREATE TABLE `sbtest6` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_6` (`k`)\\n) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest7\tCREATE TABLE `sbtest7` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_7` (`k`)\\n) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sbtest8\tCREATE TABLE `sbtest8` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`),\\n  KEY `k_8` (`k`)\\n) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
   sysbench *:  multi-threaded system evaluation benchmark (glob)
   
   Running the test with following options:
@@ -158,3 +196,19 @@ oltp.lua + MySQL tests
   Dropping table 'sbtest6'...
   Dropping table 'sbtest7'...
   Dropping table 'sbtest8'...
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest1' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest2' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest3' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest4' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest5' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest6' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest7' doesn't exist
+  ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest8' doesn't exist
+  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  
+  Creating table 'sbtest1'...
+  Inserting 10000 records into 'sbtest1'
+  sbtest1\tCREATE TABLE `sbtest1` (\\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\\n  `k` int(10) unsigned NOT NULL DEFAULT '0',\\n  `c` char(120) NOT NULL DEFAULT '',\\n  `pad` char(60) NOT NULL DEFAULT '',\\n  PRIMARY KEY (`id`)\\n) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=latin1 MAX_ROWS=1000000 (esc)
+  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  
+  Dropping table 'sbtest1'...
