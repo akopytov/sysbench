@@ -119,7 +119,7 @@ function cleanup()
 
    for i = 1,oltp_tables_count do
    print("Dropping table 'sbtest" .. i .. "'...")
-   db_query("DROP TABLE sbtest".. i )
+   db_query("DROP TABLE IF EXISTS sbtest".. i )
    end
 end
 
