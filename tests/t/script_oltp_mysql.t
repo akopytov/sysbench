@@ -44,8 +44,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest1` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_1` (`k`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -54,8 +54,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest2` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_2` (`k`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -64,8 +64,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest3` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_3` (`k`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -74,8 +74,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest4` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_4` (`k`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -84,8 +84,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest5` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_5` (`k`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -94,8 +94,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest6` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_6` (`k`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -104,8 +104,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest7` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_7` (`k`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -114,8 +114,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest8` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_8` (`k`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -184,8 +184,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest1` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
   sysbench *:  multi-threaded system evaluation benchmark (glob)
@@ -225,8 +225,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest1` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_1` (`k`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -235,8 +235,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest2` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_2` (`k`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -245,8 +245,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest3` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_3` (`k`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -255,8 +255,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest4` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_4` (`k`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -265,8 +265,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest5` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_5` (`k`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -275,8 +275,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest6` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_6` (`k`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -285,8 +285,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest7` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_7` (`k`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -295,8 +295,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest8` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_8` (`k`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
@@ -365,8 +365,8 @@ oltp.lua + MySQL tests
   CREATE TABLE `sbtest1` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `k` int(10) unsigned NOT NULL DEFAULT '0',
-    `c` char(120) NOT NULL DEFAULT '',
-    `pad` char(60) NOT NULL DEFAULT '',
+    `c` char(120)* NOT NULL DEFAULT '', (glob)
+    `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
   sysbench *:  multi-threaded system evaluation benchmark (glob)
