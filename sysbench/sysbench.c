@@ -1017,7 +1017,7 @@ static int init(void)
   long              res;
 
   sb_globals.num_threads = sb_get_value_int("num-threads");
-  if (sb_globals.num_threads == 0)
+  if (sb_globals.num_threads <= 0)
   {
     log_text(LOG_FATAL, "Invalid value for --num-threads: %d.\n", sb_globals.num_threads);
     return 1;
