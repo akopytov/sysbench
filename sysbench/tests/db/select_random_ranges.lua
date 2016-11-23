@@ -71,7 +71,8 @@ function prepare()
    db_query("CREATE INDEX k on sbtest(k)")
 
    print("Inserting " .. oltp_table_size .. " records into 'sbtest'")
-   
+    oltp_auto_inc = true
+
    if (oltp_auto_inc) then
       db_bulk_insert_init("INSERT INTO sbtest(k, c, pad) VALUES")
    else
@@ -142,9 +143,9 @@ function set_vars()
    number_of_ranges = number_of_ranges or 10
    delta = random_ranges_delta or 5
 
-   if (oltp_auto_inc == 'off') then
-      oltp_auto_inc = false
-   else
+--   if (oltp_auto_inc == 'off') then
+--      oltp_auto_inc = false
+--   else
       oltp_auto_inc = true
-   end
+--   end
 end
