@@ -100,7 +100,11 @@ function event(thread_id)
    pad_val = sb_rand_str([[
 ###########-###########-###########-###########-###########]])
 
-   rs = db_query("INSERT INTO " .. table_name ..  " (id, k, c, pad) VALUES " .. string.format("(%d, %d, '%s', '%s')",i, sb_rand(1, oltp_table_size) , c_val, pad_val))
+   if (oltp_auto_inc) then
+      rs = db_query("INSERT INTO " .. table_name ..  " (k, c, pad) VALUES " .. string.format("(%d, '%s', '%s')", sb_rand(1, oltp_table_size) , c_val, pad_val))
+   else
+      rs = db_query("INSERT INTO " .. table_name ..  " (id, k, c, pad) VALUES " .. string.format("(%d, %d, '%s', '%s')",i, sb_rand(1, oltp_table_size) , c_val, pad_val))
+   end 
 
    end
 
