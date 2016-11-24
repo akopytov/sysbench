@@ -89,6 +89,8 @@ function event(thread_id)
       end
    end
 
+   if not oltp_auto_inc_read_only then
+
    for i=1, oltp_delete_inserts do
 
    i = sb_rand(1, oltp_table_size)
@@ -101,6 +103,8 @@ function event(thread_id)
 ###########-###########-###########-###########-###########]])
 
    rs = db_query("INSERT INTO " .. table_name ..  " (id, k, c, pad) VALUES " .. string.format("(%d, %d, '%s', '%s')",i, sb_rand(1, oltp_table_size) , c_val, pad_val))
+
+   end
 
    end
 
