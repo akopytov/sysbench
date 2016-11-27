@@ -43,9 +43,9 @@
 #define TEXT_BUFFER_SIZE 4096
 #define ERROR_BUFFER_SIZE 256
 
-#define OPER_LOG_GRANULARITY 100000
+#define OPER_LOG_GRANULARITY 1000
 #define OPER_LOG_MIN_VALUE   1
-#define OPER_LOG_MAX_VALUE   1E13
+#define OPER_LOG_MAX_VALUE   1E11
 
 /* per-thread timers for response time stats */
 sb_timer_t *timers;
