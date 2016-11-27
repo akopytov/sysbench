@@ -93,7 +93,7 @@ double sb_percentile_calculate(sb_percentile_t *percentile, double percent)
   uint64_t     ncur, nmax;
   unsigned int i;
 
-  if (sb_globals.percentile_rank)
+  if (sb_globals.percentile_rank == 0)
     return 0.0;
 
   pthread_rwlock_rdlock(&percentile->lock);
