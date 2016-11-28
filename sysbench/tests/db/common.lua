@@ -17,6 +17,14 @@ function create_insert(table_id)
      index_name = "PRIMARY KEY"
    end
 
+   if (with_pgsql == 'redshift') then
+      auto_inc_type = "INTEGER IDENTITY(1,1)"
+   else
+      auto_inc_type = "SERIAL"
+   end
+print ("value of db-driver" .. db_driver)
+--print ("Value of with_pgsql" .. with_pgsql)
+
    i = table_id
 
    print("Creating table 'sbtest" .. i .. "'...")
@@ -36,7 +44,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
    elseif (db_driver == "pgsql") then
       query = [[
 CREATE TABLE sbtest]] .. i .. [[ (
-id SERIAL NOT NULL,
+id ]] .. auto_inc_type .. [[ NOT NULL,
 k INTEGER DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
 pad CHAR(60) DEFAULT '' NOT NULL,
@@ -146,6 +154,10 @@ function set_vars()
       oltp_auto_inc = false
    else
       oltp_auto_inc = true
+   end
+
+   if (with_pgsql == 'redshift') then
+      oltp_create_secondary = 'off'
    end
 
    if (oltp_read_only == 'on') then
