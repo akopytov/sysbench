@@ -303,29 +303,30 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
   const char     *ssl_cert;
   const char     *ssl_ca;
 
-  static uint opt_ssl_mode     = SSL_MODE_DISABLED;
-
   if (args.use_ssl)
   {
     ssl_key= "client-key.pem";
     ssl_cert= "client-cert.pem";
     ssl_ca= "cacert.pem";
 
-    DEBUG("mysql_ssl_set(%p,\"%s\", \"%s\", \"%s\", NULL, \"%s\")", con, ssl_key,
-          ssl_cert, ssl_ca, args.ssl_cipher);
-          
+    DEBUG("mysql_ssl_set(%p, \"%s\", \"%s\", \"%s\", NULL, \"%s\")", con,
+          ssl_key, ssl_cert, ssl_ca, args.ssl_cipher);
+
     mysql_ssl_set(con, ssl_key, ssl_cert, ssl_ca, NULL, args.ssl_cipher);
-    opt_ssl_mode= SSL_MODE_REQUIRED;
 
+#ifdef MYSQL_OPT_SSL_MODE
+    unsigned int opt_ssl_mode = SSL_MODE_REQUIRED;
+
+    DEBUG("mysql_options(%p,%s,%u)", con, "MYSQL_OPT_SSL_MODE", opt_ssl_mode);
+    mysql_options(con, MYSQL_OPT_SSL_MODE, &opt_ssl_mode);
+#endif
   }
-  DEBUG("mysql_options(%p,%s,%u)",con, "MYSQL_OPT_SSL_MODE",opt_ssl_mode);
 
-  mysql_options(con, MYSQL_OPT_SSL_MODE, &opt_ssl_mode);
-
-	if (args.use_compression)
-	{
-		mysql_options(con,MYSQL_OPT_COMPRESS,NULL);
-	}
+  if (args.use_compression)
+  {
+    DEBUG("mysql_options(%p, %s, %s)",con, "MYSQL_OPT_COMPRESS", "NULL");
+    mysql_options(con, MYSQL_OPT_COMPRESS, NULL);
+  }
 
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",
         con,
@@ -440,9 +441,9 @@ int mysql_drv_connect(db_conn_t *sb_conn)
 
   if (args.use_ssl)
   {
-    DEBUG("mysql_cipher: \"%s\"", mysql_get_ssl_cipher(con));
+    DEBUG("mysql_get_ssl_cipher(con): \"%s\"", mysql_get_ssl_cipher(con));
   }
-  
+
   sb_conn->ptr = db_mysql_con;
 
   return 0;
