@@ -31,7 +31,7 @@ before_install:
       # brew uninstall libtool
       # brew update --quiet
       # brew install libtool mysql
-      brew install mysql
+      brew install mysql postgresql
 
       # OS X requires servers to be started explicitly
       brew services start mysql
