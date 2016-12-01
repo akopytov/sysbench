@@ -44,7 +44,7 @@ endif
 
 sysbench_SOURCES = sysbench.c sysbench.h sb_timer.c sb_timer.h \
 sb_options.c sb_options.h sb_logger.c sb_logger.h sb_list.h db_driver.h \
-db_driver.c sb_percentile.c sb_percentile.h sb_rnd.c sb_rnd.h \
+db_driver.c sb_histogram.c sb_histogram.h sb_rnd.c sb_rnd.h \
 sb_thread.c sb_thread.h sb_barrier.c sb_barrier.h sb_global.h
 
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \

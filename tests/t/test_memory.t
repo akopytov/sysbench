@@ -55,7 +55,7 @@ help' only on Linux.
            min:                                *ms (glob)
            avg:                                *ms (glob)
            max:                                *ms (glob)
-           approx.  95 percentile:             *ms (glob)
+           approx.  95th percentile:           *ms (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)

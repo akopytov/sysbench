@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2008 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@
 
 #include "sysbench.h"
 #include "sb_list.h"
-#include "sb_percentile.h"
+#include "sb_histogram.h"
 
 
 /* Prepared statements usage modes */
@@ -46,8 +46,6 @@ typedef struct
 } db_globals_t;
 
 extern db_globals_t db_globals;
-
-extern sb_percentile_t local_percentile;
 
 /* Driver capabilities definition */
 

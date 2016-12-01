@@ -38,7 +38,7 @@ separately.
   Log options:
     --verbosity=N      verbosity level {5 - debug, 0 - only critical messages} [3]
   
-    --percentile=N      percentile rank of query response times to count. Use the special value of 0 to disable percentile statistics. [95]
+    --percentile=N      percentile to calculate in latency statistics (1-100). Use the special value of 0 to disable percentile calculations [95]
   
   General database options:
   

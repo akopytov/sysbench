@@ -74,7 +74,7 @@ fileio benchmark tests
            min:                                  *.*ms (glob)
            avg:                                  *.*ms (glob)
            max:                                  *.*ms (glob)
-           approx.  95 percentile:               *.*ms (glob)
+           approx.  95th percentile:             *.*ms (glob)
   
   Threads fairness:
       events (avg/stddev):           150.0000/0.00
@@ -120,7 +120,7 @@ fileio benchmark tests
            min:                                  *.*ms (glob)
            avg:                                  *.*ms (glob)
            max:                                  *.*ms (glob)
-           approx.  95 percentile:               *.*ms (glob)
+           approx.  95th percentile:             *.*ms (glob)
   
   Threads fairness:
       events (avg/stddev):           150.0000/0.00
@@ -165,7 +165,7 @@ fileio benchmark tests
            min:                                  *.*ms (glob)
            avg:                                  *.*ms (glob)
            max:                                  *.*ms (glob)
-           approx.  95 percentile:               *.*ms (glob)
+           approx.  95th percentile:             *.*ms (glob)
   
   Threads fairness:
       events (avg/stddev):           150.0000/0.00
@@ -212,7 +212,7 @@ fileio benchmark tests
            min:                                  *.*ms (glob)
            avg:                                  *.*ms (glob)
            max:                                  *.*ms (glob)
-           approx.  95 percentile:               *.*ms (glob)
+           approx.  95th percentile:             *.*ms (glob)
   
   Threads fairness:
       events (avg/stddev):           150.0000/0.00

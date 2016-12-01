@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -38,14 +38,20 @@
 #include "sysbench.h"
 #include "sb_list.h"
 #include "sb_logger.h"
-#include "sb_percentile.h"
+#include "sb_histogram.h"
+
+#include "ck_cc.h"
 
 #define TEXT_BUFFER_SIZE 4096
 #define ERROR_BUFFER_SIZE 256
 
-#define OPER_LOG_GRANULARITY 1000
-#define OPER_LOG_MIN_VALUE   1
-#define OPER_LOG_MAX_VALUE   1E11
+/*
+   Use 1024-element array for latency histogram tracking values between 0.001
+   milliseconds and 100 seconds.
+*/
+#define OPER_LOG_GRANULARITY 1024
+#define OPER_LOG_MIN_VALUE   1e-3
+#define OPER_LOG_MAX_VALUE   1E5
 
 /* per-thread timers for response time stats */
 sb_timer_t *timers;
@@ -56,8 +62,6 @@ static sb_list_t handlers[LOG_MSG_TYPE_MAX];
 
 /* set after logger initialization */
 static unsigned char initialized; 
-
-static sb_percentile_t percentile;
 
 static pthread_mutex_t text_mutex;
 static unsigned int    text_cnt;
@@ -105,8 +109,8 @@ static log_handler_t text_handler = {
 
 static sb_arg_t oper_handler_args[] =
 {
-  {"percentile", "percentile rank of query response times to count. "
-   "Use the special value of 0 to disable percentile statistics.",
+  {"percentile", "percentile to calculate in latency statistics (1-100). "
+   "Use the special value of 0 to disable percentile calculations",
    SB_ARG_TYPE_INT, "95"},
 
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
@@ -483,19 +487,20 @@ int text_handler_process(log_msg_t *msg)
 
 int oper_handler_init(void)
 {
-  unsigned int i, tmp;
+  unsigned int i;
+  int          tmp;
 
   tmp = sb_get_value_int("percentile");
   if (tmp < 0 || tmp > 100)
   {
-    log_text(LOG_FATAL, "Invalid value for percentile option: %d",
+    log_text(LOG_FATAL, "Invalid value for --percentile: %d",
              tmp);
     return 1;
   }
-  sb_globals.percentile_rank = tmp;
+  sb_globals.percentile = tmp;
 
-  if (sb_percentile_init(&percentile, OPER_LOG_GRANULARITY, OPER_LOG_MIN_VALUE,
-                         OPER_LOG_MAX_VALUE))
+  if (sb_histogram_init(&global_histogram, OPER_LOG_GRANULARITY,
+                        OPER_LOG_MIN_VALUE, OPER_LOG_MAX_VALUE))
     return 1;
 
   timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
@@ -547,7 +552,8 @@ int oper_handler_process(log_msg_t *msg)
   if (sb_globals.n_checkpoints > 0)
     pthread_mutex_unlock(&timers_mutex);
 
-  sb_percentile_update(&percentile, value);
+  if (sb_globals.percentile > 0)
+    sb_histogram_update(&global_histogram, NS2MS(value));
 
   return 0;
 }
@@ -584,9 +590,9 @@ int print_global_stats(void)
 
   total_time_ns = sb_timer_split(&sb_globals.cumulative_timer2);
 
-  percentile_val = sb_percentile_calculate(&percentile,
-                                           sb_globals.percentile_rank);
-  sb_percentile_reset(&percentile);
+  percentile_val =
+    sb_histogram_get_pct_checkpoint(&global_histogram,
+                                    sb_globals.percentile);
 
   if (sb_globals.n_checkpoints > 0)
     pthread_mutex_unlock(&timers_mutex);
@@ -641,11 +647,15 @@ int print_global_stats(void)
   log_text(LOG_NOTICE, "         max:                            %10.2fms",
            NS2MS(get_max_time(&t)));
 
-  /* Print approx. percentile value for event execution times */
-  if (t.events > 0 && sb_globals.percentile_rank > 0)
+  /* Print approximate percentile value for event execution latency */
+  if (sb_globals.percentile > 0)
   {
-    log_text(LOG_NOTICE, "         approx. %3d percentile:         %10.2fms",
-             sb_globals.percentile_rank, NS2MS(percentile_val));
+    log_text(LOG_NOTICE, "         approx. %3dth percentile:       %10.2fms",
+             sb_globals.percentile, percentile_val);
+  }
+  else
+  {
+    log_text(LOG_NOTICE, "         percentile stats:               disabled");
   }
   log_text(LOG_NOTICE, "");
 
@@ -710,6 +720,8 @@ int oper_handler_done(void)
 
   if (sb_globals.n_checkpoints > 0)
     pthread_mutex_destroy(&timers_mutex);
+
+  sb_histogram_done(&global_histogram);
 
   return 0;
 }

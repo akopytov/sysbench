@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2011 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include "sb_global.h"
 #include "sb_options.h"
 #include "sb_timer.h"
+#include "sb_histogram.h"
 
 /* Text message flags (used in the 'flags' field of log_text_msg_t) */
 

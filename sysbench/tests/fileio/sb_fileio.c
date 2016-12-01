@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@
 
 #include "sysbench.h"
 #include "crc32.h"
-#include "sb_percentile.h"
+#include "sb_histogram.h"
 #include "sb_rnd.h"
 
 /* Lengths of the checksum and the offset fields in a block */
@@ -201,9 +201,6 @@ static file_test_mode_t test_mode;
 /* Previous request needed for validation */
 static sb_file_request_t prev_req;
 
-/* Percentile stats for --report-interval */
-static sb_percentile_t local_percentile;
-
 static sb_arg_t fileio_args[] = {
   {"file-num", "number of files to create", SB_ARG_TYPE_INT, "128"},
   {"file-block-size", "block size to use in all IO operations", SB_ARG_TYPE_INT, "16384"},
@@ -340,9 +337,6 @@ int file_init(void)
   init_vars();
   clear_stats();
 
-  if (sb_percentile_init(&local_percentile, 100000, 1.0, 1e13))
-    return 1;
-
   return 0;
 }
 
@@ -412,8 +406,6 @@ int file_done(void)
   }
 
   free(per_thread);
-
-  sb_percentile_done(&local_percentile);
 
   return 0;
 }
@@ -718,9 +710,6 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
 
       LOG_EVENT_STOP(msg, thread_id);
 
-      sb_percentile_update(&local_percentile,
-                           sb_timer_value(&timers[thread_id]));
-
       /* In async mode stats will me updated on AIO requests completion */
       if (file_io_mode != FILE_IO_MODE_ASYNC)
       {
@@ -742,9 +731,6 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
         return 1;
       }
       LOG_EVENT_STOP(msg, thread_id);
-
-      sb_percentile_update(&local_percentile,
-                           sb_timer_value(&timers[thread_id]));
 
       /* Validate block if run with validation enabled */
       if (sb_globals.validate &&
@@ -875,17 +861,18 @@ void file_print_stats(sb_stat_t type)
 
       SB_THREAD_MUTEX_UNLOCK();
 
+      const double percentile_val =
+        sb_histogram_get_pct_intermediate(&global_histogram,
+                                          sb_globals.percentile);
+
       log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
                     "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "
                     "latency: %4.3f ms (%uth pct.)",
                     diff_read / megabyte / seconds,
                     diff_written / megabyte / seconds,
                     diff_other_ops / seconds,
-                    NS2MS(sb_percentile_calculate(&local_percentile,
-                                                  sb_globals.percentile_rank)),
-                    sb_globals.percentile_rank);
-
-      sb_percentile_reset(&local_percentile);
+                    percentile_val,
+                    sb_globals.percentile);
 
       break;
     }

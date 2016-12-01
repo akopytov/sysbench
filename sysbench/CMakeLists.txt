@@ -1,5 +1,5 @@
 # Copyright (C) 2008 MySQL AB
-# Copyright (C) 2008-2011 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2008-2016 Alexey Kopytov <akopytov@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,8 +30,8 @@ add_executable(sysbench
   sb_options.h 
   sb_logger.c 
   sb_logger.h
-  sb_percentile.c
-  sb_percentile.h
+  sb_histogram.c
+  sb_histogram.h
   sb_list.h 
   db_driver.h 
   db_driver.c

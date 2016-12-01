@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@
 
 #include "db_driver.h"
 #include "sb_list.h"
-#include "sb_percentile.h"
+#include "sb_histogram.h"
 
 /* Query length limit for bulk insert queries */
 #define BULK_PACKET_SIZE (512*1024)
@@ -55,8 +55,6 @@ typedef struct {
 
 /* Global variables */
 db_globals_t db_globals;
-
-sb_percentile_t local_percentile;
 
 /* Used in intermediate reports */
 static unsigned long last_transactions;
@@ -251,9 +249,6 @@ db_driver_t *db_init(const char *name)
   }
 
   db_reset_stats();
-
-  if (sb_percentile_init(&local_percentile, 100000, 1.0, 1e13))
-    return NULL;
 
   return drv;
 }
@@ -580,8 +575,6 @@ int db_done(db_driver_t *drv)
     free(thread_stats);
   }
 
-  sb_percentile_done(&local_percentile);
-
   return drv->ops.done();
 }
 
@@ -849,6 +842,10 @@ void db_print_stats(sb_stat_t type)
   {
     seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
 
+    const double percentile_val =
+      sb_histogram_get_pct_intermediate(&global_histogram,
+                                             sb_globals.percentile);
+
     log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
                   "threads: %d, tps: %4.2f, reads: %4.2f, writes: %4.2f, "
                   "response time: %4.2fms (%u%%), errors: %4.2f, "
@@ -857,9 +854,8 @@ void db_print_stats(sb_stat_t type)
                   (transactions - last_transactions) / seconds,
                   (read_ops - last_read_ops) / seconds,
                   (write_ops - last_write_ops) / seconds,
-                  NS2MS(sb_percentile_calculate(&local_percentile,
-                                                sb_globals.percentile_rank)),
-                  sb_globals.percentile_rank,
+                  percentile_val,
+                  sb_globals.percentile,
                   (errors - last_errors) / seconds,
                   (reconnects - last_reconnects) / seconds);
     if (sb_globals.tx_rate > 0)
@@ -880,8 +876,6 @@ void db_print_stats(sb_stat_t type)
     last_errors = errors;
     last_reconnects = reconnects;
     SB_THREAD_MUTEX_UNLOCK();
-
-    sb_percentile_reset(&local_percentile);
 
     return;
   }

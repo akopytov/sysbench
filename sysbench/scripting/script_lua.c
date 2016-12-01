@@ -1,5 +1,5 @@
 /* Copyright (C) 2006 MySQL AB
-   Copyright (C) 2006-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2006-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -303,9 +303,6 @@ int sb_lua_op_execute_request(sb_request_t *sb_req, int thread_id)
   } while (restart);
       
   LOG_EVENT_STOP(msg, thread_id);
-
-  if (db_driver != NULL)
-    sb_percentile_update(&local_percentile, sb_timer_value(&timers[thread_id]));
 
   return 0;
 }
