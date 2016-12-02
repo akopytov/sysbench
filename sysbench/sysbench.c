@@ -1272,7 +1272,9 @@ int main(int argc, char *argv[])
 
   /* Uninitialize logger */
   log_done();
-  
+
+  sb_options_done();
+
   exit(0);
 }
 

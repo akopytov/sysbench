@@ -67,6 +67,9 @@ typedef struct
 /* Initilize options library */
 int sb_options_init(void);
 
+/* Release resource allocated by the options library */
+int sb_options_done(void);
+
 /* Register set of command line arguments */
 int sb_register_arg_set(sb_arg_t *set);
 
