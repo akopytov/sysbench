@@ -338,6 +338,10 @@ case "$SYSTEM" in
 		SYSTEM=mingw32
 		LDFLAGS="-mthreads $LDFLAGS"
 		;;
+  CYGWIN_NT*)
+    SYSTEM=cygwin
+    LDFLAGS="-mthreads $LDFLAGS"
+    ;;
 	*)
 		SYSTEM=
 		;;
@@ -657,7 +661,7 @@ if test "$VMA_BITS" = "unknown"; then
 						return (0);
 					}
 EOF
-					
+
 					$CC -o .1 .1.c 2>/dev/null
 					VMA=`./.1 2>/dev/null`
 					if test $? -ne 0; then
@@ -769,4 +773,3 @@ generate Makefile.in $P_PWD/Makefile
 touch src/*.c
 echo "success"
 generate_stdout
-

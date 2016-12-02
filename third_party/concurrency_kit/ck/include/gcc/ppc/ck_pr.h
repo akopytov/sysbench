@@ -138,9 +138,9 @@ CK_PR_STORE_S(char, char, "stb")
 #undef CK_PR_STORE_S
 #undef CK_PR_STORE
 
-#define CK_PR_CAS(N, T)							\
+#define CK_PR_CAS(N, T, M)						\
 	CK_CC_INLINE static bool					\
-	ck_pr_cas_##N##_value(T *target, T compare, T set, T *value)	\
+	ck_pr_cas_##N##_value(M *target, T compare, T set, M *value)	\
 	{								\
 		T previous;						\
 		__asm__ __volatile__("1:"				\
@@ -155,11 +155,11 @@ CK_PR_STORE_S(char, char, "stb")
 					  "r"   (set),			\
 					  "r"   (compare)		\
 					: "memory", "cc");		\
-		*value = previous; 					\
+		*(T *)value = previous; 				\
 		return (previous == compare);				\
 	}								\
 	CK_CC_INLINE static bool					\
-	ck_pr_cas_##N(T *target, T compare, T set)			\
+	ck_pr_cas_##N(M *target, T compare, T set)			\
 	{								\
 		T previous;						\
 		__asm__ __volatile__("1:"				\
@@ -177,11 +177,13 @@ CK_PR_STORE_S(char, char, "stb")
 		return (previous == compare);				\
 	}
 
-CK_PR_CAS(ptr, void *)
-CK_PR_CAS(32, uint32_t)
-CK_PR_CAS(uint, unsigned int)
-CK_PR_CAS(int, int)
+CK_PR_CAS(ptr, void *, void)
+#define CK_PR_CAS_S(a, b) CK_PR_CAS(a, b, b)
+CK_PR_CAS_S(32, uint32_t)
+CK_PR_CAS_S(uint, unsigned int)
+CK_PR_CAS_S(int, int)
 
+#undef CK_PR_CAS_S
 #undef CK_PR_CAS
 
 #define CK_PR_FAS(N, M, T, W)					\

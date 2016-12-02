@@ -248,8 +248,8 @@ ck_pr_cas_ptr_2(void *target, void *compare, void *set)
 		                     "stxr" W " %w1, %" R "3, [%2];"	\
 		    		     "cbnz %w1, 1b;"			\
 	    			     "2:"				\
-		    : "+&r" (previous),					\
-		    "+&r" (tmp)						\
+		    : "=&r" (previous),					\
+		    "=&r" (tmp)						\
 		    : "r"   (target),					\
 		    "r"   (set),					\
 		    "r"   (compare)					\
@@ -270,8 +270,8 @@ ck_pr_cas_ptr_2(void *target, void *compare, void *set)
 		                     "stxr" W " %w1, %" R "3, [%2];"	\
 		    		     "cbnz %w1, 1b;"			\
 	    			     "2:"				\
-		    : "+&r" (previous),					\
-		    "+&r" (tmp)						\
+		    : "=&r" (previous),					\
+		    "=&r" (tmp)						\
 		    : "r"   (target),					\
 		    "r"   (set),					\
 		    "r"   (compare)					\
@@ -300,14 +300,14 @@ CK_PR_CAS_S(char, char, "b", "w")
 	CK_CC_INLINE static T					\
 	ck_pr_fas_##N(M *target, T v)				\
 	{							\
-		T previous = 0;					\
-		T tmp = 0;					\
+		T previous;					\
+		T tmp;						\
 		__asm__ __volatile__("1:"			\
 				     "ldxr" W " %" R "0, [%2];"	\
 				     "stxr" W " %w1, %" R "3, [%2];"\
 		    		     "cbnz %w1, 1b;"		\
-					: "+&r" (previous),	\
-		    			  "+&r" (tmp) 		\
+					: "=&r" (previous),	\
+		    			  "=&r" (tmp) 		\
 					: "r"   (target),	\
 					  "r"   (v)		\
 					: "memory", "cc");	\
@@ -338,8 +338,8 @@ CK_PR_FAS(char, char, char, "b", "w")
 				      I ";"			\
 				     "stxr" W " %w1, %" R "0, [%2];"	\
 				     "cbnz %w1, 1b;"		\
-					: "+&r" (previous),	\
-		    			  "+&r" (tmp)		\
+					: "=&r" (previous),	\
+		    			  "=&r" (tmp)		\
 					: "r"   (target)	\
 					: "memory", "cc");	\
 		return;						\
@@ -375,15 +375,15 @@ CK_PR_UNARY_S(char, char, "b")
 	CK_CC_INLINE static void				\
 	ck_pr_##O##_##N(M *target, T delta)			\
 	{							\
-		T previous = 0;					\
-		T tmp = 0;					\
+		T previous;					\
+		T tmp;						\
 		__asm__ __volatile__("1:"			\
 				     "ldxr" W " %" R "0, [%2];"\
 				      I " %" R "0, %" R "0, %" R "3;"	\
 				     "stxr" W " %w1, %" R "0, [%2];"	\
 				     "cbnz %w1, 1b;"		\
-					: "+&r" (previous),	\
-		    			  "+&r" (tmp)		\
+					: "=&r" (previous),	\
+		    			  "=&r" (tmp)		\
 					: "r"   (target),	\
 					  "r"   (delta)		\
 					: "memory", "cc");	\
@@ -463,15 +463,15 @@ ck_pr_faa_64(uint64_t *target, uint64_t delta)
 	CK_CC_INLINE static T						\
 	ck_pr_faa_##S(T *target, T delta)				\
 	{								\
-		T previous = 0, r = 0, tmp = 0;				\
+		T previous, r, tmp;					\
 		__asm__ __volatile__("1:"				\
 				     "ldxr" W " %w0, [%3];"		\
 				     "add %w1, %w4, %w0;"		\
 				     "stxr" W " %w2, %w1, [%3];"	\
 		    		     "cbnz %w2, 1b;"			\
-					: "+&r" (previous),		\
-					  "+&r" (r),			\
-		    			  "+&r" (tmp)			\
+					: "=&r" (previous),		\
+					  "=&r" (r),			\
+		    			  "=&r" (tmp)			\
 					: "r"   (target),		\
 					  "r"   (delta)			\
 					: "memory", "cc");		\

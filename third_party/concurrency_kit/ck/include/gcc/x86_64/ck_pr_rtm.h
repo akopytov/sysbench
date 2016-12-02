@@ -50,7 +50,7 @@
 #define CK_F_PR_RTM
 
 #include <ck_cc.h>
-#include <stdbool.h>
+#include <ck_stdbool.h>
 
 #define CK_PR_RTM_STARTED	(~0U)
 #define CK_PR_RTM_EXPLICIT	(1 << 0)
