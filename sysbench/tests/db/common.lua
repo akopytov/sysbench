@@ -17,11 +17,11 @@ function create_insert(table_id)
      index_name = "PRIMARY KEY"
    end
 
---   if (with_pgsql == 'redshift') then
+   if (with_pgsql == 'redshift') then
       auto_inc_type = "INTEGER IDENTITY(1,1)"
-  -- else
-    --  auto_inc_type = "SERIAL"
-  -- end
+   else
+      auto_inc_type = "SERIAL"
+   end
 
    i = table_id
 
@@ -93,10 +93,10 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    db_bulk_insert_done()
 
---   if oltp_create_secondary then
-  --   print("Creating secondary indexes on 'sbtest" .. i .. "'...")
-    -- db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
-  -- end
+   if oltp_create_secondary then
+     print("Creating secondary indexes on 'sbtest" .. i .. "'...")
+     db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
+   end
 
 end
 
