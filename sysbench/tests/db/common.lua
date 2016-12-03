@@ -17,7 +17,7 @@ function create_insert(table_id)
      index_name = "PRIMARY KEY"
    end
 
-   if (with_pgsql == 'redshift') then
+   if (pgsql_variant == 'redshift') then
       auto_inc_type = "INTEGER IDENTITY(1,1)"
    else
       auto_inc_type = "SERIAL"
@@ -182,7 +182,7 @@ function set_vars()
       oltp_create_secondary = true
    end
 
-   if (with_pgsql == 'redshift') then
+   if (pgsql_variant == 'redshift') then
       oltp_create_secondary = false
       oltp_delete_inserts = 0
    end
