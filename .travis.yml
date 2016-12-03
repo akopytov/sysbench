@@ -31,14 +31,15 @@ before_install:
       # brew uninstall libtool
       # brew update --quiet
       # brew install libtool mysql
-      brew install mysql postgresql
+      brew install mysql
 
       # OS X requires servers to be started explicitly
       brew services start mysql
 
-      # Avoid PostgreSQL upgrade woes, just recreate the database
+      # Avoid PostgreSQL upgrade woes, just reinstall the database
+      brew uninstall postgresql
       rm -rf /usr/local/var/postgres
-      brew postinstall postgresql
+      brew install postgresql
 
       echo "Starting PostgreSQL"
       pg_ctl -wD /usr/local/var/postgres start
