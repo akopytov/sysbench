@@ -73,7 +73,6 @@ function prepare()
    end
 
    print("Inserting " .. oltp_table_size .. " records into 'sbtest'")
- oltp_auto_inc = true
    
    if (oltp_auto_inc) then
       db_bulk_insert_init("INSERT INTO sbtest(k, c, pad) VALUES")
@@ -142,9 +141,9 @@ function set_vars()
    oltp_table_size = oltp_table_size or 10000
    random_points = random_points or 10
 
---   if (oltp_auto_inc == 'off') then
---      oltp_auto_inc = false
---   else
+   if (oltp_auto_inc == 'off') then
+      oltp_auto_inc = false
+   else
       oltp_auto_inc = true
---   end
+   end
 end
