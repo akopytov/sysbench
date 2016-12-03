@@ -25,6 +25,7 @@ function event(thread_id)
    pad_val = sb_rand_str([[
 ###########-###########-###########-###########-###########]])
 
+ oltp_auto_inc = true
    if (db_driver == "pgsql" and oltp_auto_inc) then
       rs = db_query("INSERT INTO " .. table_name .. " (k, c, pad) VALUES " ..
                        string.format("(%d, '%s', '%s')", k_val, c_val, pad_val))

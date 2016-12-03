@@ -36,7 +36,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
    elseif (db_driver == "pgsql") then
       query = [[
 CREATE TABLE sbtest]] .. i .. [[ (
-id SERIAL NOT NULL,
+id BIGINT IDENTITY(100, 10) NOT NULL,
 k INTEGER DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
 pad CHAR(60) DEFAULT '' NOT NULL,
@@ -142,11 +142,11 @@ function set_vars()
       oltp_range_selects = true
    end
 
-   if (oltp_auto_inc == 'off') then
-      oltp_auto_inc = false
-   else
+--   if (oltp_auto_inc == 'off') then
+--      oltp_auto_inc = false
+--   else
       oltp_auto_inc = true
-   end
+--   end
 
    if (oltp_read_only == 'on') then
       oltp_read_only = true
@@ -170,10 +170,10 @@ function set_vars()
       oltp_skip_trx = false
    end
 
-   if (oltp_create_secondary == 'off') then
+--   if (oltp_create_secondary == 'off') then
       oltp_create_secondary = false
-   else
-      oltp_create_secondary = true
-   end
+--   else
+--      oltp_create_secondary = true
+--   end
 
 end
