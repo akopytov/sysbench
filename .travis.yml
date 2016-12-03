@@ -28,9 +28,10 @@ before_install:
     case "${TRAVIS_OS_NAME:-linux}" in
     osx)
       # Workaround for https://github.com/Homebrew/legacy-homebrew/issues/43874
-      brew uninstall libtool
-      brew update --quiet
-      brew install libtool mysql
+      # brew uninstall libtool
+      # brew update --quiet
+      # brew install libtool mysql
+      brew install mysql postgresql
 
       # OS X requires servers to be started explicitly
       brew services start mysql
@@ -39,7 +40,9 @@ before_install:
       rm -rf /usr/local/var/postgres
       brew postinstall postgresql
 
+      echo "Starting PostgreSQL"
       pg_ctl -wD /usr/local/var/postgres start
+      echo "Creating user postgres"
       createuser -s postgres
       ;;
     esac

@@ -68,6 +68,15 @@ int sb_options_init(void)
   return 0;
 }
 
+/* Release resource allocated by the options library */
+
+int sb_options_done(void)
+{
+  free_options(&options);
+
+  return 0;
+}
+
 
 /* Register set of command line arguments */
 
