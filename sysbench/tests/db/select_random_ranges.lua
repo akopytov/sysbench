@@ -68,7 +68,9 @@ function prepare()
                  FOR EACH ROW BEGIN SELECT sbtest_seq.nextval INTO :new.id FROM DUAL; END;]])
    end
 
-   db_query("CREATE INDEX k on sbtest(k)")
+   if oltp_create_secondary then
+      db_query("CREATE INDEX k on sbtest(k)")
+   end
 
    print("Inserting " .. oltp_table_size .. " records into 'sbtest'")
     oltp_auto_inc = true
