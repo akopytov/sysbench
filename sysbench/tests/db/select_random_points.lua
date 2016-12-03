@@ -36,9 +36,16 @@ function prepare()
     
 
    elseif (db_driver == "pgsql") then
+
+      if (pgsql_variant == 'redshift') then
+         auto_inc_type = "INTEGER " .. (oltp_auto_inc and "IDENTITY(1,1)")
+      else
+         auto_inc_type = ((oltp_auto_inc and "SERIAL") or "INTEGER")
+      end
+
       query = [[
         CREATE TABLE sbtest (
-          id ]] .. ((oltp_auto_inc and "SERIAL") or "") .. [[,
+          id ]] .. auto_inc_type .. [[,
           k INTEGER DEFAULT '0' NOT NULL,
           c CHAR(120) DEFAULT '' NOT NULL,
           pad CHAR(60) DEFAULT '' NOT NULL, 
@@ -68,7 +75,9 @@ function prepare()
                  FOR EACH ROW BEGIN SELECT sbtest_seq.nextval INTO :new.id FROM DUAL; END;]])
    end
 
-   db_query("CREATE INDEX k on sbtest(k)")
+   if oltp_create_secondary then
+      db_query("CREATE INDEX k on sbtest(k)")
+   end
 
    print("Inserting " .. oltp_table_size .. " records into 'sbtest'")
    
