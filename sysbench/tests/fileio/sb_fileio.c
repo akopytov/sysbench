@@ -1765,7 +1765,7 @@ int parse_arguments(void)
   
   num_files = sb_get_value_int("file-num");
 
-  if (num_files == 0)
+  if (num_files <= 0)
   {
     log_text(LOG_FATAL, "Invalid value for file-num: %d", num_files);
     return 1;

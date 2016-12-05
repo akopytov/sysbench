@@ -38,7 +38,7 @@ function prepare()
    elseif (db_driver == "pgsql") then
       query = [[
         CREATE TABLE sbtest (
-          id ]] .. (sb.oltp_auto_inc and "SERIAL") or "" .. [[,
+          id ]] .. ((oltp_auto_inc and "SERIAL") or "") .. [[,
           k INTEGER DEFAULT '0' NOT NULL,
           c CHAR(120) DEFAULT '' NOT NULL,
           pad CHAR(60) DEFAULT '' NOT NULL, 

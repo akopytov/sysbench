@@ -16,6 +16,7 @@ Skip test if the MySQL driver is not available.
     --mysql-table-engine=STRING  storage engine to use for the test table {myisam,innodb,bdb,heap,ndbcluster,federated} [innodb]
     --mysql-engine-trx=STRING    whether storage engine used is transactional or not {yes,no,auto} [auto]
     --mysql-ssl=[on|off]         use SSL connections, if available in the client library [off]
+    --mysql-ssl-cipher=STRING    use specific cipher for SSL connections []
     --mysql-compression=[on|off] use compression, if available in the client library [off]
     --myisam-max-rows=N          max-rows parameter for MyISAM tables [1000000]
     --mysql-debug=[on|off]       dump all client library calls [off]

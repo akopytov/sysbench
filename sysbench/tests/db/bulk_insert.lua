@@ -10,6 +10,18 @@ function prepare()
    db_connect()
 
    for i = 0,num_threads-1 do
+
+   if (db_driver == "pgsql") then
+
+      db_query([[
+CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
+id INTEGER NOT NULL,
+k INTEGER DEFAULT '0' NOT NULL,
+PRIMARY KEY (id)
+)]])
+
+   else
+
       db_query([[
 CREATE TABLE IF NOT EXISTS sbtest]] .. i .. [[ (
 id INTEGER UNSIGNED NOT NULL,
@@ -17,7 +29,10 @@ k INTEGER UNSIGNED DEFAULT '0' NOT NULL,
 PRIMARY KEY (id)
 ) ENGINE = InnoDB
 ]])
+
    end
+
+   end --for
 end
 
 function event(thread_id)

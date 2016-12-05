@@ -421,7 +421,7 @@ then
     W_FAIL="-Werror"
   fi
   BASE_WARNINGS="-W -Wall -Wextra -Wpointer-arith -Wbad-function-cast \
-  -Wstrict-prototypes -Wnested-externs -Winline \
+  -Wstrict-prototypes -Wnested-externs -Winline -Wno-format-zero-length \
   -funroll-loops ${W_FAIL}"
 
   if test "$ac_profiling" = "yes"

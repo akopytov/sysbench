@@ -11,3 +11,12 @@ Make sure all available DB drivers are covered
   >     exit 1
   >   fi
   > done
+
+# Try using a non-existing driver
+  $ sysbench --db-driver=nonexisting --test=${SBTEST_SCRIPTDIR}/oltp.lua cleanup
+  sysbench * (glob)
+  
+  Dropping table 'sbtest1'...
+  FATAL: invalid database driver name: 'nonexisting'
+  FATAL: failed to execute function `cleanup': */common.lua:122: DB initialization failed (glob)
+  [1]

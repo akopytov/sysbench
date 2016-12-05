@@ -8,6 +8,11 @@ oltp.lua + PostgreSQL tests
   > fi
 
   $ DB_DRIVER_ARGS="--db-driver=pgsql $SBTEST_PGSQL_ARGS"
+
+  $ function db_show_table() {
+  >  psql -c "\d+ $1" sbtest
+  > }
+
   $ . $SBTEST_INCDIR/script_oltp_common.sh
   sysbench *.* * (glob)
   
@@ -35,6 +40,95 @@ oltp.lua + PostgreSQL tests
   Creating table 'sbtest8'...
   Inserting 10000 records into 'sbtest8'
   Creating secondary indexes on 'sbtest8'...
+                                                   Table "public.sbtest1"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest1_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  Indexes:
+      "sbtest1_pkey" PRIMARY KEY, btree (id)
+      "k_1" btree (k)
+  
+                                                   Table "public.sbtest2"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest2_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  Indexes:
+      "sbtest2_pkey" PRIMARY KEY, btree (id)
+      "k_2" btree (k)
+  
+                                                   Table "public.sbtest3"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest3_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  Indexes:
+      "sbtest3_pkey" PRIMARY KEY, btree (id)
+      "k_3" btree (k)
+  
+                                                   Table "public.sbtest4"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest4_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  Indexes:
+      "sbtest4_pkey" PRIMARY KEY, btree (id)
+      "k_4" btree (k)
+  
+                                                   Table "public.sbtest5"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest5_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  Indexes:
+      "sbtest5_pkey" PRIMARY KEY, btree (id)
+      "k_5" btree (k)
+  
+                                                   Table "public.sbtest6"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest6_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  Indexes:
+      "sbtest6_pkey" PRIMARY KEY, btree (id)
+      "k_6" btree (k)
+  
+                                                   Table "public.sbtest7"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest7_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  Indexes:
+      "sbtest7_pkey" PRIMARY KEY, btree (id)
+      "k_7" btree (k)
+  
+                                                   Table "public.sbtest8"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest8_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  Indexes:
+      "sbtest8_pkey" PRIMARY KEY, btree (id)
+      "k_8" btree (k)
+  
+  Did not find any relation named "sbtest9".
   sysbench *.* * (glob)
   
   Running the test with following options:
@@ -82,4 +176,28 @@ oltp.lua + PostgreSQL tests
   Dropping table 'sbtest6'...
   Dropping table 'sbtest7'...
   Dropping table 'sbtest8'...
-
+  Did not find any relation named "sbtest1".
+  Did not find any relation named "sbtest2".
+  Did not find any relation named "sbtest3".
+  Did not find any relation named "sbtest4".
+  Did not find any relation named "sbtest5".
+  Did not find any relation named "sbtest6".
+  Did not find any relation named "sbtest7".
+  Did not find any relation named "sbtest8".
+  sysbench 1.0:  multi-threaded system evaluation benchmark (glob)
+  
+  Creating table 'sbtest1'...
+  Inserting 10000 records into 'sbtest1'
+                                                   Table "public.sbtest1"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest1_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  Indexes:
+      "sbtest1_pkey" PRIMARY KEY, btree (id)
+  
+  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  
+  Dropping table 'sbtest1'...

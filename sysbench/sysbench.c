@@ -183,6 +183,10 @@ static event_queue_elem_t queue_array[MAX_QUEUE_LEN];
 
 static int queue_is_full;
 
+static int report_thread_created;
+static int checkpoints_thread_created;
+static int eventgen_thread_created;
+
 static void print_header(void);
 static void print_help(void);
 static void print_run_mode(sb_test_t *);
@@ -593,6 +597,8 @@ static void *eventgen_thread_proc(void *arg)
   if (sb_barrier_wait(&thread_start_barrier) < 0)
     return NULL;
 
+  eventgen_thread_created = 1;
+
   curr_ns = sb_timer_value(&sb_globals.exec_timer);
   /* emulate exponential distribution with Lambda = tx_rate */
   intr_ns = (long) (log(1 - sb_rnd_double()) /
@@ -663,10 +669,12 @@ static void *report_thread_proc(void *arg)
 
   if (current_test->ops.print_stats == NULL)
   {
-    log_text(LOG_DEBUG, "Reporting not supported by the current test, "
+    log_text(LOG_DEBUG, "Reporting is not supported by the current test, "
              "terminating the reporting thread");
     return NULL;
   }
+
+  report_thread_created = 1;
 
   pause_ns = interval_ns;
   prev_ns = sb_timer_value(&sb_globals.exec_timer) + interval_ns;
@@ -713,10 +721,12 @@ static void *checkpoints_thread_proc(void *arg)
 
   if (current_test->ops.print_stats == NULL)
   {
-    log_text(LOG_DEBUG, "Reporting not supported by the current test, "
+    log_text(LOG_DEBUG, "Reporting is not supported by the current test, "
              "terminating the checkpoints thread");
     return NULL;
   }
+
+  checkpoints_thread_created = 1;
 
   for (i = 0; i < sb_globals.n_checkpoints; i++)
   {
@@ -728,7 +738,7 @@ static void *checkpoints_thread_proc(void *arg)
     pause_ns = next_ns - curr_ns;
     usleep(pause_ns / 1000);
     /*
-      Just to update elapsed time in timer which is alter used by
+      Just to update elapsed time in timer which is later used by
       log_timestamp.
     */
     curr_ns = sb_timer_value(&sb_globals.exec_timer);
@@ -774,9 +784,6 @@ static int run_test(sb_test_t *test)
   pthread_t    report_thread;
   pthread_t    checkpoints_thread;
   pthread_t    eventgen_thread;
-  int          report_thread_created      = 0;
-  int          checkpoints_thread_created = 0;
-  int          eventgen_thread_created    = 0;
   unsigned int barrier_threads;
 
   /* initialize test */
@@ -850,7 +857,6 @@ static int run_test(sb_test_t *test)
                 "sb_thread_create() for the reporting thread failed.");
       return 1;
     }
-    report_thread_created = 1;
   }
 
   if (sb_globals.tx_rate > 0)
@@ -862,7 +868,6 @@ static int run_test(sb_test_t *test)
                 "sb_thread_create() for the reporting thread failed.");
       return 1;
     }
-    eventgen_thread_created = 1;
   }
 
   if (sb_globals.n_checkpoints > 0)
@@ -875,7 +880,6 @@ static int run_test(sb_test_t *test)
                 "sb_thread_create() for the checkpoint thread failed.");
       return 1;
     }
-    checkpoints_thread_created = 1;
   }
 
   /* Starting the worker threads */
@@ -1020,7 +1024,7 @@ static int init(void)
   long              res;
 
   sb_globals.num_threads = sb_get_value_int("num-threads");
-  if (sb_globals.num_threads == 0)
+  if (sb_globals.num_threads <= 0)
   {
     log_text(LOG_FATAL, "Invalid value for --num-threads: %d.\n", sb_globals.num_threads);
     return 1;
@@ -1275,7 +1279,9 @@ int main(int argc, char *argv[])
 
   /* Uninitialize logger */
   log_done();
-  
+
+  sb_options_done();
+
   exit(0);
 }
 
