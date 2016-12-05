@@ -198,6 +198,6 @@ oltp.lua + PostgreSQL tests
   Indexes:
       "sbtest1_pkey" PRIMARY KEY, btree (id)
   
-  sysbench *:  multi-threaded system evaluation benchmark (glob)
+  sysbench *.* * (glob)
   
   Dropping table 'sbtest1'...
