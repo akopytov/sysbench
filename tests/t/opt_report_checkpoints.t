@@ -2,6 +2,11 @@
 # --report-checkpoints tests
 ########################################################################
 
+  $ if [ -z "$SBTEST_HAS_MYSQL" ]
+  > then
+  >   exit 80
+  > fi
+
   $ sysbench --test=${SBTEST_SCRIPTDIR}/oltp.lua --db-driver=mysql --mysql-dry-run --max-time=3 --max-requests=0 --report-checkpoints=1,2 run | egrep '(Checkpoint report|OLTP test statistics)'
   [   0s] Checkpoint report:
   OLTP test statistics:

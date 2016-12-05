@@ -207,7 +207,8 @@ AS_IF([test "x$with_mysql" != xno], [
     AC_SUBST([MYSQL_LIBS])
     AC_SUBST([MYSQL_CFLAGS])
 ])
-AM_CONDITIONAL(USE_MYSQL, test x$with_mysql != xno)
+AM_CONDITIONAL([USE_MYSQL], test x$with_mysql != xno)
+AC_SUBST([USE_MYSQL], test x$with_mysql != xno)
 
 AS_IF([test "x$with_drizzle" != xno], [
   AC_LIB_HAVE_LINKFLAGS(drizzle,,

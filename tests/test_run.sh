@@ -70,4 +70,6 @@ export SBTEST_SUITEDIR="$testroot/t"
 export SBTEST_INCDIR="$PWD/include"
 export SBTEST_CONFIG="$SBTEST_INCDIR/config.sh"
 
+. $SBTEST_CONFIG
+
 cram --shell=/bin/bash --verbose $tests
