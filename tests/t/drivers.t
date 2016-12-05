@@ -18,5 +18,5 @@ Make sure all available DB drivers are covered
   
   Dropping table 'sbtest1'...
   FATAL: invalid database driver name: 'nonexisting'
-  FATAL: failed to execute function `cleanup': */common.lua:122: DB initialization failed (glob)
+  FATAL: failed to execute function `cleanup': */common.lua:128: DB initialization failed (glob)
   [1]
