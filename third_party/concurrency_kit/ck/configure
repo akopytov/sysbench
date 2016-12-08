@@ -118,7 +118,9 @@ generate()
 	    -e "s#@GZIP@#$GZIP#g"				\
 	    -e "s#@GZIP_SUFFIX@#$GZIP_SUFFIX#g"			\
 	    -e "s#@POINTER_PACK_ENABLE@#$POINTER_PACK_ENABLE#g"	\
+	    -e "s#@DISABLE_DOUBLE@#$DISABLE_DOUBLE#g"		\
 	    -e "s#@RTM_ENABLE@#$RTM_ENABLE#g"			\
+	    -e "s#@LSE_ENABLE@#$LSE_ENABLE#g"			\
 	    -e "s#@VMA_BITS@#$VMA_BITS_R#g"			\
 	    -e "s#@VMA_BITS_VALUE@#$VMA_BITS_VALUE_R#g"		\
 	    -e "s#@MM@#$MM#g"					\
@@ -157,6 +159,7 @@ generate_stdout()
 	echo "          VMA_BITS = $VMA_BITS"
 	echo "      MEMORY_MODEL = $MM"
 	echo "               RTM = $RTM_ENABLE"
+	echo "               LSE = $LSE_ENABLE"
 	echo
 	echo "Headers will be installed in $HEADERS"
 	echo "Libraries will be installed in $LIBRARY"
@@ -192,10 +195,12 @@ for option; do
 		echo "The following options will affect generated code."
 		echo "  --enable-pointer-packing Assumes address encoding is subset of pointer range"
 		echo "  --enable-rtm             Enable restricted transactional memory (power, x86_64)"
+		echo "  --enable-lse             Enable large system extensions (arm64)"
 		echo "  --memory-model=N         Specify memory model (currently tso, pso or rmo)"
 		echo "  --vma-bits=N             Specify valid number of VMA bits"
 		echo "  --platform=N             Force the platform type, instead of relying on autodetection"
 		echo "  --use-cc-builtins        Use the compiler atomic bultin functions, instead of the CK implementation"
+		echo "  --disable-double         Don't generate any of the functions using the \"double\" type"
 		echo
 		echo "The following options affect regression testing."
 		echo "  --cores=N                Specify number of cores available on target machine"
@@ -235,6 +240,9 @@ for option; do
 	--enable-rtm)
 		RTM_ENABLE_SET="CK_MD_RTM_ENABLE"
 		;;
+	--enable-lse)
+		LSE_ENABLE_SET="CK_MD_LSE_ENABLE"
+		;;
 	--cores=*)
 		CORES=$value
 		;;
@@ -264,6 +272,9 @@ for option; do
 		;;
 	--use-cc-builtins)
 		USE_CC_BUILTINS=1
+		;;
+	--disable-double)
+		DISABLE_DOUBLE="CK_PR_DISABLE_DOUBLE"
 		;;
 	--platform=*)
 		PLATFORM=$value
@@ -300,7 +311,9 @@ LIBRARY=${LIBRARY:-"${PREFIX}/lib"}
 MANDIR=${MANDIR:-"${PREFIX}/share/man"}
 GZIP=${GZIP:-"gzip -c"}
 POINTER_PACK_ENABLE=${POINTER_PACK_ENABLE:-"CK_MD_POINTER_PACK_DISABLE"}
+DISABLE_DOUBLE=${DISABLE_DOUBLE:-"CK_PR_ENABLE_DOUBLE"}
 RTM_ENABLE=${RTM_ENABLE_SET:-"CK_MD_RTM_DISABLE"}
+LSE_ENABLE=${LSE_ENABLE_SET:-"CK_MD_LSE_DISABLE"}
 VMA_BITS=${VMA_BITS:-"unknown"}
 
 DCORES=2
@@ -358,6 +371,7 @@ fi
 case $PLATFORM in
 	"macppc"|"Power Macintosh"|"powerpc")
 		RTM_ENABLE="CK_MD_RTM_DISABLE"
+		LSE_ENABLE="CK_MD_LSE_DISABLE"
 		MM="${MM:-"CK_MD_RMO"}"
 		PLATFORM=ppc
 		ENVIRONMENT=32
@@ -365,12 +379,14 @@ case $PLATFORM in
 		;;
 	"sun4u"|"sun4v"|"sparc64")
 		RTM_ENABLE="CK_MD_RTM_DISABLE"
+		LSE_ENABLE="CK_MD_LSE_DISABLE"
 		MM="${MM:-"CK_MD_TSO"}"
 		PLATFORM=sparcv9
 		ENVIRONMENT=64
 		LDFLAGS="-m64 $LDFLAGS"
 		;;
 	i386|i486|i586|i686|i586_i686|pentium*|athlon*|k5|k6|k6_2|k6_3)
+		LSE_ENABLE="CK_MD_LSE_DISABLE"
 		MM="${MM:-"CK_MD_TSO"}"
 		case $SYSTEM in
 			darwin)
@@ -417,6 +433,7 @@ case $PLATFORM in
 		esac
 		;;
 	"amd64"|"x86_64")
+		LSE_ENABLE="CK_MD_LSE_DISABLE"
 		PLATFORM=x86_64
 		ENVIRONMENT=64
 		LDFLAGS="-m64 $LDFLAGS"
@@ -424,6 +441,7 @@ case $PLATFORM in
 		;;
 	"i86pc")
 		RTM_ENABLE="CK_MD_RTM_DISABLE"
+		LSE_ENABLE="CK_MD_LSE_DISABLE"
 		MM="${MM:-"CK_MD_TSO"}"
 		if test -z "$ISA"; then ISA=`isainfo -n 2> /dev/null || echo i386` ; fi
 		case "$ISA" in
@@ -441,6 +459,7 @@ case $PLATFORM in
 		;;
 	"ppc64"|"ppc64le")
 		RTM_ENABLE="CK_MD_RTM_DISABLE"
+		LSE_ENABLE="CK_MD_LSE_DISABLE"
 		MM="${MM:-"CK_MD_RMO"}"
 		PLATFORM=ppc64
 		ENVIRONMENT=64
@@ -452,6 +471,7 @@ case $PLATFORM in
 			CFLAGS="$CFLAGS -march=armv7-a";
 		fi
 		RTM_ENABLE="CK_MD_RTM_DISABLE"
+		LSE_ENABLE="CK_MD_LSE_DISABLE"
 		MM="${MM:-"CK_MD_RMO"}"
 		PLATFORM=arm
 		ENVIRONMENT=32
@@ -464,6 +484,7 @@ case $PLATFORM in
 		;;
 	*)
 		RTM_ENABLE="CK_MD_RTM_DISABLE"
+		LSE_ENABLE="CK_MD_LSE_DISABLE"
 		PLATFORM=
 		MM="${MM:-"CK_MD_RMO"}"
 		;;

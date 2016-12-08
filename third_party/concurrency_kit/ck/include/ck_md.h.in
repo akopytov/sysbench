@@ -39,6 +39,10 @@
 #define @RTM_ENABLE@
 #endif /* @RTM_ENABLE@ */
 
+#ifndef @LSE_ENABLE@
+#define @LSE_ENABLE@
+#endif /* @LSE_ENABLE@ */
+
 #ifndef @POINTER_PACK_ENABLE@
 #define @POINTER_PACK_ENABLE@
 #endif /* @POINTER_PACK_ENABLE@ */
@@ -50,6 +54,10 @@
 #ifndef @MM@
 #define @MM@
 #endif /* @MM@ */
+
+#ifndef @DISABLE_DOUBLE@
+#define @DISABLE_DOUBLE@
+#endif /* @DISABLE_DOUBLE@ */
 
 #define CK_VERSION "@VERSION@"
 #define CK_GIT_SHA "@GIT_SHA@"
