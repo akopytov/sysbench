@@ -17,6 +17,12 @@ function create_insert(table_id)
      index_name = "PRIMARY KEY"
    end
 
+   if (pgsql_variant == 'redshift') then
+      auto_inc_type = "INTEGER IDENTITY(1,1)"
+   else
+      auto_inc_type = "SERIAL"
+   end
+
    i = table_id
 
    print("Creating table 'sbtest" .. i .. "'...")
@@ -36,7 +42,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
    elseif (db_driver == "pgsql") then
       query = [[
 CREATE TABLE sbtest]] .. i .. [[ (
-id SERIAL NOT NULL,
+id ]] .. auto_inc_type .. [[ NOT NULL,
 k INTEGER DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
 pad CHAR(60) DEFAULT '' NOT NULL,
@@ -174,6 +180,11 @@ function set_vars()
       oltp_create_secondary = false
    else
       oltp_create_secondary = true
+   end
+
+   if (pgsql_variant == 'redshift') then
+      oltp_create_secondary = false
+      oltp_delete_inserts = 0
    end
 
 end
