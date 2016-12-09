@@ -64,3 +64,8 @@ GTAGS
 *.gcda
 *.gcno
 /tests/include/config.sh
+third_party/luajit/bin/
+third_party/luajit/inc/
+third_party/luajit/lib/
+third_party/luajit/share/
+third_party/luajit/tmp/
