@@ -71,6 +71,7 @@ then
   DEBUG_CFLAGS="-O0"
   OPTIMIZE_CFLAGS="-O2"
   GCOV_CFLAGS="-O0 --coverage"
+  GCOV_LDFLAGS="-coverage"
 fi
 if test "$SUNCC" = "yes"
 then
@@ -411,6 +412,7 @@ elif test "$ac_coverage" = "yes"
 then
   # Gcov-enabled build. No optimization.
   CFLAGS="${GCOV_CFLAGS} ${CFLAGS}"
+  LDFLAGS="${GCOV_LDFLAGS} ${LDFLAGS}"
 else
   # Optimized version. No debug
   CFLAGS="${OPTIMIZE_CFLAGS} ${CFLAGS}"

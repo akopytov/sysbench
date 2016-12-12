@@ -25,7 +25,8 @@ $(builddir)/lib/libck.a:
 	tar -C $(srcdir) -cf - ck | tar -xf - -C tmp/
 	chmod -R u+w tmp
 	cd tmp/ck && \
-	./configure \
+	CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
+	  ./configure \
 	  --prefix=$(abs_top_builddir)/third_party/concurrency_kit && \
 	$(MAKE) && \
 	$(MAKE) install
