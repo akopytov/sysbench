@@ -68,7 +68,7 @@
 
 #include "sysbench.h"
 #include "sb_options.h"
-#include "scripting/sb_script.h"
+#include "sb_lua.h"
 #include "db_driver.h"
 #include "sb_rnd.h"
 #include "sb_thread.h"
@@ -222,44 +222,6 @@ static void sigalrm_forced_shutdown_handler(int sig)
   exit(2);
 }
 #endif
-
-/* Main request provider function */ 
-
-
-static sb_request_t get_request(sb_test_t *test, int thread_id)
-{ 
-  sb_request_t r;
-  (void)thread_id; /* unused */
-
-  if (test->ops.get_request != NULL)
-    r = test->ops.get_request(thread_id);
-  else
-  { 
-    log_text(LOG_ALERT, "Unsupported mode! Creating NULL request.");
-    r.type = SB_REQ_TYPE_NULL;        
-  }
-  
-  return r; 
-}
-
-
-/* Main request execution function */
-
-
-static int execute_request(sb_test_t *test, sb_request_t *r,int thread_id)
-{
-  unsigned int rc;
-
-  if (test->ops.execute_request != NULL)
-    rc = test->ops.execute_request(r, thread_id);
-  else
-  {
-    log_text(LOG_FATAL, "Unknown request. Aborting");
-    rc = 1;
-  }
-
-  return rc;
-}
 
 
 static int register_tests(void)
@@ -470,19 +432,138 @@ void print_run_mode(sb_test_t *test)
     test->ops.print_mode();
 }
 
+/*
+   Get the next event, or return an 'empty' event with type = SB_REQ_TYPE_NULL,
+   if there are no more events to execute.
+*/
 
-/* Main worker test thread */
+sb_event_t sb_next_event(sb_test_t *test, int thread_id)
+{
+  sb_event_t          event;
+  sb_list_item_t      *pos;
+  event_queue_elem_t  *elem;
+  unsigned long long  queue_start_time = 0;
+
+  event.type = SB_REQ_TYPE_NULL;
+
+  if (sb_globals.error)
+    return event;
+
+  /* Check if we have a time limit */
+  if (sb_globals.max_time != 0 &&
+      sb_timer_value(&sb_globals.exec_timer) >= SEC2NS(sb_globals.max_time))
+  {
+    log_text(LOG_INFO, "Time limit exceeded, exiting...");
+    return event;
+  }
+
+  /* If we are in tx_rate mode, we take events from queue */
+  if (sb_globals.tx_rate > 0)
+  {
+    if (queue_is_full)
+    {
+      log_text(LOG_FATAL, "Event queue is full.");
+      return event;
+    }
+    pthread_mutex_lock(&event_queue_mutex);
+    while(!sb_globals.event_queue_length)
+      pthread_cond_wait(&event_queue_cv, &event_queue_mutex);
+
+    SB_LIST_ONCE(pos, &event_queue)
+    {
+      elem = SB_LIST_ENTRY(pos, event_queue_elem_t, listitem);
+      queue_start_time = elem->event_time;;
+
+      SB_LIST_DELETE(pos);
+
+      sb_globals.event_queue_length--;
+    }
+
+    sb_globals.concurrency++;
+
+    pthread_mutex_unlock(&event_queue_mutex);
+
+    timers[thread_id].queue_time = sb_timer_value(&sb_globals.exec_timer) -
+      queue_start_time;
+
+  }
+
+  event = test->ops.next_event(thread_id);
+
+  return event;
+}
+
+
+void sb_event_start(int thread_id)
+{
+  sb_timer_t     *timer = &timers[thread_id];
+
+  if (sb_globals.n_checkpoints > 0)
+    pthread_mutex_lock(&timers_mutex);
+
+  sb_timer_start(timer);
+
+  if (sb_globals.n_checkpoints > 0)
+    pthread_mutex_unlock(&timers_mutex);
+}
+
+
+void sb_event_stop(int thread_id)
+{
+  sb_timer_t     *timer = &timers[thread_id];
+  long long      value;
+
+  if (sb_globals.n_checkpoints > 0)
+    pthread_mutex_lock(&timers_mutex);
+
+  sb_timer_stop(timer);
+
+  value = sb_timer_value(timer);
+
+  if (sb_globals.n_checkpoints > 0)
+    pthread_mutex_unlock(&timers_mutex);
+
+  sb_percentile_update(&percentile, value);
+}
+
+
+/* Main event loop -- the default thread_run implementation */
+
+
+static void thread_run(sb_test_t *test, int thread_id)
+{
+  sb_event_t        event;
+  int               rc;
+
+  while ((event = sb_next_event(test, thread_id)).type != SB_REQ_TYPE_NULL)
+  {
+    sb_event_start(thread_id);
+
+    rc = test->ops.execute_event(&event, thread_id);
+
+    sb_event_stop(thread_id);
+
+    if (sb_globals.tx_rate > 0)
+    {
+      pthread_mutex_lock(&event_queue_mutex);
+      sb_globals.concurrency--;
+      pthread_mutex_unlock(&event_queue_mutex);
+    }
+
+    if (rc != 0)
+      break;
+  }
+}
+
+
+/* Main worker thread */
 
 
 static void *worker_thread(void *arg)
 {
-  sb_request_t        request;
   sb_thread_ctxt_t   *ctxt;
   sb_test_t          *test;
-  unsigned int        thread_id;
-  unsigned long long  queue_start_time = 0;
-  sb_list_item_t     *pos;
-  event_queue_elem_t *event;
+  unsigned int       thread_id;
 
   ctxt = (sb_thread_ctxt_t *)arg;
   test = ctxt->test;
@@ -508,65 +589,16 @@ static void *worker_thread(void *arg)
   if (sb_barrier_wait(&thread_start_barrier) < 0)
     return NULL;
 
-  do
+  if (test->ops.thread_run != NULL)
   {
-
-    /* If we are in tx_rate mode, we take events from queue */
-    if (sb_globals.tx_rate > 0)
-    {
-      if (queue_is_full)
-      {
-        log_text(LOG_FATAL, "Event queue is full.");
-        break;
-      }
-      pthread_mutex_lock(&event_queue_mutex);
-      while(!sb_globals.event_queue_length)
-        pthread_cond_wait(&event_queue_cv, &event_queue_mutex);
-
-      SB_LIST_ONCE(pos, &event_queue)
-      {
-        event = SB_LIST_ENTRY(pos, event_queue_elem_t, listitem);
-        queue_start_time = event->event_time;;
-
-        SB_LIST_DELETE(pos);
-
-        sb_globals.event_queue_length--;
-      }
-
-      sb_globals.concurrency++;
-
-      pthread_mutex_unlock(&event_queue_mutex);
-
-      timers[thread_id].queue_time = sb_timer_value(&sb_globals.exec_timer) -
-        queue_start_time;
-
-    }
-
-    request = get_request(test, thread_id);
-
-    /* check if we shall execute it */
-    if (request.type != SB_REQ_TYPE_NULL)
-    {
-      if (execute_request(test, &request, thread_id))
-        break; /* break if error returned (terminates only one thread) */
-    }
-
-    if (sb_globals.tx_rate > 0)
-    {
-      pthread_mutex_lock(&event_queue_mutex);
-      sb_globals.concurrency--;
-      pthread_mutex_unlock(&event_queue_mutex);
-    }
-
-    /* Check if we have a time limit */
-    if (sb_globals.max_time != 0 &&
-        sb_timer_value(&sb_globals.exec_timer) >= SEC2NS(sb_globals.max_time))
-    {
-      log_text(LOG_INFO, "Time limit exceeded, exiting...");
-      break;
-    }
-
-  } while ((request.type != SB_REQ_TYPE_NULL) && (!sb_globals.error) );
+    /* Use benchmark-provided thread_run implementation */
+    test->ops.thread_run(thread_id);
+  }
+  else
+  {
+    /* Use default thread_run implementation */
+    thread_run(test, thread_id);
+  }
 
   if (test->ops.thread_done != NULL)
     test->ops.thread_done(thread_id);
@@ -1208,7 +1240,7 @@ int main(int argc, char *argv[])
     
     /* Check if the testname is a script filename */
     if (test == NULL)
-      test = script_load(testname);
+      test = sb_load_lua(testname);
   }
 
   /* 'help' command */

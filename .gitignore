@@ -69,3 +69,4 @@ third_party/luajit/inc/
 third_party/luajit/lib/
 third_party/luajit/share/
 third_party/luajit/tmp/
+sysbench/lua/internal/sysbench.lua.h

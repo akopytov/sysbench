@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2011 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -23,31 +23,18 @@
 # include "config.h"
 #endif
 
+#ifdef HAVE_PTHREAD_H
+# include <pthread.h>
+#endif
+
 #include "sb_global.h"
 #include "sb_options.h"
 #include "sb_timer.h"
+#include "sb_percentile.h"
 
 /* Text message flags (used in the 'flags' field of log_text_msg_t) */
 
 #define LOG_MSG_TEXT_ALLOW_DUPLICATES 1
-
-/* Macros to log per-request execution statistics */
-
-#define LOG_EVENT_START(msg, thread_id) \
-  do \
-  { \
-    ((log_msg_oper_t *)(msg).data)->thread_id = thread_id; \
-    ((log_msg_oper_t *)(msg).data)->action = LOG_MSG_OPER_START; \
-    log_msg(&(msg)); \
-  } while (0);
-
-#define LOG_EVENT_STOP(msg, thread_id) \
-  do \
-  { \
-    ((log_msg_oper_t *)(msg).data)->thread_id = thread_id; \
-    ((log_msg_oper_t *)(msg).data)->action = LOG_MSG_OPER_STOP; \
-    log_msg(&(msg)); \
-  } while (0);
 
 /* Message types definition */
 
@@ -122,6 +109,9 @@ typedef struct {
 
 /* per-thread timers for response time stats */
 extern sb_timer_t *timers;
+extern pthread_mutex_t timers_mutex;
+
+extern sb_percentile_t percentile;
 
 /* Register logger */
 

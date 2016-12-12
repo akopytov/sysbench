@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -237,8 +237,8 @@ static int file_cmd_cleanup(void);
 static int file_init(void);
 static void file_print_mode(void);
 static int file_prepare(void);
-static sb_request_t file_get_request(int thread_id);
-static int file_execute_request(sb_request_t *, int);
+static sb_event_t file_next_event(int thread_id);
+static int file_execute_event(sb_event_t *, int);
 #ifdef HAVE_LIBAIO
 static int file_thread_done(int);
 #endif
@@ -247,32 +247,27 @@ static void file_print_stats(sb_stat_t);
 
 static sb_test_t fileio_test =
 {
-  "fileio",
-  "File I/O test",  
-  {
-    file_init,
-    file_prepare,
-    NULL,
-    file_print_mode,
-    file_get_request,
-    file_execute_request,
-    file_print_stats,
+  .sname = "fileio",
+  .lname = "File I/O test",
+  .ops = {
+    .init = file_init,
+    .prepare = file_prepare,
+    .print_mode = file_print_mode,
+    .next_event = file_next_event,
+    .execute_event = file_execute_event,
+    .print_stats = file_print_stats,
 #ifdef HAVE_LIBAIO
-     file_thread_done,
+    .thread_done = file_thread_done,
 #else
-     NULL,
+    .thread_done = NULL,
 #endif
-    NULL,
-    file_done
+    .done = file_done
   },
-  {
-   NULL,
-   file_cmd_prepare,
-   NULL,
-   file_cmd_cleanup
+  .cmds = {
+   .prepare = file_cmd_prepare,
+   .cleanup = file_cmd_cleanup
   },
-  fileio_args,
-  {0,0}
+  .args = fileio_args
 };
 
 
@@ -281,8 +276,8 @@ static int remove_files(void);
 static int parse_arguments(void);
 static void clear_stats(void);
 static void init_vars(void);
-static sb_request_t file_get_seq_request(void);
-static sb_request_t file_get_rnd_request(int thread_id);
+static sb_event_t file_get_seq_request(void);
+static sb_event_t file_get_rnd_request(int thread_id);
 static void check_seq_req(sb_file_request_t *, sb_file_request_t *);
 static const char *get_io_mode_str(file_io_mode_t mode);
 static const char *get_test_mode_str(file_test_mode_t mode);
@@ -418,7 +413,7 @@ int file_done(void)
   return 0;
 }
 
-sb_request_t file_get_request(int thread_id)
+sb_event_t file_next_event(int thread_id)
 {
   if (test_mode == MODE_WRITE || test_mode == MODE_REWRITE ||
       test_mode == MODE_READ)
@@ -432,9 +427,9 @@ sb_request_t file_get_request(int thread_id)
 /* Get sequential read or write request */
 
 
-sb_request_t file_get_seq_request(void)
+sb_event_t file_get_seq_request(void)
 {
-  sb_request_t         sb_req;
+  sb_event_t           sb_req;
   sb_file_request_t    *file_req = &sb_req.u.file_request;
 
   sb_req.type = SB_REQ_TYPE_FILE;
@@ -537,9 +532,9 @@ sb_request_t file_get_seq_request(void)
 /* Request generatior for random tests */
 
 
-sb_request_t file_get_rnd_request(int thread_id)
+sb_event_t file_get_rnd_request(int thread_id)
 {
-  sb_request_t         sb_req;
+  sb_event_t           sb_req;
   sb_file_request_t    *file_req = &sb_req.u.file_request;
   unsigned long long   tmppos;
   int                  real_mode = test_mode;
@@ -648,12 +643,10 @@ retry:
 }
 
 
-int file_execute_request(sb_request_t *sb_req, int thread_id)
+int file_execute_event(sb_event_t *sb_req, int thread_id)
 {
   FILE_DESCRIPTOR    fd;
   sb_file_request_t *file_req = &sb_req->u.file_request;
-  log_msg_t          msg;
-  log_msg_oper_t     op_msg;
 
   if (sb_globals.debug)
   {
@@ -678,9 +671,6 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
     return 1;
   }
   fd = files[file_req->file_id];
-  /* Prepare log message */
-  msg.type = LOG_MSG_TYPE_OPER;
-  msg.data = &op_msg;
 
   switch (file_req->operation) {
     case FILE_OP_TYPE_NULL:
@@ -692,7 +682,6 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
       if (sb_globals.validate)
         file_fill_buffer(per_thread[thread_id].buffer, file_req->size, file_req->pos);
                          
-      LOG_EVENT_START(msg, thread_id);
       if(file_pwrite(file_req->file_id, per_thread[thread_id].buffer,
                      file_req->size, file_req->pos, thread_id)
          != (ssize_t)file_req->size)
@@ -716,8 +705,6 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
         SB_THREAD_MUTEX_UNLOCK();
       }
 
-      LOG_EVENT_STOP(msg, thread_id);
-
       sb_percentile_update(&local_percentile,
                            sb_timer_value(&timers[thread_id]));
 
@@ -732,7 +719,6 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
 
       break;
     case FILE_OP_TYPE_READ:
-      LOG_EVENT_START(msg, thread_id);
       if(file_pread(file_req->file_id, per_thread[thread_id].buffer,
                     file_req->size, file_req->pos, thread_id)
          != (ssize_t)file_req->size)
@@ -741,7 +727,6 @@ int file_execute_request(sb_request_t *sb_req, int thread_id)
                   fd, (long long)file_req->pos);
         return 1;
       }
-      LOG_EVENT_STOP(msg, thread_id);
 
       sb_percentile_update(&local_percentile,
                            sb_timer_value(&timers[thread_id]));

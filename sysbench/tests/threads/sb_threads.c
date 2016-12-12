@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -54,34 +54,23 @@ static sb_arg_t threads_args[] =
 static int threads_init(void);
 static int threads_prepare(void);
 static void threads_print_mode(void);
-static sb_request_t threads_get_request(int);
-static int threads_execute_request(sb_request_t *, int);
+static sb_event_t threads_next_event(int);
+static int threads_execute_event(sb_event_t *, int);
 static int threads_cleanup(void);
 
 static sb_test_t threads_test =
 {
-  "threads",
-  "Threads subsystem performance test",
-  {
-    threads_init,
-    threads_prepare,
-    NULL,
-    threads_print_mode,
-    threads_get_request,
-    threads_execute_request,
-    NULL,
-    NULL,
-    NULL,
-    threads_cleanup,
+  .sname = "threads",
+  .lname = "Threads subsystem performance test",
+  .ops = {
+    .init = threads_init,
+    .prepare = threads_prepare,
+    .print_mode = threads_print_mode,
+    .next_event = threads_next_event,
+    .execute_event = threads_execute_event,
+    .cleanup = threads_cleanup
   },
-  {
-    NULL,
-    NULL,
-    NULL,
-    NULL
-  },
-  threads_args,
-  {NULL, NULL}
+  .args = threads_args
 };
 
 static unsigned int thread_yields;
@@ -139,9 +128,9 @@ int threads_cleanup(void)
 }
 
 
-sb_request_t threads_get_request(int thread_id)
+sb_event_t threads_next_event(int thread_id)
 {
-  sb_request_t         sb_req;
+  sb_event_t         sb_req;
   sb_threads_request_t *threads_req = &sb_req.u.threads_request;
 
   (void) thread_id; /* unused */
@@ -163,25 +152,19 @@ sb_request_t threads_get_request(int thread_id)
 }
 
 
-int threads_execute_request(sb_request_t *sb_req, int thread_id)
+int threads_execute_event(sb_event_t *sb_req, int thread_id)
 {
   unsigned int         i;
   sb_threads_request_t *threads_req = &sb_req->u.threads_request;
-  log_msg_t           msg;
-  log_msg_oper_t      op_msg;
-  
-  /* Prepare log message */
-  msg.type = LOG_MSG_TYPE_OPER;
-  msg.data = &op_msg;
 
-  LOG_EVENT_START(msg, thread_id);
+  (void) thread_id; /* unused */
+
   for(i = 0; i < thread_yields; i++)
   {
     pthread_mutex_lock(&test_mutexes[threads_req->lock_num]);
     YIELD();
     pthread_mutex_unlock(&test_mutexes[threads_req->lock_num]);
   }
-  LOG_EVENT_STOP(msg, thread_id);
 
   return 0;
 }
