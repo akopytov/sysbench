@@ -269,14 +269,14 @@ int memory_execute_request(sb_request_t *sb_req, int thread_id)
     LOG_EVENT_START(msg, thread_id);
     switch (mem_req->type) {
       case SB_MEM_OP_WRITE:
-        for (i = 0; i < memory_block_size; i++)
+        for (i = 0; i < memory_block_size; i += sizeof(int))
         {
           idx = (int)(sb_rnd_double() * (memory_block_size / sizeof(int)));
           buf[idx] = tmp;
         }
         break;
       case SB_MEM_OP_READ:
-        for (i = 0; i < memory_block_size; i++)
+        for (i = 0; i < memory_block_size; i += sizeof(int))
         {
           idx = (int)(sb_rnd_double() * (memory_block_size / sizeof(int)));
           tmp = buf[idx];
