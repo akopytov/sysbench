@@ -13,7 +13,7 @@ select_random_*.lua + PostgreSQL tests
 
   $ DB_DRIVER_ARGS="--db-driver=pgsql $SBTEST_PGSQL_ARGS"
   $ . $SBTEST_INCDIR/script_select_random_common.sh
-  sysbench 1.0:  multi-threaded system evaluation benchmark
+  sysbench * (glob)
   
   Creating table 'sbtest1'...
   Inserting 10000 records into 'sbtest1'
@@ -84,7 +84,7 @@ select_random_*.lua + PostgreSQL tests
   Did not find any relation named "sbtest6".
   Did not find any relation named "sbtest7".
   Did not find any relation named "sbtest8".
-  sysbench 1.0:  multi-threaded system evaluation benchmark
+  sysbench * (glob)
   
   Creating table 'sbtest1'...
   Inserting 10000 records into 'sbtest1'
@@ -144,7 +144,7 @@ select_random_*.lua + PostgreSQL tests
       events (avg/stddev):* (glob)
       execution time (avg/stddev):* (glob)
   
-  sysbench 1.0:  multi-threaded system evaluation benchmark
+  sysbench * (glob)
   
   Dropping table 'sbtest1'...
   Did not find any relation named "sbtest1".

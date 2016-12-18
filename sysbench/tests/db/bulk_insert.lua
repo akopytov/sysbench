@@ -35,7 +35,7 @@ PRIMARY KEY (id)
    end --for
 end
 
-function event(thread_id)
+function event()
    local i
 
    if (cursize == 0) then

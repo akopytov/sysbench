@@ -18,6 +18,8 @@
 -- Compatibility aliases. These may be removed in later versions
 -- ----------------------------------------------------------------------
 
+thread_id = sysbench.tid
+
 sb_rand = sysbench.rand
 sb_rand_uniq = sb_rand_uniq
 sb_rnd = sysbench.rnd

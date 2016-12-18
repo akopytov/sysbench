@@ -10,7 +10,7 @@ function thread_init(thread_id)
    set_vars()
 end
 
-function event(thread_id)
+function event()
    local table_name
    local i
    local c_val

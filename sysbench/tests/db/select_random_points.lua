@@ -16,7 +16,7 @@ else
    require("common")
 end
 
-function thread_init(thread_id)
+function thread_init()
    set_vars_points()
 
    points = ""
@@ -41,7 +41,7 @@ function thread_init(thread_id)
    db_bind_param(stmt, params)
 end
 
-function event(thread_id)
+function event()
    local rs
 
    -- To prevent overlapping of our range queries we need to partition the whole table

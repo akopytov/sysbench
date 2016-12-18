@@ -16,7 +16,7 @@ end
 -- Override oltp_tables_count, this test only supports a single table
 oltp_tables_count = 1
 
-function thread_init(thread_id)
+function thread_init()
    set_vars_ranges()
 
    ranges = ""
@@ -42,7 +42,7 @@ function thread_init(thread_id)
 
 end
 
-function event(thread_id)
+function event()
    local rs
 
    -- To prevent overlapping of our range queries we need to partition the whole table
