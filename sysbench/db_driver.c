@@ -184,6 +184,7 @@ void db_print_help(void)
 db_driver_t *db_init(const char *name)
 {
   db_driver_t    *drv = NULL;
+  db_driver_t    *tmp;
   sb_list_item_t *pos;
   unsigned int   i;
   
@@ -216,9 +217,12 @@ db_driver_t *db_init(const char *name)
 
     SB_LIST_FOR_EACH(pos, &drivers)
     {
-      drv = SB_LIST_ENTRY(pos, db_driver_t, listitem);
-      if (!strcmp(drv->sname, name))
+      tmp = SB_LIST_ENTRY(pos, db_driver_t, listitem);
+      if (!strcmp(tmp->sname, name))
+      {
+        drv = tmp;
         break;
+      }
     }
   }
 

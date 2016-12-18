@@ -17,6 +17,12 @@ function create_insert(table_id)
      index_name = "PRIMARY KEY"
    end
 
+   if (pgsql_variant == 'redshift') then
+      auto_inc_type = "INTEGER IDENTITY(1,1)"
+   else
+      auto_inc_type = "SERIAL"
+   end
+
    i = table_id
 
    print("Creating table 'sbtest" .. i .. "'...")
@@ -36,7 +42,7 @@ pad CHAR(60) DEFAULT '' NOT NULL,
    elseif (db_driver == "pgsql") then
       query = [[
 CREATE TABLE sbtest]] .. i .. [[ (
-id SERIAL NOT NULL,
+id ]] .. auto_inc_type .. [[ NOT NULL,
 k INTEGER DEFAULT '0' NOT NULL,
 c CHAR(120) DEFAULT '' NOT NULL,
 pad CHAR(60) DEFAULT '' NOT NULL,
@@ -87,8 +93,10 @@ pad CHAR(60) DEFAULT '' NOT NULL,
 
    db_bulk_insert_done()
 
-   print("Creating secondary indexes on 'sbtest" .. i .. "'...")
-   db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
+   if oltp_create_secondary then
+     print("Creating secondary indexes on 'sbtest" .. i .. "'...")
+     db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
+   end
 
 end
 
@@ -117,7 +125,7 @@ function cleanup()
 
    for i = 1,oltp_tables_count do
    print("Dropping table 'sbtest" .. i .. "'...")
-   db_query("DROP TABLE sbtest".. i )
+   db_query("DROP TABLE IF EXISTS sbtest".. i )
    end
 end
 
@@ -166,6 +174,17 @@ function set_vars()
       oltp_skip_trx = true
    else
       oltp_skip_trx = false
+   end
+
+   if (oltp_create_secondary == 'off') then
+      oltp_create_secondary = false
+   else
+      oltp_create_secondary = true
+   end
+
+   if (pgsql_variant == 'redshift') then
+      oltp_create_secondary = false
+      oltp_delete_inserts = 0
    end
 
 end

@@ -173,7 +173,9 @@ sb_test_t *sb_load_lua(const char *testname)
 {
   unsigned int i;
 
+#ifdef DATA_PATH
   setenv("LUA_PATH", DATA_PATH LUA_DIRSEP "?.lua", 0);
+#endif
 
   /* Initialize global interpreter state */
   gstate = sb_lua_new_state(testname, -1);
@@ -508,6 +510,7 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
 
   if (luaL_loadfile(L, scriptname))
   {
+#ifdef DATA_PATH
     /* first location failed - look in DATA_PATH */
     char p[PATH_MAX + 1];
     strncpy(p, DATA_PATH LUA_DIRSEP, sizeof(p));
@@ -523,6 +526,9 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
       lua_error(L);
       return NULL;
     }
+#else
+    return NULL;
+#endif
   }
 
   if (lua_pcall(L, 0, 0, 0))
