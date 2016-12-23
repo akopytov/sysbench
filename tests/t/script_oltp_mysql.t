@@ -175,7 +175,7 @@ oltp.lua + MySQL tests
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest6' doesn't exist
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest7' doesn't exist
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest8' doesn't exist
-  sysbench *.* * (glob)
+  sysbench * (glob)
   
   Creating table 'sbtest1'...
   Inserting 10000 records into 'sbtest1'
@@ -188,7 +188,7 @@ oltp.lua + MySQL tests
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
-  sysbench *.* * (glob)
+  sysbench * (glob)
   
   Dropping table 'sbtest1'...
 
@@ -356,7 +356,7 @@ oltp.lua + MySQL tests
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest6' doesn't exist
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest7' doesn't exist
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest8' doesn't exist
-  sysbench *.* * (glob)
+  sysbench * (glob)
   
   Creating table 'sbtest1'...
   Inserting 10000 records into 'sbtest1'
@@ -369,6 +369,6 @@ oltp.lua + MySQL tests
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
-  sysbench *.* * (glob)
+  sysbench * (glob)
   
   Dropping table 'sbtest1'...

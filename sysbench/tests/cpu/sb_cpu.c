@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -39,31 +39,22 @@ static sb_arg_t cpu_args[] =
 /* CPU test operations */
 static int cpu_init(void);
 static void cpu_print_mode(void);
-static sb_request_t cpu_get_request(int thread_id);
-static int cpu_execute_request(sb_request_t *, int);
+static sb_event_t cpu_next_event(int thread_id);
+static int cpu_execute_event(sb_event_t *, int);
 static int cpu_done(void);
 
 static sb_test_t cpu_test =
 {
-"cpu",
- "CPU performance test",
-  {
-    cpu_init,
-    NULL,
-    NULL,
-    cpu_print_mode,
-    cpu_get_request,
-    cpu_execute_request,
-    NULL,
-    NULL,
-    NULL,
-    cpu_done
+  .sname = "cpu",
+  .lname = "CPU performance test",
+  .ops = {
+    .init = cpu_init,
+    .print_mode = cpu_print_mode,
+    .next_event = cpu_next_event,
+    .execute_event = cpu_execute_event,
+    .done = cpu_done
   },
-  {
-    NULL,NULL,NULL,NULL
-  },
-  cpu_args,
-  {NULL, NULL}
+  .args = cpu_args
 };
 
 /* Upper limit for primes */
@@ -94,9 +85,9 @@ int cpu_init(void)
 }
 
 
-sb_request_t cpu_get_request(int thread_id)
+sb_event_t cpu_next_event(int thread_id)
 {
-  sb_request_t req;
+  sb_event_t req;
 
   (void) thread_id; /* unused */
 
@@ -118,25 +109,19 @@ sb_request_t cpu_get_request(int thread_id)
   return req;
 }
 
-int cpu_execute_request(sb_request_t *r, int thread_id)
+int cpu_execute_event(sb_event_t *r, int thread_id)
 {
   unsigned long long c;
   unsigned long long l;
   double t;
   unsigned long long n=0;
-  log_msg_t           msg;
-  log_msg_oper_t      op_msg;
-  
+
+  (void)thread_id; /* unused */
   (void)r; /* unused */
 
-  /* Prepare log message */
-  msg.type = LOG_MSG_TYPE_OPER;
-  msg.data = &op_msg;
-  
   /* So far we're using very simple test prime number tests in 64bit */
-  LOG_EVENT_START(msg, thread_id);
 
-  for(c=3; c < max_prime; c++)  
+  for(c=3; c < max_prime; c++)
   {
     t = sqrt((double)c);
     for(l = 2; l <= t; l++)
@@ -145,8 +130,6 @@ int cpu_execute_request(sb_request_t *r, int thread_id)
     if (l > t )
       n++; 
   }
-
-  LOG_EVENT_STOP(msg, thread_id);
 
   return 0;
 }

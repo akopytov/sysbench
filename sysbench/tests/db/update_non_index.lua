@@ -6,11 +6,11 @@ else
    require("common")
 end
 
-function thread_init(thread_id)
+function thread_init()
    set_vars()
 end
 
-function event(thread_id)
+function event()
    local table_name
    local c_val
    local query

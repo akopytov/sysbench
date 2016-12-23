@@ -1,5 +1,5 @@
 /* Copyright (C) 2006 MySQL AB
-   Copyright (C) 2006 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2006-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,17 +16,12 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
-#ifndef SB_SCRIPT_H
-#define SB_SCRIPT_H
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
 #include "sysbench.h"
 
-/* Initialize interpreter with a given script name */
+/* Load a specified Lua script */
 
-sb_test_t *script_load(const char *testname);
-
-#endif /* SB_SCRIPT_H */
+sb_test_t *sb_load_lua(const char *testname);

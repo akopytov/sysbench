@@ -68,3 +68,9 @@ GTAGS
 /third_party/concurrency_kit/lib/
 /third_party/concurrency_kit/share/
 /third_party/concurrency_kit/tmp/
+third_party/luajit/bin/
+third_party/luajit/inc/
+third_party/luajit/lib/
+third_party/luajit/share/
+third_party/luajit/tmp/
+sysbench/lua/internal/sysbench.lua.h

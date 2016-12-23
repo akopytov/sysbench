@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -57,34 +57,22 @@ static sb_arg_t memory_args[] =
 /* Memory test operations */
 static int memory_init(void);
 static void memory_print_mode(void);
-static sb_request_t memory_get_request(int);
-static int memory_execute_request(sb_request_t *, int);
+static sb_event_t memory_next_event(int);
+static int memory_execute_event(sb_event_t *, int);
 static void memory_print_stats(sb_stat_t type);
 
 static sb_test_t memory_test =
 {
-  "memory",
-  "Memory functions speed test",
-  {
-    memory_init,
-    NULL,
-    NULL,
-    memory_print_mode,
-    memory_get_request,
-    memory_execute_request,
-    memory_print_stats,
-    NULL,
-    NULL,
-    NULL
+  .sname = "memory",
+  .lname = "Memory functions speed test",
+  .ops = {
+    .init = memory_init,
+    .print_mode = memory_print_mode,
+    .next_event = memory_next_event,
+    .execute_event = memory_execute_event,
+    .print_stats = memory_print_stats
   },
-  {
-    NULL,
-    NULL,
-    NULL,
-    NULL
-  },
-  memory_args,
-  {NULL, NULL}
+  .args = memory_args
 };
 
 /* Test arguments */
@@ -218,9 +206,9 @@ int memory_init(void)
 }
 
 
-sb_request_t memory_get_request(int thread_id)
+sb_event_t memory_next_event(int thread_id)
 {
-  sb_request_t      req;
+  sb_event_t      req;
   sb_mem_request_t  *mem_req = &req.u.mem_request;
 
   (void) thread_id; /* unused */
@@ -244,20 +232,14 @@ sb_request_t memory_get_request(int thread_id)
   return req;
 }
 
-int memory_execute_request(sb_request_t *sb_req, int thread_id)
+int memory_execute_event(sb_event_t *sb_req, int thread_id)
 {
   sb_mem_request_t    *mem_req = &sb_req->u.mem_request;
   volatile int        tmp = 0;
   int                 idx; 
   int                 *buf, *end;
-  log_msg_t           msg;
-  log_msg_oper_t      op_msg;
   long                i;
 
-  /* Prepare log message */
-  msg.type = LOG_MSG_TYPE_OPER;
-  msg.data = &op_msg;
-  
   if (mem_req->scope == SB_MEM_SCOPE_GLOBAL)
     buf = buffer;
   else
@@ -266,7 +248,6 @@ int memory_execute_request(sb_request_t *sb_req, int thread_id)
 
   if (memory_access_rnd)
   {
-    LOG_EVENT_START(msg, thread_id);
     switch (mem_req->type) {
       case SB_MEM_OP_WRITE:
         for (i = 0; i < memory_block_size; i++)
@@ -290,7 +271,6 @@ int memory_execute_request(sb_request_t *sb_req, int thread_id)
   }
   else
   {
-    LOG_EVENT_START(msg, thread_id);
     switch (mem_req->type) {
       case SB_MEM_OP_NONE:
         for (; buf < end; buf++)
@@ -310,8 +290,6 @@ int memory_execute_request(sb_request_t *sb_req, int thread_id)
         return 1;
     }
   }
-  
-  LOG_EVENT_STOP(msg, thread_id);
 
   return 0;
 }

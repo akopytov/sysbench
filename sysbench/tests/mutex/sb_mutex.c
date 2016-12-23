@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2008 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -51,34 +51,22 @@ static sb_arg_t mutex_args[] =
 /* Mutex test operations */
 static int mutex_init(void);
 static void mutex_print_mode(void);
-static sb_request_t mutex_get_request(int);
-static int mutex_execute_request(sb_request_t *, int);
+static sb_event_t mutex_next_event(int);
+static int mutex_execute_event(sb_event_t *, int);
 static int mutex_done(void);
 
 static sb_test_t mutex_test =
 {
-  "mutex",
-  "Mutex performance test",
-  {
-     mutex_init,
-     NULL,
-     NULL,
-     mutex_print_mode,
-     mutex_get_request,
-     mutex_execute_request,
-     NULL,
-     NULL,
-     NULL,
-     mutex_done
+  .sname = "mutex",
+  .lname = "Mutex performance test",
+  .ops = {
+     .init = mutex_init,
+     .print_mode = mutex_print_mode,
+     .next_event = mutex_next_event,
+     .execute_event = mutex_execute_event,
+     .done = mutex_done
   },
-  {
-     NULL,
-     NULL,
-     NULL,
-     NULL
-  },
-  mutex_args,
-  {NULL, NULL}
+  .args = mutex_args
 };
 
 
@@ -130,9 +118,9 @@ int mutex_done(void)
 }
 
 
-sb_request_t mutex_get_request(int thread_id)
+sb_event_t mutex_next_event(int thread_id)
 {
-  sb_request_t         sb_req;
+  sb_event_t         sb_req;
   sb_mutex_request_t   *mutex_req = &sb_req.u.mutex_request;
 
   (void) thread_id; /* unused */
@@ -145,20 +133,15 @@ sb_request_t mutex_get_request(int thread_id)
 }
 
 
-int mutex_execute_request(sb_request_t *sb_req, int thread_id)
+int mutex_execute_event(sb_event_t *sb_req, int thread_id)
 {
   unsigned int         i;
   unsigned int         c=0;
   unsigned int         current_lock;
   sb_mutex_request_t   *mutex_req = &sb_req->u.mutex_request;
-  log_msg_t            msg;
-  log_msg_oper_t       op_msg;
 
-  /* Prepare log message */
-  msg.type = LOG_MSG_TYPE_OPER;
-  msg.data = &op_msg;
+  (void) thread_id; /* unused */
 
-  LOG_EVENT_START(msg, thread_id);
   do
   {
     current_lock = rand() % mutex_num;
@@ -170,7 +153,6 @@ int mutex_execute_request(sb_request_t *sb_req, int thread_id)
     mutex_req->nlocks--;
   }
   while (mutex_req->nlocks > 0);
-  LOG_EVENT_STOP(msg, thread_id);
 
   /* Perform only one request per thread */
   return 1;

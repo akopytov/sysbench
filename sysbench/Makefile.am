@@ -1,5 +1,5 @@
 # Copyright (C) 2004 MySQL AB
-# Copyright (C) 2004-2014 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,7 +15,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-SUBDIRS = drivers tests scripting .
+SUBDIRS = drivers tests lua .
+
+AM_CPPFLAGS += -DDATA_PATH=\"$(pkgdatadir)\"
 
 bin_PROGRAMS = sysbench
 
@@ -45,11 +47,12 @@ endif
 sysbench_SOURCES = sysbench.c sysbench.h sb_timer.c sb_timer.h \
 sb_options.c sb_options.h sb_logger.c sb_logger.h sb_list.h db_driver.h \
 db_driver.c sb_histogram.c sb_histogram.h sb_rnd.c sb_rnd.h \
-sb_thread.c sb_thread.h sb_barrier.c sb_barrier.h sb_global.h
+sb_thread.c sb_thread.h sb_barrier.c sb_barrier.h sb_global.h sb_lua.c \
+sb_lua.h lua/internal/sysbench.lua.h
 
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     tests/memory/libsbmemory.a tests/cpu/libsbcpu.a \
-    tests/mutex/libsbmutex.a scripting/libsbscript.a \
+    tests/mutex/libsbmutex.a \
     $(mysql_ldadd) $(drizzle_ldadd) $(attachsql_ldadd) $(pgsql_ldadd) \
     $(ora_ldadd) $(LUAJIT_LIBS) $(CK_LIBS)
 

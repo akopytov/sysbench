@@ -68,7 +68,7 @@ fileio benchmark tests
   
   General statistics:
       total time:                          *.*s (glob)
-      total number of events:              150
+      total number of events:              158
       total time taken by event execution: *.*s (glob)
       response time:
            min:                                  *.*ms (glob)
@@ -77,7 +77,7 @@ fileio benchmark tests
            approx.  95th percentile:             *.*ms (glob)
   
   Threads fairness:
-      events (avg/stddev):           150.0000/0.00
+      events (avg/stddev):           158.0000/0.00
       execution time (avg/stddev):   *.*/0.00 (glob)
   
   $ sysbench $fileio_args --max-requests=150 --file-test-mode=rndrd run
@@ -206,7 +206,7 @@ fileio benchmark tests
   
   General statistics:
       total time:                          *.*s (glob)
-      total number of events:              150
+      total number of events:              158
       total time taken by event execution: *.*s (glob)
       response time:
            min:                                  *.*ms (glob)
@@ -215,7 +215,7 @@ fileio benchmark tests
            approx.  95th percentile:             *.*ms (glob)
   
   Threads fairness:
-      events (avg/stddev):           150.0000/0.00
+      events (avg/stddev):           158.0000/0.00
       execution time (avg/stddev):   *.*/0.00 (glob)
   
 

@@ -31,6 +31,11 @@ m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 #LT_LIB_DLLOAD
 AC_PROG_LIBTOOL
 
+AC_CHECK_PROG(sb_have_xxd, xxd, yes, no)
+if test x"$sb_have_xxd" = xno; then
+   AC_MSG_ERROR("xxd is required to build sysbench (usually comes with the vim package)")
+fi
+
 AC_CHECK_DECL([__SUNPRO_C], [SUNCC="yes"], [SUNCC="no"])
 
 AC_MSG_CHECKING("C Compiler version")
@@ -517,7 +522,8 @@ sysbench/tests/memory/Makefile
 sysbench/tests/threads/Makefile
 sysbench/tests/mutex/Makefile
 sysbench/tests/db/Makefile
-sysbench/scripting/Makefile
+sysbench/lua/Makefile
+sysbench/lua/internal/Makefile
 tests/Makefile
 tests/include/config.sh
 ])

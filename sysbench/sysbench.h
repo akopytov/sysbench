@@ -23,6 +23,7 @@
 # include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
+# include <stdbool.h>
 #endif
 #ifdef HAVE_UNISTD_H 
 # include <unistd.h>
@@ -73,7 +74,7 @@ typedef enum
   SB_REQ_TYPE_THREADS,
   SB_REQ_TYPE_MUTEX,
   SB_REQ_TYPE_SCRIPT
-} sb_request_type_t;
+} sb_event_type_t;
 
 /* Request structure definition */
 
@@ -92,7 +93,7 @@ typedef struct
     sb_threads_request_t threads_request;
     sb_mutex_request_t   mutex_request;
   } u;
-} sb_request_t;
+} sb_event_t;
 
 typedef enum
 {
@@ -113,9 +114,10 @@ typedef int sb_cmd_cleanup(void);
 typedef int sb_op_init(void);
 typedef int sb_op_prepare(void);
 typedef int sb_op_thread_init(int);
+typedef int sb_op_thread_run(int);
 typedef void sb_op_print_mode(void);
-typedef sb_request_t sb_op_get_request(int);
-typedef int sb_op_execute_request(sb_request_t *, int);
+typedef sb_event_t sb_op_next_event(int);
+typedef int sb_op_execute_event(sb_event_t *, int);
 typedef void sb_op_print_stats(sb_stat_t);
 typedef int sb_op_thread_done(int);
 typedef int sb_op_cleanup(void);
@@ -141,9 +143,10 @@ typedef struct
   sb_op_thread_init     *thread_init;     /* thread initialization
                                              (called when each thread starts) */
   sb_op_print_mode      *print_mode;      /* print mode function */
-  sb_op_get_request     *get_request;     /* request generation function */
-  sb_op_execute_request *execute_request; /* request execution function */
+  sb_op_next_event      *next_event;      /* event generation function */
+  sb_op_execute_event   *execute_event;   /* event execution function */
   sb_op_print_stats     *print_stats;     /* stats generation function */
+  sb_op_thread_run      *thread_run;      /* main thread loop */
   sb_op_thread_done     *thread_done;     /* thread finalize function */
   sb_op_cleanup         *cleanup;         /* called after exit from thread,
                                              but before timers stop */ 
@@ -209,6 +212,10 @@ typedef struct
 
 extern sb_globals_t sb_globals;
 extern pthread_mutex_t event_queue_mutex;
+
+sb_event_t sb_next_event(sb_test_t *test, int thread_id);
+void sb_event_start(int thread_id);
+void sb_event_stop(int thread_id);
 
 /* Random number generators */
 int sb_rand(int, int);

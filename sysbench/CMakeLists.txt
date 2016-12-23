@@ -106,11 +106,6 @@ target_link_libraries (sysbench sbfileio)
 add_subdirectory(tests/mutex)
 target_link_libraries (sysbench sbmutex)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-add_subdirectory(scripting)
-target_link_libraries(sysbench sbscript lua)
-
-
 add_subdirectory(tests/threads)
 target_link_libraries (sysbench sbthreads)
 

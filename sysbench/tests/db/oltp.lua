@@ -6,7 +6,7 @@ else
    require("common")
 end
 
-function thread_init(thread_id)
+function thread_init()
    set_vars()
 
    if (((db_driver == "mysql") or (db_driver == "attachsql")) and mysql_table_engine == "myisam") then
@@ -30,7 +30,7 @@ function get_range_str()
                         start, start + oltp_range_size - 1)
 end
 
-function event(thread_id)
+function event()
    local rs
    local i
    local table_name

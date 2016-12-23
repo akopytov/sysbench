@@ -184,7 +184,7 @@ oltp.lua + PostgreSQL tests
   Did not find any relation named "sbtest6".
   Did not find any relation named "sbtest7".
   Did not find any relation named "sbtest8".
-  sysbench *.* * (glob)
+  sysbench * (glob)
   
   Creating table 'sbtest1'...
   Inserting 10000 records into 'sbtest1'
@@ -198,6 +198,6 @@ oltp.lua + PostgreSQL tests
   Indexes:
       "sbtest1_pkey" PRIMARY KEY, btree (id)
   
-  sysbench *.* * (glob)
+  sysbench * (glob)
   
   Dropping table 'sbtest1'...

@@ -56,6 +56,12 @@
 /* per-thread timers for response time stats */
 sb_timer_t *timers;
 
+/*
+  Mutex protecting timers.
+  TODO: replace with an rwlock (and implement pthread rwlocks for Windows).
+*/
+pthread_mutex_t timers_mutex;
+
 /* Array of message handlers (one chain per message type) */
 
 static sb_list_t handlers[LOG_MSG_TYPE_MAX];
@@ -70,11 +76,6 @@ static char            text_buf[TEXT_BUFFER_SIZE];
 /* Temporary copy of timers */
 static sb_timer_t *timers_copy;
 
-/*
-  Mutex protecting timers.
-  TODO: replace with an rwlock (and implement pthread rwlocks for Windows).
-*/
-static pthread_mutex_t timers_mutex;
 
 static int text_handler_init(void);
 static int text_handler_process(log_msg_t *msg);
@@ -139,7 +140,7 @@ int log_register(void)
 
   log_add_handler(LOG_MSG_TYPE_TEXT, &text_handler);
   log_add_handler(LOG_MSG_TYPE_OPER, &oper_handler);
-  
+
   return 0;
 }
 
