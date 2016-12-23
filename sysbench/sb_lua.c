@@ -625,6 +625,7 @@ int sb_lua_db_connect(lua_State *L)
   ctxt->con = db_connect(db_driver);
   if (ctxt->con == NULL)
     luaL_error(L, "Failed to connect to the database");
+  db_set_thread(ctxt->con, ctxt->thread_id);
 
   return 0;
 }
