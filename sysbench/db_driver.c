@@ -36,6 +36,7 @@
 #include "db_driver.h"
 #include "sb_list.h"
 #include "sb_histogram.h"
+#include "ck_pr.h"
 
 /* Query length limit for bulk insert queries */
 #define BULK_PACKET_SIZE (512*1024)
@@ -44,13 +45,13 @@
 #define ROWS_BEFORE_COMMIT 1000
 
 typedef struct {
-  unsigned long   read_ops;
-  unsigned long   write_ops;
-  unsigned long   other_ops;
-  unsigned long   transactions;
-  unsigned long   errors;
-  unsigned long   reconnects;
-  pthread_mutex_t stat_mutex;
+  uint64_t   read_ops;
+  uint64_t   write_ops;
+  uint64_t   other_ops;
+  uint64_t   transactions;
+  uint64_t   errors;
+  uint64_t   reconnects;
+  char       pad[CK_MD_CACHELINE - sizeof(uint64_t) * 6];
 } db_thread_stat_t;
 
 /* Global variables */
@@ -184,8 +185,7 @@ db_driver_t *db_init(const char *name)
   db_driver_t    *drv = NULL;
   db_driver_t    *tmp;
   sb_list_item_t *pos;
-  unsigned int   i;
-  
+
   if (SB_LIST_IS_EMPTY(&drivers))
   {
     log_text(LOG_FATAL, "No DB drivers available");
@@ -239,9 +239,6 @@ db_driver_t *db_init(const char *name)
                                             sizeof(db_thread_stat_t));
   if (thread_stats == NULL)
     return NULL;
-
-  for (i = 0; i < sb_globals.num_threads; i++)
-    pthread_mutex_init(&thread_stats[i].stat_mutex, NULL);
 
   /* Initialize timers if in debug mode */
   if (db_globals.debug)
@@ -573,9 +570,6 @@ int db_done(db_driver_t *drv)
   
   if (thread_stats != NULL)
   {
-    unsigned int i;
-    for (i = 0; i < sb_globals.num_threads; i++)
-      pthread_mutex_destroy(&thread_stats[i].stat_mutex);
     free(thread_stats);
   }
 
@@ -832,14 +826,12 @@ void db_print_stats(sb_stat_t type)
   read_ops = write_ops = other_ops = transactions = errors = reconnects = 0;
   for (i = 0; i < sb_globals.num_threads; i++)
   {
-    pthread_mutex_lock(&thread_stats[i].stat_mutex);
-    read_ops += thread_stats[i].read_ops;
-    write_ops += thread_stats[i].write_ops;
-    other_ops += thread_stats[i].other_ops;
-    transactions += thread_stats[i].transactions;
-    errors += thread_stats[i].errors;
-    reconnects += thread_stats[i].reconnects;
-    pthread_mutex_unlock(&thread_stats[i].stat_mutex);
+    read_ops += ck_pr_load_64(&thread_stats[i].read_ops);
+    write_ops += ck_pr_load_64(&thread_stats[i].write_ops);
+    other_ops += ck_pr_load_64(&thread_stats[i].other_ops);
+    transactions += ck_pr_load_64(&thread_stats[i].transactions);
+    errors += ck_pr_load_64(&thread_stats[i].errors);
+    reconnects += ck_pr_load_64(&thread_stats[i].reconnects);
   }
 
   if (type == SB_STAT_INTERMEDIATE)
@@ -973,31 +965,24 @@ db_query_type_t db_get_query_type(const char *query)
 
 void db_update_thread_stats(int id, db_query_type_t type)
 {
-  if (id < 0)
-    return;
-
-  pthread_mutex_lock(&thread_stats[id].stat_mutex);
-
   switch (type)
   {
     case DB_QUERY_TYPE_READ:
-      thread_stats[id].read_ops++;
+      ck_pr_inc_64(&thread_stats[id].read_ops);
       break;
     case DB_QUERY_TYPE_WRITE:
-      thread_stats[id].write_ops++;
+      ck_pr_inc_64(&thread_stats[id].write_ops);
       break;
     case DB_QUERY_TYPE_COMMIT:
-      thread_stats[id].other_ops++;
-      thread_stats[id].transactions++;
+      ck_pr_inc_64(&thread_stats[id].other_ops);
+      ck_pr_inc_64(&thread_stats[id].transactions);
       break;
     case DB_QUERY_TYPE_OTHER:
-      thread_stats[id].other_ops++;
+      ck_pr_inc_64(&thread_stats[id].other_ops);
       break;
     default:
       log_text(LOG_WARNING, "Unknown query type: %d", type);
   }
-
-  pthread_mutex_unlock(&thread_stats[id].stat_mutex);
 }
 
 static void db_reset_stats(void)
