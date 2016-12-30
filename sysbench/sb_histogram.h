@@ -99,6 +99,11 @@ double sb_histogram_get_pct_cumulative(sb_histogram_t *h, double percentile);
 */
 double sb_histogram_get_pct_checkpoint(sb_histogram_t *h, double percentile);
 
+/*
+  Print a given histogram to stdout
+*/
+void sb_histogram_print(sb_histogram_t *h);
+
 /* Destroy a given histogram object */
 void sb_histogram_done(sb_histogram_t *h);
 

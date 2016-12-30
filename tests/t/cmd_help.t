@@ -39,6 +39,7 @@ separately.
     --verbosity=N      verbosity level {5 - debug, 0 - only critical messages} [3]
   
     --percentile=N      percentile to calculate in latency statistics (1-100). Use the special value of 0 to disable percentile calculations [95]
+    --histogram=[on|off]print latency histogram in report [off]
   
   General database options:
   
@@ -55,7 +56,6 @@ separately.
   
   See 'sysbench --test=<name> help' for a list of options for each test.
   
-
 ########################################################################
 Test driver-specific options
 ########################################################################

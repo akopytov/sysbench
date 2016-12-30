@@ -23,6 +23,7 @@
 #endif
 
 #ifdef STDC_HEADERS
+# include <stdio.h>
 # include <stdlib.h>
 #endif
 #ifdef HAVE_STRING_H
@@ -288,6 +289,47 @@ double sb_histogram_get_pct_checkpoint(sb_histogram_t *h,
   pthread_rwlock_unlock(&h->lock);
 
   return res;
+}
+
+
+void sb_histogram_print(sb_histogram_t *h)
+{
+  uint64_t maxcnt;
+  int      width;
+  size_t   i;
+
+  pthread_rwlock_wrlock(&h->lock);
+
+  merge_intermediate_into_cumulative(h);
+
+  uint64_t * const array = h->cumulative_array;
+
+  maxcnt = 0;
+  for (i = 0; i < h->array_size; i++)
+  {
+    if (array[i] > maxcnt)
+      maxcnt = array[i];
+  }
+
+  if (maxcnt == 0)
+    return;
+
+  printf("       value  ------------- distribution ------------- count\n");
+
+  for (i = 0; i < h->array_size; i++)
+  {
+    if (array[i] == 0)
+      continue;
+
+    width = floor(array[i] * (double) 40 / maxcnt + 0.5);
+
+    printf("%12.3f |%-40.*s %lu\n",
+           exp(i / h->range_mult + h->range_deduct),          /* value */
+           width, "****************************************", /* distribution */
+           (unsigned long) array[i]);                /* count */
+  }
+
+  pthread_rwlock_unlock(&h->lock);
 }
 
 

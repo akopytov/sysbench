@@ -113,6 +113,8 @@ static sb_arg_t oper_handler_args[] =
   {"percentile", "percentile to calculate in latency statistics (1-100). "
    "Use the special value of 0 to disable percentile calculations",
    SB_ARG_TYPE_INT, "95"},
+  {"histogram", "print latency histogram in report",
+   SB_ARG_TYPE_FLAG, "off"},
 
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
@@ -500,6 +502,13 @@ int oper_handler_init(void)
   }
   sb_globals.percentile = tmp;
 
+  sb_globals.histogram = sb_get_value_flag("histogram");
+  if (sb_globals.percentile == 0 && sb_globals.histogram != 0)
+  {
+    log_text(LOG_FATAL, "--histogram cannot be used with --percentile=0");
+    return 1;
+  }
+
   if (sb_histogram_init(&global_histogram, OPER_LOG_GRANULARITY,
                         OPER_LOG_MIN_VALUE, OPER_LOG_MAX_VALUE))
     return 1;
@@ -575,7 +584,6 @@ int print_global_stats(void)
   double       events_stddev;
   double       time_avg;
   double       time_stddev;
-  double       percentile_val;
   unsigned long long total_time_ns;
 
   sb_timer_init(&t);
@@ -590,10 +598,6 @@ int print_global_stats(void)
     sb_timer_reset(&timers[i]);
 
   total_time_ns = sb_timer_split(&sb_globals.cumulative_timer2);
-
-  percentile_val =
-    sb_histogram_get_pct_checkpoint(&global_histogram,
-                                    sb_globals.percentile);
 
   if (sb_globals.n_checkpoints > 0)
     pthread_mutex_unlock(&timers_mutex);
@@ -640,7 +644,16 @@ int print_global_stats(void)
   log_text(LOG_NOTICE, "    total time taken by event execution: %.4fs",
            NS2SEC(get_sum_time(&t)));
 
-  log_text(LOG_NOTICE, "    response time:");
+  log_text(LOG_NOTICE, "");
+
+  if (sb_globals.histogram)
+  {
+    log_text(LOG_NOTICE, "Latency histogram (values are in milliseconds)");
+    sb_histogram_print(&global_histogram);
+    log_text(LOG_NOTICE, " ");
+  }
+
+  log_text(LOG_NOTICE, "Latency statistics:");
   log_text(LOG_NOTICE, "         min:                            %10.2fms",
            NS2MS(get_min_time(&t)));
   log_text(LOG_NOTICE, "         avg:                            %10.2fms",
@@ -648,11 +661,13 @@ int print_global_stats(void)
   log_text(LOG_NOTICE, "         max:                            %10.2fms",
            NS2MS(get_max_time(&t)));
 
-  /* Print approximate percentile value for event execution latency */
+  /* Print approximate percentile value for event latency */
   if (sb_globals.percentile > 0)
   {
     log_text(LOG_NOTICE, "         approx. %3dth percentile:       %10.2fms",
-             sb_globals.percentile, percentile_val);
+             sb_globals.percentile,
+             sb_histogram_get_pct_checkpoint(&global_histogram,
+                                             sb_globals.percentile));
   }
   else
   {

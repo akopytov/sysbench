@@ -190,7 +190,8 @@ typedef struct
   unsigned int    num_threads;  /* number of threads to use */
   unsigned int    num_running;  /* number of threads currently active */
   unsigned int    report_interval; /* intermediate reports interval */
-  unsigned int    percentile;   /* percentile rank for response time stats */
+  unsigned int    percentile;   /* percentile rank for latency stats */
+  unsigned int    histogram;    /* show histogram in latency stats */
   /* array of report checkpoints */
   unsigned int    checkpoints[MAX_CHECKPOINTS];
   unsigned int    n_checkpoints; /* number of checkpoints */

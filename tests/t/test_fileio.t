@@ -70,11 +70,12 @@ fileio benchmark tests
       total time:                          *.*s (glob)
       total number of events:              158
       total time taken by event execution: *.*s (glob)
-      response time:
-           min: *.*ms (glob)
-           avg: *.*ms (glob)
-           max: *.*ms (glob)
-           approx.  95th percentile: *.*ms (glob)
+  
+  Latency statistics:
+           min:                              *.*ms (glob)
+           avg:                              *.*ms (glob)
+           max:                              *.*ms (glob)
+           approx.  95th percentile:         *.*ms (glob)
   
   Threads fairness:
       events (avg/stddev):           158.0000/0.00
@@ -116,11 +117,12 @@ fileio benchmark tests
       total time:                          *.*s (glob)
       total number of events:              150
       total time taken by event execution: *.*s (glob)
-      response time:
-           min: *.*ms (glob)
-           avg: *.*ms (glob)
-           max: *.*ms (glob)
-           approx.  95th percentile: *.*ms (glob)
+  
+  Latency statistics:
+           min:                              *.*ms (glob)
+           avg:                              *.*ms (glob)
+           max:                              *.*ms (glob)
+           approx.  95th percentile:         *.*ms (glob)
   
   Threads fairness:
       events (avg/stddev):           150.0000/0.00
@@ -161,11 +163,12 @@ fileio benchmark tests
       total time:                          *.*s (glob)
       total number of events:              150
       total time taken by event execution: *.*s (glob)
-      response time:
-           min: *.*ms (glob)
-           avg: *.*ms (glob)
-           max: *.*ms (glob)
-           approx.  95th percentile: *.*ms (glob)
+  
+  Latency statistics:
+           min:                              *.*ms (glob)
+           avg:                              *.*ms (glob)
+           max:                              *.*ms (glob)
+           approx.  95th percentile:         *.*ms (glob)
   
   Threads fairness:
       events (avg/stddev):           150.0000/0.00
@@ -208,11 +211,12 @@ fileio benchmark tests
       total time:                          *.*s (glob)
       total number of events:              158
       total time taken by event execution: *.*s (glob)
-      response time:
-           min: *.*ms (glob)
-           avg: *.*ms (glob)
-           max: *.*ms (glob)
-           approx.  95th percentile: *.*ms (glob)
+  
+  Latency statistics:
+           min:                              *.*ms (glob)
+           avg:                              *.*ms (glob)
+           max:                              *.*ms (glob)
+           approx.  95th percentile:         *.*ms (glob)
   
   Threads fairness:
       events (avg/stddev):           158.0000/0.00

@@ -35,7 +35,8 @@ MySQL driver tests
       total time:                          *.*s (glob)
       total number of events:              10
       total time taken by event execution: *.*s (glob)
-      response time:
+  
+  Latency statistics:
            min:                              *.*ms (glob)
            avg:                              *.*ms (glob)
            max:                              *.*ms (glob)

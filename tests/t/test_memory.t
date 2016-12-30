@@ -51,11 +51,12 @@ help' only on Linux.
       total time:                          *s (glob)
       total number of events:              262144 (glob)
       total time taken by event execution: *s (glob)
-      response time:
-           min:                                *ms (glob)
-           avg:                                *ms (glob)
-           max:                                *ms (glob)
-           approx.  95th percentile:           *ms (glob)
+  
+  Latency statistics:
+           min:                              *.*ms (glob)
+           avg:                              *.*ms (glob)
+           max:                              *.*ms (glob)
+           approx.  95th percentile:         *.*ms (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
