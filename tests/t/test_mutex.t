@@ -6,9 +6,9 @@ mutex benchmark tests
   sysbench *.* * (glob)
   
   mutex options:
-    --mutex-num=N        total size of mutex array [4096]
-    --mutex-locks=N      number of mutex locks to do per thread [50000]
-    --mutex-loops=N      number of empty loops to do inside mutex lock [10000]
+    --mutex-num=N   total size of mutex array [4096]
+    --mutex-locks=N number of mutex locks to do per thread [50000]
+    --mutex-loops=N number of empty loops to do inside mutex lock [10000]
   
   $ sysbench $args prepare
   sysbench *.* * (glob)

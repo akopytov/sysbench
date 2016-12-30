@@ -57,6 +57,20 @@ static void convert_dashes(char *);
 
 static int opt_name_cmp(const char *, const char *);
 
+/*
+  Array of option formats as displayed by sb_print_options(). The order and
+  number of elements must match sb_arg_type_t!
+*/
+static char *opt_formats[] = {
+  NULL,			/* SB_ARG_TYPE_NULL */
+  "[=on|off]",		/* SB_ARG_TYPE_FLAG */
+  "=N",			/* SB_ARG_TYPE_INT */
+  "=SIZE",		/* SB_ARG_TYPE_SIZE */
+  "=N",			/* SB_ARG_TYPE_FLOAT */
+  "=STRING",    	/* SB_ARG_TYPE_STRING */
+  "=[LIST,...]",	/* SB_ARG_TYPE_LIST */
+  "=FILENAME"		/* SB_ARG_TYPE_FILE */
+};
 
 /* Initialize options library */
 
@@ -165,37 +179,21 @@ void sb_print_options(sb_arg_t *opts)
   for (i = 0, maxlen = 0; opts[i].name != NULL; i++)
   {
     len = strlen(opts[i].name);
+    len += (opts[i].type < SB_ARG_TYPE_MAX) ?
+      strlen(opt_formats[opts[i].type]) : 8 /* =UNKNOWN */;
     if (len > maxlen)
       maxlen = len;
   }
-  
+
   for (i = 0; opts[i].name != NULL; i++)
   {
-    switch (opts[i].type) {
-      case SB_ARG_TYPE_FLAG:
-        fmt = "=[on|off]";
-        break;
-      case SB_ARG_TYPE_LIST:
-        fmt = "=[LIST,...]";
-        break;
-      case SB_ARG_TYPE_SIZE:
-        fmt = "=SIZE";
-        break;
-      case SB_ARG_TYPE_INT:
-      case SB_ARG_TYPE_FLOAT:
-        fmt = "=N";
-        break;
-      case SB_ARG_TYPE_STRING:
-        fmt = "=STRING";
-        break;
-      case SB_ARG_TYPE_FILE:
-        fmt = "=FILENAME";
-        break;
-      default:
-        fmt = "<UNKNOWN>";
-    }
+    if (opts[i].type < SB_ARG_TYPE_MAX)
+      fmt = opt_formats[opts[i].type];
+    else
+      fmt = "=UNKNOWN";
+
     printf("  --%s%-*s%s", opts[i].name,
-           (int)(maxlen - strlen(opts[i].name) + 8), fmt,
+           (int)(maxlen - strlen(opts[i].name) + 1), fmt,
            opts[i].desc);
     if (opts[i].value != NULL)
       printf(" [%s]", opts[i].value);

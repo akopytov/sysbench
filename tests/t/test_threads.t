@@ -7,8 +7,8 @@ threads benchmark tests
   sysbench *.* * (glob)
   
   threads options:
-    --thread-yields=N      number of yields to do per request [1000]
-    --thread-locks=N       number of locks per thread [8]
+    --thread-yields=N number of yields to do per request [1000]
+    --thread-locks=N  number of locks per thread [8]
   
   $ sysbench $args prepare
   sysbench *.* * (glob)

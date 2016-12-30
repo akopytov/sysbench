@@ -11,9 +11,9 @@ help' only on Linux.
   > then
   >   sysbench $args help | grep hugetlb
   > else
-  >   echo "  --memory-hugetlb=[on|off]   allocate memory from HugeTLB pool [off]"
+  >   echo "  --memory-hugetlb[=on|off]   allocate memory from HugeTLB pool [off]"
   > fi
-    --memory-hugetlb=[on|off]   allocate memory from HugeTLB pool [off]
+    --memory-hugetlb[=on|off]   allocate memory from HugeTLB pool [off]
 
   $ sysbench $args help | grep -v hugetlb
   sysbench *.* * (glob)

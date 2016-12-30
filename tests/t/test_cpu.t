@@ -6,7 +6,7 @@ cpu benchmark tests
   sysbench *.* * (glob)
   
   cpu options:
-    --cpu-max-prime=N      upper limit for primes generator [10000]
+    --cpu-max-prime=N upper limit for primes generator [10000]
   
   $ sysbench $args prepare
   sysbench *.* * (glob)
