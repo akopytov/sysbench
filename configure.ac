@@ -40,7 +40,7 @@ if test x"$sb_have_xxd" = xno; then
    AC_MSG_ERROR("xxd is required to build sysbench (usually comes with the vim package)")
 fi
 
-AC_CHECK_DECL([__SUNPRO_C], [SUNCC="yes"], [SUNCC="no"])
+AX_COMPILER_VENDOR
 
 # Checks for user arguments
 
@@ -69,7 +69,7 @@ then
   GCOV_CFLAGS="-O0 --coverage"
   GCOV_LDFLAGS="-coverage"
 fi
-if test "$SUNCC" = "yes"
+if test "$ax_cv_c_compiler_vendor" = "sun"
 then
   isainfo_k=`isainfo -k`
   if test "$target_cpu" = "sparc"
@@ -463,7 +463,7 @@ then
   NO_REDUNDANT_DECLS="-Wno-redundant-decls"
   CPPFLAGS="${CPPFLAGS}"
 fi
-if test "$SUNCC" = "yes"
+if test "$ax_cv_c_compiler_vendor" = "sun"
 then
   CC_WARNINGS="-v -errtags=yes -errwarn=%all -erroff=E_INTEGER_OVERFLOW_DETECTED -erroff=E_STATEMENT_NOT_REACHED"
 fi
