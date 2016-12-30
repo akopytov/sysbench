@@ -24,8 +24,10 @@ $(builddir)/lib/libck.a:
 	mkdir tmp
 	tar -C $(srcdir) -cf - ck | tar -xf - -C tmp/
 	chmod -R u+w tmp
-	cd tmp/ck && \
-	CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
+	cd tmp/ck &&                        \
+	CC="$(CC)"                          \
+	CFLAGS="$(CFLAGS) $(CPPFLAGS)"      \
+	LDFLAGS="$(LDFLAGS)"                \
 	  ./configure ${CK_CONFIGURE_FLAGS} \
 	  --prefix=$(abs_top_builddir)/third_party/concurrency_kit && \
 	$(MAKE) && \
