@@ -43,6 +43,12 @@ AS_IF([test "x$sb_cv_lib_ck" = "xsystem"],
     CK_CFLAGS="-I\$(abs_top_builddir)/third_party/concurrency_kit/include"
     CK_LIBS="\$(abs_top_builddir)/third_party/concurrency_kit/lib/libck.a"
 
+    # Assume 128-byte cache line on AArch64 and PowerPC
+    case $target_cpu in
+      powerpc*|aarch64)
+        CPPFLAGS="${CPPFLAGS} -DCK_MD_CACHELINE=128"
+        ;;
+    esac
     # Add --enable-lse to CK build flags, if LSE instructions are supported by
     # the target architecture
     if test "$cross_compiling" = no -a "$host_cpu" = aarch64; then
