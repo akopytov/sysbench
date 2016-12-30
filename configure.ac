@@ -25,6 +25,10 @@ AC_PROG_CC
 AC_PROG_CPP
 AM_PROG_CC_C_O
 
+# Try to guess the most optimal compiler architecture flag
+AX_GCC_ARCHFLAG([no], ,
+  AC_MSG_ERROR([*** failed to autodetect compiler flags for this architecture. Use --with-gcc-arch=<arch> to set it explicitly]))
+
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
 #LT_INIT([dlopen])
@@ -37,19 +41,6 @@ if test x"$sb_have_xxd" = xno; then
 fi
 
 AC_CHECK_DECL([__SUNPRO_C], [SUNCC="yes"], [SUNCC="no"])
-
-AC_MSG_CHECKING("C Compiler version")
-if test "$GCC" = "yes"
-then
-  CC_VERSION=`$CC --version | sed 1q`
-elif test "$SUNCC" = "yes"
-then
-  CC_VERSION=`$CC -V 2>&1 | sed 1q`
-else
-  CC_VERSION=""
-fi
-AC_MSG_RESULT("$CC_VERSION")
-AC_SUBST(CC_VERSION)
 
 # Checks for user arguments
 
@@ -555,6 +546,9 @@ AC_MSG_RESULT([LUAJIT_LIBS        : ${LUAJIT_LIBS}])
 AC_MSG_RESULT([LUAJIT_LDFLAGS     : ${LUAJIT_LDFLAGS}])
 AC_MSG_RESULT([])
 AC_MSG_RESULT([Concurrency Kit    : ${sb_use_ck}])
-AC_MSG_RESULT([CK_CFLAGS          : ${CK_CFLAGS}])
-AC_MSG_RESULT([CK_LIBS            : ${CK_LIBS}])
+if test "$sb_use_ck" = bundled; then
+  AC_MSG_RESULT([CK_CFLAGS          : ${CK_CFLAGS}])
+  AC_MSG_RESULT([CK_LIBS            : ${CK_LIBS}])
+  AC_MSG_RESULT([configure flags    : ${CK_CONFIGURE_FLAGS}])
+fi
 AC_MSG_RESULT([===============================================================================])

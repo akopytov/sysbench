@@ -42,6 +42,35 @@ AS_IF([test "x$sb_cv_lib_ck" = "xsystem"],
   [
     CK_CFLAGS="-I\$(abs_top_builddir)/third_party/concurrency_kit/include"
     CK_LIBS="\$(abs_top_builddir)/third_party/concurrency_kit/lib/libck.a"
+
+    # Add --enable-lse to CK build flags, if LSE instructions are supported by
+    # the target architecture
+    if test "$cross_compiling" = no -a "$host_cpu" = aarch64; then
+      AC_MSG_CHECKING([whether LSE instructions are supported])
+      AC_COMPILE_IFELSE(
+        [AC_LANG_PROGRAM(,
+        [[
+          unsigned long long d = 1, a = 1;
+          unsigned long long *t = &a;
+
+          __asm__ __volatile__(
+                               "stadd %0, [%1];"
+                                  : "+&r" (d)
+                                  : "r"   (t)
+                                  : "memory");
+        ]])],
+        [
+          CK_CONFIGURE_FLAGS="--enable-lse"
+          AC_MSG_RESULT([yes])
+        ],
+        [
+          CK_CONFIGURE_FLAGS=""
+          AC_MSG_RESULT([no])
+        ]
+      )
+
+      AC_SUBST([CK_CONFIGURE_FLAGS])
+    fi
   ]
 )
 
