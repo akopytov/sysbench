@@ -57,11 +57,9 @@ int sb_histogram_init(sb_histogram_t *h, size_t size,
   size_t i;
   uint64_t *tmp;
 
-  h->interm_nslots = SB_HISTOGRAM_NSLOTS;
-
   /* Allocate memory for cumulative_array + temp_array + all slot arrays */
-  tmp = (uint64_t *) calloc(size * (h->interm_nslots + 2), sizeof(uint64_t));
-  h->interm_slots = (uint64_t **) malloc(h->interm_nslots *
+  tmp = (uint64_t *) calloc(size * (SB_HISTOGRAM_NSLOTS + 2), sizeof(uint64_t));
+  h->interm_slots = (uint64_t **) malloc(SB_HISTOGRAM_NSLOTS *
                                          sizeof(uint64_t *));
 
   if (tmp == NULL || h->interm_slots == NULL)
@@ -78,7 +76,7 @@ int sb_histogram_init(sb_histogram_t *h, size_t size,
   h->temp_array = tmp;
   tmp += size;
 
-  for (i = 0; i < h->interm_nslots; i++)
+  for (i = 0; i < SB_HISTOGRAM_NSLOTS; i++)
   {
     h->interm_slots[i] = tmp;
     tmp += size;
@@ -103,7 +101,7 @@ void sb_histogram_update(sb_histogram_t *h, double value)
   size_t      slot;
   ssize_t     i;
 
-  slot = sb_rnd() % h->interm_nslots;
+  slot = sb_rnd() % SB_HISTOGRAM_NSLOTS;
 
   i = floor((log(value) - h->range_deduct) * h->range_mult + 0.5);
   if (CK_CC_UNLIKELY(i < 0))
@@ -137,7 +135,6 @@ double sb_histogram_get_pct_intermediate(sb_histogram_t *h,
     Merge intermediate slots into temp_array.
   */
   const size_t size = h->array_size;
-  const size_t nslots = h->interm_nslots;
   uint64_t * const array = h->temp_array;
 
   for (i = 0; i < size; i++)
@@ -146,7 +143,7 @@ double sb_histogram_get_pct_intermediate(sb_histogram_t *h,
     nevents += array[i];
   }
 
-  for (s = 1; s < nslots; s++)
+  for (s = 1; s < SB_HISTOGRAM_NSLOTS; s++)
   {
     for (i = 0; i < size; i++)
     {
@@ -202,10 +199,9 @@ static void merge_intermediate_into_cumulative(sb_histogram_t *h)
   nevents = h->cumulative_nevents;
 
   const size_t size = h->array_size;
-  const size_t nslots = h->interm_nslots;
   uint64_t * const array = h->cumulative_array;
 
-  for (s = 0; s < nslots; s++)
+  for (s = 0; s < SB_HISTOGRAM_NSLOTS; s++)
   {
     for (i = 0; i < size; i++)
     {

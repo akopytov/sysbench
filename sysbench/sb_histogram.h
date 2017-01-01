@@ -46,8 +46,6 @@ typedef struct {
      sb_histogram_get_pct_intermediate() function.
   */
   uint64_t              **interm_slots;
-  /* Number of slots in interm_slots */
-  size_t                interm_nslots;
   /* Number of elements in each array */
   size_t                array_size;
   /* Lower bound of values to track */
