@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2012 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -157,13 +157,11 @@ unsigned long long  sb_timer_value(sb_timer_t *t)
   return TIMESPEC_DIFF(ts, t->time_start) + t->queue_time;
 }
 
-
 /*
-  get time elapsed since the previos call to sb_timer_split() for the specified
+  get time elapsed since the previous call to sb_timer_split() for the specified
   timer without stopping it.  The first call returns time elapsed since the
   timer was started.
 */
-
 
 unsigned long long sb_timer_split(sb_timer_t *t)
 {
@@ -262,32 +260,4 @@ sb_timer_t merge_timers(sb_timer_t *t1, sb_timer_t *t2)
     t.min_time = t2->min_time;
      
   return t;       
-}
-
-
-/* Add a number of nanoseconds to a struct timespec */
-
-
-void add_ns_to_timespec(struct timespec *dest, long long delta)
-{
-  long long x;
-
-  x = dest->tv_nsec + delta;
-  if (x > 1000000000)
-  {
-    /* Future second */
-    dest->tv_sec += x / 1000000000;
-    dest->tv_nsec = x % 1000000000;
-  }
-  else if (x < 0)
-  {
-    /* Past second */
-    dest->tv_sec = dest->tv_sec - 1 + (x / 1000000000);
-    dest->tv_nsec = (x % 1000000000) + 1000000000;
-  }
-  else
-  {
-    /* Within the same second */
-    dest->tv_nsec = x;
-  }
 }

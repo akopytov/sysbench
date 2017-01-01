@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,6 +37,8 @@
 #  include <time.h>
 # endif
 #endif
+
+#include "sb_utility.h"
 
 /* Convert nanoseconds to seconds and vice versa */
 #define NS2SEC(nsec) ((nsec)/1000000000.)
@@ -80,6 +82,9 @@ typedef struct
   unsigned long long events;
   unsigned long long queue_time;
   timer_state_t      state;
+
+  char pad[SB_CACHELINE_PAD(sizeof(struct timespec)*3 + sizeof(long long)*6 +
+                            sizeof(timer_state_t))];
 } sb_timer_t;
 
 
@@ -127,8 +132,5 @@ unsigned long long  get_max_time(sb_timer_t *);
 
 /* sum data from two timers. used in summing data from multiple threads */
 sb_timer_t merge_timers(sb_timer_t *, sb_timer_t *);
-
-/* add a number of nanoseconds to a struct timespec */
-void add_ns_to_timespec(struct timespec *dest, long long delta);
 
 #endif /* SB_TIMER_H */
