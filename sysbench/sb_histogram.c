@@ -39,6 +39,7 @@
 #include "sb_rnd.h"
 
 #include "ck_pr.h"
+#include "ck_cc.h"
 
 /*
    Number of slots for current histogram array. TODO: replace this constant with
@@ -47,7 +48,7 @@
 #define SB_HISTOGRAM_NSLOTS 128
 
 /* Global latency histogram */
-sb_histogram_t global_histogram;
+sb_histogram_t global_histogram CK_CC_CACHELINE;
 
 
 int sb_histogram_init(sb_histogram_t *h, size_t size,
