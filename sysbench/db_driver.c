@@ -1003,6 +1003,7 @@ static void db_reset_stats(void)
   last_read_ops = 0;
   last_write_ops = 0;
   last_errors = 0;
+  last_reconnects = 0;
 
   /*
     So that intermediate stats are calculated from the current moment
