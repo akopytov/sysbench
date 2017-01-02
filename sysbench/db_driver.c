@@ -842,7 +842,7 @@ void db_print_stats(sb_stat_t type)
       sb_histogram_get_pct_intermediate(&global_histogram,
                                              sb_globals.percentile);
 
-    log_timestamp(LOG_NOTICE, seconds,
+    log_timestamp(LOG_NOTICE, NS2SEC(sb_timer_value(&sb_exec_timer)),
                   "threads: %d, tps: %4.2f, reads: %4.2f, writes: %4.2f, "
                   "response time: %4.2fms (%u%%), errors: %4.2f, "
                   "reconnects: %5.2f",

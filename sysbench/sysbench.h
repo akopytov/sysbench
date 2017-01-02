@@ -210,6 +210,9 @@ typedef struct
 extern sb_globals_t sb_globals;
 extern pthread_mutex_t event_queue_mutex;
 
+/* Global execution timer */
+extern sb_timer_t      sb_exec_timer CK_CC_CACHELINE;
+
 /* timers for checkpoint reports */
 extern sb_timer_t      sb_intermediate_timer;
 extern sb_timer_t      sb_checkpoint_timer1;
