@@ -74,6 +74,8 @@
 #include "sb_thread.h"
 #include "sb_barrier.h"
 
+#include "ck_cc.h"
+
 #define VERSION_STRING PACKAGE" "PACKAGE_VERSION SB_GIT_SHA
 
 /* Large prime number to generate unique random IDs */
@@ -187,6 +189,17 @@ static int report_thread_created;
 static int checkpoints_thread_created;
 static int eventgen_thread_created;
 
+/* Time limit (--max-time) in nanoseconds */
+static uint64_t max_time_ns CK_CC_CACHELINE;
+
+/* Global execution timer */
+sb_timer_t      sb_exec_timer CK_CC_CACHELINE;
+
+/* timers for intermediate/checkpoint reports */
+sb_timer_t sb_intermediate_timer CK_CC_CACHELINE;
+sb_timer_t sb_checkpoint_timer1  CK_CC_CACHELINE;
+sb_timer_t sb_checkpoint_timer2  CK_CC_CACHELINE;
+
 static void print_header(void);
 static void print_help(void);
 static void print_run_mode(sb_test_t *);
@@ -211,9 +224,10 @@ static void sigalrm_forced_shutdown_handler(int sig)
 
   sb_globals.forced_shutdown_in_progress = 1;
 
-  sb_timer_stop(&sb_globals.exec_timer);
-  sb_timer_stop(&sb_globals.cumulative_timer1);
-  sb_timer_stop(&sb_globals.cumulative_timer2);
+  sb_timer_stop(&sb_exec_timer);
+  sb_timer_stop(&sb_intermediate_timer);
+  sb_timer_stop(&sb_checkpoint_timer1);
+  sb_timer_stop(&sb_checkpoint_timer2);
 
   log_text(LOG_FATAL,
            "The --max-time limit has expired, forcing shutdown...");
@@ -454,8 +468,8 @@ sb_event_t sb_next_event(sb_test_t *test, int thread_id)
     return event;
 
   /* Check if we have a time limit */
-  if (sb_globals.max_time != 0 &&
-      sb_timer_value(&sb_globals.exec_timer) >= SEC2NS(sb_globals.max_time))
+  if (max_time_ns > 0 &&
+      sb_timer_value(&sb_exec_timer) >= max_time_ns)
   {
     log_text(LOG_INFO, "Time limit exceeded, exiting...");
     return event;
@@ -487,7 +501,7 @@ sb_event_t sb_next_event(sb_test_t *test, int thread_id)
 
     pthread_mutex_unlock(&event_queue_mutex);
 
-    timers[thread_id].queue_time = sb_timer_value(&sb_globals.exec_timer) -
+    timers[thread_id].queue_time = sb_timer_value(&sb_exec_timer) -
       queue_start_time;
 
   }
@@ -520,9 +534,7 @@ void sb_event_stop(int thread_id)
   if (sb_globals.n_checkpoints > 0)
     pthread_mutex_lock(&timers_mutex);
 
-  sb_timer_stop(timer);
-
-  value = sb_timer_value(timer);
+  value = sb_timer_stop(timer);
 
   if (sb_globals.n_checkpoints > 0)
     pthread_mutex_unlock(&timers_mutex);
@@ -632,7 +644,7 @@ static void *eventgen_thread_proc(void *arg)
 
   eventgen_thread_created = 1;
 
-  curr_ns = sb_timer_value(&sb_globals.exec_timer);
+  curr_ns = sb_timer_value(&sb_exec_timer);
   /* emulate exponential distribution with Lambda = tx_rate */
   intr_ns = (long) (log(1 - sb_rnd_double()) /
                     (-(double) sb_globals.tx_rate)*1000000);
@@ -640,7 +652,7 @@ static void *eventgen_thread_proc(void *arg)
 
   for (;;)
   {
-    curr_ns = sb_timer_value(&sb_globals.exec_timer);
+    curr_ns = sb_timer_value(&sb_exec_timer);
 
     /* emulate exponential distribution with Lambda = tx_rate */
     intr_ns = (long) (log(1 - sb_rnd_double()) /
@@ -654,12 +666,12 @@ static void *eventgen_thread_proc(void *arg)
     }
     else
     {
-      log_timestamp(LOG_DEBUG, &sb_globals.exec_timer,
+      log_timestamp(LOG_DEBUG, NS2SEC(curr_ns),
                     "Event generation thread is too slow");
     }
 
 
-    queue_array[i].event_time = sb_timer_value(&sb_globals.exec_timer);
+    queue_array[i].event_time = sb_timer_value(&sb_exec_timer);
     pthread_mutex_lock(&event_queue_mutex);
     SB_LIST_ADD_TAIL(&queue_array[i].listitem, &event_queue);
     sb_globals.event_queue_length++;
@@ -710,7 +722,7 @@ static void *report_thread_proc(void *arg)
   report_thread_created = 1;
 
   pause_ns = interval_ns;
-  prev_ns = sb_timer_value(&sb_globals.exec_timer) + interval_ns;
+  prev_ns = sb_timer_value(&sb_exec_timer) + interval_ns;
   for (;;)
   {
     usleep(pause_ns / 1000);
@@ -723,7 +735,7 @@ static void *report_thread_proc(void *arg)
       current_test->ops.print_stats(SB_STAT_INTERMEDIATE);
     pthread_mutex_unlock(&report_interval_mutex);
 
-    curr_ns = sb_timer_value(&sb_globals.exec_timer);
+    curr_ns = sb_timer_value(&sb_exec_timer);
     do
     {
       next_ns = prev_ns + interval_ns;
@@ -764,20 +776,16 @@ static void *checkpoints_thread_proc(void *arg)
   for (i = 0; i < sb_globals.n_checkpoints; i++)
   {
     next_ns = SEC2NS(sb_globals.checkpoints[i]);
-    curr_ns = sb_timer_value(&sb_globals.exec_timer);
+    curr_ns = sb_timer_value(&sb_exec_timer);
     if (next_ns <= curr_ns)
       continue;
 
     pause_ns = next_ns - curr_ns;
     usleep(pause_ns / 1000);
-    /*
-      Just to update elapsed time in timer which is later used by
-      log_timestamp.
-    */
-    curr_ns = sb_timer_value(&sb_globals.exec_timer);
 
     SB_THREAD_MUTEX_LOCK();
-    log_timestamp(LOG_NOTICE, &sb_globals.exec_timer, "Checkpoint report:");
+    log_timestamp(LOG_NOTICE, NS2SEC(sb_timer_value(&sb_exec_timer)),
+                  "Checkpoint report:");
     current_test->ops.print_stats(SB_STAT_CUMULATIVE);
     print_global_stats();
     SB_THREAD_MUTEX_UNLOCK();
@@ -798,9 +806,10 @@ static int threads_started_callback(void *arg)
 
   sb_globals.num_running = sb_globals.num_threads;
 
-  sb_timer_start(&sb_globals.exec_timer);
-  sb_timer_start(&sb_globals.cumulative_timer1);
-  sb_timer_start(&sb_globals.cumulative_timer2);
+  sb_timer_start(&sb_exec_timer);
+  sb_timer_copy(&sb_intermediate_timer, &sb_exec_timer);
+  sb_timer_copy(&sb_checkpoint_timer1, &sb_exec_timer);
+  sb_timer_copy(&sb_checkpoint_timer2, &sb_exec_timer);
 
   return 0;
 }
@@ -826,10 +835,11 @@ static int run_test(sb_test_t *test)
   /* print test mode */
   print_run_mode(test);
 
-  /* initialize and start timers */
-  sb_timer_init(&sb_globals.exec_timer);
-  sb_timer_init(&sb_globals.cumulative_timer1);
-  sb_timer_init(&sb_globals.cumulative_timer2);
+  /* initialize timers */
+  sb_timer_init(&sb_exec_timer);
+  sb_timer_init(&sb_intermediate_timer);
+  sb_timer_init(&sb_checkpoint_timer1);
+  sb_timer_init(&sb_checkpoint_timer2);
   for(i = 0; i < sb_globals.num_threads; i++)
   {
     threads[i].id = i;
@@ -963,9 +973,10 @@ static int run_test(sb_test_t *test)
     sb_globals.num_running--;
   }
 
-  sb_timer_stop(&sb_globals.exec_timer);
-  sb_timer_stop(&sb_globals.cumulative_timer1);
-  sb_timer_stop(&sb_globals.cumulative_timer2);
+  sb_timer_stop(&sb_exec_timer);
+  sb_timer_stop(&sb_intermediate_timer);
+  sb_timer_stop(&sb_checkpoint_timer1);
+  sb_timer_stop(&sb_checkpoint_timer2);
 
   /* Silence periodic reports if they were on */
   pthread_mutex_lock(&report_interval_mutex);
@@ -1064,6 +1075,8 @@ static int init(void)
   }
   sb_globals.max_requests = sb_get_value_int("max-requests");
   sb_globals.max_time = sb_get_value_int("max-time");
+  max_time_ns = SEC2NS(sb_globals.max_time);
+
   if (!sb_globals.max_requests && !sb_globals.max_time)
     log_text(LOG_WARNING, "WARNING: Both max-requests and max-time are 0, running endless test");
 

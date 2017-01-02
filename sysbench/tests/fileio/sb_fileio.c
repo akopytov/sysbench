@@ -834,7 +834,7 @@ void file_print_stats(sb_stat_t type)
     {
       SB_THREAD_MUTEX_LOCK();
 
-      seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
+      seconds = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
 
       diff_read = bytes_read - last_bytes_read;
       diff_written = bytes_written - last_bytes_written;
@@ -850,7 +850,7 @@ void file_print_stats(sb_stat_t type)
         sb_histogram_get_pct_intermediate(&global_histogram,
                                           sb_globals.percentile);
 
-      log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
+      log_timestamp(LOG_NOTICE, seconds,
                     "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "
                     "latency: %4.3f ms (%uth pct.)",
                     diff_read / megabyte / seconds,
@@ -863,7 +863,7 @@ void file_print_stats(sb_stat_t type)
     }
 
   case SB_STAT_CUMULATIVE:
-    seconds = NS2SEC(sb_timer_split(&sb_globals.cumulative_timer1));
+    seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
 
     log_text(LOG_NOTICE, "\n"
              "File operations:\n"
@@ -1060,8 +1060,7 @@ int create_files(void)
     close(fd);
   }
 
-  sb_timer_stop(&t);
-  seconds = NS2SEC(sb_timer_value(&t));
+  seconds = NS2SEC(sb_timer_stop(&t));
 
   if (written > 0)
     log_text(LOG_NOTICE, "%llu bytes written in %.2f seconds (%.2f MiB/sec).",
@@ -1160,8 +1159,7 @@ void clear_stats(void)
     So that intermediate stats are calculated from the current moment
     rather than from the previous intermediate report
   */
-  if (sb_timer_initialized(&sb_globals.exec_timer))
-    sb_timer_split(&sb_globals.exec_timer);
+  sb_timer_checkpoint(&sb_intermediate_timer);
 }
 
 

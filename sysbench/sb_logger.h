@@ -141,7 +141,7 @@ void log_text(log_msg_priority_t priority, const char *fmt, ...)
   specified timer.
 */
 
-void log_timestamp(log_msg_priority_t priority, const sb_timer_t *timer,
+void log_timestamp(log_msg_priority_t priority, double seconds,
                    const char *fmt, ...)
   SB_ATTRIBUTE_FORMAT(printf, 3, 4);
 

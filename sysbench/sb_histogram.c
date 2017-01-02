@@ -41,6 +41,9 @@
 #include "ck_pr.h"
 #include "ck_cc.h"
 
+#include "sb_util.h"
+
+
 /*
    Number of slots for current histogram array. TODO: replace this constant with
    some autodetection code based on the number of available cores or some such.
@@ -104,9 +107,9 @@ void sb_histogram_update(sb_histogram_t *h, double value)
   slot = sb_rnd() % SB_HISTOGRAM_NSLOTS;
 
   i = floor((log(value) - h->range_deduct) * h->range_mult + 0.5);
-  if (CK_CC_UNLIKELY(i < 0))
+  if (SB_UNLIKELY(i < 0))
     i = 0;
-  else if (CK_CC_UNLIKELY(i >= (ssize_t) (h->array_size)))
+  else if (SB_UNLIKELY(i >= (ssize_t) (h->array_size)))
     i = h->array_size - 1;
 
   ck_pr_inc_64(&h->interm_slots[slot][i]);

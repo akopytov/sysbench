@@ -81,7 +81,6 @@ static int text_handler_init(void);
 static int text_handler_process(log_msg_t *msg);
 
 static int oper_handler_init(void);
-static int oper_handler_process(log_msg_t *msg);
 static int oper_handler_done(void);
 
 /* Built-in log handlers */
@@ -122,7 +121,7 @@ static sb_arg_t oper_handler_args[] =
 static log_handler_t oper_handler = {
   {
     oper_handler_init,
-    &oper_handler_process,
+    NULL,
     oper_handler_done,
   },
   oper_handler_args,
@@ -303,7 +302,7 @@ void log_text(log_msg_priority_t priority, const char *fmt, ...)
 */
 
 
-void log_timestamp(log_msg_priority_t priority, const sb_timer_t *timer,
+void log_timestamp(log_msg_priority_t priority, double seconds,
                    const char *fmt, ...)
 {
   log_msg_t      msg;
@@ -315,7 +314,7 @@ void log_timestamp(log_msg_priority_t priority, const sb_timer_t *timer,
   maxlen = TEXT_BUFFER_SIZE;
   clen = 0;
 
-  n = snprintf(buf, maxlen, "[%4.0fs] ", NS2SEC(timer->elapsed));
+  n = snprintf(buf, maxlen, "[%4.0fs] ", seconds);
   clen += n;
   maxlen -= n;
 
@@ -532,42 +531,6 @@ int oper_handler_init(void)
 }
 
 
-/* Process operation start/stop messages */
-
-
-int oper_handler_process(log_msg_t *msg)
-{
-  log_msg_oper_t *oper_msg = (log_msg_oper_t *)msg->data;
-  sb_timer_t     *timer = &timers[oper_msg->thread_id];
-  long long      value;
-
-  if (oper_msg->action == LOG_MSG_OPER_START)
-  {
-    if (sb_globals.n_checkpoints > 0)
-      pthread_mutex_lock(&timers_mutex);
-    sb_timer_start(timer);
-    if (sb_globals.n_checkpoints > 0)
-      pthread_mutex_unlock(&timers_mutex);
-
-    return 0;
-  }
-
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_lock(&timers_mutex);
-
-  sb_timer_stop(timer);
-
-  value = sb_timer_value(timer);
-
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_unlock(&timers_mutex);
-
-  if (sb_globals.percentile > 0)
-    sb_histogram_update(&global_histogram, NS2MS(value));
-
-  return 0;
-}
-
 /*
   Print global stats either from the last checkpoint (if used) or
   from the test start.
@@ -597,7 +560,7 @@ int print_global_stats(void)
   for (i = 0; i < sb_globals.num_threads; i++)
     sb_timer_reset(&timers[i]);
 
-  total_time_ns = sb_timer_split(&sb_globals.cumulative_timer2);
+  total_time_ns = sb_timer_checkpoint(&sb_checkpoint_timer2);
 
   if (sb_globals.n_checkpoints > 0)
     pthread_mutex_unlock(&timers_mutex);
@@ -634,13 +597,13 @@ int print_global_stats(void)
   for(i = 0; i < nthreads; i++)
     t = merge_timers(&t, &timers_copy[i]);
 
-/* Print total statistics */
+  /* Print total statistics */
   log_text(LOG_NOTICE, "");
   log_text(LOG_NOTICE, "General statistics:");
   log_text(LOG_NOTICE, "    total time:                          %.4fs",
            NS2SEC(total_time_ns));
-  log_text(LOG_NOTICE, "    total number of events:              %lld",
-           t.events);
+  log_text(LOG_NOTICE, "    total number of events:              %llu",
+           (unsigned long long) t.events);
   log_text(LOG_NOTICE, "    total time taken by event execution: %.4fs",
            NS2SEC(get_sum_time(&t)));
 
@@ -709,11 +672,11 @@ int print_global_stats(void)
     for(i = 0; i < nthreads; i++)
     {
       log_text(LOG_DEBUG, "    thread #%3d: min: %.4fs  avg: %.4fs  max: %.4fs  "
-               "events: %lld",i,
+               "events: %llu",i,
                NS2SEC(get_min_time(&timers_copy[i])),
                NS2SEC(get_avg_time(&timers_copy[i])),
                NS2SEC(get_max_time(&timers_copy[i])),
-               timers_copy[i].events);
+               (unsigned long long) timers_copy[i].events);
       log_text(LOG_DEBUG, "                 "
                "total time taken by even execution: %.4fs",
                NS2SEC(get_sum_time(&timers_copy[i]))

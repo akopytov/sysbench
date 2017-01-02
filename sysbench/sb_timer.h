@@ -38,11 +38,14 @@
 # endif
 #endif
 
-#include "sb_utility.h"
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "sb_util.h"
 
 /* Convert nanoseconds to seconds and vice versa */
 #define NS2SEC(nsec) ((nsec)/1000000000.)
-#define SEC2NS(sec)  ((sec)*1000000000ULL)
+#define SEC2NS(sec)  ((uint64_t)(sec) * 1000000000)
 
 /* Convert nanoseconds to milliseconds and vice versa */
 #define NS2MS(nsec) ((nsec)/1000000.)
@@ -72,19 +75,15 @@ typedef enum {TIMER_UNINITIALIZED, TIMER_INITIALIZED, TIMER_STOPPED, \
 
 typedef struct
 {
-  struct timespec    time_start;
-  struct timespec    time_end;
-  struct timespec    time_split;
-  unsigned long long elapsed;
-  unsigned long long min_time;
-  unsigned long long max_time;
-  unsigned long long sum_time;
-  unsigned long long events;
-  unsigned long long queue_time;
-  timer_state_t      state;
+  struct timespec time_start;
+  struct timespec time_end;
+  uint64_t        events;
+  uint64_t        queue_time;
+  uint64_t        min_time;
+  uint64_t        max_time;
+  uint64_t        sum_time;
 
-  char pad[SB_CACHELINE_PAD(sizeof(struct timespec)*3 + sizeof(long long)*6 +
-                            sizeof(timer_state_t))];
+  char pad[SB_CACHELINE_PAD(sizeof(struct timespec)*2 + sizeof(uint64_t)*5)];
 } sb_timer_t;
 
 
@@ -96,27 +95,54 @@ void sb_timer_init(sb_timer_t *);
 /* Reset timer counters, but leave the current state intact */
 void sb_timer_reset(sb_timer_t *t);
 
-/* check whether the timer is initialized */
-int sb_timer_initialized(sb_timer_t *t);
-
 /* check whether the timer is running */
-int sb_timer_running(sb_timer_t *t);
+bool sb_timer_running(sb_timer_t *t);
 
 /* start timer */
-void sb_timer_start(sb_timer_t *);
+static inline void sb_timer_start(sb_timer_t *t)
+{
+  SB_GETTIME(&t->time_start);
+}
 
 /* stop timer */
-void sb_timer_stop(sb_timer_t *);
+static inline uint64_t sb_timer_stop(sb_timer_t *t)
+{
+  SB_GETTIME(&t->time_end);
 
-/* get the current timer value in nanoseconds */
-unsigned long long sb_timer_value(sb_timer_t *);
+  uint64_t elapsed = TIMESPEC_DIFF(t->time_end, t->time_start) + t->queue_time;
+
+  t->events++;
+  t->sum_time += elapsed;
+
+  if (CK_CC_UNLIKELY(elapsed < t->min_time))
+    t->min_time = elapsed;
+  if (CK_CC_UNLIKELY(elapsed > t->max_time))
+    t->max_time = elapsed;
+
+  return elapsed;
+}
 
 /*
-  get time elapsed since the previos call to sb_timer_split() for the specified
-  timer without stopping it.  The first call returns time elapsed since the
-  timer was started.
+  get the current timer value in nanoseconds without affecting is state, i.e.
+  is safe to be used concurrently on a shared timer.
 */
-unsigned long long sb_timer_split(sb_timer_t *);
+static inline uint64_t sb_timer_value(sb_timer_t *t)
+{
+  struct timespec ts;
+
+  SB_GETTIME(&ts);
+  return TIMESPEC_DIFF(ts, t->time_start) + t->queue_time;
+}
+
+/* Clone a timer */
+void sb_timer_copy(sb_timer_t *to, sb_timer_t *from);
+
+/*
+  get time elapsed since the previous call to sb_timer_checkpoint() for the
+  specified timer without stopping it.  The first call returns time elapsed
+  since the timer was started.
+*/
+uint64_t sb_timer_checkpoint(sb_timer_t *t);
 
 /* get average time per event */
 unsigned long long get_avg_time(sb_timer_t *);

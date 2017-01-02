@@ -344,9 +344,9 @@ void memory_print_stats(sb_stat_t type)
   switch (type) {
   case SB_STAT_INTERMEDIATE:
     SB_THREAD_MUTEX_LOCK();
-    seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
+    seconds = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
 
-    log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
+    log_timestamp(LOG_NOTICE, seconds,
                   "%4.2f MiB/sec,",
                   (double)(total_bytes - last_bytes) / megabyte / seconds);
     last_bytes = total_bytes;
@@ -355,7 +355,7 @@ void memory_print_stats(sb_stat_t type)
     break;
 
   case SB_STAT_CUMULATIVE:
-    seconds = NS2SEC(sb_timer_split(&sb_globals.cumulative_timer1));
+    seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
 
     log_text(LOG_NOTICE, "Operations performed: %d (%8.2f ops/sec)\n",
              total_ops, total_ops / seconds);
@@ -369,8 +369,7 @@ void memory_print_stats(sb_stat_t type)
       So that intermediate stats are calculated from the current moment
       rather than from the previous intermediate report
     */
-    if (sb_timer_initialized(&sb_globals.exec_timer))
-      sb_timer_split(&sb_globals.exec_timer);
+    sb_timer_checkpoint(&sb_intermediate_timer);
 
     break;
   }

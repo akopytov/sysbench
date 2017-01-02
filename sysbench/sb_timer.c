@@ -33,166 +33,54 @@
 
 /* Some functions for simple time operations */
 
-static inline void sb_timer_update(sb_timer_t *t)
-{
-  SB_GETTIME(&t->time_end);
-  t->elapsed = TIMESPEC_DIFF(t->time_end, t->time_start) + t->queue_time;
-}
-
 /* initialize timer */
-
 
 void sb_timer_init(sb_timer_t *t)
 {
   memset(&t->time_start, 0, sizeof(struct timespec));
   memset(&t->time_end, 0, sizeof(struct timespec));
-  memset(&t->time_split, 0, sizeof(struct timespec));
   sb_timer_reset(t);
-  t->state = TIMER_INITIALIZED;
 }
 
-
 /* Reset timer counters, but leave the current state intact */
+
 void sb_timer_reset(sb_timer_t *t)
 {
   t->min_time = 0xffffffffffffffffULL;
   t->max_time = 0;
   t->sum_time = 0;
   t->events = 0;
-  t->elapsed = 0;
   t->queue_time = 0;
 }
 
+/* Clone a timer */
 
-/* check whether the timer is initialized */
-int sb_timer_initialized(sb_timer_t *t)
+void sb_timer_copy(sb_timer_t *to, sb_timer_t *from)
 {
-  return t->state != TIMER_UNINITIALIZED;
+  memcpy(to, from, sizeof(sb_timer_t));
 }
 
 /* check whether the timer is running */
-int sb_timer_running(sb_timer_t *t)
+
+bool sb_timer_running(sb_timer_t *t)
 {
-  return t->state == TIMER_RUNNING;
-}
-
-/* start timer */
-
-
-void sb_timer_start(sb_timer_t *t)
-{
-  switch (t->state) {
-    case TIMER_INITIALIZED:
-    case TIMER_STOPPED:
-      break;
-    case TIMER_RUNNING:
-      log_text(LOG_WARNING, "timer was already started");
-      break;
-    default:
-      log_text(LOG_FATAL, "uninitialized timer started");
-      abort();
-  }
-  
-  SB_GETTIME(&t->time_start);
-  t->time_split = t->time_start;
-  t->state = TIMER_RUNNING;
-}
-
-
-/* stop timer */
-
-
-void sb_timer_stop(sb_timer_t *t)
-{
-  switch (t->state) {
-    case TIMER_INITIALIZED:
-      log_text(LOG_WARNING, "timer was never started");
-      break;
-    case TIMER_STOPPED:
-      log_text(LOG_WARNING, "timer was already stopped");
-      break;
-    case TIMER_RUNNING:
-      break;
-    default:
-      log_text(LOG_FATAL, "uninitialized timer stopped");
-      abort();
-  }
-
-  sb_timer_update(t);
-  t->events++;
-  t->sum_time += t->elapsed;
-  if (t->elapsed < t->min_time)
-    t->min_time = t->elapsed;
-  if (t->elapsed > t->max_time)
-    t->max_time = t->elapsed;
-
-  t->state = TIMER_STOPPED;
-}
-
-
-/*
-   get the current timer value in nanoseconds without affecting is state, i.e.
-   is safe to be used concurrently on a shared timer.
-*/
-
-
-unsigned long long  sb_timer_value(sb_timer_t *t)
-{
-  struct timespec ts;
-
-  switch (t->state) {
-    case TIMER_INITIALIZED:
-      log_text(LOG_WARNING, "timer was never started");
-      return 0;
-    case TIMER_STOPPED:
-      return t->elapsed;
-    case TIMER_RUNNING:
-      break;
-    default:
-      log_text(LOG_FATAL, "uninitialized timer queried");
-      abort();
-  }
-
-  SB_GETTIME(&ts);
-  return TIMESPEC_DIFF(ts, t->time_start) + t->queue_time;
+  return TIMESPEC_DIFF(t->time_start, t->time_end) > 0;
 }
 
 /*
-  get time elapsed since the previous call to sb_timer_split() for the specified
-  timer without stopping it.  The first call returns time elapsed since the
-  timer was started.
+  get time elapsed since the previous call to sb_timer_checkpoint() for the
+  specified timer without stopping it.  The first call returns time elapsed
+  since the timer was started.
 */
 
-unsigned long long sb_timer_split(sb_timer_t *t)
+uint64_t sb_timer_checkpoint(sb_timer_t *t)
 {
-  struct timespec    tmp;
-  unsigned long long res;
-
-  switch (t->state) {
-    case TIMER_INITIALIZED:
-      log_text(LOG_WARNING, "timer was never started");
-      return 0;
-    case TIMER_STOPPED:
-      res = TIMESPEC_DIFF(t->time_end, t->time_split);
-      t->time_split = t->time_end;
-      if (res)
-        return res;
-      else
-      {
-        log_text(LOG_WARNING, "timer was already stopped");
-        return 0;
-      }
-    case TIMER_RUNNING:
-      break;
-    default:
-      log_text(LOG_FATAL, "uninitialized timer queried");
-      abort();
-  }
+  struct timespec tmp;
+  uint64_t        res;
 
   SB_GETTIME(&tmp);
-  t->elapsed = TIMESPEC_DIFF(tmp, t->time_start);
-  res = TIMESPEC_DIFF(tmp, t->time_split);
-  t->time_split = tmp;
+  res = TIMESPEC_DIFF(tmp, t->time_start);
+  t->time_start = tmp;
 
   return res;
 }
@@ -245,7 +133,6 @@ sb_timer_t merge_timers(sb_timer_t *t1, sb_timer_t *t2)
   /* Initialize to avoid warnings */
   memset(&t, 0, sizeof(sb_timer_t));
 
-  t.elapsed = t1->elapsed + t2->elapsed;
   t.sum_time = t1->sum_time+t2->sum_time;
   t.events = t1->events+t2->events;
 

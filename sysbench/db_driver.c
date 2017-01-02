@@ -836,13 +836,13 @@ void db_print_stats(sb_stat_t type)
 
   if (type == SB_STAT_INTERMEDIATE)
   {
-    seconds = NS2SEC(sb_timer_split(&sb_globals.exec_timer));
+    seconds = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
 
     const double percentile_val =
       sb_histogram_get_pct_intermediate(&global_histogram,
                                              sb_globals.percentile);
 
-    log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
+    log_timestamp(LOG_NOTICE, seconds,
                   "threads: %d, tps: %4.2f, reads: %4.2f, writes: %4.2f, "
                   "response time: %4.2fms (%u%%), errors: %4.2f, "
                   "reconnects: %5.2f",
@@ -858,7 +858,7 @@ void db_print_stats(sb_stat_t type)
     {
       pthread_mutex_lock(&event_queue_mutex);
 
-      log_timestamp(LOG_NOTICE, &sb_globals.exec_timer,
+      log_timestamp(LOG_NOTICE, seconds,
                     "queue length: %d, concurrency: %d",
                     sb_globals.event_queue_length, sb_globals.concurrency);
 
@@ -878,7 +878,7 @@ void db_print_stats(sb_stat_t type)
   else if (type != SB_STAT_CUMULATIVE)
     return;
 
-  seconds = NS2SEC(sb_timer_split(&sb_globals.cumulative_timer1));
+  seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
 
   log_text(LOG_NOTICE, "OLTP test statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
@@ -1008,8 +1008,7 @@ static void db_reset_stats(void)
     So that intermediate stats are calculated from the current moment
     rather than from the previous intermediate report
   */
-  if (sb_timer_running(&sb_globals.exec_timer))
-    sb_timer_split(&sb_globals.exec_timer);
+  sb_timer_checkpoint(&sb_intermediate_timer);
 
   if (db_globals.debug)
   {

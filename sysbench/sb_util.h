@@ -16,6 +16,9 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
+#ifndef SB_UTIL_H
+#define SB_UTIL_H
+
 /*
   General utility macros and functions.
 */
@@ -25,6 +28,7 @@
 #endif
 
 #include "ck_md.h"
+#include "ck_cc.h"
 
 /*
   Calculate the smallest multiple of m that is not smaller than n, when m is a
@@ -40,3 +44,23 @@
 
 /* Calculate padding to cache line size. */
 #define SB_CACHELINE_PAD(n) (SB_PAD(n, CK_MD_CACHELINE))
+
+/* Minimum/maximum values */
+#ifdef __GNUC__
+#  define SB_MIN(a,b)           \
+  ({ __typeof__ (a) _a = (a);   \
+    __typeof__ (b) _b = (b);    \
+    _a < _b ? _a : _b; })
+#  define SB_MAX(a,b)           \
+  ({ __typeof__ (a) _a = (a);   \
+    __typeof__ (b) _b = (b);    \
+    _a > _b ? _a : _b; })
+#else
+#  define SB_MIN(a,b) (((a) < (b)) ? (a) : (b))
+#  define SB_MAX(a,b) (((a) > (b)) ? (a) : (b))
+#endif /* __GNUC__ */
+
+#define SB_LIKELY(x) CK_CC_LIKELY(x)
+#define SB_UNLIKELY(x) CK_CC_UNLIKELY(x)
+
+#endif /* SB_UTIL_H */

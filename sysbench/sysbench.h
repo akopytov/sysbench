@@ -183,10 +183,6 @@ typedef struct
   sb_cmd_t        command;      /* command passed from command line */
   int             error;        /* global error - everyone exit */
   pthread_mutex_t exec_mutex;   /* execution mutex */
-  sb_timer_t      exec_timer;   /* total execution timer */
-  /* timers for cumulative reports */
-  sb_timer_t      cumulative_timer1;
-  sb_timer_t      cumulative_timer2;
   unsigned int    num_threads;  /* number of threads to use */
   unsigned int    num_running;  /* number of threads currently active */
   unsigned int    report_interval; /* intermediate reports interval */
@@ -213,6 +209,11 @@ typedef struct
 
 extern sb_globals_t sb_globals;
 extern pthread_mutex_t event_queue_mutex;
+
+/* timers for checkpoint reports */
+extern sb_timer_t      sb_intermediate_timer;
+extern sb_timer_t      sb_checkpoint_timer1;
+extern sb_timer_t      sb_checkpoint_timer2;
 
 sb_event_t sb_next_event(sb_test_t *test, int thread_id);
 void sb_event_start(int thread_id);
