@@ -70,7 +70,7 @@
 #include "sb_options.h"
 #include "sb_lua.h"
 #include "db_driver.h"
-#include "sb_rnd.h"
+#include "sb_rand.h"
 #include "sb_thread.h"
 #include "sb_barrier.h"
 
@@ -78,23 +78,11 @@
 
 #define VERSION_STRING PACKAGE" "PACKAGE_VERSION SB_GIT_SHA
 
-/* Large prime number to generate unique random IDs */
-#define LARGE_PRIME 2147483647
-
 /* Maximum queue length for the tx-rate mode */
 #define MAX_QUEUE_LEN 100000
 
 /* Wait at most this number of seconds for worker threads to initialize */
 #define THREAD_INIT_TIMEOUT 30
-
-/* Random numbers distributions */
-typedef enum
-{
-  DIST_TYPE_UNIFORM,
-  DIST_TYPE_GAUSSIAN,
-  DIST_TYPE_SPECIAL,
-  DIST_TYPE_PARETO
-} rand_dist_t;
 
 /* Event queue data type for the tx-rate mode */
 typedef struct {
@@ -102,21 +90,6 @@ typedef struct {
   sb_list_item_t     listitem;
 } event_queue_elem_t;
 
-static rand_dist_t rand_type;
-static int (*rand_func)(int, int); /* pointer to random numbers generator */
-static unsigned int rand_iter;
-static unsigned int rand_pct;
-static unsigned int rand_res;
-static int rand_seed; /* optional seed set on the command line */
-
-/* parameters for Pareto distribution */
-static double pareto_h; /* parameter h */
-static double pareto_power; /* parameter pre-calculated by h */
-
-/* Random seed used to generate unique random numbers */
-static unsigned long long rnd_seed;
-/* Mutex to protect random seed */
-static pthread_mutex_t    rnd_mutex;
 /* Mutex to protect report_interval */
 static pthread_mutex_t    report_interval_mutex;
 
@@ -146,16 +119,6 @@ sb_arg_t general_args[] =
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
   {"help", "print help and exit", SB_ARG_TYPE_FLAG, NULL},
   {"version", "print version and exit", SB_ARG_TYPE_FLAG, "off"},
-  {"rand-type", "random numbers distribution {uniform,gaussian,special,pareto}",
-   SB_ARG_TYPE_STRING, "special"},
-  {"rand-spec-iter", "number of iterations used for numbers generation", SB_ARG_TYPE_INT, "12"},
-  {"rand-spec-pct", "percentage of values to be treated as 'special' (for special distribution)",
-   SB_ARG_TYPE_INT, "1"},
-  {"rand-spec-res", "percentage of 'special' values to use (for special distribution)",
-   SB_ARG_TYPE_INT, "75"},
-  {"rand-seed", "seed for random number generator, ignored when 0", SB_ARG_TYPE_INT, "0"},
-  {"rand-pareto-h", "parameter h for pareto distibution", SB_ARG_TYPE_FLOAT,
-   "0.2"},
   {"config-file", "File containing command line options", SB_ARG_TYPE_FILE, NULL},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
@@ -253,6 +216,7 @@ static int register_tests(void)
     + register_test_threads(&tests)
     + register_test_mutex(&tests)
     + db_register()
+    + sb_rand_register()
     ;
 }
 
@@ -281,6 +245,8 @@ void print_help(void)
   printf("Commands: prepare run cleanup help version\n\n");
   printf("General options:\n");
   sb_print_options(general_args);
+
+  sb_rand_print_help();
 
   log_print_help();
 
@@ -428,10 +394,12 @@ void print_run_mode(sb_test_t *test)
   if (sb_globals.validate)
     log_text(LOG_NOTICE, "Additional request validation enabled.\n");
 
-  if (rand_seed)
+  if (sb_rand_seed)
   {
-    log_text(LOG_NOTICE, "Initializing random number generator from seed (%d).\n", rand_seed);
-    srandom(rand_seed);
+    log_text(LOG_NOTICE,
+             "Initializing random number generator from seed (%d).\n",
+             sb_rand_seed);
+    srandom(sb_rand_seed);
   }
   else
   {
@@ -871,10 +839,7 @@ static int run_test(sb_test_t *test)
   /* Set thread concurrency (required on Solaris) */
   thr_setconcurrency(sb_globals.num_threads);
 #endif
-  
-  /* Initialize random seed  */
-  rnd_seed = LARGE_PRIME;
-  pthread_mutex_init(&rnd_mutex, NULL);
+
   pthread_mutex_init(&report_interval_mutex, NULL);
 
   /* Calculate the required number of threads for the start barrier */
@@ -997,8 +962,6 @@ static int run_test(sb_test_t *test)
   if (test->ops.print_stats != NULL && !sb_globals.error)
     test->ops.print_stats(SB_STAT_CUMULATIVE);
 
-  pthread_mutex_destroy(&rnd_mutex);
-
   pthread_mutex_destroy(&sb_globals.exec_mutex);
 
   /* finalize test */
@@ -1060,7 +1023,6 @@ static int checkpoint_cmp(const void *a_ptr, const void *b_ptr)
 static int init(void)
 {
   option_t *opt;
-  char     *s;
   char     *tmp;
   sb_list_t         *checkpoints_list;
   sb_list_item_t    *pos_val;
@@ -1134,41 +1096,10 @@ static int init(void)
   
   sb_globals.validate = sb_get_value_flag("validate");
 
-  rand_seed = sb_get_value_int("rand-seed");
-
-  s = sb_get_value_string("rand-type");
-  if (!strcmp(s, "uniform"))
+  if (sb_rand_init())
   {
-    rand_type = DIST_TYPE_UNIFORM;
-    rand_func = &sb_rand_uniform;
-  }
-  else if (!strcmp(s, "gaussian"))
-  {
-    rand_type = DIST_TYPE_GAUSSIAN;
-    rand_func = &sb_rand_gaussian;
-  }
-  else if (!strcmp(s, "special"))
-  {
-    rand_type = DIST_TYPE_SPECIAL;
-    rand_func = &sb_rand_special;
-  }
-  else if (!strcmp(s, "pareto"))
-  {
-    rand_type = DIST_TYPE_PARETO;
-    rand_func = &sb_rand_pareto;
-  }
-  else
-  {
-    log_text(LOG_FATAL, "Invalid random numbers distribution: %s.", s);
     return 1;
   }
-
-  rand_iter = sb_get_value_int("rand-spec-iter");
-  rand_pct = sb_get_value_int("rand-spec-pct");
-  rand_res = sb_get_value_int("rand-spec-res");
-
-  pareto_h  = sb_get_value_float("rand-pareto-h");
-  pareto_power = log(pareto_h) / log(1.0-pareto_h);
 
   sb_globals.tx_rate = sb_get_value_int("tx-rate");
   sb_globals.report_interval = sb_get_value_int("report-interval");
@@ -1328,122 +1259,8 @@ int main(int argc, char *argv[])
 
   sb_options_done();
 
+  sb_rand_done();
+
   exit(0);
 }
 
-/*
-  Return random number in specified range with distribution specified
-  with the --rand-type command line option
-*/
-
-int sb_rand(int a, int b)
-{
-  return rand_func(a,b);
-}
-
-/* uniform distribution */
-
-int sb_rand_uniform(int a, int b)
-{
-  return a + sb_rnd() % (b - a + 1);
-}
-
-/* gaussian distribution */
-
-int sb_rand_gaussian(int a, int b)
-{
-  int          sum;
-  unsigned int i, t;
-
-  t = b - a + 1;
-  for(i=0, sum=0; i < rand_iter; i++)
-    sum += sb_rnd() % t;
-  
-  return a + sum / rand_iter;
-}
-
-/* 'special' distribution */
-
-int sb_rand_special(int a, int b)
-{
-  int          sum = 0;
-  unsigned int i;
-  unsigned int d;
-  unsigned int t;
-  unsigned int res;
-  unsigned int range_size;
-  
-  if (a >= b)
-    return 0;
-
-  t = b - a + 1;
-  
-  /* Increase range size for special values. */
-  range_size = t * (100 / (100 - rand_res));
-  
-  /* Generate uniformly distributed one at this stage  */
-  res = sb_rnd() % range_size;
-  
-  /* For first part use gaussian distribution */
-  if (res < t)
-  {
-    for(i = 0; i < rand_iter; i++)
-      sum += sb_rnd() % t;
-    return a + sum / rand_iter;  
-  }
-
-  /*
-   * For second part use even distribution mapped to few items 
-   * We shall distribute other values near by the center
-   */
-  d = t * rand_pct / 100;
-  if (d < 1)
-    d = 1;
-  res %= d;
-   
-  /* Now we have res values in SPECIAL_PCT range of the data */
-  res += (t / 2 - t * rand_pct / (100 * 2));
-   
-  return a + res;
-}
-
-/* Pareto distribution */
-
-int sb_rand_pareto(int a, int b)
-{
-  return a + (int)(b - a + 1) * pow(sb_rnd_double(), pareto_power);
-}
-
-/* Generate unique random id */
-
-
-int sb_rand_uniq(int a, int b)
-{
-  int res;
-
-  pthread_mutex_lock(&rnd_mutex);
-  res = (unsigned int) (rnd_seed % (b - a + 1)) ;
-  rnd_seed += LARGE_PRIME;
-  pthread_mutex_unlock(&rnd_mutex);
-
-  return res + a;
-}
-
-
-/* Generate random string */
-
-
-void sb_rand_str(const char *fmt, char *buf)
-{
-  unsigned int i;
-
-  for (i=0; fmt[i] != '\0'; i++)
-  {
-    if (fmt[i] == '#')
-      buf[i] = sb_rand_uniform('0', '9');
-    else if (fmt[i] == '@')
-      buf[i] = sb_rand_uniform('a', 'z');
-    else
-      buf[i] = fmt[i];
-  }
-}

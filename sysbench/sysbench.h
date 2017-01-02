@@ -222,13 +222,4 @@ sb_event_t sb_next_event(sb_test_t *test, int thread_id);
 void sb_event_start(int thread_id);
 void sb_event_stop(int thread_id);
 
-/* Random number generators */
-int sb_rand(int, int);
-int sb_rand_uniform(int, int);
-int sb_rand_gaussian(int, int);
-int sb_rand_special(int, int);
-int sb_rand_pareto(int, int);
-int sb_rand_uniq(int a, int b);
-void sb_rand_str(const char *, char *);
-
 #endif

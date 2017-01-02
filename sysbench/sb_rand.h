@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2016-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,10 +16,19 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
-#ifndef SB_RND_H
-#define SB_RND_H
+#ifndef SB_RAND_H
+#define SB_RAND_H
 
 #include <stdlib.h>
+
+/* Random numbers distributions */
+typedef enum
+{
+  DIST_TYPE_UNIFORM,
+  DIST_TYPE_GAUSSIAN,
+  DIST_TYPE_SPECIAL,
+  DIST_TYPE_PARETO
+} rand_dist_t;
 
 /* Pick the best available re-entrant PRNG */
 #if defined(HAVE_LRAND48_R)
@@ -59,4 +68,20 @@ extern __declspec(thread) unsigned int sb_rng_state;
 # error No re-entrant PRNG function found.
 #endif
 
-#endif /* SB_RND_H */
+extern int sb_rand_seed; /* optional seed set on the command line */
+
+int sb_rand_register(void);
+void sb_rand_print_help(void);
+
+int sb_rand_init(void);
+void sb_rand_done(void);
+
+int sb_rand(int, int);
+int sb_rand_uniform(int, int);
+int sb_rand_gaussian(int, int);
+int sb_rand_special(int, int);
+int sb_rand_pareto(int, int);
+int sb_rand_uniq(int a, int b);
+void sb_rand_str(const char *, char *);
+
+#endif /* SB_RAND_H */

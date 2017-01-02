@@ -36,7 +36,7 @@
 #include "sysbench.h"
 #include "sb_histogram.h"
 #include "sb_logger.h"
-#include "sb_rnd.h"
+#include "sb_rand.h"
 
 #include "ck_pr.h"
 #include "ck_cc.h"

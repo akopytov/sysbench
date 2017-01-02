@@ -1,5 +1,5 @@
 # Copyright (C) 2008 MySQL AB
-# Copyright (C) 2008-2016 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2008-2017 Alexey Kopytov <akopytov@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,8 +37,8 @@ add_executable(sysbench
   db_driver.c
   sb_win.c
   sb_win.h
-  sb_rnd.c
-  sb_rnd.h
+  sb_rand.c
+  sb_rand.h
   sb_thread.c
   sb_thread.h
   sb_barrier.c

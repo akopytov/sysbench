@@ -27,13 +27,15 @@ separately.
     --validate[=on|off]             perform validation checks where possible [off]
     --help[=on|off]                 print help and exit
     --version[=on|off]              print version and exit [off]
-    --rand-type=STRING              random numbers distribution {uniform,gaussian,special,pareto} [special]
-    --rand-spec-iter=N              number of iterations used for numbers generation [12]
-    --rand-spec-pct=N               percentage of values to be treated as 'special' (for special distribution) [1]
-    --rand-spec-res=N               percentage of 'special' values to use (for special distribution) [75]
-    --rand-seed=N                   seed for random number generator, ignored when 0 [0]
-    --rand-pareto-h=N               parameter h for pareto distibution [0.2]
     --config-file=FILENAME          File containing command line options
+  
+  Pseudo-Random Numbers Generator options:
+    --rand-type=STRING random numbers distribution {uniform,gaussian,special,pareto} [special]
+    --rand-spec-iter=N number of iterations used for numbers generation [12]
+    --rand-spec-pct=N  percentage of values to be treated as 'special' (for special distribution) [1]
+    --rand-spec-res=N  percentage of 'special' values to use (for special distribution) [75]
+    --rand-seed=N      seed for random number generator, ignored when 0 [0]
+    --rand-pareto-h=N  parameter h for pareto distibution [0.2]
   
   Log options:
     --verbosity=N verbosity level {5 - debug, 0 - only critical messages} [3]

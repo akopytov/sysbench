@@ -24,7 +24,7 @@
 #endif
 
 #include "sysbench.h"
-#include "sb_rnd.h"
+#include "sb_rand.h"
 
 #ifdef HAVE_SYS_IPC_H
 # include <sys/ipc.h>

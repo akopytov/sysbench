@@ -60,7 +60,7 @@
 #include "sysbench.h"
 #include "crc32.h"
 #include "sb_histogram.h"
-#include "sb_rnd.h"
+#include "sb_rand.h"
 
 /* Lengths of the checksum and the offset fields in a block */
 #define FILE_CHECKSUM_LENGTH sizeof(int)

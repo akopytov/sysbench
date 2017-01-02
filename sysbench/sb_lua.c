@@ -26,7 +26,7 @@
 #include "lauxlib.h"
 
 #include "db_driver.h"
-#include "sb_rnd.h"
+#include "sb_rand.h"
 #include "sb_thread.h"
 
 #include "ck_pr.h"

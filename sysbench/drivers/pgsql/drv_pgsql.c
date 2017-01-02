@@ -31,7 +31,7 @@
 
 #include "sb_options.h"
 #include "db_driver.h"
-#include "sb_rnd.h"
+#include "sb_rand.h"
 
 /* Maximum length of text representation of bind parameters */
 #define MAX_PARAM_LENGTH 256

@@ -32,7 +32,7 @@ function event()
       if (oltp_auto_inc) then
          i = 0
       else
-         i = sb_rand_uniq(1, oltp_table_size)
+         i = sb_rand_uniq()
       end
       rs = db_query("INSERT INTO " .. table_name ..
                        " (id, k, c, pad) VALUES " ..
