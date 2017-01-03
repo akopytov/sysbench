@@ -555,7 +555,7 @@ static void *worker_thread(void *arg)
   thread_id = ctxt->id;
 
   /* Initialize thread-local RNG state */
-  sb_srnd(random());
+  sb_rand_thread_init();
 
   log_text(LOG_DEBUG, "Worker thread (#%d) started", thread_id);
 
@@ -614,7 +614,7 @@ static void *eventgen_thread_proc(void *arg)
 
   curr_ns = sb_timer_value(&sb_exec_timer);
   /* emulate exponential distribution with Lambda = tx_rate */
-  intr_ns = (long) (log(1 - sb_rnd_double()) /
+  intr_ns = (long) (log(1 - sb_rand_uniform_double()) /
                     (-(double) sb_globals.tx_rate)*1000000);
   next_ns = curr_ns + intr_ns*1000;
 
@@ -623,7 +623,7 @@ static void *eventgen_thread_proc(void *arg)
     curr_ns = sb_timer_value(&sb_exec_timer);
 
     /* emulate exponential distribution with Lambda = tx_rate */
-    intr_ns = (long) (log(1 - sb_rnd_double()) /
+    intr_ns = (long) (log(1 - sb_rand_uniform_double()) /
                       (-(double)sb_globals.tx_rate)*1000000);
 
     next_ns = next_ns + intr_ns*1000;

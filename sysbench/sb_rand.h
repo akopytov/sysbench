@@ -21,6 +21,8 @@
 
 #include <stdlib.h>
 
+#include "xoroshiro128plus.h"
+
 /* Random numbers distributions */
 typedef enum
 {
@@ -30,52 +32,36 @@ typedef enum
   DIST_TYPE_PARETO
 } rand_dist_t;
 
-/* Pick the best available re-entrant PRNG */
-#if defined(HAVE_LRAND48_R)
-extern TLS struct drand48_data sb_rng_state;
+typedef uint64_t sb_rng_state_t [2];
 
-static inline long sb_rnd(void)
+/* optional seed set on the command line */
+extern int sb_rand_seed;
+
+/* Thread-local RNG state */
+extern TLS sb_rng_state_t sb_rng_state;
+
+/* Return a uniformly distributed pseudo-random 64-bit unsigned integer */
+static inline uint64_t sb_rand_uniform_uint64(void)
 {
-  long result;
-
-  lrand48_r(&sb_rng_state, &result);
-
-  return result;
+  return xoroshiro_next(sb_rng_state);
 }
-static inline double sb_rnd_double(void)
+
+/* Return a uniformly distributed pseudo-random double in the [0, 1) interval */
+static inline double sb_rand_uniform_double(void)
 {
-  double result;
+  const uint64_t x = sb_rand_uniform_uint64();
+  const union { uint64_t i; double d; } u = { .i = UINT64_C(0x3FF) << 52 | x >> 12 };
 
-  drand48_r(&sb_rng_state, &result);
-
-  return result;
+  return u.d - 1.0;
 }
-#define sb_srnd(seed) srand48_r(seed, &sb_rng_state)
-
-#elif defined(HAVE_RAND_R)
-extern TLS unsigned int sb_rng_state;
-# define sb_rnd() (rand_r(&sb_rng_state))
-# define sb_srnd(seed) do { sb_rng_state = seed; } while(0)
-/* On some platforms rand() may return values larger than RAND_MAX */
-# define sb_rnd_double() ((double) (sb_rnd() % RAND_MAX) / RAND_MAX)
-#elif defined(_WIN32)
-extern __declspec(thread) unsigned int sb_rng_state;
-# define sb_rnd() (rand_s(&sb_rng_state))
-# define sb_srnd(seed) do { sb_rng_state = seed; } while(0)
-/* On some platforms rand() may return values larger than RAND_MAX */
-# define sb_rnd_double() ((double) (sb_rnd() % RAND_MAX) / RAND_MAX)
-#else
-# error No re-entrant PRNG function found.
-#endif
-
-extern int sb_rand_seed; /* optional seed set on the command line */
 
 int sb_rand_register(void);
 void sb_rand_print_help(void);
-
 int sb_rand_init(void);
 void sb_rand_done(void);
+void sb_rand_thread_init(void);
 
+/* Generator functions */
 int sb_rand_default(int, int);
 int sb_rand_uniform(int, int);
 int sb_rand_gaussian(int, int);

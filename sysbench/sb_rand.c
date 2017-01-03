@@ -38,13 +38,7 @@
 /* Large prime number to generate unique random IDs */
 #define LARGE_PRIME 2147483647
 
-#ifdef HAVE_LRAND48_R
-TLS struct drand48_data sb_rng_state;
-#elif defined(HAVE_RAND_R)
-TLS unsigned int sb_rng_state;
-#elif defined(_WIN32)
-__declspec(thread) unsigned int sb_rng_state;
-#endif
+TLS sb_rng_state_t sb_rng_state CK_CC_CACHELINE;
 
 /* Exported variables */
 int sb_rand_seed; /* optional seed set on the command line */
@@ -134,6 +128,9 @@ int sb_rand_init(void)
   rnd_seed = LARGE_PRIME;
   pthread_mutex_init(&rnd_mutex, NULL);
 
+  /* Seed PRNG for the main thread. Worker thread do their own seeding */
+  sb_rand_thread_init();
+
   return 0;
 }
 
@@ -151,6 +148,17 @@ void sb_rand_done(void)
   pthread_mutex_destroy(&rnd_mutex);
 }
 
+/* Initialize thread-local RNG state */
+
+void sb_rand_thread_init(void)
+{
+  /* We use libc PRNG to see xoroshiro128+ */
+  sb_rng_state[0] = ((((uint64_t) random()) % UINT32_MAX) << 32) |
+    (((uint64_t) random()) % UINT32_MAX);
+  sb_rng_state[1] = ((((uint64_t) random()) % UINT32_MAX) << 32) |
+    (((uint64_t) random()) % UINT32_MAX);
+}
+
 /*
   Return random number in the specified range with distribution specified
   with the --rand-type command line option
@@ -165,7 +173,7 @@ int sb_rand_default(int a, int b)
 
 int sb_rand_uniform(int a, int b)
 {
-  return a + sb_rnd() % (b - a + 1);
+  return a + sb_rand_uniform_uint64() % (b - a + 1);
 }
 
 /* gaussian distribution */
@@ -177,7 +185,7 @@ int sb_rand_gaussian(int a, int b)
 
   t = b - a + 1;
   for(i=0, sum=0; i < rand_iter; i++)
-    sum += sb_rnd() % t;
+    sum += sb_rand_uniform_uint64() % t;
 
   return a + sum / rand_iter;
 }
@@ -202,13 +210,13 @@ int sb_rand_special(int a, int b)
   range_size = t * (100 / (100 - rand_res));
 
   /* Generate uniformly distributed one at this stage  */
-  res = sb_rnd() % range_size;
+  res = sb_rand_uniform_uint64() % range_size;
 
   /* For first part use gaussian distribution */
   if (res < t)
   {
     for(i = 0; i < rand_iter; i++)
-      sum += sb_rnd() % t;
+      sum += sb_rand_uniform_uint64() % t;
     return a + sum / rand_iter;
   }
 
@@ -231,7 +239,7 @@ int sb_rand_special(int a, int b)
 
 int sb_rand_pareto(int a, int b)
 {
-  return a + (int)(b - a + 1) * pow(sb_rnd_double(), pareto_power);
+  return a + (int)(b - a + 1) * pow(sb_rand_uniform_double(), pareto_power);
 }
 
 /* Generate unique random id */

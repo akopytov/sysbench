@@ -603,7 +603,7 @@ sb_event_t file_get_rnd_request(int thread_id)
     file_req->operation = FILE_OP_TYPE_READ;
 
 retry:
-  tmppos = (long long) (sb_rnd_double() * total_size);
+  tmppos = (long long) (sb_rand_uniform_double() * total_size);
   tmppos = tmppos - (tmppos % (long long) file_block_size);
   file_req->file_id = (int) (tmppos / (long long) file_size);
   file_req->pos = (long long) (tmppos % (long long) file_size);
@@ -2091,7 +2091,7 @@ void file_fill_buffer(unsigned char *buf, unsigned int len,
   unsigned int i;
 
   for (i = 0; i < len - (FILE_CHECKSUM_LENGTH + FILE_OFFSET_LENGTH); i++)
-    buf[i] = sb_rnd() & 0xFF;
+    buf[i] = sb_rand_uniform_uint64() & 0xFF;
 
   /* Store the checksum */
   *(int *)(void *)(buf + i) = (int)crc32(0, (unsigned char *)buf, len -

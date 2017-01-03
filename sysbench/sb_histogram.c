@@ -104,7 +104,7 @@ void sb_histogram_update(sb_histogram_t *h, double value)
   size_t      slot;
   ssize_t     i;
 
-  slot = sb_rnd() % SB_HISTOGRAM_NSLOTS;
+  slot = sb_rand_uniform_uint64() % SB_HISTOGRAM_NSLOTS;
 
   i = floor((log(value) - h->range_deduct) * h->range_mult + 0.5);
   if (SB_UNLIKELY(i < 0))

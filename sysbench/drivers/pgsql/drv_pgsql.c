@@ -1,5 +1,5 @@
 /* Copyright (C) 2005 MySQL AB
-   Copyright (C) 2005-20015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2005-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -736,5 +736,7 @@ int get_pgsql_bind_type(db_bind_type_t type)
 
 int get_unique_stmt_name(char *name, int len)
 {
-  return snprintf(name, len, "sbstmt%d%d", (int)sb_rnd(), (int)sb_rnd());
+  return snprintf(name, len, "sbstmt%d%d",
+                  (int) sb_rand_uniform_uint64(),
+                  (int) sb_rand_uniform_uint64());
 }
