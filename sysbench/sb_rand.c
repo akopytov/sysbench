@@ -156,7 +156,7 @@ void sb_rand_done(void)
   with the --rand-type command line option
 */
 
-int sb_rand(int a, int b)
+int sb_rand_default(int a, int b)
 {
   return rand_func(a,b);
 }

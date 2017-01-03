@@ -149,7 +149,7 @@ static int sb_lua_db_execute(lua_State *);
 static int sb_lua_db_close(lua_State *);
 static int sb_lua_db_store_results(lua_State *);
 static int sb_lua_db_free_results(lua_State *);
-static int sb_lua_rand(lua_State *);
+static int sb_lua_rand_default(lua_State *);
 static int sb_lua_rand_uniq(lua_State *);
 static int sb_lua_rand_uniform(lua_State *);
 static int sb_lua_rand_gaussian(lua_State *);
@@ -449,7 +449,7 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   SB_LUA_FUNC("event_start", sb_lua_event_start);
   SB_LUA_FUNC("event_stop", sb_lua_event_stop);
 
-  SB_LUA_FUNC("rand", sb_lua_rand);
+  SB_LUA_FUNC("rand_default", sb_lua_rand_default);
   SB_LUA_FUNC("rand_uniq", sb_lua_rand_uniq);
   SB_LUA_FUNC("rnd", sb_lua_rnd);
   SB_LUA_FUNC("rand_str", sb_lua_rand_str);
@@ -1066,14 +1066,14 @@ int sb_lua_db_free_results(lua_State *L)
   return 0;
 }
 
-int sb_lua_rand(lua_State *L)
+int sb_lua_rand_default(lua_State *L)
 {
   int a, b;
 
   a = luaL_checknumber(L, 1);
   b = luaL_checknumber(L, 2);
 
-  lua_pushnumber(L, sb_rand(a, b));
+  lua_pushnumber(L, sb_rand_default(a, b));
 
   return 1;
 }

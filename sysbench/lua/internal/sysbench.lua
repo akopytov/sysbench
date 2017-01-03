@@ -20,7 +20,7 @@
 
 thread_id = sysbench.tid
 
-sb_rand = sysbench.rand
+sb_rand = sysbench.rand_default
 sb_rand_uniq = sb_rand_uniq
 sb_rnd = sysbench.rnd
 sb_rand_str = sysbench.rand_str

@@ -76,7 +76,7 @@ void sb_rand_print_help(void);
 int sb_rand_init(void);
 void sb_rand_done(void);
 
-int sb_rand(int, int);
+int sb_rand_default(int, int);
 int sb_rand_uniform(int, int);
 int sb_rand_gaussian(int, int);
 int sb_rand_special(int, int);
