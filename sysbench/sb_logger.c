@@ -595,7 +595,7 @@ int print_global_stats(void)
   }
 
   for(i = 0; i < nthreads; i++)
-    t = merge_timers(&t, &timers_copy[i]);
+    t = sb_timer_merge(&t, &timers_copy[i]);
 
   /* Print total statistics */
   log_text(LOG_NOTICE, "");
@@ -605,7 +605,7 @@ int print_global_stats(void)
   log_text(LOG_NOTICE, "    total number of events:              %llu",
            (unsigned long long) t.events);
   log_text(LOG_NOTICE, "    total time taken by event execution: %.4fs",
-           NS2SEC(get_sum_time(&t)));
+           NS2SEC(sb_timer_sum(&t)));
 
   log_text(LOG_NOTICE, "");
 
@@ -618,11 +618,11 @@ int print_global_stats(void)
 
   log_text(LOG_NOTICE, "Latency statistics:");
   log_text(LOG_NOTICE, "         min:                            %10.2fms",
-           NS2MS(get_min_time(&t)));
+           NS2MS(sb_timer_min(&t)));
   log_text(LOG_NOTICE, "         avg:                            %10.2fms",
-           NS2MS(get_avg_time(&t)));
+           NS2MS(sb_timer_avg(&t)));
   log_text(LOG_NOTICE, "         max:                            %10.2fms",
-           NS2MS(get_max_time(&t)));
+           NS2MS(sb_timer_max(&t)));
 
   /* Print approximate percentile value for event latency */
   if (sb_globals.percentile > 0)
@@ -645,7 +645,7 @@ int print_global_stats(void)
     from the average time/request and req/thread
    */
   events_avg = (double)t.events / nthreads;
-  time_avg = NS2SEC(get_sum_time(&t)) / nthreads;
+  time_avg = NS2SEC(sb_timer_sum(&t)) / nthreads;
   events_stddev = 0;
   time_stddev = 0;
   for(i = 0; i < nthreads; i++)
@@ -653,7 +653,7 @@ int print_global_stats(void)
     diff = fabs(events_avg - timers_copy[i].events);
     events_stddev += diff*diff;
     
-    diff = fabs(time_avg - NS2SEC(get_sum_time(&timers_copy[i])));
+    diff = fabs(time_avg - NS2SEC(sb_timer_sum(&timers_copy[i])));
     time_stddev += diff*diff;
   }
   events_stddev = sqrt(events_stddev / nthreads);
@@ -673,13 +673,13 @@ int print_global_stats(void)
     {
       log_text(LOG_DEBUG, "    thread #%3d: min: %.4fs  avg: %.4fs  max: %.4fs  "
                "events: %llu",i,
-               NS2SEC(get_min_time(&timers_copy[i])),
-               NS2SEC(get_avg_time(&timers_copy[i])),
-               NS2SEC(get_max_time(&timers_copy[i])),
+               NS2SEC(sb_timer_min(&timers_copy[i])),
+               NS2SEC(sb_timer_avg(&timers_copy[i])),
+               NS2SEC(sb_timer_max(&timers_copy[i])),
                (unsigned long long) timers_copy[i].events);
       log_text(LOG_DEBUG, "                 "
                "total time taken by even execution: %.4fs",
-               NS2SEC(get_sum_time(&timers_copy[i]))
+               NS2SEC(sb_timer_sum(&timers_copy[i]))
                );
     }
     log_text(LOG_NOTICE, "");

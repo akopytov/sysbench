@@ -145,18 +145,18 @@ void sb_timer_copy(sb_timer_t *to, sb_timer_t *from);
 uint64_t sb_timer_checkpoint(sb_timer_t *t);
 
 /* get average time per event */
-unsigned long long get_avg_time(sb_timer_t *);
+uint64_t sb_timer_avg(sb_timer_t *);
 
 /* get total time for all events */
-unsigned long long get_sum_time(sb_timer_t *);
+uint64_t sb_timer_sum(sb_timer_t *);
 
 /* get minimum time */
-unsigned long long  get_min_time(sb_timer_t *);
+uint64_t sb_timer_min(sb_timer_t *);
 
 /* get maximum time */
-unsigned long long  get_max_time(sb_timer_t *);
+uint64_t sb_timer_max(sb_timer_t *);
 
 /* sum data from two timers. used in summing data from multiple threads */
-sb_timer_t merge_timers(sb_timer_t *, sb_timer_t *);
+sb_timer_t sb_timer_merge(sb_timer_t *, sb_timer_t *);
 
 #endif /* SB_TIMER_H */

@@ -909,30 +909,30 @@ void db_print_stats(sb_stat_t type)
 
     for (i = 0; i < sb_globals.num_threads; i++)
     {
-      exec_timer = merge_timers(&exec_timer, exec_timers + i);
-      fetch_timer = merge_timers(&fetch_timer, fetch_timers + i);
+      exec_timer = sb_timer_merge(&exec_timer, exec_timers + i);
+      fetch_timer = sb_timer_merge(&fetch_timer, fetch_timers + i);
     }
 
     log_text(LOG_DEBUG, "");
     log_text(LOG_DEBUG, "Query execution statistics:");
     log_text(LOG_DEBUG, "    min:                                %.4fs",
-             NS2SEC(get_min_time(&exec_timer)));
+             NS2SEC(sb_timer_min(&exec_timer)));
     log_text(LOG_DEBUG, "    avg:                                %.4fs",
-             NS2SEC(get_avg_time(&exec_timer)));
+             NS2SEC(sb_timer_avg(&exec_timer)));
     log_text(LOG_DEBUG, "    max:                                %.4fs",
-             NS2SEC(get_max_time(&exec_timer)));
+             NS2SEC(sb_timer_max(&exec_timer)));
     log_text(LOG_DEBUG, "  total:                                %.4fs",
-             NS2SEC(get_sum_time(&exec_timer)));
+             NS2SEC(sb_timer_sum(&exec_timer)));
 
     log_text(LOG_DEBUG, "Results fetching statistics:");
     log_text(LOG_DEBUG, "    min:                                %.4fs",
-             NS2SEC(get_min_time(&fetch_timer)));
+             NS2SEC(sb_timer_min(&fetch_timer)));
     log_text(LOG_DEBUG, "    avg:                                %.4fs",
-             NS2SEC(get_avg_time(&fetch_timer)));
+             NS2SEC(sb_timer_avg(&fetch_timer)));
     log_text(LOG_DEBUG, "    max:                                %.4fs",
-             NS2SEC(get_max_time(&fetch_timer)));
+             NS2SEC(sb_timer_max(&fetch_timer)));
     log_text(LOG_DEBUG, "  total:                                %.4fs",
-             NS2SEC(get_sum_time(&fetch_timer)));
+             NS2SEC(sb_timer_sum(&fetch_timer)));
   }
 
   db_reset_stats();
