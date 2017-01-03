@@ -1068,7 +1068,7 @@ int sb_lua_db_free_results(lua_State *L)
 
 int sb_lua_rand_default(lua_State *L)
 {
-  int a, b;
+  uint64_t a, b;
 
   a = luaL_checknumber(L, 1);
   b = luaL_checknumber(L, 2);
@@ -1080,7 +1080,7 @@ int sb_lua_rand_default(lua_State *L)
 
 int sb_lua_rand_uniform(lua_State *L)
 {
-  int a, b;
+  uint64_t a, b;
 
   a = luaL_checknumber(L, 1);
   b = luaL_checknumber(L, 2);
@@ -1092,7 +1092,7 @@ int sb_lua_rand_uniform(lua_State *L)
 
 int sb_lua_rand_gaussian(lua_State *L)
 {
-  int a, b;
+  uint64_t a, b;
 
   a = luaL_checknumber(L, 1);
   b = luaL_checknumber(L, 2);
@@ -1104,7 +1104,7 @@ int sb_lua_rand_gaussian(lua_State *L)
 
 int sb_lua_rand_special(lua_State *L)
 {
-  int a, b;
+  uint64_t a, b;
 
   a = luaL_checknumber(L, 1);
   b = luaL_checknumber(L, 2);
@@ -1116,7 +1116,7 @@ int sb_lua_rand_special(lua_State *L)
 
 int sb_lua_rand_uniq(lua_State *L)
 {
-  int a, b;
+  uint64_t a, b;
 
   a = luaL_checknumber(L, 1);
   b = luaL_checknumber(L, 2);

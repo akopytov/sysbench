@@ -61,7 +61,8 @@ static sb_arg_t rand_args[] =
 };
 
 static rand_dist_t rand_type;
-static int (*rand_func)(int, int); /* pointer to random numbers generator */
+/* pointer to the default PRNG as defined by --rand-type */
+static uint64_t (*rand_func)(uint64_t, uint64_t);
 static unsigned int rand_iter;
 static unsigned int rand_pct;
 static unsigned int rand_res;
@@ -164,24 +165,25 @@ void sb_rand_thread_init(void)
   with the --rand-type command line option
 */
 
-int sb_rand_default(int a, int b)
+uint64_t sb_rand_default(uint64_t a, uint64_t b)
 {
   return rand_func(a,b);
 }
 
 /* uniform distribution */
 
-int sb_rand_uniform(int a, int b)
+uint64_t sb_rand_uniform(uint64_t a, uint64_t b)
 {
   return a + sb_rand_uniform_uint64() % (b - a + 1);
 }
 
 /* gaussian distribution */
 
-int sb_rand_gaussian(int a, int b)
+uint64_t sb_rand_gaussian(uint64_t a, uint64_t b)
 {
-  int          sum;
-  unsigned int i, t;
+  uint64_t     sum;
+  uint64_t     t;
+  unsigned int i;
 
   t = b - a + 1;
   for(i=0, sum=0; i < rand_iter; i++)
@@ -192,17 +194,14 @@ int sb_rand_gaussian(int a, int b)
 
 /* 'special' distribution */
 
-int sb_rand_special(int a, int b)
+uint64_t sb_rand_special(uint64_t a, uint64_t b)
 {
-  int          sum = 0;
+  uint64_t     sum = 0;
+  uint64_t     t;
+  uint64_t     range_size;
+  uint64_t     res;
+  uint64_t     d;
   unsigned int i;
-  unsigned int d;
-  unsigned int t;
-  unsigned int res;
-  unsigned int range_size;
-
-  if (a >= b)
-    return 0;
 
   t = b - a + 1;
 
@@ -221,9 +220,8 @@ int sb_rand_special(int a, int b)
   }
 
   /*
-   * For second part use even distribution mapped to few items
-   * We shall distribute other values near by the center
-   */
+    For the remaining range use the uniform distribution.
+  */
   d = t * rand_pct / 100;
   if (d < 1)
     d = 1;
@@ -237,29 +235,27 @@ int sb_rand_special(int a, int b)
 
 /* Pareto distribution */
 
-int sb_rand_pareto(int a, int b)
+uint64_t sb_rand_pareto(uint64_t a, uint64_t b)
 {
-  return a + (int)(b - a + 1) * pow(sb_rand_uniform_double(), pareto_power);
+  return a + (uint64_t) ((b - a + 1) *
+                         pow(sb_rand_uniform_double(), pareto_power));
 }
 
 /* Generate unique random id */
 
-
-int sb_rand_uniq(int a, int b)
+uint64_t sb_rand_uniq(uint64_t a, uint64_t b)
 {
-  int res;
+  uint64_t res;
 
   pthread_mutex_lock(&rnd_mutex);
-  res = (unsigned int) (rnd_seed % (b - a + 1)) ;
+  res = (uint64_t) (rnd_seed % (b - a + 1)) ;
   rnd_seed += LARGE_PRIME;
   pthread_mutex_unlock(&rnd_mutex);
 
   return res + a;
 }
 
-
 /* Generate random string */
-
 
 void sb_rand_str(const char *fmt, char *buf)
 {
