@@ -483,7 +483,8 @@ int text_handler_process(log_msg_t *msg)
 
 int oper_handler_init(void)
 {
-  unsigned int i, tmp;
+  unsigned int i;
+  int tmp;
 
   tmp = sb_get_value_int("percentile");
   if (tmp < 0 || tmp > 100)
