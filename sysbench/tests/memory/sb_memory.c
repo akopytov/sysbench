@@ -250,7 +250,7 @@ int memory_execute_event(sb_event_t *sb_req, int thread_id)
   {
     switch (mem_req->type) {
       case SB_MEM_OP_WRITE:
-        for (i = 0; i < memory_block_size; i++)
+        for (i = 0; i < memory_block_size; i += sizeof(int))
         {
           idx = (int)(sb_rand_uniform_double() *
                       (memory_block_size / sizeof(int)));
@@ -258,7 +258,7 @@ int memory_execute_event(sb_event_t *sb_req, int thread_id)
         }
         break;
       case SB_MEM_OP_READ:
-        for (i = 0; i < memory_block_size; i++)
+        for (i = 0; i < memory_block_size; i += sizeof(int))
         {
           idx = (int)(sb_rand_uniform_double() *
                       (memory_block_size / sizeof(int)));
