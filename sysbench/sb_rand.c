@@ -67,6 +67,15 @@ static unsigned int rand_iter;
 static unsigned int rand_pct;
 static unsigned int rand_res;
 
+/*
+  Pre-computed FP constants to avoid unnecessary conversions and divisions at
+  runtime.
+*/
+static double rand_iter_mult;
+static double rand_pct_mult;
+static double rand_pct_2_mult;
+static double rand_res_mult;
+
 /* parameters for Pareto distribution */
 static double pareto_h; /* parameter h */
 static double pareto_power; /* parameter pre-calculated by h */
@@ -119,8 +128,14 @@ int sb_rand_init(void)
   }
 
   rand_iter = sb_get_value_int("rand-spec-iter");
+  rand_iter_mult = 1.0 / rand_iter;
+
   rand_pct = sb_get_value_int("rand-spec-pct");
+  rand_pct_mult = rand_pct / 100.0;
+  rand_pct_2_mult = rand_pct / 200.0;
+
   rand_res = sb_get_value_int("rand-spec-res");
+  rand_res_mult = 100.0 / (100.0 - rand_res);
 
   pareto_h  = sb_get_value_float("rand-pareto-h");
   pareto_power = log(pareto_h) / log(1.0-pareto_h);
@@ -174,63 +189,72 @@ uint64_t sb_rand_default(uint64_t a, uint64_t b)
 
 uint64_t sb_rand_uniform(uint64_t a, uint64_t b)
 {
-  return a + sb_rand_uniform_uint64() % (b - a + 1);
+  return a + sb_rand_uniform_double() * (b - a + 1);
 }
 
 /* gaussian distribution */
 
 uint64_t sb_rand_gaussian(uint64_t a, uint64_t b)
 {
-  uint64_t     sum;
-  uint64_t     t;
+  double       sum;
+  double       t;
   unsigned int i;
 
   t = b - a + 1;
   for(i=0, sum=0; i < rand_iter; i++)
-    sum += sb_rand_uniform_uint64() % t;
+    sum += sb_rand_uniform_double() * t;
 
-  return a + sum / rand_iter;
+  return a + (uint64_t) (sum * rand_iter_mult) ;
 }
 
 /* 'special' distribution */
 
 uint64_t sb_rand_special(uint64_t a, uint64_t b)
 {
-  uint64_t     sum = 0;
-  uint64_t     t;
-  uint64_t     range_size;
-  uint64_t     res;
-  uint64_t     d;
+  double       sum;
+  double       t;
+  double       range_size;
+  double       res;
+  double       d;
+  double       rnd;
   unsigned int i;
 
-  t = b - a + 1;
+  t = b - a;
 
   /* Increase range size for special values. */
-  range_size = t * (100 / (100 - rand_res));
+  range_size = t * rand_res_mult;
 
   /* Generate uniformly distributed one at this stage  */
-  res = sb_rand_uniform_uint64() % range_size;
+  rnd = sb_rand_uniform_double(); /* Random double in the [0, 1) interval */
+  /* Random integer in the [0, range_size) interval */
+  res = rnd * range_size;
 
-  /* For first part use gaussian distribution */
+  /*
+    Use gaussian distribution for (100 - rand_res) percent of all generated
+    values.
+  */
   if (res < t)
   {
+    sum = 0.0;
+
     for(i = 0; i < rand_iter; i++)
-      sum += sb_rand_uniform_uint64() % t;
-    return a + sum / rand_iter;
+      sum += sb_rand_uniform_double();
+
+    return a + sum * t * rand_iter_mult;
   }
 
   /*
-    For the remaining range use the uniform distribution.
+    For the remaining rand_res percent of values use the uniform
+    distribution. We map previously generated random double in the [0, 1)
+    interval to the rand_pct percent part of the [a, b] interval. Then we move
+    the resulting value in the [0, (b-a) * (rand_pct / 100)] interval to the
+    center of the original interval [a, b].
   */
-  d = t * rand_pct / 100;
-  if (d < 1)
-    d = 1;
-  res %= d;
+  d = t * rand_pct_mult;
+  res = rnd * (d + 1);
+  res += t / 2 - t * rand_pct_2_mult;
 
-  /* Now we have res values in SPECIAL_PCT range of the data */
-  res += (t / 2 - t * rand_pct / (100 * 2));
-
-  return a + res;
+  return a + (uint64_t) res;
 }
 
 /* Pareto distribution */
