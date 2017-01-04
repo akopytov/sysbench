@@ -149,13 +149,6 @@ static int sb_lua_db_execute(lua_State *);
 static int sb_lua_db_close(lua_State *);
 static int sb_lua_db_store_results(lua_State *);
 static int sb_lua_db_free_results(lua_State *);
-static int sb_lua_rand_default(lua_State *);
-static int sb_lua_rand_uniq(lua_State *);
-static int sb_lua_rand_uniform(lua_State *);
-static int sb_lua_rand_gaussian(lua_State *);
-static int sb_lua_rand_special(lua_State *);
-static int sb_lua_rand_uniform_uint64(lua_State *);
-static int sb_lua_rand_str(lua_State *);
 static int sb_lua_more_events(lua_State *);
 static int sb_lua_event_start(lua_State *);
 static int sb_lua_event_stop(lua_State *);
@@ -448,14 +441,6 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   SB_LUA_FUNC("more_events", sb_lua_more_events);
   SB_LUA_FUNC("event_start", sb_lua_event_start);
   SB_LUA_FUNC("event_stop", sb_lua_event_stop);
-
-  SB_LUA_FUNC("rand_default", sb_lua_rand_default);
-  SB_LUA_FUNC("rand_uniq", sb_lua_rand_uniq);
-  SB_LUA_FUNC("rand_uniform_uint64", sb_lua_rand_uniform_uint64);
-  SB_LUA_FUNC("rand_str", sb_lua_rand_str);
-  SB_LUA_FUNC("rand_uniform", sb_lua_rand_uniform);
-  SB_LUA_FUNC("rand_gaussian", sb_lua_rand_gaussian);
-  SB_LUA_FUNC("rand_special", sb_lua_rand_special);
 
   /* Export functions into per-L 'sysbench.db' table  */
 
@@ -1064,86 +1049,6 @@ int sb_lua_db_free_results(lua_State *L)
   rs->ptr = NULL;
   
   return 0;
-}
-
-int sb_lua_rand_default(lua_State *L)
-{
-  uint64_t a, b;
-
-  a = luaL_checknumber(L, 1);
-  b = luaL_checknumber(L, 2);
-
-  lua_pushnumber(L, sb_rand_default(a, b));
-
-  return 1;
-}
-
-int sb_lua_rand_uniform(lua_State *L)
-{
-  uint64_t a, b;
-
-  a = luaL_checknumber(L, 1);
-  b = luaL_checknumber(L, 2);
-
-  lua_pushnumber(L, sb_rand_uniform(a, b));
-
-  return 1;
-}
-
-int sb_lua_rand_gaussian(lua_State *L)
-{
-  uint64_t a, b;
-
-  a = luaL_checknumber(L, 1);
-  b = luaL_checknumber(L, 2);
-
-  lua_pushnumber(L, sb_rand_gaussian(a, b));
-
-  return 1;
-}
-
-int sb_lua_rand_special(lua_State *L)
-{
-  uint64_t a, b;
-
-  a = luaL_checknumber(L, 1);
-  b = luaL_checknumber(L, 2);
-
-  lua_pushnumber(L, sb_rand_special(a, b));
-
-  return 1;
-}
-
-int sb_lua_rand_uniq(lua_State *L)
-{
-  uint64_t a, b;
-
-  a = luaL_checknumber(L, 1);
-  b = luaL_checknumber(L, 2);
-
-  lua_pushnumber(L, sb_rand_uniq(a, b));
-
-  return 1;
-}
-
-int sb_lua_rand_uniform_uint64(lua_State *L)
-{
-  lua_pushnumber(L, sb_rand_uniform_uint64());
-
-  return 1;
-}
-
-int sb_lua_rand_str(lua_State *L)
-{
-  const char *fmt = luaL_checkstring(L, -1);
-  char *buf = strdup(fmt);
-
-  sb_rand_str(fmt, buf);
-  lua_pushstring(L, buf);
-
-  free(buf);
-
-  return 1;
 }
 
 /* Get a per-state interpreter context */

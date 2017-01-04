@@ -130,17 +130,17 @@ function cleanup()
 end
 
 function set_vars()
-   oltp_table_size = oltp_table_size or 10000
-   oltp_range_size = oltp_range_size or 100
-   oltp_tables_count = oltp_tables_count or 1
-   oltp_point_selects = oltp_point_selects or 10
-   oltp_simple_ranges = oltp_simple_ranges or 1
-   oltp_sum_ranges = oltp_sum_ranges or 1
-   oltp_order_ranges = oltp_order_ranges or 1
-   oltp_distinct_ranges = oltp_distinct_ranges or 1
-   oltp_index_updates = oltp_index_updates or 1
-   oltp_non_index_updates = oltp_non_index_updates or 1
-   oltp_delete_inserts = oltp_delete_inserts or 1
+   oltp_table_size = tonumber(oltp_table_size) or 10000
+   oltp_range_size = tonumber(oltp_range_size) or 100
+   oltp_tables_count = tonumber(oltp_tables_count) or 1
+   oltp_point_selects = tonumber(oltp_point_selects) or 10
+   oltp_simple_ranges = tonumber(oltp_simple_ranges) or 1
+   oltp_sum_ranges = tonumber(oltp_sum_ranges) or 1
+   oltp_order_ranges = tonumber(oltp_order_ranges) or 1
+   oltp_distinct_ranges = tonumber(oltp_distinct_ranges) or 1
+   oltp_index_updates = tonumber(oltp_index_updates) or 1
+   oltp_non_index_updates = tonumber(oltp_non_index_updates) or 1
+   oltp_delete_inserts = tonumber(oltp_delete_inserts) or 1
 
    if (oltp_range_selects == 'off') then
       oltp_range_selects = false

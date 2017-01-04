@@ -15,18 +15,66 @@
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 -- ----------------------------------------------------------------------
+-- Pseudo-random number generation API
+-- ----------------------------------------------------------------------
+
+ffi = require("ffi")
+
+sysbench.rand = {}
+
+ffi.cdef[[
+uint32_t sb_rand_default(uint32_t, uint32_t);
+uint32_t sb_rand_uniform(uint32_t, uint32_t);
+uint32_t sb_rand_gaussian(uint32_t, uint32_t);
+uint32_t sb_rand_special(uint32_t, uint32_t);
+uint32_t sb_rand_pareto(uint32_t, uint32_t);
+uint32_t sb_rand_uniq(uint32_t, uint32_t);
+void sb_rand_str(const char *, char *);
+]]
+
+function sysbench.rand.default(a, b)
+   return ffi.C.sb_rand_default(a, b)
+end
+
+function sysbench.rand.uniform(a, b)
+   return ffi.C.sb_rand_uniform(a, b)
+end
+
+function sysbench.rand.gaussian(a, b)
+   return ffi.C.sb_rand_guassian(a, b)
+end
+
+function sysbench.rand.special(a, b)
+   return ffi.C.sb_rand_special(a, b)
+end
+
+function sysbench.rand.pareto(a, b)
+   return ffi.C.sb_rand_pareto(a, b)
+end
+
+function sysbench.rand.unique(a, b)
+   return ffi.C.sb_rand_uniq(a, b)
+end
+
+function sysbench.rand.string(fmt)
+   local buflen = #fmt
+   local buf = ffi.new("uint8_t[?]", buflen)
+   ffi.C.sb_rand_str(fmt, buf)
+   return ffi.string(buf, buflen)
+end
+
+-- ----------------------------------------------------------------------
 -- Compatibility aliases. These may be removed in later versions
 -- ----------------------------------------------------------------------
 
 thread_id = sysbench.tid
 
-sb_rand = sysbench.rand_default
-sb_rand_uniq = sb_rand_uniq
-sb_rnd = sysbench.rand_uniform_uint64
-sb_rand_str = sysbench.rand_str
-sb_rand_uniform = sysbench.rand_uniform
-sb_rand_gaussian = sysbench.rand_gaussian
-sb_rand_special = sysbench.rand_special
+sb_rand = sysbench.rand.default
+sb_rand_uniq = sysbench.rand.unique
+sb_rand_str = sysbench.rand.string
+sb_rand_uniform = sysbench.rand.uniform
+sb_rand_gaussian = sysbench.rand.gaussian
+sb_rand_special = sysbench.rand.special
 
 db_connect = sysbench.db.connect
 db_disconnect = sysbench.db.disconnect
