@@ -54,7 +54,8 @@ static sb_arg_t rand_args[] =
    SB_ARG_TYPE_INT, "1"},
   {"rand-spec-res", "percentage of 'special' values to use (for special distribution)",
    SB_ARG_TYPE_INT, "75"},
-  {"rand-seed", "seed for random number generator, ignored when 0", SB_ARG_TYPE_INT, "0"},
+  {"rand-seed", "seed for random number generator. When 0, the current time is "
+   "used as a RNG seed.", SB_ARG_TYPE_INT, "0"},
   {"rand-pareto-h", "parameter h for pareto distibution", SB_ARG_TYPE_FLOAT,
    "0.2"},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
