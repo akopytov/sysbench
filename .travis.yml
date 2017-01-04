@@ -37,7 +37,7 @@ before_install:
       brew services start mysql
 
       # Avoid PostgreSQL upgrade woes, just reinstall the database
-      brew uninstall postgresql
+      brew uninstall --ignore-dependencies postgresql
       rm -rf /usr/local/var/postgres
       brew install postgresql
 
