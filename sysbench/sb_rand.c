@@ -63,7 +63,7 @@ static sb_arg_t rand_args[] =
 
 static rand_dist_t rand_type;
 /* pointer to the default PRNG as defined by --rand-type */
-static uint64_t (*rand_func)(uint64_t, uint64_t);
+static uint32_t (*rand_func)(uint32_t, uint32_t);
 static unsigned int rand_iter;
 static unsigned int rand_pct;
 static unsigned int rand_res;
@@ -181,21 +181,21 @@ void sb_rand_thread_init(void)
   with the --rand-type command line option
 */
 
-uint64_t sb_rand_default(uint64_t a, uint64_t b)
+uint32_t sb_rand_default(uint32_t a, uint32_t b)
 {
   return rand_func(a,b);
 }
 
 /* uniform distribution */
 
-uint64_t sb_rand_uniform(uint64_t a, uint64_t b)
+uint32_t sb_rand_uniform(uint32_t a, uint32_t b)
 {
   return a + sb_rand_uniform_double() * (b - a + 1);
 }
 
 /* gaussian distribution */
 
-uint64_t sb_rand_gaussian(uint64_t a, uint64_t b)
+uint32_t sb_rand_gaussian(uint32_t a, uint32_t b)
 {
   double       sum;
   double       t;
@@ -205,12 +205,12 @@ uint64_t sb_rand_gaussian(uint64_t a, uint64_t b)
   for(i=0, sum=0; i < rand_iter; i++)
     sum += sb_rand_uniform_double() * t;
 
-  return a + (uint64_t) (sum * rand_iter_mult) ;
+  return a + (uint32_t) (sum * rand_iter_mult) ;
 }
 
 /* 'special' distribution */
 
-uint64_t sb_rand_special(uint64_t a, uint64_t b)
+uint32_t sb_rand_special(uint32_t a, uint32_t b)
 {
   double       sum;
   double       t;
@@ -255,25 +255,25 @@ uint64_t sb_rand_special(uint64_t a, uint64_t b)
   res = rnd * (d + 1);
   res += t / 2 - t * rand_pct_2_mult;
 
-  return a + (uint64_t) res;
+  return a + (uint32_t) res;
 }
 
 /* Pareto distribution */
 
-uint64_t sb_rand_pareto(uint64_t a, uint64_t b)
+uint32_t sb_rand_pareto(uint32_t a, uint32_t b)
 {
-  return a + (uint64_t) ((b - a + 1) *
+  return a + (uint32_t) ((b - a + 1) *
                          pow(sb_rand_uniform_double(), pareto_power));
 }
 
 /* Generate unique random id */
 
-uint64_t sb_rand_uniq(uint64_t a, uint64_t b)
+uint32_t sb_rand_uniq(uint32_t a, uint32_t b)
 {
-  uint64_t res;
+  uint32_t res;
 
   pthread_mutex_lock(&rnd_mutex);
-  res = (uint64_t) (rnd_seed % (b - a + 1)) ;
+  res = (uint32_t) (rnd_seed % (b - a + 1)) ;
   rnd_seed += LARGE_PRIME;
   pthread_mutex_unlock(&rnd_mutex);
 

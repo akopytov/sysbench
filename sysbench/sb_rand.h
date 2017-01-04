@@ -62,12 +62,12 @@ void sb_rand_done(void);
 void sb_rand_thread_init(void);
 
 /* Generator functions */
-uint64_t sb_rand_default(uint64_t, uint64_t);
-uint64_t sb_rand_uniform(uint64_t, uint64_t);
-uint64_t sb_rand_gaussian(uint64_t, uint64_t);
-uint64_t sb_rand_special(uint64_t, uint64_t);
-uint64_t sb_rand_pareto(uint64_t, uint64_t);
-uint64_t sb_rand_uniq(uint64_t a, uint64_t b);
+uint32_t sb_rand_default(uint32_t, uint32_t);
+uint32_t sb_rand_uniform(uint32_t, uint32_t);
+uint32_t sb_rand_gaussian(uint32_t, uint32_t);
+uint32_t sb_rand_special(uint32_t, uint32_t);
+uint32_t sb_rand_pareto(uint32_t, uint32_t);
+uint32_t sb_rand_uniq(uint32_t, uint32_t);
 void sb_rand_str(const char *, char *);
 
 #endif /* SB_RAND_H */
