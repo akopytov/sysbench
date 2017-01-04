@@ -35,7 +35,8 @@ before_install:
       # OS X requires servers to be started explicitly
       brew services start mysql
 
-      # Avoid PostgreSQL upgrade woes, just recreate the database
+      # Avoid PostgreSQL upgrade woes, just reinstall the database
+      brew uninstall --ignore-dependencies postgresql
       rm -rf /usr/local/var/postgres
       brew postinstall postgresql
 
