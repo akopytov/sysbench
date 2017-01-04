@@ -43,9 +43,9 @@ AS_IF([test "x$sb_cv_lib_luajit" = "xsystem"],
     LUAJIT_CFLAGS="-I\$(abs_top_builddir)/third_party/luajit/inc"
     LUAJIT_LIBS="\$(abs_top_builddir)/third_party/luajit/lib/libluajit-5.1.a"
     AS_CASE([$host_os],
-      # -ldl is required on Linux
+      # -ldl and -rdynamic is required on Linux
       [*linux*], [
-        LUAJIT_LIBS="$LUAJIT_LIBS -ldl"
+        LUAJIT_LIBS="$LUAJIT_LIBS -ldl -rdynamic"
       ])
   ]
 )
