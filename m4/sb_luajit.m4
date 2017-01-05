@@ -42,11 +42,6 @@ AS_IF([test "x$sb_cv_lib_luajit" = "xsystem"],
   [
     LUAJIT_CFLAGS="-I\$(abs_top_builddir)/third_party/luajit/inc"
     LUAJIT_LIBS="\$(abs_top_builddir)/third_party/luajit/lib/libluajit-5.1.a"
-    AS_CASE([$host_os],
-      # -ldl and -rdynamic is required on Linux
-      [*linux*], [
-        LUAJIT_LIBS="$LUAJIT_LIBS -ldl -rdynamic"
-      ])
   ]
 )
 
@@ -55,10 +50,13 @@ AC_DEFINE_UNQUOTED([SB_WITH_LUAJIT], ["$sb_use_luajit"],
 
 AM_CONDITIONAL([USE_BUNDLED_LUAJIT], [test "x$sb_use_luajit" = xbundled])
 
-# Add extra flags when building a 64-bit application on OS X,
-# http://luajit.org/install.html
 AS_CASE([$host_os:$host_cpu],
+        # Add extra flags when building a 64-bit application on OS X,
+        # http://luajit.org/install.html
         [*darwin*:x86_64],
-        [LUAJIT_LDFLAGS="-pagezero_size 10000 -image_base 100000000"])
+          [LUAJIT_LDFLAGS="-pagezero_size 10000 -image_base 100000000"],
+        # -ldl and -rdynamic are required on Linux
+        [*linux*:*],
+          [LUAJIT_LDFLAGS="-ldl -rdynamic"])
 AC_SUBST([LUAJIT_LDFLAGS])
 ])
