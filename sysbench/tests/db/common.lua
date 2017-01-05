@@ -154,6 +154,12 @@ function set_vars()
       oltp_auto_inc = true
    end
 
+   if (oltp_auto_inc_read_only == 'on') then
+      oltp_auto_inc_read_only = true
+   else
+      oltp_auto_inc_read_only = false
+   end
+
    if (oltp_read_only == 'on') then
       oltp_read_only = true
    else
