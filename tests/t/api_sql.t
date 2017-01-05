@@ -7,7 +7,7 @@ SQL Lua API tests
   >   exit 80
   > fi
 
-  $ SB_ARGS="--verbosity=1 --test=$CRAMTMP/api_sql.lua --max-requests=1 --num-threads=1 --db-driver=mysql"
+  $ SB_ARGS="--verbosity=1 --test=$CRAMTMP/api_sql.lua --max-requests=1 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS"
   $ cat >$CRAMTMP/api_sql.lua <<EOF
   > function event(thread_id)
   >   db_query("CREATE TABLE t(a INT)")
