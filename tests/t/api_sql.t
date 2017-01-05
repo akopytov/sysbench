@@ -49,7 +49,7 @@ SQL Lua API tests
   t
   CREATE TABLE `t` (
     `a` int(11) DEFAULT NULL
-  ) ENGINE=InnoDB DEFAULT CHARSET=latin1
+  ) * (glob)
 
   $ mysql -uroot sbtest -Nse "SELECT COUNT(DISTINCT a) FROM t"
   100
