@@ -7,7 +7,7 @@ Basic Lua API tests
   >   exit 80
   > fi
 
-  $ SB_ARGS="--verbosity=0 --test=$CRAMTMP/api_basic.lua --max-requests=2 --num-threads=1"
+  $ SB_ARGS="--verbosity=0 --test=$CRAMTMP/api_basic.lua --max-requests=2 --num-threads=1 --db-driver=mysql"
 
   $ cat >$CRAMTMP/api_basic.lua <<EOF
   > function init(thread_id)
