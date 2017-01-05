@@ -38,7 +38,7 @@ before_install:
       # Avoid PostgreSQL upgrade woes, just reinstall the database
       brew uninstall --ignore-dependencies postgresql
       rm -rf /usr/local/var/postgres
-      brew postinstall postgresql
+      brew install postgresql
 
       pg_ctl -wD /usr/local/var/postgres start
       createuser -s postgres
