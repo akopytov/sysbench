@@ -57,6 +57,11 @@ AS_CASE([$host_os:$host_cpu],
           [LUAJIT_LDFLAGS="-pagezero_size 10000 -image_base 100000000"],
         # -ldl and -rdynamic are required on Linux
         [*linux*:*],
-          [LUAJIT_LDFLAGS="-ldl -rdynamic"])
+          [
+            LUAJIT_LIBS="$LUAJIT_LIBS -ldl"
+            LUAJIT_LDFLAGS="-rdynamic"
+          ]
+)
+
 AC_SUBST([LUAJIT_LDFLAGS])
 ])
