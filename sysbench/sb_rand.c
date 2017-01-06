@@ -88,6 +88,8 @@ static pthread_mutex_t    rnd_mutex;
 
 extern inline uint64_t sb_rand_uniform_uint64(void);
 extern inline double sb_rand_uniform_double(void);
+extern inline uint64_t xoroshiro_rotl(const uint64_t, int);
+extern inline uint64_t xoroshiro_next(uint64_t s[2]);
 
 int sb_rand_register(void)
 {
