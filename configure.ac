@@ -27,12 +27,12 @@ AC_PROG_CPP
 AM_PROG_CC_C_O
 
 if test x"$ac_cv_prog_cc_c99" = xno; then
-   AC_MSG_ERROR([A C99 compiler is required to build sysbench])
+   AC_MSG_ERROR([a C99 compiler is required to build sysbench])
 fi
 
 # Try to guess the most optimal compiler architecture flag
 AX_GCC_ARCHFLAG([no], ,
-  AC_MSG_ERROR([*** failed to autodetect compiler flags for this architecture. Use --with-gcc-arch=<arch> to set it explicitly]))
+  AC_MSG_ERROR([failed to autodetect compiler flags for this architecture. Use --with-gcc-arch=<arch> to set it explicitly]))
 
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
@@ -42,7 +42,7 @@ AC_PROG_LIBTOOL
 
 AC_CHECK_PROG(sb_have_pkg_config, pkg-config, yes, no)
 if test x"$sb_have_pkg_config" = xno; then
-  AC_MSG_ERROR("The pkg-config package is required to build sysbench")
+  AC_MSG_ERROR([the pkg-config package is required to build sysbench])
 fi
 
 AC_CHECK_PROG(sb_have_xxd, xxd, yes, no)
@@ -299,7 +299,7 @@ limits.h \
 AC_TYPE_OFF_T
 AC_HEADER_TIME
 AX_TLS([],
-  AC_MSG_ERROR([Thread-local storage is not suppored by the target platform!])
+  AC_MSG_ERROR([thread-local storage is not suppored by the target platform!])
 )
 
 # Define HAVE_FUNC_ATTRIBUTE_FORMAT if compiler supports the
