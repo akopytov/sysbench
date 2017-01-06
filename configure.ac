@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.57)
+AC_PREREQ(2.63)
 AC_INIT([sysbench],[1.0],[https://github.com/akopytov/sysbench/issues],
         [sysbench], [https://github.com/akopytov/sysbench])
 AC_CONFIG_AUX_DIR([config])
@@ -22,8 +22,13 @@ AC_CONFIG_MACRO_DIR([m4])
 ACX_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CC
+AC_PROG_CC_C99
 AC_PROG_CPP
 AM_PROG_CC_C_O
+
+if test x"$ac_cv_prog_cc_c99" = xno; then
+   AC_MSG_ERROR([A C99 compiler is required to build sysbench])
+fi
 
 # Try to guess the most optimal compiler architecture flag
 AX_GCC_ARCHFLAG([no], ,
@@ -286,9 +291,7 @@ limits.h \
 
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_C_INLINE
 AC_TYPE_OFF_T
-AC_TYPE_SIZE_T
 AC_HEADER_TIME
 AX_TLS([],
   AC_MSG_ERROR([Thread-local storage is not suppored by the target platform!])
