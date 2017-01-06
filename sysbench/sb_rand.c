@@ -86,6 +86,9 @@ static unsigned long long rnd_seed;
 /* Mutex to protect random seed */
 static pthread_mutex_t    rnd_mutex;
 
+extern inline uint64_t sb_rand_uniform_uint64(void);
+extern inline double sb_rand_uniform_double(void);
+
 int sb_rand_register(void)
 {
   sb_register_arg_set(rand_args);

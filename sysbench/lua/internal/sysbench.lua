@@ -23,6 +23,7 @@ ffi = require("ffi")
 sysbench.rand = {}
 
 ffi.cdef[[
+uint64_t sb_rand_uniform_uint64(void);
 uint32_t sb_rand_default(uint32_t, uint32_t);
 uint32_t sb_rand_uniform(uint32_t, uint32_t);
 uint32_t sb_rand_gaussian(uint32_t, uint32_t);
@@ -30,7 +31,12 @@ uint32_t sb_rand_special(uint32_t, uint32_t);
 uint32_t sb_rand_pareto(uint32_t, uint32_t);
 uint32_t sb_rand_uniq(uint32_t, uint32_t);
 void sb_rand_str(const char *, char *);
+double sb_rand_uniform_double(void);
 ]]
+
+function sysbench.rand.uniform_uint64()
+   return ffi.C.sb_rand_uniform_uint64()
+end
 
 function sysbench.rand.default(a, b)
    return ffi.C.sb_rand_default(a, b)
@@ -41,7 +47,7 @@ function sysbench.rand.uniform(a, b)
 end
 
 function sysbench.rand.gaussian(a, b)
-   return ffi.C.sb_rand_guassian(a, b)
+   return ffi.C.sb_rand_gaussian(a, b)
 end
 
 function sysbench.rand.special(a, b)
@@ -63,11 +69,22 @@ function sysbench.rand.string(fmt)
    return ffi.string(buf, buflen)
 end
 
+function sysbench.rand.uniform_double()
+   return ffi.C.sb_rand_uniform_double()
+end
+
 -- ----------------------------------------------------------------------
--- Compatibility aliases. These may be removed in later versions
+-- Compatibility wrappers/aliases. These may be removed in later versions
 -- ----------------------------------------------------------------------
 
 thread_id = sysbench.tid
+
+function sb_rnd()
+   -- Keep lower 32 bits from sysbench.rand.uniform_uint64() and convert them to
+   -- a Lua number
+   return tonumber(sysbench.rand.uniform_uint64() %
+                      tonumber("100000000", 16))
+end
 
 sb_rand = sysbench.rand.default
 sb_rand_uniq = sysbench.rand.unique
@@ -93,6 +110,8 @@ db_execute = sysbench.db.execute
 db_store_results = sysbench.db.store_results
 db_free_results = sysbench.db.free_results
 
+db_close = sysbench.db.close
+
 DB_ERROR_NONE = sysbench.db.DB_ERROR_NONE
 DB_ERROR_RESTART_TRANSACTION = sysbench.db.DB_ERROR_RESTART_TRANSACTION
 DB_ERROR_FAILED = sysbench.db.DB_ERROR_FAILED
@@ -100,10 +119,13 @@ DB_ERROR_FAILED = sysbench.db.DB_ERROR_FAILED
 -- ----------------------------------------------------------------------
 -- Main event loop. This is a Lua version of sysbench.c:thread_run()
 -- ----------------------------------------------------------------------
-function thread_run()
+function thread_run(thread_id)
+   if (type(event) ~= "function") then
+      error("Cannot find the 'event' function in the script")
+   end
    while sysbench.more_events() do
       sysbench.event_start()
-      event()
+      event(thread_id)
       sysbench.event_stop()
    end
 end

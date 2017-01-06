@@ -41,13 +41,13 @@ extern int sb_rand_seed;
 extern TLS sb_rng_state_t sb_rng_state;
 
 /* Return a uniformly distributed pseudo-random 64-bit unsigned integer */
-static inline uint64_t sb_rand_uniform_uint64(void)
+inline uint64_t sb_rand_uniform_uint64(void)
 {
   return xoroshiro_next(sb_rng_state);
 }
 
 /* Return a uniformly distributed pseudo-random double in the [0, 1) interval */
-static inline double sb_rand_uniform_double(void)
+inline double sb_rand_uniform_double(void)
 {
   const uint64_t x = sb_rand_uniform_uint64();
   const union { uint64_t i; double d; } u = { .i = UINT64_C(0x3FF) << 52 | x >> 12 };

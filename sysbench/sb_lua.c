@@ -40,6 +40,8 @@
 #define THREAD_INIT_FUNC "thread_init"
 #define THREAD_DONE_FUNC "thread_done"
 #define THREAD_RUN_FUNC "thread_run"
+#define INIT_FUNC "init"
+#define DONE_FUNC "done"
 
 /* Macros to call Lua functions */
 #define CALL_ERROR(L, name)           \
@@ -96,20 +98,18 @@ static sb_test_t sbtest;
 
 /* Lua test operations */
 
-static int sb_lua_init(void);
-static int sb_lua_done(void);
+static int sb_lua_op_init(void);
+static int sb_lua_op_done(void);
 static sb_event_t sb_lua_next_event(int);
-static int sb_lua_op_execute_event(sb_event_t *, int);
 static int sb_lua_op_thread_init(int);
 static int sb_lua_op_thread_run(int);
 static int sb_lua_op_thread_done(int);
 static void sb_lua_op_print_stats(sb_stat_t type);
 
 static sb_operations_t lua_ops = {
-   .init = sb_lua_init,
+   .init = sb_lua_op_init,
    .next_event = &sb_lua_next_event,
-   .execute_event = sb_lua_op_execute_event,
-   .done = sb_lua_done
+   .done = sb_lua_op_done
 };
 
 /* Main (global) interpreter state */
@@ -236,8 +236,18 @@ sb_test_t *sb_load_lua(const char *testname)
 
 /* Initialize Lua script */
 
-int sb_lua_init(void)
+int sb_lua_op_init(void)
 {
+  lua_getglobal(gstate, INIT_FUNC);
+  if (!lua_isnil(gstate, -1))
+  {
+    if (lua_pcall(gstate, 0, 0, 0))
+    {
+      CALL_ERROR(gstate, INIT_FUNC);
+      return 1;
+    }
+  }
+
   return 0;
 }
 
@@ -259,56 +269,14 @@ sb_event_t sb_lua_next_event(int thread_id)
   return req;
 }
 
-int sb_lua_op_execute_event(sb_event_t *sb_req, int thread_id)
-{
-  unsigned int        restart;
-  lua_State           *L = states[thread_id];
-
-  (void)sb_req; /* unused */
-  (void)thread_id; /* unused */
-
-  do
-  {
-    restart = 0;
-
-    lua_getglobal(L, EVENT_FUNC);
-
-    if (lua_pcall(L, 0, 1, 0))
-    {
-      if (lua_gettop(L) && lua_isnumber(L, -1) &&
-          lua_tonumber(L, -1) == SB_DB_ERROR_RESTART_TRANSACTION)
-      {
-        log_text(LOG_DEBUG,
-                 "Ignored error encountered, restarting transaction");
-        restart = 1;
-      }
-      else
-      {
-        CALL_ERROR(L, EVENT_FUNC);
-        sb_globals.error = 1;
-        return 1;
-        
-      }
-    }
-    lua_pop(L, 1);
-  } while (restart);
-
-  return 0;
-}
-
 int sb_lua_op_thread_init(int thread_id)
 {
-  sb_lua_ctxt_t     *ctxt;
   lua_State * const L = states[thread_id];
 
-  ctxt = sb_lua_get_context(L);
-
-  if (ctxt->con == NULL)
-    sb_lua_db_connect(L);
-
   lua_getglobal(L, THREAD_INIT_FUNC);
+  lua_pushnumber(L, thread_id);
 
-  if (lua_pcall(L, 0, 1, 0))
+  if (lua_pcall(L, 1, 1, 0))
   {
     CALL_ERROR(L, THREAD_INIT_FUNC);
     return 1;
@@ -322,8 +290,9 @@ int sb_lua_op_thread_run(int thread_id)
   lua_State * const L = states[thread_id];
 
   lua_getglobal(L, THREAD_RUN_FUNC);
+  lua_pushnumber(L, thread_id);
 
-  if (lua_pcall(L, 0, 1, 0))
+  if (lua_pcall(L, 1, 1, 0))
   {
     CALL_ERROR(L, THREAD_RUN_FUNC);
     return 1;
@@ -337,8 +306,9 @@ int sb_lua_op_thread_done(int thread_id)
   lua_State * const L = states[thread_id];
 
   lua_getglobal(L, THREAD_DONE_FUNC);
+  lua_pushnumber(L, thread_id);
 
-  if (lua_pcall(L, 0, 1, 0))
+  if (lua_pcall(L, 1, 1, 0))
   {
     CALL_ERROR(L, THREAD_DONE_FUNC);
     return 1;
@@ -354,7 +324,7 @@ void sb_lua_op_print_stats(sb_stat_t type)
     db_print_stats(type);
 }
 
-int sb_lua_done(void)
+int sb_lua_op_done(void)
 {
   unsigned int i;
 
@@ -362,7 +332,17 @@ int sb_lua_done(void)
     lua_close(states[i]);
 
   free(states);
-  
+
+  lua_getglobal(gstate, DONE_FUNC);
+  if (!lua_isnil(gstate, -1))
+  {
+    if (lua_pcall(gstate, 0, 0, 0))
+    {
+      CALL_ERROR(gstate, DONE_FUNC);
+      return 1;
+    }
+  }
+
   return 0;
 }
 
@@ -420,29 +400,35 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
     lua_setglobal(L, opt->name);
   }
 
-#define SB_LUA_VAR(luaname, cname)               \
-  lua_pushstring(L, luaname);                \
-  lua_pushnumber(L, cname);                  \
-  lua_settable(L, -3)
-#define SB_LUA_FUNC(luaname, cname)              \
-  lua_pushstring(L, luaname);                \
-  lua_pushcfunction(L, cname);               \
-  lua_settable(L, -3)
+#define SB_LUA_VAR(luaname, cname)              \
+  do {                                          \
+    lua_pushstring(L, luaname);                 \
+    lua_pushnumber(L, cname);                   \
+    lua_settable(L, -3);                        \
+  } while (0)
 
-  /* Export variables into per-L 'sysbench' table */
+#define SB_LUA_FUNC(luaname, cname)             \
+  do {                                          \
+    lua_pushstring(L, luaname);                 \
+    lua_pushcfunction(L, cname);                \
+    lua_settable(L, -3);                        \
+  } while (0)
+
+  /* Export variables into per-state 'sysbench' table */
 
   lua_newtable(L);
 
   /* sysbench.tid */
-  SB_LUA_VAR("tid", thread_id);
+  if (thread_id >= 0)
+    SB_LUA_VAR("tid", thread_id);
 
-  /* Export functions into per-L 'sysbench' table  */
+  /* Export functions into per-state 'sysbench' table  */
 
   SB_LUA_FUNC("more_events", sb_lua_more_events);
   SB_LUA_FUNC("event_start", sb_lua_event_start);
   SB_LUA_FUNC("event_stop", sb_lua_event_stop);
 
-  /* Export functions into per-L 'sysbench.db' table  */
+  /* Export functions into per-state 'sysbench.db' table  */
 
   lua_pushstring(L, "db");
   lua_newtable(L);

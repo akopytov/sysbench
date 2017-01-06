@@ -7,13 +7,9 @@ Basic Lua API tests
   >   exit 80
   > fi
 
-  $ SB_ARGS="--verbosity=0 --test=$CRAMTMP/api_basic.lua --max-requests=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS"
+  $ SB_ARGS="--verbosity=0 --test=$CRAMTMP/api_legacy_basic.lua --max-requests=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS"
 
-  $ cat >$CRAMTMP/api_basic.lua <<EOF
-  > function init(thread_id)
-  >   print("tid:" .. (thread_id or "(nil)") .. " init()")
-  > end
-  > 
+  $ cat >$CRAMTMP/api_legacy_basic.lua <<EOF
   > function prepare(thread_id)
   >   print("tid:" .. (thread_id or "(nil)") .. " prepare()")
   > end
@@ -42,22 +38,16 @@ Basic Lua API tests
   >   print(string.format("tid:%d thread_done()", thread_id))
   > end
   > 
-  > function done(thread_id)
-  >   print("tid:" .. (thread_id or "(nil)") .. " done()")
-  > end
-  > 
   > EOF
 
   $ sysbench $SB_ARGS prepare
   tid:(nil) prepare()
 
   $ sysbench $SB_ARGS run
-  tid:(nil) init()
   tid:0 thread_init()
   tid:0 event()
   tid:0 event()
   tid:0 thread_done()
-  tid:(nil) done()
 
   $ sysbench $SB_ARGS cleanup
   tid:(nil) cleanup()
