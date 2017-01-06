@@ -31,11 +31,11 @@ See <http://creativecommons.org/publicdomain/zero/1.0/>. */
    a 64-bit seed, we suggest to seed a splitmix64 generator and use its
    output to fill s. */
 
-static inline uint64_t xoroshiro_rotl(const uint64_t x, int k) {
+inline uint64_t xoroshiro_rotl(const uint64_t x, int k) {
         return (x << k) | (x >> (64 - k));
 }
 
-static inline uint64_t xoroshiro_next(uint64_t s[2]) {
+inline uint64_t xoroshiro_next(uint64_t s[2]) {
         const uint64_t s0 = s[0];
         uint64_t s1 = s[1];
         const uint64_t result = s0 + s1;
