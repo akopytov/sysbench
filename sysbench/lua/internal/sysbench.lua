@@ -29,7 +29,7 @@ uint32_t sb_rand_uniform(uint32_t, uint32_t);
 uint32_t sb_rand_gaussian(uint32_t, uint32_t);
 uint32_t sb_rand_special(uint32_t, uint32_t);
 uint32_t sb_rand_pareto(uint32_t, uint32_t);
-uint32_t sb_rand_uniq(uint32_t, uint32_t);
+uint32_t sb_rand_unique(void);
 void sb_rand_str(const char *, char *);
 double sb_rand_uniform_double(void);
 ]]
@@ -58,8 +58,8 @@ function sysbench.rand.pareto(a, b)
    return ffi.C.sb_rand_pareto(a, b)
 end
 
-function sysbench.rand.unique(a, b)
-   return ffi.C.sb_rand_uniq(a, b)
+function sysbench.rand.unique()
+   return ffi.C.sb_rand_unique()
 end
 
 function sysbench.rand.string(fmt)
@@ -87,11 +87,25 @@ function sb_rnd()
 end
 
 sb_rand = sysbench.rand.default
-sb_rand_uniq = sysbench.rand.unique
 sb_rand_str = sysbench.rand.string
 sb_rand_uniform = sysbench.rand.uniform
 sb_rand_gaussian = sysbench.rand.gaussian
 sb_rand_special = sysbench.rand.special
+
+function sb_rand_uniq(a, b)
+   local res
+   if type(a) == "nil" then
+      a = 0
+   end
+   if type(b) == "nil" then
+      b = 4294967295
+   end
+   repeat
+      res = sysbench.rand.unique()
+   until res >= a and res <= b
+   return res
+end
+
 
 db_connect = sysbench.db.connect
 db_disconnect = sysbench.db.disconnect

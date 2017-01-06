@@ -35,8 +35,7 @@
 #include "sb_rand.h"
 #include "sb_logger.h"
 
-/* Large prime number to generate unique random IDs */
-#define LARGE_PRIME 2147483647
+#include "ck_pr.h"
 
 TLS sb_rng_state_t sb_rng_state CK_CC_CACHELINE;
 
@@ -81,15 +80,16 @@ static double rand_res_mult;
 static double pareto_h; /* parameter h */
 static double pareto_power; /* parameter pre-calculated by h */
 
-/* Random seed used to generate unique random numbers */
-static unsigned long long rnd_seed;
-/* Mutex to protect random seed */
-static pthread_mutex_t    rnd_mutex;
+/* Unique sequence generator state */
+static uint32_t rand_unique_index CK_CC_CACHELINE;
+static uint32_t rand_unique_offset;
 
 extern inline uint64_t sb_rand_uniform_uint64(void);
 extern inline double sb_rand_uniform_double(void);
 extern inline uint64_t xoroshiro_rotl(const uint64_t, int);
 extern inline uint64_t xoroshiro_next(uint64_t s[2]);
+
+static void rand_unique_seed(uint32_t index, uint32_t offset);
 
 int sb_rand_register(void)
 {
@@ -146,12 +146,11 @@ int sb_rand_init(void)
   pareto_h  = sb_get_value_float("rand-pareto-h");
   pareto_power = log(pareto_h) / log(1.0-pareto_h);
 
-  /* Initialize random seed  */
-  rnd_seed = LARGE_PRIME;
-  pthread_mutex_init(&rnd_mutex, NULL);
-
   /* Seed PRNG for the main thread. Worker thread do their own seeding */
   sb_rand_thread_init();
+
+  /* Seed the unique sequence generator */
+  rand_unique_seed(random(), random());
 
   return 0;
 }
@@ -167,7 +166,6 @@ void sb_rand_print_help(void)
 
 void sb_rand_done(void)
 {
-  pthread_mutex_destroy(&rnd_mutex);
 }
 
 /* Initialize thread-local RNG state */
@@ -271,20 +269,6 @@ uint32_t sb_rand_pareto(uint32_t a, uint32_t b)
                          pow(sb_rand_uniform_double(), pareto_power));
 }
 
-/* Generate unique random id */
-
-uint32_t sb_rand_uniq(uint32_t a, uint32_t b)
-{
-  uint32_t res;
-
-  pthread_mutex_lock(&rnd_mutex);
-  res = (uint32_t) (rnd_seed % (b - a + 1)) ;
-  rnd_seed += LARGE_PRIME;
-  pthread_mutex_unlock(&rnd_mutex);
-
-  return res + a;
-}
-
 /* Generate random string */
 
 void sb_rand_str(const char *fmt, char *buf)
@@ -300,4 +284,39 @@ void sb_rand_str(const char *fmt, char *buf)
     else
       buf[i] = fmt[i];
   }
+}
+
+/*
+  Unique random sequence generator. This is based on public domain code from
+  https://github.com/preshing/RandomSequence
+*/
+
+static uint32_t rand_unique_permute(uint32_t x)
+{
+  static const uint32_t prime = UINT32_C(4294967291);
+
+  if (x >= prime)
+    return x; /* The 5 integers out of range are mapped to themselves. */
+
+  uint32_t residue = ((uint64_t) x * x) % prime;
+  return (x <= prime / 2) ? residue : prime - residue;
+}
+
+
+static void rand_unique_seed(uint32_t index, uint32_t offset)
+{
+  rand_unique_index = rand_unique_permute(rand_unique_permute(index) +
+                                          0x682f0161);
+  rand_unique_offset = rand_unique_permute(rand_unique_permute(offset) +
+                                          0x46790905);
+}
+
+/* This is safe to be called concurrently from multiple threads */
+
+uint32_t sb_rand_unique(void)
+{
+  uint32_t index = ck_pr_faa_32(&rand_unique_index, 1);
+
+  return rand_unique_permute((rand_unique_permute(index) + rand_unique_offset) ^
+                             0x5bf03635);
 }

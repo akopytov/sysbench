@@ -67,7 +67,7 @@ uint32_t sb_rand_uniform(uint32_t, uint32_t);
 uint32_t sb_rand_gaussian(uint32_t, uint32_t);
 uint32_t sb_rand_special(uint32_t, uint32_t);
 uint32_t sb_rand_pareto(uint32_t, uint32_t);
-uint32_t sb_rand_uniq(uint32_t, uint32_t);
+uint32_t sb_rand_unique(void);
 void sb_rand_str(const char *, char *);
 
 #endif /* SB_RAND_H */
