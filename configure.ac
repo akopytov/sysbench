@@ -40,6 +40,11 @@ m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 #LT_LIB_DLLOAD
 AC_PROG_LIBTOOL
 
+AC_CHECK_PROG(sb_have_pkg_config, pkg-config, yes, no)
+if test x"$sb_have_pkg_config" = xno; then
+  AC_MSG_ERROR("The pkg-config package is required to build sysbench")
+fi
+
 AC_CHECK_PROG(sb_have_xxd, xxd, yes, no)
 if test x"$sb_have_xxd" = xno; then
    AC_MSG_ERROR("xxd is required to build sysbench (usually comes with the vim package)")
