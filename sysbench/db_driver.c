@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -839,8 +839,8 @@ void db_print_stats(sb_stat_t type)
     seconds = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
 
     const double percentile_val =
-      sb_histogram_get_pct_intermediate(&global_histogram,
-                                             sb_globals.percentile);
+      sb_histogram_get_pct_intermediate(&sb_latency_histogram,
+                                        sb_globals.percentile);
 
     log_timestamp(LOG_NOTICE, NS2SEC(sb_timer_value(&sb_exec_timer)),
                   "threads: %d, tps: %4.2f, reads: %4.2f, writes: %4.2f, "

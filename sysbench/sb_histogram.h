@@ -1,4 +1,4 @@
-/* Copyright (C) 2011-2016 Alexey Kopytov.
+/* Copyright (C) 2011-2017 Alexey Kopytov.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -64,7 +64,7 @@ typedef struct {
 } sb_histogram_t;
 
 /* Global latency histogram */
-extern sb_histogram_t global_histogram;
+extern sb_histogram_t sb_latency_histogram;
 
 /*
   Initialize a new histogram object with a given array size and value bounds.

@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -508,7 +508,7 @@ int oper_handler_init(void)
     return 1;
   }
 
-  if (sb_histogram_init(&global_histogram, OPER_LOG_GRANULARITY,
+  if (sb_histogram_init(&sb_latency_histogram, OPER_LOG_GRANULARITY,
                         OPER_LOG_MIN_VALUE, OPER_LOG_MAX_VALUE))
     return 1;
 
@@ -612,7 +612,7 @@ int print_global_stats(void)
   if (sb_globals.histogram)
   {
     log_text(LOG_NOTICE, "Latency histogram (values are in milliseconds)");
-    sb_histogram_print(&global_histogram);
+    sb_histogram_print(&sb_latency_histogram);
     log_text(LOG_NOTICE, " ");
   }
 
@@ -629,7 +629,7 @@ int print_global_stats(void)
   {
     log_text(LOG_NOTICE, "         approx. %3dth percentile:       %10.2fms",
              sb_globals.percentile,
-             sb_histogram_get_pct_checkpoint(&global_histogram,
+             sb_histogram_get_pct_checkpoint(&sb_latency_histogram,
                                              sb_globals.percentile));
   }
   else
@@ -700,7 +700,7 @@ int oper_handler_done(void)
   if (sb_globals.n_checkpoints > 0)
     pthread_mutex_destroy(&timers_mutex);
 
-  sb_histogram_done(&global_histogram);
+  sb_histogram_done(&sb_latency_histogram);
 
   return 0;
 }

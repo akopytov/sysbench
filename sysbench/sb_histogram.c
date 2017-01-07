@@ -1,4 +1,4 @@
-/* Copyright (C) 2011-2016 Alexey Kopytov.
+/* Copyright (C) 2011-2017 Alexey Kopytov.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -51,7 +51,7 @@
 #define SB_HISTOGRAM_NSLOTS 128
 
 /* Global latency histogram */
-sb_histogram_t global_histogram CK_CC_CACHELINE;
+sb_histogram_t sb_latency_histogram CK_CC_CACHELINE;
 
 
 int sb_histogram_init(sb_histogram_t *h, size_t size,

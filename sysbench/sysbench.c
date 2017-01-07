@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -508,7 +508,7 @@ void sb_event_stop(int thread_id)
     pthread_mutex_unlock(&timers_mutex);
 
   if (sb_globals.percentile > 0)
-    sb_histogram_update(&global_histogram, NS2MS(value));
+    sb_histogram_update(&sb_latency_histogram, NS2MS(value));
 }
 
 
