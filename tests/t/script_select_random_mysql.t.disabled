@@ -53,8 +53,7 @@ select_random_*.lua + MySQL tests
           other:                           0
           total:                           100
       transactions:                        0      (0.00 per sec.)
-      read/write requests:                 100    (* per sec.) (glob)
-      other operations:                    0      (0.00 per sec.)
+      queries:                             100    (* per sec.) (glob)
       ignored errors:                      0      (0.00 per sec.)
       reconnects:                          0      (0.00 per sec.)
   
@@ -124,8 +123,7 @@ select_random_*.lua + MySQL tests
           other:                           0
           total:                           100
       transactions:                        0      (0.00 per sec.)
-      read/write requests:                 100    (* per sec.) (glob)
-      other operations:                    0      (0.00 per sec.)
+      queries:                             100    (* per sec.) (glob)
       ignored errors:                      0      (0.00 per sec.)
       reconnects:                          0      (0.00 per sec.)
   

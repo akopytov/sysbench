@@ -30,6 +30,18 @@
 #include "ck_md.h"
 #include "ck_cc.h"
 
+#ifdef HAVE_FUNC_ATTRIBUTE_FORMAT
+# define SB_ATTRIBUTE_FORMAT(style, m, n) __attribute__((format(style, m, n)))
+#else
+# define SB_ATTRIBUTE_FORMAT(style, m, n)
+#endif
+
+#ifdef HAVE_FUNC_ATTRIBUTE_UNUSED
+# define SB_ATTRIBUTE_UNUSED __attribute__((unused))
+#else
+# define SB_ATTRIBUTE_UNUSED
+#endif
+
 /*
   Calculate the smallest multiple of m that is not smaller than n, when m is a
   power of 2.
@@ -43,7 +55,7 @@
 #define SB_PAD(n, m) (SB_ALIGN((n),(m)) - (n))
 
 /* Calculate padding to cache line size. */
-#define SB_CACHELINE_PAD(n) (SB_PAD(n, CK_MD_CACHELINE))
+#define SB_CACHELINE_PAD(n) (SB_PAD((n), CK_MD_CACHELINE))
 
 /* Minimum/maximum values */
 #ifdef __GNUC__
@@ -62,5 +74,21 @@
 
 #define SB_LIKELY(x) CK_CC_LIKELY(x)
 #define SB_UNLIKELY(x) CK_CC_UNLIKELY(x)
+
+/* SB_CONTAINER_OF */
+#ifdef __GNUC__
+#  define SB_MEMBER_TYPE(type, member) __typeof__ (((type *)0)->member)
+#else
+#  define SB_MEMBER_TYPE(type, member) const void
+#endif /* __GNUC__ */
+
+#define SB_CONTAINER_OF(ptr, type, member) ((type *)(void *)(           \
+    (char *)(SB_MEMBER_TYPE(type, member) *){ ptr } - offsetof(type, member)))
+
+/* Compile-timer assertion */
+#define SB_COMPILE_TIME_ASSERT(expr)                                    \
+  do {                                                                  \
+    typedef char cta[(expr) ? 1 : -1] SB_ATTRIBUTE_UNUSED;              \
+  } while(0)
 
 #endif /* SB_UTIL_H */

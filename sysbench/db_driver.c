@@ -25,6 +25,8 @@
 #endif
 #ifdef STDC_HEADERS
 # include <ctype.h>
+# include <inttypes.h>
+# include <stdbool.h>
 #endif
 #ifdef HAVE_STRING_H
 # include <string.h>
@@ -32,6 +34,8 @@
 #ifdef HAVE_STRINGS_H
 # include <strings.h>
 #endif
+
+#include <pthread.h>
 
 #include "db_driver.h"
 #include "sb_list.h"
@@ -44,42 +48,38 @@
 /* How many rows to insert before COMMITs (used in bulk insert) */
 #define ROWS_BEFORE_COMMIT 1000
 
-typedef struct {
-  uint64_t   read_ops;
-  uint64_t   write_ops;
-  uint64_t   other_ops;
-  uint64_t   transactions;
-  uint64_t   errors;
-  uint64_t   reconnects;
-  char       pad[CK_MD_CACHELINE - sizeof(uint64_t) * 6];
-} db_thread_stat_t;
-
 /* Global variables */
-db_globals_t db_globals;
+db_globals_t db_globals CK_CC_CACHELINE;
+
+/* per-thread stats */
+db_stats_t *thread_stats CK_CC_CACHELINE;
 
 /* Used in intermediate reports */
-static unsigned long last_transactions;
-static unsigned long last_read_ops;
-static unsigned long last_write_ops;
-static unsigned long last_errors;
-static unsigned long last_reconnects;
+static db_stats_t last_stats;
 
 /* Static variables */
 static sb_list_t        drivers;          /* list of available DB drivers */
-static db_thread_stat_t *thread_stats; /* per-thread stats */
+
+static uint8_t stats_enabled;
+
+static bool db_global_initialized;
+static pthread_once_t db_global_once = PTHREAD_ONCE_INIT;
 
 /* Timers used in debug mode */
 static sb_timer_t *exec_timers;
 static sb_timer_t *fetch_timers;
 
+pthread_mutex_t print_stats_mutex;
+
 /* Static functions */
 
 static int db_parse_arguments(void);
+#if 0
 static void db_free_row(db_row_t *);
+#endif
 static int db_bulk_do_insert(db_conn_t *, int);
-static db_query_type_t db_get_query_type(const char *);
-static void db_update_thread_stats(int, db_query_type_t);
 static void db_reset_stats(void);
+static int db_free_results_int(db_conn_t *con);
 
 /* DB layer arguments */
 
@@ -101,9 +101,30 @@ static sb_arg_t db_args[] =
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };
 
+static inline uint64_t db_stat_val(db_stats_t stats, db_stat_type_t type)
+{
+  return ck_pr_load_64(&stats[type]);
+}
+
+static inline void db_stat_merge(db_stats_t dst, db_stats_t src)
+{
+  for (size_t i = 0; i < DB_STAT_MAX; i++)
+    ck_pr_add_64(&dst[i], db_stat_val(src, i));
+}
+
+static inline void db_stat_copy(db_stats_t dst, db_stats_t src)
+{
+  for (size_t i = 0; i < DB_STAT_MAX; i++)
+    ck_pr_store_64(&dst[i], db_stat_val(src, i));
+}
+
+static inline uint64_t db_stat_diff(db_stats_t a, db_stats_t b,
+                                    db_stat_type_t type)
+{
+  return db_stat_val(a, type) - db_stat_val(b, type);
+}
 
 /* Register available database drivers and command line arguments */
-
 
 int db_register(void)
 {
@@ -137,6 +158,8 @@ int db_register(void)
     drv = SB_LIST_ENTRY(pos, db_driver_t, listitem);
     if (drv->args != NULL)
       sb_register_arg_set(drv->args);
+    drv->initialized = false;
+    pthread_mutex_init(&drv->mutex, NULL);
   }
   /* Register general command line arguments for DB API */
   sb_register_arg_set(db_args);
@@ -173,27 +196,82 @@ void db_print_help(void)
 }
 
 
+static void enable_print_stats(void)
+{
+  ck_pr_fence_store();
+  ck_pr_store_8(&stats_enabled, 1);
+}
+
+static void disable_print_stats(void)
+{
+  ck_pr_store_8(&stats_enabled, 0);
+  ck_pr_fence_store();
+}
+
+
+static bool check_print_stats(void)
+{
+  bool rc = ck_pr_load_8(&stats_enabled) == 1;
+  ck_pr_fence_load();
+
+  return rc;
+}
+
+/* Initialize per-thread stats */
+
+int db_thread_stat_init(void)
+{
+  thread_stats = malloc(sb_globals.num_threads * sizeof(db_stats_t));
+
+  return thread_stats == NULL;
+}
+
+
+static void db_init(void)
+{
+  if (SB_LIST_IS_EMPTY(&drivers))
+  {
+    log_text(LOG_FATAL, "No DB drivers available");
+    return;
+  }
+
+  if (db_parse_arguments())
+    return;
+
+  pthread_mutex_init(&print_stats_mutex, NULL);
+
+  /* Initialize timers if in debug mode */
+  if (db_globals.debug)
+  {
+    exec_timers = (sb_timer_t *) malloc(sb_globals.num_threads *
+                                        sizeof(sb_timer_t));
+    fetch_timers = (sb_timer_t *) malloc(sb_globals.num_threads *
+                                         sizeof(sb_timer_t));
+  }
+
+  db_reset_stats();
+
+  enable_print_stats();
+
+  db_global_initialized = true;
+}
+
 /*
   Initialize a driver specified by 'name' and return a handle to it
   If NULL is passed as a name, then use the driver passed in --db-driver
   command line option
 */
 
-
-db_driver_t *db_init(const char *name)
+db_driver_t *db_create(const char *name)
 {
   db_driver_t    *drv = NULL;
   db_driver_t    *tmp;
   sb_list_item_t *pos;
 
-  if (SB_LIST_IS_EMPTY(&drivers))
-  {
-    log_text(LOG_FATAL, "No DB drivers available");
-    return NULL;
-  }
+  pthread_once(&db_global_once, db_init);
 
-  if (db_parse_arguments())
-    return NULL;
+  if (!db_global_initialized)
+    goto err;
 
   if (name == NULL && db_globals.driver == NULL)
   {
@@ -205,7 +283,7 @@ db_driver_t *db_init(const char *name)
     else
     {
       log_text(LOG_FATAL, "no database driver specified");
-      return NULL;
+      goto err;
     }
   }
   else
@@ -227,36 +305,45 @@ db_driver_t *db_init(const char *name)
   if (drv == NULL)
   {
     log_text(LOG_FATAL, "invalid database driver name: '%s'", name);
-    return NULL;
+    goto err;
   }
 
-  /* Initialize database driver */
-  if (drv->ops.init())
-    return NULL;
-
-  /* Initialize per-thread stats */
-  thread_stats = (db_thread_stat_t *)malloc(sb_globals.num_threads *
-                                            sizeof(db_thread_stat_t));
-  if (thread_stats == NULL)
-    return NULL;
-
-  /* Initialize timers if in debug mode */
-  if (db_globals.debug)
+  /* Initialize database driver only once */
+  pthread_mutex_lock(&drv->mutex);
+  if (!drv->initialized)
   {
-    exec_timers = (sb_timer_t *) malloc(sb_globals.num_threads *
-                                        sizeof(sb_timer_t));
-    fetch_timers = (sb_timer_t *) malloc(sb_globals.num_threads *
-                                         sizeof(sb_timer_t));
+    if (drv->ops.init())
+    {
+      pthread_mutex_unlock(&drv->mutex);
+      goto err;
+    }
+    drv->initialized = true;
   }
+  pthread_mutex_unlock(&drv->mutex);
 
-  db_reset_stats();
+  if (drv->ops.thread_init != NULL && drv->ops.thread_init(sb_tls_thread_id))
+  {
+    log_text(LOG_FATAL, "thread-local driver initialization failed.");
+    return NULL;
+  }
 
   return drv;
+
+err:
+  return NULL;
 }
 
+/* Deinitialize a driver object */
+
+int db_destroy(db_driver_t *drv)
+{
+  if (drv->ops.thread_done != NULL)
+    return drv->ops.thread_done(sb_tls_thread_id);
+
+  return 0;
+}
 
 /* Describe database capabilities */
-
 
 int db_describe(db_driver_t *drv, drv_caps_t *caps)
 {
@@ -270,15 +357,21 @@ int db_describe(db_driver_t *drv, drv_caps_t *caps)
 /* Connect to database */
 
 
-db_conn_t *db_connect(db_driver_t *drv)
+db_conn_t *db_connection_create(db_driver_t *drv)
 {
   db_conn_t *con;
+
+  SB_COMPILE_TIME_ASSERT(sizeof(db_conn_t) % CK_MD_CACHELINE == 0);
 
   con = (db_conn_t *)calloc(1, sizeof(db_conn_t));
   if (con == NULL)
     return NULL;
-  
+
   con->driver = drv;
+  con->state = DB_CONN_READY;
+
+  db_set_thread(con, sb_tls_thread_id);
+
   if (drv->ops.connect(con))
   {
     free(con);
@@ -300,28 +393,49 @@ void db_set_thread(db_conn_t *con, int thread_id)
 /* Disconnect from database */
 
 
-int db_disconnect(db_conn_t *con)
+int db_connection_close(db_conn_t *con)
 {
   int         rc;
-  db_driver_t *drv;
+  db_driver_t *drv = con->driver;
 
-  drv = con->driver;
-  if (drv == NULL)
-    return 1;
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_WARNING, "attempt to close an already closed connection");
+    return 0;
+  }
 
   rc = drv->ops.disconnect(con);
-  free(con);
+
+  con->state = DB_CONN_INVALID;
 
   return rc;
+}
+
+
+/* Disconnect and release memory allocated by a connection object */
+
+
+void db_connection_free(db_conn_t *con)
+{
+  if (con->state != DB_CONN_INVALID)
+    db_connection_close(con);
+
+  free(con);
 }
 
 
 /* Prepare statement */
 
 
-db_stmt_t *db_prepare(db_conn_t *con, const char *query)
+db_stmt_t *db_prepare(db_conn_t *con, const char *query, size_t len)
 {
   db_stmt_t *stmt;
+
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
+    return NULL;
+  }
 
   stmt = (db_stmt_t *)calloc(1, sizeof(db_stmt_t));
   if (stmt == NULL)
@@ -329,14 +443,12 @@ db_stmt_t *db_prepare(db_conn_t *con, const char *query)
 
   stmt->connection = con;
 
-  if (con->driver->ops.prepare(stmt, query))
+  if (con->driver->ops.prepare(stmt, query, len))
   {
     free(stmt);
     return NULL;
   }
 
-  stmt->type = db_get_query_type(query);
-  
   return stmt;
 }
 
@@ -344,12 +456,15 @@ db_stmt_t *db_prepare(db_conn_t *con, const char *query)
 /* Bind parameters for prepared statement */
 
 
-int db_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
+int db_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
   db_conn_t *con = stmt->connection;
 
-  if (con == NULL || con->driver == NULL)
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
     return 1;
+  }
 
   return con->driver->ops.bind_param(stmt, params, len);
 }
@@ -358,12 +473,15 @@ int db_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 /* Bind results for prepared statement */
 
 
-int db_bind_result(db_stmt_t *stmt, db_bind_t *results, unsigned int len)
+int db_bind_result(db_stmt_t *stmt, db_bind_t *results, size_t len)
 {
   db_conn_t *con = stmt->connection;
 
-  if (con == NULL || con->driver == NULL)
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
     return 1;
+  }
 
   return con->driver->ops.bind_result(stmt, results, len);
 }
@@ -372,72 +490,54 @@ int db_bind_result(db_stmt_t *stmt, db_bind_t *results, unsigned int len)
 /* Execute prepared statement */
 
 
-db_result_set_t *db_execute(db_stmt_t *stmt)
+db_result_t *db_execute(db_stmt_t *stmt)
 {
   db_conn_t       *con = stmt->connection;
-  db_result_set_t *rs = &con->rs;
+  db_result_t     *rs = &con->rs;
+  int             rc;
 
-  if (con == NULL || con->driver == NULL)
+  if (con->state == DB_CONN_INVALID)
   {
-    log_text(LOG_DEBUG, "ERROR: exiting db_execute(), uninitialized connection");
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
     return NULL;
   }
-
-  memset(rs, 0, sizeof(db_result_set_t));
+  else if (con->state == DB_CONN_RESULT_SET &&
+           (rc = db_free_results_int(con)) != 0)
+  {
+    return NULL;
+  }
 
   rs->statement = stmt;
-  rs->connection = con;
 
   con->db_errno = con->driver->ops.execute(stmt, rs);
-  if (con->db_errno != SB_DB_ERROR_NONE)
-  {
-    log_text(LOG_DEBUG, "ERROR: exiting db_execute(), driver's execute method failed");
 
-    if (con->db_errno == SB_DB_ERROR_RECONNECTED)
-    {
-      thread_stats[con->thread_id].reconnects++;
-      con->db_errno = SB_DB_ERROR_RESTART_TRANSACTION;
-    }
-    else if (con->db_errno == SB_DB_ERROR_RESTART_TRANSACTION)
-      thread_stats[con->thread_id].errors++;
+  db_thread_stat_inc(con->thread_id, rs->stat_type);
 
-    return NULL;
-  }
+  con->state = DB_CONN_RESULT_SET;
 
-  db_update_thread_stats(con->thread_id, stmt->type);
-  
   return rs;
-}
-
-
-/* Return the number of rows in a result set */
-
-
-unsigned long long db_num_rows(db_result_set_t *rs)
-{
-  db_conn_t *con = rs->connection;
-
-  if (con == NULL || con->driver == NULL)
-    return 0;
-
-  return con->driver->ops.num_rows(rs);
 }
 
 
 /* Fetch row from result set of a query */
 
 
-db_row_t *db_fetch_row(db_result_set_t *rs)
+db_row_t *db_fetch_row(db_result_t *rs)
 {
-  db_conn_t *con = rs->connection;
+  db_conn_t *con = SB_CONTAINER_OF(rs, db_conn_t, rs);
 
-  /* Is this a result set of a non-prepared statement? */
-  if (rs->statement != NULL)
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
     return NULL;
-
-  if (con == NULL || con->driver == NULL)
+  }
+  else if (con->state != DB_CONN_RESULT_SET)
+  {
+    log_text(LOG_ALERT, "attempt to fetch row from an invalid result set");
     return NULL;
+  }
 
+#if 0
   if (rs->row != NULL)
     db_free_row(rs->row);
   rs->row = (db_row_t *)calloc(1, sizeof(db_row_t));
@@ -451,39 +551,35 @@ db_row_t *db_fetch_row(db_result_set_t *rs)
   }
 
   return rs->row;
+#endif
+  return NULL;
 }
 
 
 /* Execute non-prepared statement */
 
 
-db_result_set_t *db_query(db_conn_t *con, const char *query)
+db_result_t *db_query(db_conn_t *con, const char *query, size_t len)
 {
-  db_result_set_t *rs = &con->rs;
-  
-  if (con->driver == NULL)
-    return NULL;
+  db_result_t *rs = &con->rs;
+  int         rc;
 
-  memset(rs, 0, sizeof(db_result_set_t));
-  
-  rs->connection = con;
-
-  con->db_errno = con->driver->ops.query(con, query, rs);
-
-  if (con->db_errno == SB_DB_ERROR_NONE)
-    db_update_thread_stats(con->thread_id, db_get_query_type(query));
-  else
+  if (con->state == DB_CONN_INVALID)
   {
-    if (con->db_errno == SB_DB_ERROR_RECONNECTED)
-    {
-      thread_stats[con->thread_id].reconnects++;
-      con->db_errno = SB_DB_ERROR_RESTART_TRANSACTION;
-    }
-    else if (con->db_errno == SB_DB_ERROR_RESTART_TRANSACTION)
-      thread_stats[con->thread_id].errors++;
-
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
     return NULL;
   }
+  else if (con->state == DB_CONN_RESULT_SET &&
+           (rc = db_free_results_int(con)) != 0)
+  {
+    return NULL;
+  }
+
+  con->db_errno = con->driver->ops.query(con, query, len, rs);
+
+  db_thread_stat_inc(con->thread_id, rs->stat_type);
+
+  con->state = DB_CONN_RESULT_SET;
 
   return rs;
 }
@@ -492,22 +588,39 @@ db_result_set_t *db_query(db_conn_t *con, const char *query)
 /* Free result set */
 
 
-int db_free_results(db_result_set_t *rs)
+static int db_free_results_int(db_conn_t *con)
 {
   int       rc;
-  db_conn_t *con = rs->connection;
 
-  if (con == NULL || con->driver == NULL)
-    return 1;
+  rc = con->driver->ops.free_results(&con->rs);
 
-  rc = con->driver->ops.free_results(rs);
-
+#if 0
   if (rs->row != NULL)
     db_free_row(rs->row);
+#endif
+
+  con->state = DB_CONN_READY;
 
   return rc;
 }
 
+int db_free_results(db_result_t *rs)
+{
+  db_conn_t * const con = SB_CONTAINER_OF(rs, db_conn_t, rs);
+
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
+    return 0;
+  }
+  else if (con->state != DB_CONN_RESULT_SET)
+  {
+    log_text(LOG_ALERT, "attempt to free an invalid result set");
+    return 0;
+  }
+
+  return db_free_results_int(con);
+}
 
 /* Close prepared statement */
 
@@ -517,13 +630,18 @@ int db_close(db_stmt_t *stmt)
   int       rc;
   db_conn_t *con;
 
-  if (stmt == NULL)
-    return 1;
-  
   con = stmt->connection;
 
-  if (con == NULL || con->driver == NULL)
-    return 1;
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
+    return 0;
+  }
+  else if (con->state == DB_CONN_RESULT_SET && con->rs.statement == stmt &&
+           (rc = db_free_results_int(con)) != 0)
+  {
+    return 0;
+  }
 
   rc = con->driver->ops.close(stmt);
 
@@ -542,47 +660,42 @@ int db_close(db_stmt_t *stmt)
   return rc;
 }
 
+/* Uninitialize DB API */
 
-/* Store result set from last query */
-
-
-int db_store_results(db_result_set_t *rs)
+void db_done(void)
 {
-  db_conn_t *con = rs->connection;
+  sb_list_item_t *pos;
+  db_driver_t    *drv;
 
-  if (con == NULL || con->driver == NULL)
-    return SB_DB_ERROR_FAILED;
+  if (!db_global_initialized)
+    return;
 
-  return con->driver->ops.store_results(rs);
-}
+  disable_print_stats();
 
-
-/* Uninitialize driver */
-
-
-int db_done(db_driver_t *drv)
-{
   if (db_globals.debug)
   {
     free(exec_timers);
     free(fetch_timers);
+
+    exec_timers = fetch_timers = NULL;
   }
-  
-  if (thread_stats != NULL)
+
+  free(thread_stats);
+  thread_stats = NULL;
+
+  pthread_mutex_destroy(&print_stats_mutex);
+
+  SB_LIST_FOR_EACH(pos, &drivers)
   {
-    free(thread_stats);
+    drv = SB_LIST_ENTRY(pos, db_driver_t, listitem);
+    if (drv->initialized)
+    {
+      drv->ops.done();
+      pthread_mutex_destroy(&drv->mutex);
+    }
   }
 
-  return drv->ops.done();
-}
-
-
-/* Return the error code for the last function */
-
-
-db_error_t db_errno(db_conn_t *con)
-{
-  return con->db_errno;
+  return;
 }
 
 
@@ -674,6 +787,7 @@ int db_print_value(db_bind_t *var, char *buf, int buflen)
 }
 
 
+#if 0
 /* Free row fetched by db_fetch_row() */
 
 
@@ -681,19 +795,27 @@ void db_free_row(db_row_t *row)
 {
   free(row);
 }
-
+#endif
 
 /* Initialize multi-row insert operation */
 
 
-int db_bulk_insert_init(db_conn_t *con, const char *query)
+int db_bulk_insert_init(db_conn_t *con, const char *query, size_t query_len)
 {
   drv_caps_t driver_caps;
-  size_t query_len;
+  int        rc;
 
-  if (con->driver == NULL)
-    return 1;
-  
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
+    return 0;
+  }
+  else if (con->state == DB_CONN_RESULT_SET &&
+           (rc = db_free_results_int(con)) != 0)
+  {
+    return 0;
+  }
+
   /* Get database capabilites */
   if (db_describe(con->driver, &driver_caps))
   {
@@ -702,7 +824,6 @@ int db_bulk_insert_init(db_conn_t *con, const char *query)
   }
 
   /* Allocate query buffer */
-  query_len = strlen(query);
   if (query_len + 1 > BULK_PACKET_SIZE)
   {
     log_text(LOG_FATAL,
@@ -720,7 +841,7 @@ int db_bulk_insert_init(db_conn_t *con, const char *query)
   con->bulk_commit_cnt = 0;
   strcpy(con->bulk_buffer, query);
   con->bulk_ptr = query_len;
-  con->bulk_ptr_orig = query_len;
+  con->bulk_values = query_len;
   con->bulk_cnt = 0;
 
   return 0;
@@ -728,9 +849,20 @@ int db_bulk_insert_init(db_conn_t *con, const char *query)
 
 /* Add row to multi-row insert operation */
 
-int db_bulk_insert_next(db_conn_t *con, const char *query)
+int db_bulk_insert_next(db_conn_t *con, const char *query, size_t query_len)
 {
-  unsigned int query_len = strlen(query);
+  int rc;
+
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
+    return 0;
+  }
+  else if (con->state == DB_CONN_RESULT_SET &&
+           (rc = db_free_results_int(con)) != 0)
+  {
+    return 0;
+  }
 
   /*
     Reserve space for '\0' and ',' (if not the first chunk in
@@ -766,14 +898,14 @@ int db_bulk_insert_next(db_conn_t *con, const char *query)
 
 /* Do the actual INSERT (and COMMIT, if necessary) */
 
-int db_bulk_do_insert(db_conn_t *con, int is_last)
+static int db_bulk_do_insert(db_conn_t *con, int is_last)
 {
   if (!con->bulk_cnt)
     return 0;
-      
-  if (db_query(con, con->bulk_buffer) == NULL)
+
+  if (db_query(con, con->bulk_buffer, con->bulk_ptr) == NULL)
     return 1;
-  
+
 
   if (con->bulk_commit_max != 0)
   {
@@ -781,13 +913,13 @@ int db_bulk_do_insert(db_conn_t *con, int is_last)
 
     if (is_last || con->bulk_commit_cnt >= con->bulk_commit_max)
     {
-      if (db_query(con, "COMMIT") == NULL)
+      if (db_query(con, "COMMIT", 6) == NULL)
         return 1;
       con->bulk_commit_cnt = 0;
     }
   }
 
-  con->bulk_ptr = con->bulk_ptr_orig;
+  con->bulk_ptr = con->bulk_values;
   con->bulk_cnt = 0;
 
   return 0;
@@ -795,16 +927,19 @@ int db_bulk_do_insert(db_conn_t *con, int is_last)
 
 /* Finish multi-row insert operation */
 
-void db_bulk_insert_done(db_conn_t *con)
+int db_bulk_insert_done(db_conn_t *con)
 {
   /* Flush remaining data in buffer, if any */
-  db_bulk_do_insert(con, 1);
-  
+  if (db_bulk_do_insert(con, 1))
+    return 1;
+
   if (con->bulk_buffer != NULL)
   {
     free(con->bulk_buffer);
     con->bulk_buffer = NULL;
   }
+
+  return 0;
 }
 
 /* Print database-specific test stats */
@@ -815,24 +950,24 @@ void db_print_stats(sb_stat_t type)
   unsigned int  i;
   sb_timer_t    exec_timer;
   sb_timer_t    fetch_timer;
-  unsigned long read_ops;
-  unsigned long write_ops;
-  unsigned long other_ops;
-  unsigned long transactions;
-  unsigned long errors;
-  unsigned long reconnects;
+  db_stats_t    stats;
+
+  SB_COMPILE_TIME_ASSERT(sizeof(db_stats_t) % CK_MD_CACHELINE == 0);
+
+  /* Don't print stats if no drivers are used */
+  if (!check_print_stats())
+    return;
+
+  /*
+     Prevent interval and checkpoint reporting threads from using and updating
+     thread stats concurrently.
+  */
+  pthread_mutex_lock(&print_stats_mutex);
 
   /* Summarize per-thread counters */
-  read_ops = write_ops = other_ops = transactions = errors = reconnects = 0;
+  memset(&stats, 0, sizeof(db_stats_t));
   for (i = 0; i < sb_globals.num_threads; i++)
-  {
-    read_ops += ck_pr_load_64(&thread_stats[i].read_ops);
-    write_ops += ck_pr_load_64(&thread_stats[i].write_ops);
-    other_ops += ck_pr_load_64(&thread_stats[i].other_ops);
-    transactions += ck_pr_load_64(&thread_stats[i].transactions);
-    errors += ck_pr_load_64(&thread_stats[i].errors);
-    reconnects += ck_pr_load_64(&thread_stats[i].reconnects);
-  }
+    db_stat_merge(stats, thread_stats[i]);
 
   if (type == SB_STAT_INTERMEDIATE)
   {
@@ -841,19 +976,28 @@ void db_print_stats(sb_stat_t type)
     const double percentile_val =
       sb_histogram_get_pct_intermediate(&sb_latency_histogram,
                                         sb_globals.percentile);
+    const uint64_t reads = db_stat_diff(stats, last_stats, DB_STAT_READ);
+    const uint64_t writes = db_stat_diff(stats, last_stats, DB_STAT_WRITE);
+    const uint64_t others = db_stat_diff(stats, last_stats, DB_STAT_OTHER);
+    const uint64_t errors = db_stat_diff(stats, last_stats, DB_STAT_ERROR);
+    const uint64_t reconnects = db_stat_diff(stats, last_stats,
+                                            DB_STAT_RECONNECT);
 
     log_timestamp(LOG_NOTICE, NS2SEC(sb_timer_value(&sb_exec_timer)),
-                  "threads: %d, tps: %4.2f, reads: %4.2f, writes: %4.2f, "
-                  "response time: %4.2fms (%u%%), errors: %4.2f, "
-                  "reconnects: %5.2f",
+                  "threads: %d tps: %4.2f "
+                  "qps: %4.2f (r/w/o: %4.2f/%4.2f/%4.2f) "
+                  "latency: %4.2fms (%u%%) errors/s: %4.2f "
+                  "reconnects/s: %4.2f",
                   sb_globals.num_running,
-                  (transactions - last_transactions) / seconds,
-                  (read_ops - last_read_ops) / seconds,
-                  (write_ops - last_write_ops) / seconds,
+                  db_stat_diff(stats, last_stats, DB_STAT_TRX) / seconds,
+                  (reads + writes + others) / seconds,
+                  reads / seconds,
+                  writes / seconds,
+                  others / seconds,
                   percentile_val,
                   sb_globals.percentile,
-                  (errors - last_errors) / seconds,
-                  (reconnects - last_reconnects) / seconds);
+                  errors / seconds,
+                  reconnects / seconds);
     if (sb_globals.tx_rate > 0)
     {
       pthread_mutex_lock(&event_queue_mutex);
@@ -865,41 +1009,40 @@ void db_print_stats(sb_stat_t type)
       pthread_mutex_unlock(&event_queue_mutex);
     }
 
-    SB_THREAD_MUTEX_LOCK();
-    last_transactions = transactions;
-    last_read_ops = read_ops;
-    last_write_ops = write_ops;
-    last_errors = errors;
-    last_reconnects = reconnects;
-    SB_THREAD_MUTEX_UNLOCK();
+    db_stat_copy(last_stats, stats);
 
-    return;
+    goto end;
   }
   else if (type != SB_STAT_CUMULATIVE)
-    return;
+    goto end;
 
   seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
 
+  const uint64_t reads = db_stat_val(stats, DB_STAT_READ);
+  const uint64_t writes = db_stat_val(stats, DB_STAT_WRITE);
+  const uint64_t others = db_stat_val(stats, DB_STAT_OTHER);
+  const uint64_t transactions = db_stat_val(stats, DB_STAT_TRX);
+  const uint64_t errors = db_stat_val(stats, DB_STAT_ERROR);
+  const uint64_t reconnects = db_stat_val(stats, DB_STAT_RECONNECT);
+
   log_text(LOG_NOTICE, "OLTP test statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
-  log_text(LOG_NOTICE, "        read:                            %lu",
-           read_ops);
-  log_text(LOG_NOTICE, "        write:                           %lu",
-           write_ops);
-  log_text(LOG_NOTICE, "        other:                           %lu",
-           other_ops);
-  log_text(LOG_NOTICE, "        total:                           %lu",
-           read_ops + write_ops + other_ops);
-  log_text(LOG_NOTICE, "    transactions:                        %-6lu"
+  log_text(LOG_NOTICE, "        read:                            %" PRIu64,
+           reads);
+  log_text(LOG_NOTICE, "        write:                           %" PRIu64,
+           writes);
+  log_text(LOG_NOTICE, "        other:                           %" PRIu64,
+           others);
+  log_text(LOG_NOTICE, "        total:                           %" PRIu64,
+           reads + writes + others);
+  log_text(LOG_NOTICE, "    transactions:                        %-6" PRIu64
            " (%.2f per sec.)", transactions, transactions / seconds);
-  log_text(LOG_NOTICE, "    read/write requests:                 %-6lu"
-           " (%.2f per sec.)", read_ops + write_ops,
-           (read_ops + write_ops) / seconds);  
-  log_text(LOG_NOTICE, "    other operations:                    %-6lu"
-           " (%.2f per sec.)", other_ops, other_ops / seconds);
-  log_text(LOG_NOTICE, "    ignored errors:                      %-6lu"
+  log_text(LOG_NOTICE, "    queries:                             %-6" PRIu64
+           " (%.2f per sec.)", reads + writes + others,
+           (reads + writes + others) / seconds);
+  log_text(LOG_NOTICE, "    ignored errors:                      %-6" PRIu64
            " (%.2f per sec.)", errors, errors / seconds);
-  log_text(LOG_NOTICE, "    reconnects:                          %-6lu"
+  log_text(LOG_NOTICE, "    reconnects:                          %-6" PRIu64
            " (%.2f per sec.)", reconnects, reconnects / seconds);
 
   if (db_globals.debug)
@@ -936,74 +1079,18 @@ void db_print_stats(sb_stat_t type)
   }
 
   db_reset_stats();
+
+end:
+  pthread_mutex_unlock(&print_stats_mutex);
 }
 
-/* Get query type */
-
-db_query_type_t db_get_query_type(const char *query)
-{
-  while (isspace(*query))
-    query++;
-
-  if (!strncasecmp(query, "select", 6))
-    return DB_QUERY_TYPE_READ;
-
-  if (!strncasecmp(query, "insert", 6) ||
-      !strncasecmp(query, "update", 6) ||
-      !strncasecmp(query, "delete", 6))
-    return DB_QUERY_TYPE_WRITE;
-
-  if (!strncasecmp(query, "commit", 6) ||
-      !strncasecmp(query, "unlock tables", 13))
-    return DB_QUERY_TYPE_COMMIT;
-    
-  
-  return DB_QUERY_TYPE_OTHER;
-}
-
-/* Update stats according to type */
-
-void db_update_thread_stats(int id, db_query_type_t type)
-{
-  switch (type)
-  {
-    case DB_QUERY_TYPE_READ:
-      ck_pr_inc_64(&thread_stats[id].read_ops);
-      break;
-    case DB_QUERY_TYPE_WRITE:
-      ck_pr_inc_64(&thread_stats[id].write_ops);
-      break;
-    case DB_QUERY_TYPE_COMMIT:
-      ck_pr_inc_64(&thread_stats[id].other_ops);
-      ck_pr_inc_64(&thread_stats[id].transactions);
-      break;
-    case DB_QUERY_TYPE_OTHER:
-      ck_pr_inc_64(&thread_stats[id].other_ops);
-      break;
-    default:
-      log_text(LOG_WARNING, "Unknown query type: %d", type);
-  }
-}
 
 static void db_reset_stats(void)
 {
   unsigned int i;
 
-  for(i = 0; i < sb_globals.num_threads; i++)
-  {
-    thread_stats[i].read_ops = 0;
-    thread_stats[i].write_ops = 0;
-    thread_stats[i].other_ops = 0;
-    thread_stats[i].transactions = 0;
-    thread_stats[i].errors = 0;
-    thread_stats[i].reconnects = 0;
-  }
-
-  last_transactions = 0;
-  last_read_ops = 0;
-  last_write_ops = 0;
-  last_errors = 0;
-  last_reconnects = 0;
+  memset(thread_stats, 0, sb_globals.num_threads * sizeof(db_stats_t));
+  memset(last_stats, 0, sizeof(db_stats_t));
 
   /*
     So that intermediate stats are calculated from the current moment

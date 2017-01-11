@@ -1,0 +1,223 @@
+-- Copyright (C) 2017 Alexey Kopytov <akopytov@gmail.com>
+
+-- This program is free software; you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation; either version 2 of the License, or
+-- (at your option) any later version.
+
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+
+-- You should have received a copy of the GNU General Public License
+-- along with this program; if not, write to the Free Software
+-- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+
+-- ----------------------------------------------------------------------
+-- SQL API
+-- ----------------------------------------------------------------------
+
+ffi = require("ffi")
+
+sysbench.sql = {}
+
+ffi.cdef[[
+typedef enum
+{
+  DB_ERROR_NONE,                /* no error(s) */
+  DB_ERROR_IGNORABLE,           /* error should be ignored as defined by command
+                                line arguments or a custom error handler */
+  DB_ERROR_FATAL                /* non-ignorable error */
+} sql_error_t;
+
+typedef struct db_driver sql_driver;
+typedef struct db_conn sql_connection;
+typedef struct db_stmt sql_statement;
+typedef struct db_result sql_result;
+
+typedef enum
+{
+  SQL_TYPE_NONE,
+  SQL_TYPE_TINYINT,
+  SQL_TYPE_SMALLINT,
+  SQL_TYPE_INT,
+  SQL_TYPE_BIGINT,
+  SQL_TYPE_FLOAT,
+  SQL_TYPE_DOUBLE,
+  SQL_TYPE_TIME,
+  SQL_TYPE_DATE,
+  SQL_TYPE_DATETIME,
+  SQL_TYPE_TIMESTAMP,
+  SQL_TYPE_CHAR,
+  SQL_TYPE_VARCHAR
+} sql_bind_type_t;
+
+typedef struct
+{
+  sql_bind_type_t   type;
+  void             *buffer;
+  unsigned long    *data_len;
+  unsigned long    max_len;
+  char             *is_null;
+} sql_bind;
+
+sql_driver *db_create(const char *);
+int db_destroy(sql_driver *drv);
+
+sql_connection *db_connection_create(sql_driver * drv);
+int db_connection_close(sql_connection *con);
+void db_connection_free(sql_connection *con);
+
+int db_bulk_insert_init(sql_connection *, const char *, size_t);
+int db_bulk_insert_next(sql_connection *, const char *, size_t);
+void db_bulk_insert_done(sql_connection *);
+
+sql_result *db_query(sql_connection *con, const char *query, size_t len);
+
+sql_statement *db_prepare(sql_connection *con, const char *query, size_t len);
+int db_bind_param(sql_statement *stmt, sql_bind *params, size_t len);
+int db_bind_result(sql_statement *stmt, sql_bind *results, size_t len);
+sql_result db_execute(sql_statement *stmt);
+int db_close(sql_statement *stmt);
+]]
+
+local sql_driver = ffi.typeof('sql_driver *')
+local sql_connection = ffi.typeof('sql_connection *')
+local sql_statement = ffi.typeof('sql_statement *')
+local sql_bind = ffi.typeof('sql_bind');
+
+sysbench.sql.type =
+   {
+      NONE = ffi.C.SQL_TYPE_NONE,
+      TINYINT = ffi.C.SQL_TYPE_TINYINT,
+      SMALLINT = ffi.C.SQL_TYPE_SMALLINT,
+      INT = ffi.C.SQL_TYPE_INT,
+      BIGINT = ffi.C.SQL_TYPE_BIGINT,
+      FLOAT = ffi.C.SQL_TYPE_FLOAT,
+      DOUBLE = ffi.C.SQL_TYPE_DOUBLE,
+      TIME = ffi.C.SQL_TYPE_TIME,
+      DATE = ffi.C.SQL_TYPE_DATE,
+      DATETIME = ffi.C.SQL_TYPE_DATETIME,
+      TIMESTAMP = ffi.C.SQL_TYPE_TIMESTAMP,
+      CHAR = ffi.C.SQL_TYPE_CHAR,
+      VARCHAR = ffi.C.SQL_TYPE_VARCHAR
+   }
+
+local function check_type(type, var, func)
+   if var == nil or not ffi.istype(type, var) then
+      error(string.format("bad argument '%s' to %s() where a '%s' was expected",
+                          var, func, type))
+   end
+end
+
+-- Initialize a given SQL driver and return a handle to it to create
+-- connections. A nil driver name (i.e. no function argument) initializes the
+-- default driver, i.e. the one specified with --db-driver on the command line.
+function sysbench.sql.driver(driver_name)
+   local drv = ffi.C.db_create(driver_name)
+   if (drv == nil) then
+      error("failed to initialize the DB driver")
+   end
+   return ffi.gc(drv, ffi.C.db_destroy)
+end
+
+function sysbench.sql.connect(driver)
+   check_type(sql_driver, driver, 'sysbench.sql.connect')
+   local con = ffi.C.db_connection_create(driver)
+   if con == nil then
+      error('connection creation failed')
+   end
+   return ffi.gc(con, ffi.C.db_connection_free)
+end
+
+function sysbench.sql.disconnect(con)
+   check_type(sql_connection, con, 'sysbench.sql.disconnect')
+   return ffi.C.db_connection_close(con) == 0
+end
+
+function sysbench.sql.query(con, query)
+   check_type(sql_connection, con, 'sysbench.sql.query')
+   return ffi.C.db_query(con, query, #query)
+end
+
+function sysbench.sql.bulk_insert_init(con, query)
+   check_type(sql_connection, con, 'sysbench.sql.bulk_insert_init')
+   return ffi.C.db_bulk_insert_init(con, query, #query)
+end
+
+function sysbench.sql.bulk_insert_next(con, val)
+   check_type(sql_connection, con, 'sysbench.sql.bulk_insert_next')
+   return ffi.C.db_bulk_insert_next(con, val, #val)
+end
+
+function sysbench.sql.bulk_insert_done(con)
+   check_type(sql_connection, con, 'sysbench.sql.bulk_insert_done')
+   return ffi.C.db_bulk_insert_done(con)
+end
+
+function sysbench.sql.prepare(con, query)
+   check_type(sql_connection, con, 'sysbench.sql.prepare')
+   return ffi.C.db_prepare(con, query, #query)
+end
+
+function sysbench.sql.bind_param(stmt, params)
+   local len = #params
+   local sql_params = {}
+   local i
+
+   check_type(sql_statement, stmt, 'sysbench.sql.bind_param')
+
+   error("NYI")
+
+   return ffi.C.db_bind_param(stmt,
+                              ffi.new("sql_bind[" .. len .."]",
+                                      sql_params),
+                              len)
+end
+
+-- sql_driver metatable
+local driver_mt = {
+   __index = {
+      connect = sysbench.sql.connect,
+   },
+   __gc = ffi.C.db_destroy,
+   __tostring = function() return '<sql_driver>' end,
+}
+ffi.metatype("struct db_driver", driver_mt)
+
+-- sql_connection metatable
+local connection_mt = {
+   __index = {
+      disconnect = sysbench.sql.disconnect,
+      query = sysbench.sql.query,
+      bulk_insert_init = sysbench.sql.bulk_insert_init,
+      bulk_insert_next = sysbench.sql.bulk_insert_next,
+      bulk_insert_done = sysbench.sql.bulk_insert_done,
+      prepare = sysbench.sql.prepare,
+   },
+   __tostring = function() return '<sql_connection>' end,
+   __gc = ffi.C.db_connection_free,
+}
+ffi.metatype("struct db_conn", connection_mt)
+
+-- sql_statement metatable
+local statement_mt = {
+   __index = {
+      bind_param = sysbench.sql.bind_param,
+   },
+   __tostring = function() return '<sql_statement>' end,
+   __gc = ffi.C.db_close,
+}
+ffi.metatype("struct db_stmt", statement_mt)
+
+-- sql_bind metatable
+local bind_mt = {
+   __tostring = function() return '<sql_bind>' end,
+}
+ffi.metatype("sql_bind", bind_mt)
+
+-- error codes
+sysbench.sql.ERROR_NONE = ffi.C.DB_ERROR_NONE
+sysbench.sql.ERROR_IGNORABLE = ffi.C.DB_ERROR_IGNORABLE
+sysbench.sql.ERROR_FATAL = ffi.C.DB_ERROR_FATAL

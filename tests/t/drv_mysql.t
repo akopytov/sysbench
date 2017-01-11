@@ -25,9 +25,8 @@ MySQL driver tests
           write:                           0
           other:                           0
           total:                           10
-      transactions:                        0      (0.00 per sec.)
-      read/write requests:                 10     (*.* per sec.) (glob)
-      other operations:                    0      (0.00 per sec.)
+      transactions:                        10     (*.* per sec.) (glob)
+      queries:                             10     (*.* per sec.) (glob)
       ignored errors:                      0      (0.00 per sec.)
       reconnects:                          0      (0.00 per sec.)
   

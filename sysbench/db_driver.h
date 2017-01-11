@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -26,7 +26,8 @@
 #include "sysbench.h"
 #include "sb_list.h"
 #include "sb_histogram.h"
-
+#include "sb_util.h"
+#include "ck_pr.h"
 
 /* Prepared statements usage modes */
 
@@ -45,8 +46,6 @@ typedef struct
   unsigned char debug;     /* debug flag */
 } db_globals_t;
 
-extern db_globals_t db_globals;
-
 /* Driver capabilities definition */
 
 typedef struct
@@ -63,10 +62,10 @@ typedef struct
 
 typedef enum
 {
-  SB_DB_ERROR_NONE,
-  SB_DB_ERROR_RESTART_TRANSACTION,
-  SB_DB_ERROR_RECONNECTED,
-  SB_DB_ERROR_FAILED
+  DB_ERROR_NONE,                /* no error(s) */
+  DB_ERROR_IGNORABLE,           /* error should be ignored as defined by command
+                                line arguments or a custom error handler */
+  DB_ERROR_FATAL                /* non-ignorable error */
 } db_error_t;
 
 
@@ -118,32 +117,33 @@ typedef struct
 
 struct db_conn;
 struct db_stmt;
-struct db_result_set;
+struct db_result;
 struct db_row;
 
 /* Driver operations definition */
 
 typedef int drv_op_init(void);
+typedef int drv_op_thread_init(int);
 typedef int drv_op_describe(drv_caps_t *);
 typedef int drv_op_connect(struct db_conn *);
 typedef int drv_op_disconnect(struct db_conn *);
-typedef int drv_op_prepare(struct db_stmt *, const char *);
-typedef int drv_op_bind_param(struct db_stmt *, db_bind_t *, unsigned int);
-typedef int drv_op_bind_result(struct db_stmt *, db_bind_t *, unsigned int );
-typedef int drv_op_execute(struct db_stmt *, struct db_result_set *);
-typedef int drv_op_fetch(struct db_result_set *);
-typedef int drv_op_fetch_row(struct db_result_set *, struct db_row *);
-typedef unsigned long long drv_op_num_rows(struct db_result_set *);
-typedef int drv_op_query(struct db_conn *, const char *,
-                         struct db_result_set *);
-typedef int drv_op_free_results(struct db_result_set *);
+typedef int drv_op_prepare(struct db_stmt *, const char *, size_t);
+typedef int drv_op_bind_param(struct db_stmt *, db_bind_t *, size_t);
+typedef int drv_op_bind_result(struct db_stmt *, db_bind_t *, size_t);
+typedef db_error_t drv_op_execute(struct db_stmt *, struct db_result *);
+typedef int drv_op_fetch(struct db_result *);
+typedef int drv_op_fetch_row(struct db_result *, struct db_row *);
+typedef db_error_t drv_op_query(struct db_conn *, const char *, size_t,
+                                struct db_result *);
+typedef int drv_op_free_results(struct db_result *);
 typedef int drv_op_close(struct db_stmt *);
-typedef int drv_op_store_results(struct db_result_set *);
+typedef int drv_op_thread_done(int);
 typedef int drv_op_done(void);
 
 typedef struct
 {
   drv_op_init            *init;           /* initializate driver */
+  drv_op_thread_init     *thread_init;    /* thread-local driver initialization */
   drv_op_describe        *describe;       /* describe database capabilities */
   drv_op_connect         *connect;        /* connect to database */
   drv_op_disconnect      *disconnect;     /* disconnect from database */
@@ -153,11 +153,10 @@ typedef struct
   drv_op_execute         *execute;        /* execute prepared statement */
   drv_op_fetch           *fetch;          /* fetch row for prepared statement */
   drv_op_fetch_row       *fetch_row;      /* fetch row for queries */
-  drv_op_num_rows        *num_rows;       /* return number of rows in result set */
   drv_op_free_results    *free_results;   /* free result set */
   drv_op_close           *close;          /* close prepared statement */
   drv_op_query           *query;          /* execute non-prepared statement */
-  drv_op_store_results   *store_results;  /* store results from last query */
+  drv_op_thread_done     *thread_done;    /* thread-local driver deinitialization */
   drv_op_done            *done;           /* uninitialize driver */
 } drv_ops_t;
 
@@ -171,55 +170,65 @@ typedef struct
   drv_ops_t       ops;      /* driver operations */
 
   sb_list_item_t  listitem; /* can be linked in a list */
+  bool            initialized;
+  pthread_mutex_t mutex;
 } db_driver_t;
 
-/* Connection types definition */
+/* Query type for statistics */
 
 typedef enum {
-  DB_CONN_TYPE_UNUSED,
-  DB_CONN_TYPE_MYSQL
-} db_conn_type_t;
+  DB_STAT_OTHER,
+  DB_STAT_READ,
+  DB_STAT_WRITE,
+  DB_STAT_TRX,
+  DB_STAT_ERROR,
+  DB_STAT_RECONNECT,
+  DB_STAT_MAX
+} db_stat_type_t;
 
 /* Result set definition */
 
-typedef struct db_result_set
+typedef struct db_result
 {
-  struct db_conn *connection; /* Connection which this result set belongs to */
-  struct db_stmt *statement;  /* Statement for this result set (if any) */ 
+  db_stat_type_t stat_type;     /* Statistical counter type */
+  uint32_t       nrows;         /* Number of affected rows */
+  struct db_stmt *statement;    /* Pointer to prepared statement (if used) */
+  void           *ptr;          /* Pointer to driver-specific data */
+} db_result_t;
 
-  struct db_row  *row;        /* Last row fetched by db_fetch_row */
-  void           *ptr;        /* Pointer to driver-specific data */
-  unsigned long long nrows;   /* Number of rows in a result set */
-} db_result_set_t;
+typedef enum {
+  DB_CONN_READY,
+  DB_CONN_RESULT_SET,
+  DB_CONN_INVALID
+} db_conn_state_t;
 
 /* Database connection structure */
 
 typedef struct db_conn
 {
-  db_driver_t     *driver;        /* DB driver for this connection */
-  db_conn_type_t  type;
-  void            *ptr;
-  db_error_t      db_errno;
+  db_driver_t     *driver;           /* DB driver for this connection */
+  void            *ptr;              /* Driver-specific data */
+  db_error_t      db_errno;          /* Driver-independent error code */
+  db_conn_state_t state;             /* Connection state */
+  db_result_t     rs;                /* Result set */
+  int             thread_id;         /* Assiciated thread id (required to
+                                     collect per-thread stats */
 
-  /* Internal fields */
-  char            bulk_supported;    /* 1, if multi-row inserts are supported by the driver */
+  char            bulk_supported;    /* 1, if multi-row inserts are supported by
+                                     the driver */
   unsigned int    bulk_cnt;          /* Current number of rows in bulk insert buffer */
-  char *          bulk_buffer;       /* Bulk insert query buffer */
   unsigned int    bulk_buflen;       /* Current length of bulk_buffer */
+  char            *bulk_buffer;      /* Bulk insert query buffer */
   unsigned int    bulk_ptr;          /* Current position in bulk_buffer */
-  unsigned int    bulk_ptr_orig;     /* Save value of bulk_ptr */
+  unsigned int    bulk_values;       /* Save value of bulk_ptr */
   unsigned int    bulk_commit_cnt;   /* Current value of uncommitted rows */
   unsigned int    bulk_commit_max;   /* Maximum value of uncommitted rows */
-  int             thread_id;         /* Assiciated thread id (required to collect per-thread stats */
-  db_result_set_t rs;                /* Result set */
-} db_conn_t;
 
-typedef enum {
-  DB_QUERY_TYPE_READ,
-  DB_QUERY_TYPE_WRITE,
-  DB_QUERY_TYPE_COMMIT,
-  DB_QUERY_TYPE_OTHER
-} db_query_type_t;
+  char            pad[SB_CACHELINE_PAD(sizeof(void *) * 3 + sizeof(db_error_t) +
+                                       sizeof(db_conn_state_t) +
+                                       sizeof(db_result_t) +
+                                       sizeof(int) * 8)];
+} db_conn_t;
 
 /* Prepared statement definition */
 
@@ -232,7 +241,7 @@ typedef struct db_stmt
   db_bind_t       *bound_res;      /* Array of bound results for emulated PS */ 
   db_bind_t       *bound_res_len;  /* Length of the bound_res array */
   char            emulated;        /* Should this statement be emulated? */
-  db_query_type_t type;            /* Query type */
+  db_stat_type_t  stat_type;       /* Query type */
   void            *ptr;            /* Pointer to driver-specific data structure */
 } db_stmt_t;
 
@@ -240,9 +249,20 @@ typedef struct db_stmt
 
 typedef struct db_row
 {
-  db_result_set_t *result_set; /* Result set which this row belongs to */
+  db_result_t *result; /* Result set which this row belongs to */
   void            *ptr;        /* Driver-specific row data */ 
 } db_row_t;
+
+/*
+  sizeof(db_stats_t) must be multiple of CK_MD_CACHELINE to avoid cache
+  line sharing.
+*/
+typedef uint64_t
+db_stats_t[SB_ALIGN(DB_STAT_MAX * sizeof(uint64_t), CK_MD_CACHELINE) /
+           sizeof(uint64_t)];
+
+extern db_globals_t db_globals;
+extern db_stats_t *thread_stats;
 
 /* Database abstraction layer calls */
 
@@ -250,54 +270,64 @@ int db_register(void);
 
 void db_print_help(void);
 
-db_driver_t *db_init(const char *);
+db_driver_t *db_create(const char *);
+
+int db_destroy(db_driver_t *);
 
 int db_describe(db_driver_t *, drv_caps_t *);
 
-db_conn_t *db_connect(db_driver_t *);
+db_conn_t *db_connection_create(db_driver_t *);
 
-int db_disconnect(db_conn_t *);
+int db_connection_close(db_conn_t *);
 
-db_stmt_t *db_prepare(db_conn_t *, const char *);
+void db_connection_free(db_conn_t *con);
 
-int db_bind_param(db_stmt_t *, db_bind_t *, unsigned int);
+db_stmt_t *db_prepare(db_conn_t *, const char *, size_t);
 
-int db_bind_result(db_stmt_t *, db_bind_t *, unsigned int);
+int db_bind_param(db_stmt_t *, db_bind_t *, size_t);
 
-db_result_set_t *db_execute(db_stmt_t *);
+int db_bind_result(db_stmt_t *, db_bind_t *, size_t);
 
-db_row_t *db_fetch_row(db_result_set_t *);
+db_result_t *db_execute(db_stmt_t *);
 
-unsigned long long db_num_rows(db_result_set_t *);
+db_row_t *db_fetch_row(db_result_t *);
 
-db_result_set_t *db_query(db_conn_t *, const char *);
+db_result_t *db_query(db_conn_t *, const char *, size_t len);
 
-int db_free_results(db_result_set_t *);
+int db_free_results(db_result_t *);
 
-int db_store_results(db_result_set_t *);
+int db_store_results(db_result_t *);
 
 int db_close(db_stmt_t *);
 
-int db_done(db_driver_t *);
-
-db_error_t db_errno(db_conn_t *);
+void db_done(void);
 
 int db_print_value(db_bind_t *, char *, int);
 
 /* Initialize multi-row insert operation */
-int db_bulk_insert_init(db_conn_t *, const char *);
+int db_bulk_insert_init(db_conn_t *, const char *, size_t);
 
 /* Add row to multi-row insert operation */
-int db_bulk_insert_next(db_conn_t *, const char *);
+int db_bulk_insert_next(db_conn_t *, const char *, size_t);
 
 /* Finish multi-row insert operation */
-void db_bulk_insert_done(db_conn_t *);
+int db_bulk_insert_done(db_conn_t *);
 
 /* Print database-specific test stats */
 void db_print_stats(sb_stat_t type);
 
 /* Associate connection with a thread (required only for statistics */
 void db_set_thread(db_conn_t *, int);
+
+/* Initialize per-thread stats */
+int db_thread_stat_init(void);
+
+/* Increment a given stat counter for a connection */
+static inline void db_thread_stat_inc(int id, db_stat_type_t type)
+{
+  ck_pr_inc_64(&thread_stats[id][type]);
+}
+
 
 /* DB drivers registrars */
 

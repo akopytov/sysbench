@@ -24,10 +24,4 @@
 #include "config.h"
 #endif
 
-#ifdef HAVE_FUNC_ATTRIBUTE_FORMAT
-# define SB_ATTRIBUTE_FORMAT(style, m, n) __attribute__((format(style, m, n)))
-#else
-# define SB_ATTRIBUTE_FORMAT(style, m, n)
-#endif
-
 #endif /* SB_GLOBAL_H */

@@ -114,17 +114,16 @@ static int pgsql_drv_init(void);
 static int pgsql_drv_describe(drv_caps_t *);
 static int pgsql_drv_connect(db_conn_t *);
 static int pgsql_drv_disconnect(db_conn_t *);
-static int pgsql_drv_prepare(db_stmt_t *, const char *);
-static int pgsql_drv_bind_param(db_stmt_t *, db_bind_t *, unsigned int);
-static int pgsql_drv_bind_result(db_stmt_t *, db_bind_t *, unsigned int);
-static int pgsql_drv_execute(db_stmt_t *, db_result_set_t *);
-static int pgsql_drv_fetch(db_result_set_t *);
-static int pgsql_drv_fetch_row(db_result_set_t *, db_row_t *);
-static unsigned long long pgsql_drv_num_rows(db_result_set_t *);
-static int pgsql_drv_query(db_conn_t *, const char *, db_result_set_t *);
-static int pgsql_drv_free_results(db_result_set_t *);
+static int pgsql_drv_prepare(db_stmt_t *, const char *, size_t);
+static int pgsql_drv_bind_param(db_stmt_t *, db_bind_t *, size_t);
+static int pgsql_drv_bind_result(db_stmt_t *, db_bind_t *, size_t);
+static db_error_t pgsql_drv_execute(db_stmt_t *, db_result_t *);
+static int pgsql_drv_fetch(db_result_t *);
+static int pgsql_drv_fetch_row(db_result_t *, db_row_t *);
+static db_error_t pgsql_drv_query(db_conn_t *, const char *, size_t,
+                                  db_result_t *);
+static int pgsql_drv_free_results(db_result_t *);
 static int pgsql_drv_close(db_stmt_t *);
-static int pgsql_drv_store_results(db_result_set_t *);
 static int pgsql_drv_done(void);
 
 /* PgSQL driver definition */
@@ -136,24 +135,21 @@ static db_driver_t pgsql_driver =
   .args = pgsql_drv_args,
   .ops =
   {
-    pgsql_drv_init,
-    pgsql_drv_describe,
-    pgsql_drv_connect,
-    pgsql_drv_disconnect,
-    pgsql_drv_prepare,
-    pgsql_drv_bind_param,
-    pgsql_drv_bind_result,
-    pgsql_drv_execute,
-    pgsql_drv_fetch,
-    pgsql_drv_fetch_row,
-    pgsql_drv_num_rows,
-    pgsql_drv_free_results,
-    pgsql_drv_close,
-    pgsql_drv_query,
-    pgsql_drv_store_results,
-    pgsql_drv_done
-  },
-  .listitem = {NULL, NULL}
+    .init = pgsql_drv_init,
+    .describe = pgsql_drv_describe,
+    .connect = pgsql_drv_connect,
+    .disconnect = pgsql_drv_disconnect,
+    .prepare = pgsql_drv_prepare,
+    .bind_param = pgsql_drv_bind_param,
+    .bind_result = pgsql_drv_bind_result,
+    .execute = pgsql_drv_execute,
+    .fetch = pgsql_drv_fetch,
+    .fetch_row = pgsql_drv_fetch_row,
+    .free_results = pgsql_drv_free_results,
+    .close = pgsql_drv_close,
+    .query = pgsql_drv_query,
+    .done = pgsql_drv_done
+  }
 };
 
 
@@ -273,7 +269,7 @@ int pgsql_drv_disconnect(db_conn_t *sb_conn)
 /* Prepare statement */
 
 
-int pgsql_drv_prepare(db_stmt_t *stmt, const char *query)
+int pgsql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
 {
   PGconn       *con = (PGconn *)stmt->connection->ptr;
   PGresult     *pgres;
@@ -285,7 +281,9 @@ int pgsql_drv_prepare(db_stmt_t *stmt, const char *query)
   unsigned int buflen;
   int          n;
   char         name[32];
-  
+
+  (void) len; /* unused */
+
   if (con == NULL)
     return 1;
 
@@ -375,7 +373,7 @@ int pgsql_drv_prepare(db_stmt_t *stmt, const char *query)
 /* Bind parameters for prepared statement */
 
 
-int pgsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
+int pgsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
   PGconn       *con = (PGconn *)stmt->connection->ptr;
   PGresult     *pgres;
@@ -405,7 +403,7 @@ int pgsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
   if ((unsigned)pgstmt->nparams != len)
   {
     log_text(LOG_ALERT, "wrong number of parameters in prepared statement");
-    log_text(LOG_DEBUG, "counted: %d, passed to bind_param(): %d",
+    log_text(LOG_DEBUG, "counted: %d, passed to bind_param(): %zd",
              pgstmt->nparams, len);
     return 1;
   }
@@ -454,7 +452,7 @@ int pgsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 /* Bind results for prepared statement */
 
 
-int pgsql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
+int pgsql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
   /* unused */
   (void)stmt;
@@ -468,35 +466,67 @@ int pgsql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 /* Check query execution status */
 
 
-static int pgsql_check_status(PGconn *pgcon, PGresult *pgres,
-                              const char *funcname)
+static db_error_t pgsql_check_status(PGconn *pgcon, PGresult *pgres,
+                                     const char *funcname, const char *query,
+                                     db_result_t *rs)
 {
   ExecStatusType status;
+  db_error_t     rc;
 
   status = PQresultStatus(pgres);
-  if (status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK)
-  {
+  switch(status) {
+  case PGRES_TUPLES_OK:
+    rs->nrows = PQntuples(pgres);
+    rs->stat_type = DB_STAT_READ;
+    rc = DB_ERROR_NONE;
+
+    break;
+
+  case PGRES_COMMAND_OK:
+    rs->nrows = strtoul(PQcmdTuples(pgres), NULL, 10);;
+    rs->stat_type = (rs->nrows > 0) ? DB_STAT_WRITE : DB_STAT_OTHER;
+    rc = DB_ERROR_NONE;
+
+    break;
+
+  case PGRES_FATAL_ERROR:
+    rs->nrows = 0;
+    rs->stat_type = DB_STAT_ERROR;
+
     const char * const errmsg = PQerrorMessage(pgcon);
 
     if (strstr(errmsg, "deadlock detected") ||
         strstr(errmsg, "duplicate key value violates unique constraint"))
     {
       PQexec(pgcon, "ROLLBACK");
-      return SB_DB_ERROR_RESTART_TRANSACTION;
+      rc = DB_ERROR_IGNORABLE;
+    }
+    else
+    {
+      log_text(LOG_FATAL, "%s() failed: %d %s", funcname, status, errmsg);
+
+      if (query != NULL)
+        log_text(LOG_FATAL, "failed query was: %s", query);
+
+      rc =  DB_ERROR_FATAL;
     }
 
-    log_text(LOG_FATAL, "%s() failed: %d %s", funcname, status, errmsg);
-    return SB_DB_ERROR_FAILED;
+    break;
+
+  default:
+    rs->nrows = 0;
+    rs->stat_type = DB_STAT_OTHER;
+    rc = DB_ERROR_NONE;
   }
 
-  return SB_DB_ERROR_NONE;
+  return rc;
 }
 
 
 /* Execute prepared statement */
 
 
-int pgsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
+db_error_t pgsql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
 {
   db_conn_t       *con = stmt->connection;
   PGconn          *pgcon = (PGconn *)con->ptr;
@@ -507,15 +537,18 @@ int pgsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
   unsigned int    i, j, vcnt;
   char            need_realloc;
   int             n;
-  int             rc;
+  db_error_t      rc;
 
   if (!stmt->emulated)
   {
     pgstmt = stmt->ptr;
     if (pgstmt == NULL)
-      return SB_DB_ERROR_FAILED;
+    {
+      log_text(LOG_DEBUG,
+               "ERROR: exiting mysql_drv_execute(), uninitialized statement");
+      return DB_ERROR_FATAL;
+    }
 
-  
     /* Convert SysBench bind structures to PgSQL data */
     for (i = 0; i < (unsigned)pgstmt->nparams; i++)
     {
@@ -537,10 +570,9 @@ int pgsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
     pgres = PQexecPrepared(pgcon, pgstmt->name, pgstmt->nparams,
                            (const char **)pgstmt->pvalues, NULL, NULL, 1);
 
-    rc = pgsql_check_status(pgcon, pgres, "PQexecPrepared");
+    rc = pgsql_check_status(pgcon, pgres, "PQexecPrepared", NULL, rs);
 
-    if (rc == SB_DB_ERROR_NONE)
-      rs->ptr = (void *)pgres;
+    rs->ptr = (void *) pgres;
 
     return rc;
   }
@@ -557,7 +589,7 @@ int pgsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
       buflen = (buflen > 0) ? buflen * 2 : 256;
       buf = realloc(buf, buflen);
       if (buf == NULL)
-        return SB_DB_ERROR_FAILED;
+        return DB_ERROR_FATAL;
       need_realloc = 0;
     }
 
@@ -577,37 +609,31 @@ int pgsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
     vcnt++;
   }
   buf[j] = '\0';
-  
-  con->db_errno = pgsql_drv_query(con, buf, rs);
-  free(buf);
-  if (con->db_errno != SB_DB_ERROR_NONE)
-  {
-    return con->db_errno;
-  }
 
-  return SB_DB_ERROR_NONE;
+  rc = pgsql_drv_query(con, buf, j, rs);
+
+  free(buf);
+
+  return rc;
 }
 
 
 /* Execute SQL query */
 
 
-int pgsql_drv_query(db_conn_t *sb_conn, const char *query,
-                      db_result_set_t *rs)
+db_error_t pgsql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
+                           db_result_t *rs)
 {
   PGconn         *con = sb_conn->ptr;
   PGresult       *pgres;
-  int            rc;
+  db_error_t     rc;
 
-  (void)rs; /* unused */
+  (void)len; /* unused */
 
   pgres = PQexec(con, query);
-  rc = pgsql_check_status(con, pgres, "PQexec");
+  rc = pgsql_check_status(con, pgres, "PQexec", query, rs);
 
-  if (rc == SB_DB_ERROR_NONE)
-    rs->ptr = pgres;
-  else if (rc == SB_DB_ERROR_FAILED)
-    log_text(LOG_FATAL, "failed query: %s", query);
+  rs->ptr = pgres;
 
   return rc;
 }
@@ -616,7 +642,7 @@ int pgsql_drv_query(db_conn_t *sb_conn, const char *query,
 /* Fetch row from result set of a prepared statement */
 
 
-int pgsql_drv_fetch(db_result_set_t *rs)
+int pgsql_drv_fetch(db_result_t *rs)
 {
   /* NYI */
   (void)rs;
@@ -628,7 +654,7 @@ int pgsql_drv_fetch(db_result_set_t *rs)
 /* Fetch row from result set of a query */
 
 
-int pgsql_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
+int pgsql_drv_fetch_row(db_result_t *rs, db_row_t *row)
 {
   /* NYI */
   (void)rs;  /* unused */
@@ -638,46 +664,15 @@ int pgsql_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
 }
 
 
-/* Return the number of rows in a result set */
-
-
-unsigned long long pgsql_drv_num_rows(db_result_set_t *rs)
-{
-  return rs->nrows;
-}
-
-
-/* Store results from the last query */
-
-
-int pgsql_drv_store_results(db_result_set_t *rs)
-{
-  PGresult           *pgres;
-  unsigned long long i,j, ncolumns;
-  
-  pgres = (PGresult *)rs->ptr;
-  if (pgres == NULL)
-    return 1;
-
-  rs->nrows = PQntuples(pgres);
-  ncolumns = PQnfields(pgres);
-
-  for (i = 0; i < rs->nrows; i++)
-    for (j = 0; j < ncolumns; j++)
-      PQgetvalue(pgres, i, j);
-  
-  return 0;
-}
-
-
 /* Free result set */
 
 
-int pgsql_drv_free_results(db_result_set_t *rs)
+int pgsql_drv_free_results(db_result_t *rs)
 {
   if (rs->ptr != NULL)
   {
     PQclear((PGresult *)rs->ptr);
+    rs->ptr = NULL;
     return 0;
   }
 

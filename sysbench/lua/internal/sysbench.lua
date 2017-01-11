@@ -1,4 +1,4 @@
--- Copyright (C) 2016 Alexey Kopytov <akopytov@gmail.com>
+-- Copyright (C) 2016-2017 Alexey Kopytov <akopytov@gmail.com>
 
 -- This program is free software; you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -82,8 +82,7 @@ thread_id = sysbench.tid
 function sb_rnd()
    -- Keep lower 32 bits from sysbench.rand.uniform_uint64() and convert them to
    -- a Lua number
-   return tonumber(sysbench.rand.uniform_uint64() %
-                      tonumber("100000000", 16))
+   return tonumber(sysbench.rand.uniform_uint64() % 4294967296)
 end
 
 sb_rand = sysbench.rand.default
@@ -105,7 +104,6 @@ function sb_rand_uniq(a, b)
    until res >= a and res <= b
    return res
 end
-
 
 db_connect = sysbench.db.connect
 db_disconnect = sysbench.db.disconnect
@@ -134,9 +132,6 @@ DB_ERROR_FAILED = sysbench.db.DB_ERROR_FAILED
 -- Main event loop. This is a Lua version of sysbench.c:thread_run()
 -- ----------------------------------------------------------------------
 function thread_run(thread_id)
-   if (type(event) ~= "function") then
-      error("Cannot find the 'event' function in the script")
-   end
    while sysbench.more_events() do
       sysbench.event_start()
       event(thread_id)

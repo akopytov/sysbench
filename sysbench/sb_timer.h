@@ -114,9 +114,9 @@ static inline uint64_t sb_timer_stop(sb_timer_t *t)
   t->events++;
   t->sum_time += elapsed;
 
-  if (CK_CC_UNLIKELY(elapsed < t->min_time))
+  if (SB_UNLIKELY(elapsed < t->min_time))
     t->min_time = elapsed;
-  if (CK_CC_UNLIKELY(elapsed > t->max_time))
+  if (SB_UNLIKELY(elapsed > t->max_time))
     t->max_time = elapsed;
 
   return elapsed;

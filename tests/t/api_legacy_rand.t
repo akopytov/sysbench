@@ -1,5 +1,5 @@
 ########################################################################
-PRNG Lua API tests
+Legacy PRNG Lua API tests
 ########################################################################
 
   $ SB_ARGS="--verbosity=0 --test=$CRAMTMP/api_legacy_rand.lua --max-requests=1 --num-threads=1"

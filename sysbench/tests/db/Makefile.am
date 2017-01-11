@@ -15,9 +15,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-dist_pkgdata_DATA = common.lua delete.lua insert.lua bulk_insert.lua \
-             oltp.lua \
-             oltp_simple.lua \
+dist_pkgdata_DATA = delete.lua insert.lua bulk_insert.lua \
+             oltp_read_write.lua oltp_read_only.lua \
+             oltp_common.lua \
+             oltp_point_select.lua \
              parallel_prepare.lua \
              select_random_points.lua \
              select_random_ranges.lua \

@@ -30,6 +30,7 @@
 
 #include "sb_logger.h"
 #include "sb_timer.h"
+#include "sb_util.h"
 
 /* Some functions for simple time operations */
 
@@ -37,6 +38,8 @@
 
 void sb_timer_init(sb_timer_t *t)
 {
+  SB_COMPILE_TIME_ASSERT(sizeof(sb_timer_t) % CK_MD_CACHELINE == 0);
+
   memset(&t->time_start, 0, sizeof(struct timespec));
   memset(&t->time_end, 0, sizeof(struct timespec));
   sb_timer_reset(t);

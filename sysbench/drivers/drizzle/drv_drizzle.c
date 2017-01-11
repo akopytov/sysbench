@@ -96,17 +96,17 @@ static int drizzle_drv_init(void);
 static int drizzle_drv_describe(drv_caps_t *);
 static int drizzle_drv_connect(db_conn_t *);
 static int drizzle_drv_disconnect(db_conn_t *);
-static int drizzle_drv_prepare(db_stmt_t *, const char *);
-static int drizzle_drv_bind_param(db_stmt_t *, db_bind_t *, unsigned int);
-static int drizzle_drv_bind_result(db_stmt_t *, db_bind_t *, unsigned int);
-static int drizzle_drv_execute(db_stmt_t *, db_result_set_t *);
-static int drizzle_drv_fetch(db_result_set_t *);
-static int drizzle_drv_fetch_row(db_result_set_t *, db_row_t *);
-static unsigned long long drizzle_drv_num_rows(db_result_set_t *);
-static int drizzle_drv_query(db_conn_t *, const char *, db_result_set_t *);
-static int drizzle_drv_free_results(db_result_set_t *);
+static int drizzle_drv_prepare(db_stmt_t *, const char *, size_t);
+static int drizzle_drv_bind_param(db_stmt_t *, db_bind_t *, size_t);
+static int drizzle_drv_bind_result(db_stmt_t *, db_bind_t *, size_t);
+static db_error_t drizzle_drv_execute(db_stmt_t *, db_result_t *);
+static int drizzle_drv_fetch(db_result_t *);
+static int drizzle_drv_fetch_row(db_result_t *, db_row_t *);
+static db_error_t drizzle_drv_query(db_conn_t *, const char *, size_t,
+                             db_result_t *);
+static int drizzle_drv_free_results(db_result_t *);
 static int drizzle_drv_close(db_stmt_t *);
-static int drizzle_drv_store_results(db_result_set_t *);
+static int drizzle_drv_store_results(db_result_t *);
 static int drizzle_drv_done(void);
 
 /* Drizzle driver definition */
@@ -118,24 +118,22 @@ static db_driver_t drizzle_driver =
   .args = drizzle_drv_args,
   .ops =
   {
-    drizzle_drv_init,
-    drizzle_drv_describe,
-    drizzle_drv_connect,
-    drizzle_drv_disconnect,
-    drizzle_drv_prepare,
-    drizzle_drv_bind_param,
-    drizzle_drv_bind_result,
-    drizzle_drv_execute,
-    drizzle_drv_fetch,
-    drizzle_drv_fetch_row,
-    drizzle_drv_num_rows,
-    drizzle_drv_free_results,
-    drizzle_drv_close,
-    drizzle_drv_query,
-    drizzle_drv_store_results,
-    drizzle_drv_done
+    .init = drizzle_drv_init,
+    .describe = drizzle_drv_describe,
+    .connect = drizzle_drv_connect,
+    .disconnect = drizzle_drv_disconnect,
+    .prepare = drizzle_drv_prepare,
+    .bind_param = drizzle_drv_bind_param,
+    .bind_result = drizzle_drv_bind_result,
+    .execute = drizzle_drv_execute,
+    .fetch = drizzle_drv_fetch,
+    .fetch_row = drizzle_drv_fetch_row,
+    .free_results = drizzle_drv_free_results,
+    .close = drizzle_drv_close,
+    .query = drizzle_drv_query,
+    .store_results = drizzle_drv_store_results,
+    .done = drizzle_drv_done
   },
-  .listitem = {NULL, NULL}
 };
 
 
@@ -299,8 +297,10 @@ int drizzle_drv_disconnect(db_conn_t *sb_conn)
 /* Prepare statement */
 
 
-int drizzle_drv_prepare(db_stmt_t *stmt, const char *query)
+int drizzle_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
 {
+
+  (void) len; /* unused */
 
   /* Use client-side PS */
   stmt->emulated = 1;
@@ -311,7 +311,7 @@ int drizzle_drv_prepare(db_stmt_t *stmt, const char *query)
 
 
 /* Bind parameters for prepared statement */
-int drizzle_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
+int drizzle_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
   drizzle_con_st        *con = (drizzle_con_st *)stmt->connection->ptr;
   
@@ -333,7 +333,7 @@ int drizzle_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 
 
 /* Bind results for prepared statement */
-int drizzle_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
+int drizzle_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
   (void)stmt;
   (void)params;
@@ -345,7 +345,7 @@ int drizzle_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len
 /* Execute prepared statement */
 
 
-int drizzle_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
+db_error_t drizzle_drv_execute(db_stmt_t *stmt, db_result_t *rs)
 {
   db_conn_t       *con = stmt->connection;
   char            *buf = NULL;
@@ -390,7 +390,7 @@ int drizzle_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
   }
   buf[j] = '\0';
   
-  con->db_errno = drizzle_drv_query(con, buf, rs);
+  con->db_errno = drizzle_drv_query(con, buf, j, rs);
   free(buf);
   if (con->db_errno != SB_DB_ERROR_NONE)
   {
@@ -405,8 +405,8 @@ int drizzle_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
 /* Execute SQL query */
 
 
-int drizzle_drv_query(db_conn_t *sb_conn, const char *query,
-                      db_result_set_t *rs)
+db_error_t drizzle_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
+                             db_result_t *rs)
 {
   drizzle_con_st *con = sb_conn->ptr;
   unsigned int rc;
@@ -417,9 +417,9 @@ int drizzle_drv_query(db_conn_t *sb_conn, const char *query,
         con,
         result,
         query,
-        strlen(query),
+        len,
         &ret);
-  result= drizzle_query(con, NULL, query, strlen(query), &ret);
+  result= drizzle_query(con, NULL, query, len, &ret);
   DEBUG("drizzle_query(%p) == %d", con, ret);
 
   if (ret == DRIZZLE_RETURN_ERROR_CODE)
@@ -468,7 +468,7 @@ int drizzle_drv_query(db_conn_t *sb_conn, const char *query,
 /* Fetch row from result set of a prepared statement */
 
 
-int drizzle_drv_fetch(db_result_set_t *rs)
+int drizzle_drv_fetch(db_result_t *rs)
 {
   /* NYI */
   (void)rs;
@@ -481,7 +481,7 @@ int drizzle_drv_fetch(db_result_set_t *rs)
 /* Fetch row from result set of a query */
 
 
-int drizzle_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
+int drizzle_drv_fetch_row(db_result_t *rs, db_row_t *row)
 {
   /* NYI */
   printf("in drizzle_drv_fetch_row!\n");
@@ -492,19 +492,10 @@ int drizzle_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
 }
 
 
-/* Return the number of rows in a result set */
-
-
-unsigned long long drizzle_drv_num_rows(db_result_set_t *rs)
-{
-  return rs->nrows;
-}
-
-
 /* Store results from the last query */
 
 
-int drizzle_drv_store_results(db_result_set_t *rs)
+int drizzle_drv_store_results(db_result_t *rs)
 {
 
   drizzle_con_st        *con = rs->connection->ptr;
@@ -662,13 +653,14 @@ int drizzle_drv_store_results(db_result_set_t *rs)
 /* Free result set */
 
 
-int drizzle_drv_free_results(db_result_set_t *rs)
+int drizzle_drv_free_results(db_result_t *rs)
 {
 
   if (rs->ptr != NULL)
   {
     DEBUG("drizzle_result_free(%p)", rs->ptr);
     drizzle_result_free(rs->ptr);
+    rs->ptr = NULL;
     return 0;
   }
 

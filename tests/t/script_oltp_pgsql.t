@@ -147,8 +147,7 @@ oltp.lua + PostgreSQL tests
           other:                           200
           total:                           2000
       transactions:                        100    (* per sec.) (glob)
-      read/write requests:                 1800   (* per sec.) (glob)
-      other operations:                    200    (* per sec.) (glob)
+      queries:                             2000   (* per sec.) (glob)
       ignored errors:                      0      (* per sec.) (glob)
       reconnects:                          0      (* per sec.) (glob)
   

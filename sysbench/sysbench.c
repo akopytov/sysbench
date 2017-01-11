@@ -163,6 +163,8 @@ sb_timer_t sb_intermediate_timer CK_CC_CACHELINE;
 sb_timer_t sb_checkpoint_timer1  CK_CC_CACHELINE;
 sb_timer_t sb_checkpoint_timer2  CK_CC_CACHELINE;
 
+TLS int sb_tls_thread_id;
+
 static void print_header(void);
 static void print_help(void);
 static void print_run_mode(sb_test_t *);
@@ -509,18 +511,21 @@ void sb_event_stop(int thread_id)
 
   if (sb_globals.percentile > 0)
     sb_histogram_update(&sb_latency_histogram, NS2MS(value));
+
+  db_thread_stat_inc(thread_id, DB_STAT_TRX);
 }
 
 
 /* Main event loop -- the default thread_run implementation */
 
 
-static void thread_run(sb_test_t *test, int thread_id)
+static int thread_run(sb_test_t *test, int thread_id)
 {
   sb_event_t        event;
-  int               rc;
+  int               rc = 0;
 
-  while ((event = sb_next_event(test, thread_id)).type != SB_REQ_TYPE_NULL)
+  while ((event = sb_next_event(test, thread_id)).type != SB_REQ_TYPE_NULL &&
+         rc == 0)
   {
     sb_event_start(thread_id);
 
@@ -534,10 +539,9 @@ static void thread_run(sb_test_t *test, int thread_id)
       sb_globals.concurrency--;
       pthread_mutex_unlock(&event_queue_mutex);
     }
-
-    if (rc != 0)
-      break;
   }
+
+  return rc;
 }
 
 
@@ -549,10 +553,12 @@ static void *worker_thread(void *arg)
   sb_thread_ctxt_t   *ctxt;
   sb_test_t          *test;
   unsigned int       thread_id;
+  int                rc;
 
   ctxt = (sb_thread_ctxt_t *)arg;
   test = ctxt->test;
-  thread_id = ctxt->id;
+
+  sb_tls_thread_id = thread_id = ctxt->id;
 
   /* Initialize thread-local RNG state */
   sb_rand_thread_init();
@@ -577,15 +583,17 @@ static void *worker_thread(void *arg)
   if (test->ops.thread_run != NULL)
   {
     /* Use benchmark-provided thread_run implementation */
-    test->ops.thread_run(thread_id);
+    rc = test->ops.thread_run(thread_id);
   }
   else
   {
     /* Use default thread_run implementation */
-    thread_run(test, thread_id);
+    rc = thread_run(test, thread_id);
   }
 
-  if (test->ops.thread_done != NULL)
+  if (rc != 0)
+    sb_globals.error = 1;
+  else if (test->ops.thread_done != NULL)
     test->ops.thread_done(thread_id);
 
   return NULL;
@@ -779,6 +787,8 @@ static int threads_started_callback(void *arg)
   sb_timer_copy(&sb_checkpoint_timer1, &sb_exec_timer);
   sb_timer_copy(&sb_checkpoint_timer2, &sb_exec_timer);
 
+  log_text(LOG_NOTICE, "Threads started!\n");
+
   return 0;
 }
 
@@ -927,8 +937,6 @@ static int run_test(sb_test_t *test)
     alarm(sb_globals.max_time + sb_globals.timeout);
   }
 #endif
-
-  log_text(LOG_NOTICE, "Threads started!\n");
 
   for(i = 0; i < sb_globals.num_threads; i++)
   {
@@ -1177,9 +1185,9 @@ int main(int argc, char *argv[])
   }
 
   /* Initialize global variables and logger */
-  if (init() || log_init())
+  if (init() || log_init() || db_thread_stat_init())
     exit(1);
-  
+
   print_header();
 
   testname = sb_get_value_string("test");
@@ -1254,7 +1262,8 @@ int main(int argc, char *argv[])
   if (run_test(test))
     exit(1);
 
-  /* Uninitialize logger */
+  db_done();
+
   log_done();
 
   sb_options_done();

@@ -306,6 +306,10 @@ AX_TLS([],
 # __attribute__((format...)) function attribute
 AX_GCC_FUNC_ATTRIBUTE(format)
 
+# Define HAVE_FUNC_ATTRIBUTE_UNUSED if compiler supports the
+# __attribute__((unused)) function attribute
+AX_GCC_FUNC_ATTRIBUTE(unused)
+
 if test "$enable_largefile" = yes; then
     AC_SYS_LARGEFILE
 fi

@@ -218,6 +218,8 @@ extern sb_timer_t      sb_intermediate_timer;
 extern sb_timer_t      sb_checkpoint_timer1;
 extern sb_timer_t      sb_checkpoint_timer2;
 
+extern TLS int sb_tls_thread_id;
+
 sb_event_t sb_next_event(sb_test_t *test, int thread_id);
 void sb_event_start(int thread_id);
 void sb_event_stop(int thread_id);

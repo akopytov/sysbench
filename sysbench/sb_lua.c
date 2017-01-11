@@ -1,5 +1,5 @@
 /* Copyright (C) 2006 MySQL AB
-   Copyright (C) 2006-2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2006-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 #include "ck_pr.h"
 /* Auto-generated headers */
 #include "lua/internal/sysbench.lua.h"
+#include "lua/internal/sysbench.sql.lua.h"
 
 #define EVENT_FUNC "event"
 #define PREPARE_FUNC "prepare"
@@ -73,7 +74,7 @@ typedef struct {
 } sb_lua_bind_t;
 
 typedef struct {
-  db_result_set_t *ptr;
+  db_result_t *ptr;
 } sb_lua_db_rs_t;
 
 typedef struct {
@@ -96,6 +97,8 @@ static unsigned int nevents;
 
 static sb_test_t sbtest;
 
+static const char *sb_lua_script_path;
+
 /* Lua test operations */
 
 static int sb_lua_op_init(void);
@@ -116,13 +119,10 @@ static sb_operations_t lua_ops = {
 static lua_State *gstate;
 
 /* Database driver */
-static db_driver_t *db_driver;
+static TLS db_driver_t *db_driver;
 
 /* Variable with unique address to store per-state data */
 static const char sb_lua_ctxt_key = 0;
-
-/* Control variable for sb_lua_db_init_once() */
-static pthread_once_t db_init_control = PTHREAD_ONCE_INIT;
 
 /* Lua test commands */
 static int sb_lua_cmd_prepare(void);
@@ -130,12 +130,12 @@ static int sb_lua_cmd_cleanup(void);
 static int sb_lua_cmd_help(void);
 
 /* Initialize interpreter state */
-static lua_State *sb_lua_new_state(const char *, int);
+static lua_State *sb_lua_new_state(int);
 
 /* Close interpretet state */
 static int sb_lua_close_state(lua_State *);
 
-/* Exported C functions */
+/* Exported C functions for legacy Lua API */
 static int sb_lua_db_connect(lua_State *);
 static int sb_lua_db_disconnect(lua_State *);
 static int sb_lua_db_query(lua_State *);
@@ -165,14 +165,14 @@ unsigned int sb_lua_table_size(lua_State *, int);
 
 sb_test_t *sb_load_lua(const char *testname)
 {
-  unsigned int i;
-
 #ifdef DATA_PATH
   setenv("LUA_PATH", DATA_PATH LUA_DIRSEP "?.lua", 0);
 #endif
 
+  sb_lua_script_path = testname;
+
   /* Initialize global interpreter state */
-  gstate = sb_lua_new_state(testname, -1);
+  gstate = sb_lua_new_state(-1);
   if (gstate == NULL)
     goto error;
 
@@ -193,13 +193,9 @@ sb_test_t *sb_load_lua(const char *testname)
   /* Test operations */
   sbtest.ops = lua_ops;
 
-  lua_getglobal(gstate, THREAD_INIT_FUNC);
-  if (!lua_isnil(gstate, -1))
-    sbtest.ops.thread_init = &sb_lua_op_thread_init;
+  sbtest.ops.thread_init = &sb_lua_op_thread_init;
 
-  lua_getglobal(gstate, THREAD_DONE_FUNC);
-  if (!lua_isnil(gstate, -1))
-    sbtest.ops.thread_done = &sb_lua_op_thread_done;
+  sbtest.ops.thread_done = &sb_lua_op_thread_done;
 
   lua_getglobal(gstate, THREAD_RUN_FUNC);
   if (!lua_isnil(gstate, -1))
@@ -207,30 +203,20 @@ sb_test_t *sb_load_lua(const char *testname)
 
 
   sbtest.ops.print_stats = &sb_lua_op_print_stats;
-  
-  /* Initialize per-thread interpreters */
+
+  /* Allocate per-thread interpreters array */
   states = (lua_State **)calloc(sb_globals.num_threads, sizeof(lua_State *));
   if (states == NULL)
     goto error;
-  for (i = 0; i < sb_globals.num_threads; i++)
-  {
-    states[i] = sb_lua_new_state(testname, i);
-    if (states[i] == NULL)
-      goto error;
-  }
-  
+
   return &sbtest;
 
  error:
 
   sb_lua_close_state(gstate);
   if (states != NULL)
-  {
-    for (i = 0; i < sb_globals.num_threads; i++)
-      sb_lua_close_state(states[i]);
     free(states);
-  }
-  
+
   return NULL;
 }
 
@@ -271,15 +257,24 @@ sb_event_t sb_lua_next_event(int thread_id)
 
 int sb_lua_op_thread_init(int thread_id)
 {
-  lua_State * const L = states[thread_id];
+  lua_State * L;
+
+  L = sb_lua_new_state(thread_id);
+  if (L == NULL)
+    return 1;
+
+  states[thread_id] = L;
 
   lua_getglobal(L, THREAD_INIT_FUNC);
-  lua_pushnumber(L, thread_id);
-
-  if (lua_pcall(L, 1, 1, 0))
+  if (!lua_isnil(L, -1))
   {
-    CALL_ERROR(L, THREAD_INIT_FUNC);
-    return 1;
+    lua_pushnumber(L, thread_id);
+
+    if (lua_pcall(L, 1, 1, 0))
+    {
+      CALL_ERROR(L, THREAD_INIT_FUNC);
+      return 1;
+    }
   }
 
   return 0;
@@ -304,34 +299,35 @@ int sb_lua_op_thread_run(int thread_id)
 int sb_lua_op_thread_done(int thread_id)
 {
   lua_State * const L = states[thread_id];
+  int rc = 0;
 
   lua_getglobal(L, THREAD_DONE_FUNC);
-  lua_pushnumber(L, thread_id);
 
-  if (lua_pcall(L, 1, 1, 0))
+  if (!lua_isnil(L, -1))
   {
-    CALL_ERROR(L, THREAD_DONE_FUNC);
-    return 1;
+    lua_pushnumber(L, thread_id);
+
+    if (lua_pcall(L, 1, 1, 0))
+    {
+      CALL_ERROR(L, THREAD_DONE_FUNC);
+      rc = 1;
+    }
   }
-  
-  return 0;
+
+  sb_lua_close_state(L);
+
+  return rc;
 }
 
 void sb_lua_op_print_stats(sb_stat_t type)
 {
-  /* check if db driver has been initialized */
-  if (db_driver != NULL)
-    db_print_stats(type);
+  db_print_stats(type);
 }
 
 int sb_lua_op_done(void)
 {
-  unsigned int i;
-
-  for (i = 0; i < sb_globals.num_threads; i++)
-    lua_close(states[i]);
-
-  free(states);
+  if (states != NULL)
+    free(states);
 
   lua_getglobal(gstate, DONE_FUNC);
   if (!lua_isnil(gstate, -1))
@@ -348,7 +344,7 @@ int sb_lua_op_done(void)
 
 /* Allocate and initialize new interpreter state */
 
-lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
+lua_State *sb_lua_new_state(int thread_id)
 {
   lua_State      *L;
   sb_lua_ctxt_t  *ctxt;
@@ -447,9 +443,9 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   SB_LUA_FUNC("store_results", sb_lua_db_store_results);
   SB_LUA_FUNC("free_results", sb_lua_db_free_results);
 
-  SB_LUA_VAR("DB_ERROR_NONE", SB_DB_ERROR_NONE);
-  SB_LUA_VAR("DB_ERROR_RESTART_TRANSACTION", SB_DB_ERROR_RESTART_TRANSACTION);
-  SB_LUA_VAR("DB_ERROR_FAILED", SB_DB_ERROR_FAILED);
+  SB_LUA_VAR("DB_ERROR_NONE", DB_ERROR_NONE);
+  SB_LUA_VAR("DB_ERROR_RESTART_TRANSACTION", DB_ERROR_IGNORABLE);
+  SB_LUA_VAR("DB_ERROR_FAILED", DB_ERROR_FATAL);
 
 #undef SB_LUA_VAR
 #undef SB_LUA_FUNC
@@ -467,18 +463,36 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
   {
     log_text(LOG_FATAL, "failed to load internal module sysbench.lua: %s",
              lua_tostring(L, -1));
+    return NULL;
   }
   lua_pushstring(L, "sysbench");
   lua_call(L, 1, 0);
 
-  if (luaL_loadfile(L, scriptname))
+  if (luaL_loadbuffer(L, (const char *) sysbench_sql_lua, sysbench_sql_lua_len,
+                      "sysbench.sql.lua"))
   {
+    log_text(LOG_FATAL, "failed to load internal module sysbench.sql.lua: %s",
+             lua_tostring(L, -1));
+    return NULL;
+  }
+  lua_pushstring(L, "sysbench.sql");
+  lua_call(L, 1, 0);
+
+  int rc;
+
+  if ((rc = luaL_loadfile(L, sb_lua_script_path)))
+  {
+    if (rc != LUA_ERRFILE)
+    {
+      lua_error(L);
+      return NULL;
+    }
 #ifdef DATA_PATH
     /* first location failed - look in DATA_PATH */
     char p[PATH_MAX + 1];
     strncpy(p, DATA_PATH LUA_DIRSEP, sizeof(p));
-    strncat(p, scriptname, sizeof(p)-strlen(p)-1);
-    if (!strrchr(scriptname, '.'))
+    strncat(p, sb_lua_script_path, sizeof(p)-strlen(p)-1);
+    if (!strrchr(sb_lua_script_path, '.'))
     {
       /* add .lua extension if there isn't one */
       strncat(p, ".lua", sizeof(p)-strlen(p)-1);
@@ -490,6 +504,7 @@ lua_State *sb_lua_new_state(const char *scriptname, int thread_id)
       return NULL;
     }
 #else
+    lua_error(L);
     return NULL;
 #endif
   }
@@ -518,6 +533,12 @@ int sb_lua_close_state(lua_State *state)
 {
   if (state != NULL)
     lua_close(state);
+
+  if (db_driver != NULL)
+  {
+    db_destroy(db_driver);
+    db_driver = NULL;
+  }
 
   return 0;
 }
@@ -571,29 +592,19 @@ int sb_lua_cmd_help(void)
 }
 
 
-/* init_routine for pthread_once() */
-
-
-static void sb_lua_db_init_once(void)
-{
-  if (db_driver == NULL)
-    db_driver = db_init(NULL);
-}
-
 int sb_lua_db_connect(lua_State *L)
 {
   sb_lua_ctxt_t *ctxt;
   
   ctxt = sb_lua_get_context(L);
 
-  /* Initialize the DB driver once for all threads */
-  pthread_once(&db_init_control, sb_lua_db_init_once);
+  db_driver = db_create(NULL);
   if (db_driver == NULL)
     luaL_error(L, "DB initialization failed");
   lua_pushstring(L, db_driver->sname);
   lua_setglobal(L, "db_driver");
   
-  ctxt->con = db_connect(db_driver);
+  ctxt->con = db_connection_create(db_driver);
   if (ctxt->con == NULL)
     luaL_error(L, "Failed to connect to the database");
   db_set_thread(ctxt->con, ctxt->thread_id);
@@ -608,7 +619,10 @@ int sb_lua_db_disconnect(lua_State *L)
   ctxt = sb_lua_get_context(L);
 
   if (ctxt->con)
-    db_disconnect(ctxt->con);
+  {
+    db_connection_close(ctxt->con);
+    db_connection_free(ctxt->con);
+  }
 
   ctxt->con = NULL;
   
@@ -617,26 +631,26 @@ int sb_lua_db_disconnect(lua_State *L)
 
 int sb_lua_db_query(lua_State *L)
 {
-  sb_lua_ctxt_t *ctxt;
-  const char *query;
-  db_result_set_t *rs;
+  sb_lua_ctxt_t   *ctxt;
+  const char      *query;
+  db_result_t *rs;
+  size_t          len;
 
   ctxt = sb_lua_get_context(L);
 
   if (ctxt->con == NULL)
     sb_lua_db_connect(L);
   
-  query = luaL_checkstring(L, 1);
-  rs = db_query(ctxt->con, query);
+  query = luaL_checklstring(L, 1, &len);
+  rs = db_query(ctxt->con, query, len);
   if (rs == NULL)
   {
     lua_pushnumber(L, ctxt->con->db_errno);
     lua_error(L);
   }
 
-  db_store_results(rs);
   db_free_results(rs);
-  
+
   return 0;
 }
 
@@ -644,16 +658,17 @@ int sb_lua_db_bulk_insert_init(lua_State *L)
 {
   sb_lua_ctxt_t *ctxt;
   const char *query;
+  size_t len;
 
   ctxt = sb_lua_get_context(L);
 
   if (ctxt->con == NULL)
     sb_lua_db_connect(L);
-    
-  query = luaL_checkstring(L, 1);
-  if (db_bulk_insert_init(ctxt->con, query))
+
+  query = luaL_checklstring(L, 1, &len);
+  if (db_bulk_insert_init(ctxt->con, query, len))
     luaL_error(L, "db_bulk_insert_init() failed");
-  
+
   return 0;
 }
 
@@ -661,13 +676,14 @@ int sb_lua_db_bulk_insert_next(lua_State *L)
 {
   sb_lua_ctxt_t *ctxt;
   const char *query;
+  size_t len;
 
   ctxt = sb_lua_get_context(L);
 
   CHECK_CONNECTION(L, ctxt);
     
-  query = luaL_checkstring(L, 1);
-  if (db_bulk_insert_next(ctxt->con, query))
+  query = luaL_checklstring(L, 1, &len);
+  if (db_bulk_insert_next(ctxt->con, query, len))
     luaL_error(L, "db_bulk_insert_next() failed");
   
   return 0;
@@ -688,23 +704,24 @@ int sb_lua_db_bulk_insert_done(lua_State *L)
 
 int sb_lua_db_prepare(lua_State *L)
 {
-  sb_lua_ctxt_t *ctxt;
+  sb_lua_ctxt_t    *ctxt;
   sb_lua_db_stmt_t *stmt;
-  const char *query;
+  const char       *query;
+  size_t           len;
 
   ctxt = sb_lua_get_context(L);
 
   if (ctxt->con == NULL)
     sb_lua_db_connect(L);
 
-  query = luaL_checkstring(L, 1);
-  
+  query = luaL_checklstring(L, 1, &len);
+
   stmt = (sb_lua_db_stmt_t *)lua_newuserdata(L, sizeof(sb_lua_db_stmt_t));
   luaL_getmetatable(L, "sysbench.stmt");
   lua_setmetatable(L, -2);
   memset(stmt, 0, sizeof(sb_lua_db_stmt_t));
-  
-  stmt->ptr = db_prepare(ctxt->con, query);
+
+  stmt->ptr = db_prepare(ctxt->con, query, len);
   if (stmt->ptr == NULL)
     luaL_error(L, "db_prepare() failed");
 
@@ -866,7 +883,7 @@ int sb_lua_db_execute(lua_State *L)
 {
   sb_lua_ctxt_t    *ctxt;
   sb_lua_db_stmt_t *stmt;
-  db_result_set_t  *ptr;
+  db_result_t      *ptr;
   sb_lua_db_rs_t   *rs;
   unsigned int     i;
   char             needs_rebind = 0;
@@ -1014,8 +1031,8 @@ int sb_lua_db_store_results(lua_State *L)
   rs = (sb_lua_db_rs_t *)luaL_checkudata(L, 1, "sysbench.rs");
   luaL_argcheck(L, rs != NULL, 1, "result set expected");
 
-  db_store_results(rs->ptr);
-  
+  /* noop as db_store_results() is now performed automatically by db_query() */
+
   return 0;
 }
 

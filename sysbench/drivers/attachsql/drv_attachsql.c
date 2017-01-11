@@ -86,17 +86,17 @@ static int attachsql_drv_init(void);
 static int attachsql_drv_describe(drv_caps_t *);
 static int attachsql_drv_connect(db_conn_t *);
 static int attachsql_drv_disconnect(db_conn_t *);
-static int attachsql_drv_prepare(db_stmt_t *, const char *);
-static int attachsql_drv_bind_param(db_stmt_t *, db_bind_t *, unsigned int);
-static int attachsql_drv_bind_result(db_stmt_t *, db_bind_t *, unsigned int);
-static int attachsql_drv_execute(db_stmt_t *, db_result_set_t *);
-static int attachsql_drv_fetch(db_result_set_t *);
-static int attachsql_drv_fetch_row(db_result_set_t *, db_row_t *);
-static unsigned long long attachsql_drv_num_rows(db_result_set_t *);
-static int attachsql_drv_query(db_conn_t *, const char *, db_result_set_t *);
-static int attachsql_drv_free_results(db_result_set_t *);
+static int attachsql_drv_prepare(db_stmt_t *, const char *, size_t);
+static int attachsql_drv_bind_param(db_stmt_t *, db_bind_t *, size_t);
+static int attachsql_drv_bind_result(db_stmt_t *, db_bind_t *, size_t);
+static db_error_t attachsql_drv_execute(db_stmt_t *, db_result_t *);
+static int attachsql_drv_fetch(db_result_t *);
+static int attachsql_drv_fetch_row(db_result_t *, db_row_t *);
+static db_error_t attachsql_drv_query(db_conn_t *, const char *, size_t,
+                                      db_result_t *);
+static int attachsql_drv_free_results(db_result_t *);
 static int attachsql_drv_close(db_stmt_t *);
-static int attachsql_drv_store_results(db_result_set_t *);
+static int attachsql_drv_store_results(db_result_t *);
 static int attachsql_drv_done(void);
 
 /* libAttachSQL driver definition */
@@ -108,24 +108,22 @@ static db_driver_t attachsql_driver =
   .args = attachsql_drv_args,
   .ops =
   {
-    attachsql_drv_init,
-    attachsql_drv_describe,
-    attachsql_drv_connect,
-    attachsql_drv_disconnect,
-    attachsql_drv_prepare,
-    attachsql_drv_bind_param,
-    attachsql_drv_bind_result,
-    attachsql_drv_execute,
-    attachsql_drv_fetch,
-    attachsql_drv_fetch_row,
-    attachsql_drv_num_rows,
-    attachsql_drv_free_results,
-    attachsql_drv_close,
-    attachsql_drv_query,
-    attachsql_drv_store_results,
-    attachsql_drv_done
-  },
-  .listitem = {NULL, NULL}
+    .init = attachsql_drv_init,
+    .describe = attachsql_drv_describe,
+    .connect = attachsql_drv_connect,
+    .disconnect = attachsql_drv_disconnect,
+    .prepare = attachsql_drv_prepare,
+    .bind_param = attachsql_drv_bind_param,
+    .bind_result = attachsql_drv_bind_result,
+    .execute = attachsql_drv_execute,
+    .fetch = attachsql_drv_fetch,
+    .fetch_row = attachsql_drv_fetch_row,
+    .free_results = attachsql_drv_free_results,
+    .close = attachsql_drv_close,
+    .query = attachsql_drv_query,
+    .store_results = attachsql_drv_store_results,
+    .done = attachsql_drv_done
+  }
 };
 
 
@@ -280,12 +278,12 @@ int attachsql_drv_disconnect(db_conn_t *sb_conn)
 /* Prepare statement */
 
 
-int attachsql_drv_prepare(db_stmt_t *stmt, const char *query)
+int attachsql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
 {
   attachsql_connect_t *con= (attachsql_connect_t *)stmt->connection->ptr;
   attachsql_error_t *error= NULL;
   attachsql_return_t aret= ATTACHSQL_RETURN_NONE;
-  attachsql_statement_prepare(con, strlen(query), query, &error);
+  attachsql_statement_prepare(con, len, query, &error);
   while(aret != ATTACHSQL_RETURN_EOF)
   {
     aret= attachsql_connect_poll(con, &error);
@@ -302,7 +300,7 @@ int attachsql_drv_prepare(db_stmt_t *stmt, const char *query)
 
 
 /* Bind parameters for prepared statement */
-int attachsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
+int attachsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
   /* libAttachSQL doesn't do this, you do this during execute
    * this is because sysbench doesn't set the values until that time
@@ -322,7 +320,7 @@ int attachsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int le
 
 
 /* Bind results for prepared statement */
-int attachsql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
+int attachsql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
   (void)stmt;
   (void)params;
@@ -335,7 +333,7 @@ int attachsql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int l
 /* Execute prepared statement */
 
 
-int attachsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
+db_error_t attachsql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
 {
   (void) rs;
   attachsql_connect_t *con= (attachsql_connect_t *)stmt->connection->ptr;
@@ -426,8 +424,8 @@ int attachsql_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
 /* Execute SQL query */
 
 
-int attachsql_drv_query(db_conn_t *sb_conn, const char *query,
-                      db_result_set_t *rs)
+db_error_t attachsql_drv_query(db_conn_t *sb_conn, const char *query,
+                               size_t len, db_result_t *rs)
 {
   (void) rs;
   attachsql_connect_t *con = sb_conn->ptr;
@@ -441,8 +439,8 @@ int attachsql_drv_query(db_conn_t *sb_conn, const char *query,
   DEBUG("attachsql_query(%p, \"%s\", %u)",
         con,
         query,
-        strlen(query));
-  attachsql_query(con, strlen(query), query, 0, NULL, &error);
+        len);
+  attachsql_query(con, len, query, 0, NULL, &error);
 
   while((aret != ATTACHSQL_RETURN_EOF) && (aret != ATTACHSQL_RETURN_ROW_READY))
   {
@@ -471,7 +469,7 @@ int attachsql_drv_query(db_conn_t *sb_conn, const char *query,
 /* Fetch row from result set of a prepared statement */
 
 
-int attachsql_drv_fetch(db_result_set_t *rs)
+int attachsql_drv_fetch(db_result_t *rs)
 {
   /* NYI */
   attachsql_connect_t *con = rs->connection->ptr;
@@ -531,7 +529,7 @@ int attachsql_drv_fetch(db_result_set_t *rs)
 /* Fetch row from result set of a query */
 
 
-int attachsql_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
+int attachsql_drv_fetch_row(db_result_t *rs, db_row_t *row)
 {
   attachsql_error_t *error= NULL;
   attachsql_return_t aret= ATTACHSQL_RETURN_NONE;
@@ -562,19 +560,10 @@ int attachsql_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
 }
 
 
-/* Return the number of rows in a result set */
-
-
-unsigned long long attachsql_drv_num_rows(db_result_set_t *rs)
-{
-  return rs->nrows;
-}
-
-
 /* Store results from the last query */
 
 
-int attachsql_drv_store_results(db_result_set_t *rs)
+int attachsql_drv_store_results(db_result_t *rs)
 {
   int ret= 0;
   db_row_t row;
@@ -598,13 +587,14 @@ int attachsql_drv_store_results(db_result_set_t *rs)
 /* Free result set */
 
 
-int attachsql_drv_free_results(db_result_set_t *rs)
+int attachsql_drv_free_results(db_result_t *rs)
 {
 
   if (rs->connection->ptr != NULL)
   {
     DEBUG("attachsql_query_close(%p)", rs->connection->ptr);
     attachsql_query_close(rs->connection->ptr);
+    rs->connection->ptr = NULL;
     return 0;
   }
 

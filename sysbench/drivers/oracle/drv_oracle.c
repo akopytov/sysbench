@@ -170,17 +170,17 @@ static int ora_drv_init(void);
 static int ora_drv_describe(drv_caps_t *);
 static int ora_drv_connect(db_conn_t *);
 static int ora_drv_disconnect(db_conn_t *);
-static int ora_drv_prepare(db_stmt_t *, const char *);
-static int ora_drv_bind_param(db_stmt_t *, db_bind_t *, unsigned int);
-static int ora_drv_bind_result(db_stmt_t *, db_bind_t *, unsigned int);
-static int ora_drv_execute(db_stmt_t *, db_result_set_t *);
-static int ora_drv_fetch(db_result_set_t *);
-static int ora_drv_fetch_row(db_result_set_t *, db_row_t *);
-static unsigned long long ora_drv_num_rows(db_result_set_t *);
-static int ora_drv_query(db_conn_t *, const char *, db_result_set_t *);
-static int ora_drv_free_results(db_result_set_t *);
+static int ora_drv_prepare(db_stmt_t *, const char *, size_t);
+static int ora_drv_bind_param(db_stmt_t *, db_bind_t *, size_t);
+static int ora_drv_bind_result(db_stmt_t *, db_bind_t *, size_t);
+static db_error_t ora_drv_execute(db_stmt_t *, db_result_t *);
+static int ora_drv_fetch(db_result_t *);
+static int ora_drv_fetch_row(db_result_t *, db_row_t *);
+static db_error_t ora_drv_query(db_conn_t *, const char *, size_t,
+                                db_result_t *);
+static int ora_drv_free_results(db_result_t *);
 static int ora_drv_close(db_stmt_t *);
-static int ora_drv_store_results(db_result_set_t *);
+static int ora_drv_store_results(db_result_t *);
 static int ora_drv_done(void);
 
 /* Oracle driver definition */
@@ -192,24 +192,22 @@ static db_driver_t oracle_driver =
   .args = ora_drv_args,
   .ops =
   {
-    ora_drv_init,
-    ora_drv_describe,
-    ora_drv_connect,
-    ora_drv_disconnect,
-    ora_drv_prepare,
-    ora_drv_bind_param,
-    ora_drv_bind_result,
-    ora_drv_execute,
-    ora_drv_fetch,
-    ora_drv_fetch_row,
-    ora_drv_num_rows,
-    ora_drv_free_results,
-    ora_drv_close,
-    ora_drv_query,
-    ora_drv_store_results,
-    ora_drv_done
-  },
-  .listitem = {NULL, NULL}
+    .init = ora_drv_init,
+    .describe = ora_drv_describe,
+    .connect = ora_drv_connect,
+    .disconnect = ora_drv_disconnect,
+    .prepare = ora_drv_prepare,
+    .bind_param = ora_drv_bind_param,
+    .bind_result = ora_drv_bind_result,
+    .execute = ora_drv_execute,
+    .fetch = ora_drv_fetch,
+    .fetch_row = ora_drv_fetch_row,
+    .free_results = ora_drv_free_results,
+    .close = ora_drv_close,
+    .query = ora_drv_query,
+    .store_results = ora_drv_store_results,
+    .done = ora_drv_done
+  }
 };
 
 
@@ -402,7 +400,7 @@ int ora_drv_disconnect(db_conn_t *sb_conn)
 /* Prepare statement */
 
 
-int ora_drv_prepare(db_stmt_t *stmt, const char *query)
+int ora_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
 {
   ora_conn_t   *ora_con = (ora_conn_t *)stmt->connection->ptr;
   sword        rc;
@@ -468,7 +466,7 @@ int ora_drv_prepare(db_stmt_t *stmt, const char *query)
     if (ora_stmt->type != STMT_TYPE_BEGIN &&
         ora_stmt->type != STMT_TYPE_COMMIT)
     {
-      rc = OCIStmtPrepare(ora_stmt->ptr, ora_con->errhp, buf, strlen(buf),
+      rc = OCIStmtPrepare(ora_stmt->ptr, ora_con->errhp, buf, j,
                           OCI_NTV_SYNTAX, OCI_DEFAULT);
       CHECKERR("OCIStmtPrepare");
 
@@ -507,7 +505,7 @@ int ora_drv_prepare(db_stmt_t *stmt, const char *query)
 /* Bind parameters for prepared statement */
 
 
-int ora_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
+int ora_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
   ora_conn_t  *con = (ora_conn_t *)stmt->connection->ptr;
   ora_stmt_t  *ora_stmt = (ora_stmt_t *)stmt->ptr;
@@ -574,7 +572,7 @@ int ora_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 /* Bind results for prepared statement */
 
 
-int ora_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
+int ora_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
   /* NYI */
 
@@ -589,7 +587,7 @@ int ora_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, unsigned int len)
 /* Execute prepared statement */
 
 
-int ora_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
+db_error_t ora_drv_execute(db_stmt_t *stmt, db_result_t *rs)
 {
   db_conn_t       *db_con = stmt->connection;
   ora_stmt_t      *ora_stmt = stmt->ptr;
@@ -675,7 +673,7 @@ int ora_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
   }
   buf[j] = '\0';
   
-  db_con->db_errno = ora_drv_query(db_con, buf, rs);
+  db_con->db_errno = ora_drv_query(db_con, buf, j, rs);
   free(buf);
 
   return SB_DB_ERROR_NONE;
@@ -690,8 +688,8 @@ int ora_drv_execute(db_stmt_t *stmt, db_result_set_t *rs)
 /* Execute SQL query */
 
 
-int ora_drv_query(db_conn_t *sb_conn, const char *query,
-                      db_result_set_t *rs)
+db_error_t ora_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
+                         db_result_t *rs)
 {
   ora_conn_t      *ora_con = sb_conn->ptr;
   sword           rc = 0;
@@ -728,7 +726,7 @@ int ora_drv_query(db_conn_t *sb_conn, const char *query,
 
   stmt = (OCIStmt *)tmp;
   
-  rc = OCIStmtPrepare(stmt, ora_con->errhp, (OraText *)query, strlen(query),
+  rc = OCIStmtPrepare(stmt, ora_con->errhp, (OraText *)query, len,
                       OCI_NTV_SYNTAX, OCI_DEFAULT);
   CHECKERR("OCIStmtPrepare");
 
@@ -752,7 +750,7 @@ int ora_drv_query(db_conn_t *sb_conn, const char *query,
 /* Fetch row from result set of a prepared statement */
 
 
-int ora_drv_fetch(db_result_set_t *rs)
+int ora_drv_fetch(db_result_t *rs)
 {
   /* NYI */
   (void)rs;
@@ -764,7 +762,7 @@ int ora_drv_fetch(db_result_set_t *rs)
 /* Fetch row from result set of a query */
 
 
-int ora_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
+int ora_drv_fetch_row(db_result_t *rs, db_row_t *row)
 {
   /* NYI */
   (void)rs;  /* unused */
@@ -774,25 +772,10 @@ int ora_drv_fetch_row(db_result_set_t *rs, db_row_t *row)
 }
 
 
-/* Return the number of rows in a result set */
-
-
-unsigned long long ora_drv_num_rows(db_result_set_t *rs)
-{
-  ora_result_set_t *ora_rs = (ora_result_set_t *)rs->ptr;
-  
-  /* Check if the results are already fetched */
-  if (ora_rs != NULL)
-    return ora_rs->nrows;
-
-  return 0;
-}
-
-
 /* Store results from the last query */
 
 
-int ora_drv_store_results(db_result_set_t *rs)
+int ora_drv_store_results(db_result_t *rs)
 {
   unsigned int     i;
   sword            rc;
@@ -935,7 +918,7 @@ int ora_drv_store_results(db_result_set_t *rs)
 /* Free result set */
 
 
-int ora_drv_free_results(db_result_set_t *rs)
+int ora_drv_free_results(db_result_t *rs)
 {
   ora_result_set_t *ora_rs = (ora_result_set_t *)rs->ptr;
   ora_row_t        *row;
@@ -979,7 +962,9 @@ int ora_drv_free_results(db_result_set_t *rs)
   }
 
   free(ora_rs);
-  
+
+  rs->ptr = NULL;
+
   return 0;
 }
 

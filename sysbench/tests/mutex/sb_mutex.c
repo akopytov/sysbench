@@ -76,6 +76,8 @@ static unsigned int mutex_loops;
 static unsigned int mutex_locks;
 static unsigned int global_var;
 
+static TLS int tls_counter;
+
 int register_test_mutex(sb_list_t *tests)
 {
   SB_LIST_ADD_TAIL(&mutex_test.listitem, tests);
@@ -125,9 +127,15 @@ sb_event_t mutex_next_event(int thread_id)
 
   (void) thread_id; /* unused */
 
-  sb_req.type = SB_REQ_TYPE_MUTEX;
-  mutex_req->nlocks = mutex_locks;
-  mutex_req->nloops = mutex_loops;
+  /* Perform only one request per thread */
+  if (tls_counter++ > 0)
+    sb_req.type = SB_REQ_TYPE_NULL;
+  else
+  {
+    sb_req.type = SB_REQ_TYPE_MUTEX;
+    mutex_req->nlocks = mutex_locks;
+    mutex_req->nloops = mutex_loops;
+  }
 
   return sb_req;
 }
@@ -154,8 +162,7 @@ int mutex_execute_event(sb_event_t *sb_req, int thread_id)
   }
   while (mutex_req->nlocks > 0);
 
-  /* Perform only one request per thread */
-  return 1;
+  return 0;
 }
 
 

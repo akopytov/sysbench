@@ -27,7 +27,7 @@
 # include <pthread.h>
 #endif
 
-#include "sb_global.h"
+#include "sb_util.h"
 #include "sb_options.h"
 #include "sb_timer.h"
 #include "sb_histogram.h"
