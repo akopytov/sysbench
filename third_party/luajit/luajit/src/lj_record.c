@@ -2263,6 +2263,8 @@ void lj_record_ins(jit_State *J)
     rc = lj_ir_kint(J, (int32_t)(int16_t)rc);
     break;
   case BC_KNIL:
+    if (LJ_FR2 && ra > J->maxslot)
+      J->base[ra-1] = 0;
     while (ra <= rc)
       J->base[ra++] = TREF_NIL;
     if (rc >= J->maxslot) J->maxslot = rc+1;

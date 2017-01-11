@@ -347,6 +347,11 @@ static uint64_t kfold_int64arith(uint64_t k1, uint64_t k2, IROp op)
   case IR_BAND: k1 &= k2; break;
   case IR_BOR: k1 |= k2; break;
   case IR_BXOR: k1 ^= k2; break;
+  case IR_BSHL: k1 <<= (k2 & 63); break;
+  case IR_BSHR: k1 = (int32_t)((uint32_t)k1 >> (k2 & 63)); break;
+  case IR_BSAR: k1 >>= (k2 & 63); break;
+  case IR_BROL: k1 = (int32_t)lj_rol((uint32_t)k1, (k2 & 63)); break;
+  case IR_BROR: k1 = (int32_t)lj_ror((uint32_t)k1, (k2 & 63)); break;
 #endif
   default: UNUSED(k2); lua_assert(0); break;
   }
@@ -1652,6 +1657,14 @@ LJFOLDF(simplify_shiftk_andk)
     fins->op1 = (IRRef1)lj_opt_fold(J);
     fins->op2 = (IRRef1)lj_ir_kint(J, k);
     fins->ot = IRTI(IR_BAND);
+    return RETRYFOLD;
+  } else if (irk->o == IR_KINT64) {
+    uint64_t k = kfold_int64arith(ir_k64(irk)->u64, fright->i, (IROp)fins->o);
+    IROpT ot = fleft->ot;
+    fins->op1 = fleft->op1;
+    fins->op1 = (IRRef1)lj_opt_fold(J);
+    fins->op2 = (IRRef1)lj_ir_kint64(J, k);
+    fins->ot = ot;
     return RETRYFOLD;
   }
   return NEXTFOLD;

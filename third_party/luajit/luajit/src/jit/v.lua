@@ -99,7 +99,7 @@ end
 local function dump_trace(what, tr, func, pc, otr, oex)
   if what == "start" then
     startloc = fmtfunc(func, pc)
-    startex = otr and "("..otr.."/"..oex..") " or ""
+    startex = otr and "("..otr.."/"..(oex == -1 and "stitch" or oex)..") " or ""
   else
     if what == "abort" then
       local loc = fmtfunc(func, pc)

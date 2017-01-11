@@ -91,7 +91,7 @@ typedef struct ASMState {
   MCode *realign;	/* Realign loop if not NULL. */
 
 #ifdef RID_NUM_KREF
-  int32_t krefk[RID_NUM_KREF];
+  intptr_t krefk[RID_NUM_KREF];
 #endif
   IRRef1 phireg[RID_MAX];  /* PHI register references. */
   uint16_t parentmap[LJ_MAX_JSLOTS];  /* Parent instruction to RegSP map. */
@@ -144,7 +144,7 @@ static LJ_AINLINE void checkmclim(ASMState *as)
 #define ra_krefreg(ref)		((Reg)(RID_MIN_KREF + (Reg)(ref)))
 #define ra_krefk(as, ref)	(as->krefk[(ref)])
 
-static LJ_AINLINE void ra_setkref(ASMState *as, Reg r, int32_t k)
+static LJ_AINLINE void ra_setkref(ASMState *as, Reg r, intptr_t k)
 {
   IRRef ref = (IRRef)(r - RID_MIN_KREF);
   as->krefk[ref] = k;
@@ -171,6 +171,8 @@ IRFLDEF(FLOFS)
 #include "lj_emit_x86.h"
 #elif LJ_TARGET_ARM
 #include "lj_emit_arm.h"
+#elif LJ_TARGET_ARM64
+#include "lj_emit_arm64.h"
 #elif LJ_TARGET_PPC
 #include "lj_emit_ppc.h"
 #elif LJ_TARGET_MIPS
@@ -322,7 +324,11 @@ static Reg ra_rematk(ASMState *as, IRRef ref)
     lua_assert(!rset_test(as->freeset, r));
     ra_free(as, r);
     ra_modified(as, r);
+#if LJ_64
+    emit_loadu64(as, r, ra_krefk(as, ref));
+#else
     emit_loadi(as, r, ra_krefk(as, ref));
+#endif
     return r;
   }
   ir = IR(ref);
@@ -524,7 +530,7 @@ static void ra_evictk(ASMState *as)
 
 #ifdef RID_NUM_KREF
 /* Allocate a register for a constant. */
-static Reg ra_allock(ASMState *as, int32_t k, RegSet allow)
+static Reg ra_allock(ASMState *as, intptr_t k, RegSet allow)
 {
   /* First try to find a register which already holds the same constant. */
   RegSet pick, work = ~as->freeset & RSET_GPR;
@@ -533,9 +539,31 @@ static Reg ra_allock(ASMState *as, int32_t k, RegSet allow)
     IRRef ref;
     r = rset_pickbot(work);
     ref = regcost_ref(as->cost[r]);
+#if LJ_64
+    if (ref < ASMREF_L) {
+      if (ra_iskref(ref)) {
+	if (k == ra_krefk(as, ref))
+	  return r;
+      } else {
+	IRIns *ir = IR(ref);
+	if ((ir->o == IR_KINT64 && k == (int64_t)ir_kint64(ir)->u64) ||
+#if LJ_GC64
+	    (ir->o == IR_KINT && k == ir->i) ||
+	    (ir->o == IR_KGC && k == (intptr_t)ir_kgc(ir)) ||
+	    ((ir->o == IR_KPTR || ir->o == IR_KKPTR) &&
+	     k == (intptr_t)ir_kptr(ir))
+#else
+	    (ir->o != IR_KINT64 && k == ir->i)
+#endif
+	   )
+	  return r;
+      }
+    }
+#else
     if (ref < ASMREF_L &&
 	k == (ra_iskref(ref) ? ra_krefk(as, ref) : IR(ref)->i))
       return r;
+#endif
     rset_clear(work, r);
   }
   pick = as->freeset & allow;
@@ -555,7 +583,7 @@ static Reg ra_allock(ASMState *as, int32_t k, RegSet allow)
 }
 
 /* Allocate a specific register for a constant. */
-static void ra_allockreg(ASMState *as, int32_t k, Reg r)
+static void ra_allockreg(ASMState *as, intptr_t k, Reg r)
 {
   Reg kr = ra_allock(as, k, RID2RSET(r));
   if (kr != r) {
@@ -1563,6 +1591,8 @@ static void asm_loop(ASMState *as)
 #include "lj_asm_x86.h"
 #elif LJ_TARGET_ARM
 #include "lj_asm_arm.h"
+#elif LJ_TARGET_ARM64
+#include "lj_asm_arm64.h"
 #elif LJ_TARGET_PPC
 #include "lj_asm_ppc.h"
 #elif LJ_TARGET_MIPS

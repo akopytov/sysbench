@@ -296,6 +296,9 @@ enum {
 #elif LJ_TARGET_ARM
   DW_REG_SP = 13,
   DW_REG_RA = 14,
+#elif LJ_TARGET_ARM64
+  DW_REG_SP = 31,
+  DW_REG_RA = 30,
 #elif LJ_TARGET_PPC
   DW_REG_SP = 1,
   DW_REG_RA = 65,
@@ -374,6 +377,8 @@ static const ELFheader elfhdr_template = {
   .machine = 62,
 #elif LJ_TARGET_ARM
   .machine = 40,
+#elif LJ_TARGET_ARM64
+  .machine = 183,
 #elif LJ_TARGET_PPC
   .machine = 20,
 #elif LJ_TARGET_MIPS
@@ -562,6 +567,13 @@ static void LJ_FASTCALL gdbjit_ehframe(GDBJITctx *ctx)
     {
       int i;
       for (i = 11; i >= 4; i--) { DB(DW_CFA_offset|i); DUV(2+(11-i)); }
+    }
+#elif LJ_TARGET_ARM64
+    {
+      int i;
+      DB(DW_CFA_offset|31); DUV(2);
+      for (i = 28; i >= 19; i--) { DB(DW_CFA_offset|i); DUV(3+(28-i)); }
+      for (i = 15; i >= 8; i--) { DB(DW_CFA_offset|32|i); DUV(28-i); }
     }
 #elif LJ_TARGET_PPC
     {

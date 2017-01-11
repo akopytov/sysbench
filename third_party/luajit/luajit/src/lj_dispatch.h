@@ -107,6 +107,7 @@ typedef struct GG_State {
 #define J2G(J)		(&J2GG(J)->g)
 #define G2J(gl)		(&G2GG(gl)->J)
 #define L2J(L)		(&L2GG(L)->J)
+#define GG_G2J		(GG_OFS(J) - GG_OFS(g))
 #define GG_G2DISP	(GG_OFS(dispatch) - GG_OFS(g))
 #define GG_DISP2G	(GG_OFS(g) - GG_OFS(dispatch))
 #define GG_DISP2J	(GG_OFS(J) - GG_OFS(dispatch))

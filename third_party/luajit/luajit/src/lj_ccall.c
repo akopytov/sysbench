@@ -331,7 +331,7 @@
 
 #define CCALL_HANDLE_COMPLEXARG \
   /* Pass complex by value in separate (!) FPRs or on stack. */ \
-  isfp = ctr->size == 2*sizeof(float) ? 2 : 1;
+  isfp = sz == 2*sizeof(float) ? 2 : 1;
 
 #define CCALL_HANDLE_REGARG \
   if (LJ_TARGET_IOS && isva) { \

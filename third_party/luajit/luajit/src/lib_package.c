@@ -399,8 +399,7 @@ static int lj_cf_package_loader_preload(lua_State *L)
 
 /* ------------------------------------------------------------------------ */
 
-static const int sentinel_ = 0;
-#define sentinel	((void *)&sentinel_)
+#define sentinel	((void *)0x4004)
 
 static int lj_cf_package_require(lua_State *L)
 {

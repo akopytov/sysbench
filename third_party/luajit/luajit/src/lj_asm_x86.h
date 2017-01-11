@@ -234,10 +234,10 @@ static void asm_fusefref(ASMState *as, IRIns *ir, RegSet allow)
   as->mrm.idx = RID_NONE;
   if (ir->op1 == REF_NIL) {
 #if LJ_GC64
-    as->mrm.ofs = (int32_t)ir->op2 - GG_OFS(dispatch);
+    as->mrm.ofs = (int32_t)(ir->op2 << 2) - GG_OFS(dispatch);
     as->mrm.base = RID_DISPATCH;
 #else
-    as->mrm.ofs = (int32_t)ir->op2 + ptr2addr(J2GG(as->J));
+    as->mrm.ofs = (int32_t)(ir->op2 << 2) + ptr2addr(J2GG(as->J));
     as->mrm.base = RID_NONE;
 #endif
     return;
@@ -1246,7 +1246,19 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
 #endif
       } else {
 	emit_rr(as, XO_MOV, tmp, key);
+#if LJ_GC64
+	checkmclim(as);
+	emit_gri(as, XG_ARITHi(XOg_XOR), dest, irt_toitype(kt) << 15);
+	if ((as->flags & JIT_F_BMI2)) {
+	  emit_i8(as, 32);
+	  emit_mrm(as, XV_RORX|VEX_64, dest, key);
+	} else {
+	  emit_shifti(as, XOg_SHR|REX_64, dest, 32);
+	  emit_rr(as, XO_MOV, dest|REX_64, key|REX_64);
+	}
+#else
 	emit_rmro(as, XO_LEA, dest, key, HASH_BIAS);
+#endif
       }
     }
   }

@@ -55,7 +55,7 @@ typedef uint32_t RegSP;
 /* Bitset for registers. 32 registers suffice for most architectures.
 ** Note that one set holds bits for both GPRs and FPRs.
 */
-#if LJ_TARGET_PPC || LJ_TARGET_MIPS
+#if LJ_TARGET_PPC || LJ_TARGET_MIPS || LJ_TARGET_ARM64
 typedef uint64_t RegSet;
 #else
 typedef uint32_t RegSet;
@@ -69,7 +69,7 @@ typedef uint32_t RegSet;
 #define rset_set(rs, r)		(rs |= RID2RSET(r))
 #define rset_clear(rs, r)	(rs &= ~RID2RSET(r))
 #define rset_exclude(rs, r)	(rs & ~RID2RSET(r))
-#if LJ_TARGET_PPC || LJ_TARGET_MIPS
+#if LJ_TARGET_PPC || LJ_TARGET_MIPS || LJ_TARGET_ARM64
 #define rset_picktop(rs)	((Reg)(__builtin_clzll(rs)^63))
 #define rset_pickbot(rs)	((Reg)__builtin_ctzll(rs))
 #else
