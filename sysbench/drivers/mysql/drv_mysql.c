@@ -281,7 +281,10 @@ int mysql_drv_thread_init(int thread_id)
 {
   (void) thread_id; /* unused */
 
-  return mysql_thread_init() != 0;
+  const my_bool rc = mysql_thread_init();
+  DEBUG("mysql_thread_init() = %d", (int) rc);
+
+  return rc != 0;
 }
 
 /* Thread-local driver deinitialization */
@@ -290,6 +293,7 @@ int mysql_drv_thread_done(int thread_id)
 {
   (void) thread_id; /* unused */
 
+  DEBUG("mysql_thread_end(%s)", "");
   mysql_thread_end();
 
   return 0;
@@ -805,6 +809,7 @@ db_error_t mysql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
                          &rs->stat_type);
     }
 
+    rs->stat_type = stmt->stat_type;
     rs->nrows = (uint32_t) mysql_stmt_num_rows(stmt->ptr);
     DEBUG("mysql_stmt_num_rows(%p) = %u", rs->statement->ptr,
           (unsigned) (rs->nrows));

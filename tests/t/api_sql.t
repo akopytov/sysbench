@@ -36,13 +36,20 @@ SQL Lua API tests
   >   con:query("SELECT 1")
   >   
   >   con = drv:connect()
-  >   con:query[[UPDATE t SET a = a + 100]]
   >   
-  >   -- local stmt = con:prepare("UPDATE t SET a = a + ?")
-  >   -- stmt:bind_param({{sysbench.sql.type.INT}})
-  >   -- rs = stmt:execute()
-  >   -- rs:free_results()
-  >   -- stmt:close()
+  >   con:query("ALTER TABLE t ADD COLUMN b CHAR(10)")
+  >   
+  >   local stmt = con:prepare("UPDATE t SET a = a + ?, b = ?")
+  >   local a = stmt:bind_create(sysbench.sql.type.INT)
+  >   local b = stmt:bind_create(sysbench.sql.type.CHAR, 10)
+  >   stmt:bind_param(a, b)
+  >   a:set(100)
+  >   rs = stmt:execute()
+  >   a:set(200)
+  >   b:set("01234567890")
+  >   rs = stmt:execute()
+  >   rs:free()
+  >   stmt:close()
   > end
   > EOF
 
@@ -69,15 +76,18 @@ SQL Lua API tests
   *************************** 1. row ***************************
   t
   CREATE TABLE `t` (
-    `a` int(11) DEFAULT NULL
+    `a` int(11) DEFAULT NULL,
+    `b` char(10)* DEFAULT NULL (glob)
   ) * (glob)
 
   $ mysql -uroot sbtest -Nse "SELECT COUNT(DISTINCT a) FROM t"
   100
 
-  $ mysql -uroot sbtest -Nse "SELECT MIN(a), MAX(a) FROM t\G"
+  $ mysql -uroot sbtest -Nse "SELECT MIN(a), MAX(a), MIN(b), MAX(b) FROM t\G"
   *************************** 1. row ***************************
-  101
-  200
+  301
+  400
+  0123456789
+  0123456789
 
   $ mysql -uroot sbtest -Nse "DROP TABLE t"
