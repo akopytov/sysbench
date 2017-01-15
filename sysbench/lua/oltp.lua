@@ -1,9 +1,9 @@
 pathtest = string.match(test, "(.*/)")
 
 if pathtest then
-   dofile(pathtest .. "common.lua")
+   dofile(pathtest .. "oltp_common.lua")
 else
-   require("common")
+   require("oltp_common")
 end
 
 function thread_init()

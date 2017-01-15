@@ -15,6 +15,8 @@
 
 set -eu
 
+OLTP_SCRIPT_PATH=${OLTP_SCRIPT_PATH:-${SBTEST_INCDIR}/oltp_legacy/oltp.lua}
+
 ARGS="--test=${OLTP_SCRIPT_PATH} $DB_DRIVER_ARGS --oltp-tables-count=8"
 
 sysbench $ARGS prepare
