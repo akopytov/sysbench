@@ -91,4 +91,13 @@
     typedef char cta[(expr) ? 1 : -1] SB_ATTRIBUTE_UNUSED;              \
   } while(0)
 
+/*
+  Allocate a buffer of a specified size such that the address is a multiple of a
+  specified alignment.
+*/
+void *sb_memalign(size_t size, size_t alignment);
+
+/* Get OS page size */
+size_t sb_getpagesize(void);
+
 #endif /* SB_UTIL_H */

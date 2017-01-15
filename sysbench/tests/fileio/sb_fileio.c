@@ -61,6 +61,7 @@
 #include "crc32.h"
 #include "sb_histogram.h"
 #include "sb_rand.h"
+#include "sb_util.h"
 
 /* Lengths of the checksum and the offset fields in a block */
 #define FILE_CHECKSUM_LENGTH sizeof(int)
@@ -297,9 +298,7 @@ static int file_mmap_done(void);
 #endif
 
 /* Portability wrappers */
-static unsigned long sb_getpagesize(void);
 static unsigned long sb_get_allocation_granularity(void);
-static void *sb_memalign(size_t size);
 static void sb_free_memaligned(void *buf);
 static FILE_DESCRIPTOR sb_open(const char *);
 static int sb_create(const char *);
@@ -1903,7 +1902,7 @@ int parse_arguments(void)
   per_thread = malloc(sizeof(*per_thread) * sb_globals.num_threads);
   for (i = 0; i < sb_globals.num_threads; i++)
   {
-    per_thread[i].buffer = sb_memalign(file_max_request_size);
+    per_thread[i].buffer = sb_memalign(file_max_request_size, sb_getpagesize());
     if (per_thread[i].buffer == NULL)
     {
       log_text(LOG_FATAL, "Failed to allocate a memory buffer");
@@ -1960,20 +1959,7 @@ void check_seq_req(sb_file_request_t *prev_req, sb_file_request_t *r)
 } 
 
 
-unsigned long sb_getpagesize(void)
-{
-#ifdef _SC_PAGESIZE
-  return sysconf(_SC_PAGESIZE);
-#elif defined _WIN32
-  SYSTEM_INFO info;
-  GetSystemInfo(&info);
-  return info.dwPageSize;
-#else
-  return getpagesize();
-#endif
-}
-
-/* 
+/*
   Alignment requirement for mmap(). The same as page size, except on Windows
   (on Windows it has to be 64KB, even if pagesize is only 4 or 8KB)
 */
@@ -1986,39 +1972,6 @@ unsigned long sb_get_allocation_granularity(void)
 #else
   return sb_getpagesize();
 #endif
-}
-
-/*
-  Allocate a buffer of a specified size and align it to the allocation
-  granularity
-*/
-void *sb_memalign(size_t size)
-{
-  unsigned long page_size;
-  void *buffer;
-  
-#ifdef HAVE_POSIX_MEMALIGN
-  page_size = sb_getpagesize();
-  int ret= posix_memalign(&buffer, page_size, size);
-  if (ret != 0)
-    buffer = NULL; 
-#elif defined(HAVE_MEMALIGN)
-  page_size = sb_getpagesize();
-  buffer = memalign(page_size, size);
-#elif defined(HAVE_VALLOC)
-  (void)page_size; /* unused */
-  buffer = valloc(size);
-#elif defined (_WIN32)
-  (void)page_size; /* unused */
-  buffer = VirtualAlloc(NULL, size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
-#else
-  (void)page_size; /* unused */
-  log_text(LOG_WARNING, "None of valloc(), memalign() and posix_memalign() "
-           "is available, doing unaligned IO!");
-  buffer = malloc(size);
-#endif
-
-  return buffer;
 }
 
 static void sb_free_memaligned(void *buf)

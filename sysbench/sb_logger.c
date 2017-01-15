@@ -512,9 +512,10 @@ int oper_handler_init(void)
                         OPER_LOG_MIN_VALUE, OPER_LOG_MAX_VALUE))
     return 1;
 
-  timers = (sb_timer_t *)malloc(sb_globals.num_threads * sizeof(sb_timer_t));
-  timers_copy = (sb_timer_t *)malloc(sb_globals.num_threads *
-                                     sizeof(sb_timer_t));
+  timers = sb_memalign(sb_globals.num_threads * sizeof(sb_timer_t),
+                       CK_MD_CACHELINE);
+  timers_copy = sb_memalign(sb_globals.num_threads * sizeof(sb_timer_t),
+                            CK_MD_CACHELINE);
   if (timers == NULL || timers_copy == NULL)
   {
     log_text(LOG_FATAL, "Memory allocation failure");
