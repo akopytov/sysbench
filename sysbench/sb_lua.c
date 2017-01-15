@@ -99,7 +99,7 @@ static sb_test_t sbtest;
 
 static const char *sb_lua_script_path;
 
-static TLS csb_lua_ctxt_t *tls_lua_ctxt;
+static TLS sb_lua_ctxt_t *tls_lua_ctxt;
 
 /* Lua test operations */
 
