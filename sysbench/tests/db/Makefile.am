@@ -17,8 +17,6 @@
 
 dist_pkgdata_DATA = delete.lua insert.lua bulk_insert.lua \
              oltp_read_write.lua oltp_read_only.lua \
-             oltp_common.lua \
-             oltp_point_select.lua \
              parallel_prepare.lua \
              select_random_points.lua \
              select_random_ranges.lua \

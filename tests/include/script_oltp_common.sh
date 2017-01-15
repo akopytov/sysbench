@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 #
 ################################################################################
-# Common code for legacy OLTP tests
+# Common code for OLTP tests
 #
 # Expects the following variables and callback functions to be defined by the
 # caller:
 #
 #   DB_DRIVER_ARGS -- extra driver-specific arguments to pass to sysbench
+#   OLTP_SCRIPT_PATH -- path to the script file to execute
 #
 #   db_show_table() -- called with a single argument to dump a specified table
 #                      schema
@@ -14,7 +15,7 @@
 
 set -eu
 
-ARGS="--test=${SBTEST_INCDIR}/oltp_legacy/oltp.lua $DB_DRIVER_ARGS --oltp-tables-count=8"
+ARGS="--test=${OLTP_SCRIPT_PATH} $DB_DRIVER_ARGS --oltp-tables-count=8"
 
 sysbench $ARGS prepare
 
