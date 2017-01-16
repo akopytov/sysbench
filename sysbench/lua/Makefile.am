@@ -17,4 +17,5 @@
 SUBDIRS = internal
 
 dist_pkgdata_DATA = oltp_common.lua oltp.lua \
-             oltp_point_select.lua
+             oltp_point_select.lua \
+             select_random_points.lua select_random_ranges.lua
