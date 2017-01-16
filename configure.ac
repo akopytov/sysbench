@@ -559,7 +559,6 @@ sysbench/tests/fileio/Makefile
 sysbench/tests/memory/Makefile
 sysbench/tests/threads/Makefile
 sysbench/tests/mutex/Makefile
-sysbench/tests/db/Makefile
 sysbench/lua/Makefile
 sysbench/lua/internal/Makefile
 tests/Makefile
