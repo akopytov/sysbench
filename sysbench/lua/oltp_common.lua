@@ -19,7 +19,7 @@
 -- ----------------------------------------------------------------------
 
 -- Generate strings of random digits with 11-digit groups separated by dashes
-local function get_c_value()
+function get_c_value()
    -- 10 groups, 119 characters
    return sysbench.rand.string("###########-###########-###########-" ..
                                "###########-###########-###########-" ..
@@ -27,7 +27,7 @@ local function get_c_value()
                                "###########")
 end
 
-local function get_pad_value()
+function get_pad_value()
    -- 5 groups, 59 characters
    return sysbench.rand.string("###########-###########-###########-" ..
                                "###########-###########")

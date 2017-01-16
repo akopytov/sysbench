@@ -27,7 +27,7 @@ else
 end
 
 function event()
-   local table_name = "sbtest" .. sb_rand_uniform(1, oltp_tables_count)\
+   local table_name = "sbtest" .. sb_rand_uniform(1, oltp_tables_count)
    local k_val = sysbench.rand.default(1, oltp_table_size)
    local c_val = get_c_value()
    local pad_val = get_pad_value()
