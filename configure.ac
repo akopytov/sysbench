@@ -434,7 +434,12 @@ fi
 
 if test "$ac_asan" = "yes"
 then
-  CFLAGS="${ASAN_CFLAGS} ${CFLAGS}"
+  # Add -fsanitize=address to CFLAGS/LDFLAGS if supported by the compiler
+  AX_CHECK_COMPILE_FLAG([-fsanitize=address],
+  [
+    CFLAGS="${ASAN_CFLAGS} ${CFLAGS}"
+    LDFLAGS="${ASAN_CFLAGS} ${LDFLAGS}"
+  ])
 fi
 
 if test "$GCC" = "yes"
