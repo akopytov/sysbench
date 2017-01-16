@@ -126,6 +126,7 @@ static void read_config_file(const char *filename)
 int set_option(const char *name, const char *value, sb_arg_type_t type)
 {
   option_t *opt;
+  char     *tmpbuf;
   char     *tmp;
 
   opt = add_option(&options, name);
@@ -151,10 +152,14 @@ int set_option(const char *name, const char *value, sb_arg_type_t type)
       if (value == NULL)
         break;
 
-      tmp = strdup(value);
+      tmpbuf = strdup(value);
+      tmp = tmpbuf;
+
       for (tmp = strtok(tmp, ","); tmp != NULL; tmp = strtok(NULL, ","))
         add_value(&opt->values, tmp);
-      free(tmp);
+
+      free(tmpbuf);
+
       break;
     case SB_ARG_TYPE_FILE:
       read_config_file(value);
