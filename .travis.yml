@@ -74,7 +74,7 @@ script:
   - SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
 
 after_success:
-  - coveralls --gcov-options '\-lp'
+  - PYTHONWARNINGS=ignore coveralls --gcov-options '\-lp'
 
 # Local variables:
 # mode: yaml
