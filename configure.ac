@@ -432,7 +432,7 @@ else
   CFLAGS="${OPTIMIZE_CFLAGS} ${CFLAGS}"
 fi
 
-if test "$with_asan" = "yes"
+if test "$ac_asan" = "yes"
 then
   CFLAGS="${ASAN_CFLAGS} ${CFLAGS}"
 fi
