@@ -54,7 +54,7 @@ before_install:
     esac
 
 install:
-  - pip install --user cram cpp-coveralls
+  - pip install --user cram urllib3[secure] cpp-coveralls
   - >
     case "${TRAVIS_OS_NAME:-linux}" in
     osx)
@@ -74,7 +74,7 @@ script:
   - SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
 
 after_success:
-  - PYTHONWARNINGS=ignore coveralls --gcov-options '\-lp'
+  - coveralls --gcov-options '\-lp'
 
 # Local variables:
 # mode: yaml
