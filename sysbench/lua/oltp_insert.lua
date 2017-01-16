@@ -15,7 +15,7 @@
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 -- ----------------------------------------------------------------------
--- OLTP Point Select benchmark
+-- Insert-Only OLTP benchmark
 -- ----------------------------------------------------------------------
 
 pathtest = string.match(test, "(.*/)")
@@ -27,7 +27,24 @@ else
 end
 
 function event()
-  con:query(string.format("SELECT c FROM sbtest%d WHERE id=%d",
-                          sysbench.rand.uniform(1, oltp_tables_count),
-                          sysbench.rand.default(1, oltp_table_size)))
+   local table_name = "sbtest" .. sb_rand_uniform(1, oltp_tables_count)\
+   local k_val = sysbench.rand.default(1, oltp_table_size)
+   local c_val = get_c_value()
+   local pad_val = get_pad_value()
+
+   if (drv:name() == "pgsql" and oltp_auto_inc) then
+      con:query(string.format("INSERT INTO %s (k, c, pad) VALUES " ..
+                                 "(%d, '%s', '%s')",
+                              table_name, k_val, c_val, pad_val))
+   else
+      if (oltp_auto_inc) then
+         i = 0
+      else
+         i = sysbench.rand.unique()
+      end
+
+      con:query(string.format("INSERT INTO %s (id, k, c, pad) VALUES " ..
+                                 "(%d, %d, '%s', '%s')",
+                              table_name, i, k_val, c_val, pad_val))
+   end
 end

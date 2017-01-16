@@ -1,5 +1,5 @@
 ########################################################################
-oltp.lua + PostgreSQL tests 
+oltp_read_write.lua + PostgreSQL tests 
 ########################################################################
 
   $ if [ -z "${SBTEST_PGSQL_ARGS:-}" ]
@@ -7,12 +7,12 @@ oltp.lua + PostgreSQL tests
   >   exit 80
   > fi
 
-  $ DB_DRIVER_ARGS="--db-driver=pgsql $SBTEST_PGSQL_ARGS"
-
   $ function db_show_table() {
   >  psql -c "\d+ $1" sbtest
   > }
 
+  $ DB_DRIVER_ARGS="--db-driver=pgsql $SBTEST_PGSQL_ARGS"
+  $ OLTP_SCRIPT_PATH=${SBTEST_SCRIPTDIR}/oltp_read_write.lua
   $ . $SBTEST_INCDIR/script_oltp_common.sh
   sysbench *.* * (glob)
   

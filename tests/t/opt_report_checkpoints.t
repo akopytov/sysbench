@@ -7,7 +7,7 @@
   >   exit 80
   > fi
 
-  $ sysbench --test=${SBTEST_SCRIPTDIR}/oltp.lua --db-driver=mysql --mysql-dry-run --max-time=3 --max-requests=0 --report-checkpoints=1,2 run | egrep '(Checkpoint report|OLTP test statistics)'
+  $ sysbench --test=${SBTEST_SCRIPTDIR}/oltp_read_write.lua --db-driver=mysql --mysql-dry-run --max-time=3 --max-requests=0 --report-checkpoints=1,2 run | egrep '(Checkpoint report|OLTP test statistics)'
   [   1s] Checkpoint report:
   OLTP test statistics:
   [   2s] Checkpoint report:

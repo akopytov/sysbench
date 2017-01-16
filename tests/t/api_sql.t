@@ -15,6 +15,7 @@ SQL Lua API tests
   > end
   > 
   > function event()
+  >   print("drv:name() = " .. drv:name())
   >   for k,v in pairs(sysbench.sql.type) do print(k .. " = " .. v) end
   >   print()
   >   
@@ -56,6 +57,7 @@ SQL Lua API tests
   $ mysql -uroot sbtest -Nse "DROP TABLE IF EXISTS t"
 
   $ sysbench $SB_ARGS run
+  drv:name() = mysql
   NONE = 0
   INT = 3
   CHAR = 11

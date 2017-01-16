@@ -7,7 +7,7 @@
   >   exit 80
   > fi
 
-  $ sysbench --test=${SBTEST_SCRIPTDIR}/oltp.lua --db-driver=mysql --mysql-dry-run --max-time=3 --max-requests=0 --report-interval=1 run | grep '\[   2s\]'
+  $ sysbench --test=${SBTEST_SCRIPTDIR}/oltp_read_write.lua --db-driver=mysql --mysql-dry-run --max-time=3 --max-requests=0 --report-interval=1 run | grep '\[   2s\]'
   [   2s] threads: 1 tps: * qps: * (r/w/o: */*/*) latency: *ms (95%) errors/s: 0.00 reconnects/s: 0.00 (glob)
 
 # Run a test that does not support intermediate reports

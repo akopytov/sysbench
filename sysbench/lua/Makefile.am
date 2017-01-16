@@ -17,6 +17,14 @@
 SUBDIRS = internal
 
 dist_pkgdata_DATA = bulk_insert.lua \
-             oltp_common.lua oltp.lua \
+             oltp_common.lua \
+             oltp_delete.lua \
+             oltp_insert.lua \
+             oltp_read_only.lua \
+             oltp_read_write.lua \
              oltp_point_select.lua \
-             select_random_points.lua select_random_ranges.lua
+             oltp_update_index.lua \
+             oltp_update_non_index.lua \
+             oltp_write_only.lua\
+             select_random_points.lua \
+             select_random_ranges.lua

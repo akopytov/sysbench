@@ -31,7 +31,14 @@ typedef enum
   DB_ERROR_FATAL                /* non-ignorable error */
 } sql_error_t;
 
-typedef struct db_driver sql_driver;
+typedef struct
+{
+  const char      *sname;    /* short name */
+  const char      *lname;   /* long name */
+
+  const char      opaque[?];
+} sql_driver;
+
 typedef struct db_conn sql_connection;
 typedef struct db_stmt sql_statement;
 typedef struct db_result sql_result;
@@ -266,15 +273,20 @@ function sysbench.sql.free_results(result)
    return ffi.C.db_free_results(result)
 end
 
+function sysbench.sql.driver_name(driver)
+   return ffi.string(driver.sname)
+end
+
 -- sql_driver metatable
 local driver_mt = {
    __index = {
       connect = sysbench.sql.connect,
+      name = sysbench.sql.driver_name,
    },
    __gc = ffi.C.db_destroy,
    __tostring = function() return '<sql_driver>' end,
 }
-ffi.metatype("struct db_driver", driver_mt)
+ffi.metatype("sql_driver", driver_mt)
 
 -- sql_connection metatable
 local connection_mt = {

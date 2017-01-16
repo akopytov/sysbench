@@ -15,7 +15,7 @@
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 -- ----------------------------------------------------------------------
--- OLTP Point Select benchmark
+-- Write-Only OLTP benchmark
 -- ----------------------------------------------------------------------
 
 pathtest = string.match(test, "(.*/)")
@@ -27,7 +27,17 @@ else
 end
 
 function event()
-  con:query(string.format("SELECT c FROM sbtest%d WHERE id=%d",
-                          sysbench.rand.uniform(1, oltp_tables_count),
-                          sysbench.rand.default(1, oltp_table_size)))
+   local table_name = "sbtest" .. sb_rand_uniform(1, oltp_tables_count)
+
+   if not oltp_skip_trx then
+      con:query("BEGIN")
+   end
+
+   execute_index_updates(con, table_name)
+   execute_non_index_updates(con, table_name)
+   execute_delete_inserts(con, table_name)
+
+   if not oltp_skip_trx then
+      con:query("COMMIT")
+   end
 end

@@ -1,5 +1,5 @@
 ########################################################################
-oltp.lua + MySQL tests 
+oltp_read_write.lua + MySQL tests 
 ########################################################################
 
   $ if [ -z "${SBTEST_MYSQL_ARGS:-}" ]
@@ -12,6 +12,7 @@ oltp.lua + MySQL tests
   > }
 
   $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-table-engine=myisam $SBTEST_MYSQL_ARGS"
+  $ OLTP_SCRIPT_PATH=${SBTEST_SCRIPTDIR}/oltp_read_write.lua
   $ . $SBTEST_INCDIR/script_oltp_common.sh
   sysbench *.* * (glob)
   
@@ -42,83 +43,83 @@ oltp.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_1` (`k`)
-  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest2
   CREATE TABLE `sbtest2` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_2` (`k`)
-  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest3
   CREATE TABLE `sbtest3` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_3` (`k`)
-  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest4
   CREATE TABLE `sbtest4` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_4` (`k`)
-  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest5
   CREATE TABLE `sbtest5` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_5` (`k`)
-  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest6
   CREATE TABLE `sbtest6` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_6` (`k`)
-  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest7
   CREATE TABLE `sbtest7` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_7` (`k`)
-  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest8
   CREATE TABLE `sbtest8` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_8` (`k`)
-  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
   sysbench *.* * (glob)
   
@@ -182,12 +183,12 @@ oltp.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
-  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   sysbench * (glob)
   
   Dropping table 'sbtest1'...
@@ -223,83 +224,83 @@ oltp.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_1` (`k`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest2
   CREATE TABLE `sbtest2` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_2` (`k`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest3
   CREATE TABLE `sbtest3` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_3` (`k`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest4
   CREATE TABLE `sbtest4` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_4` (`k`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest5
   CREATE TABLE `sbtest5` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_5` (`k`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest6
   CREATE TABLE `sbtest6` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_6` (`k`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest7
   CREATE TABLE `sbtest7` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_7` (`k`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   *************************** 1. row ***************************
   sbtest8
   CREATE TABLE `sbtest8` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
     KEY `k_8` (`k`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
   sysbench *.* * (glob)
   
@@ -363,12 +364,12 @@ oltp.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   sysbench * (glob)
   
   Dropping table 'sbtest1'...
