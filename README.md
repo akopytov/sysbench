@@ -1,5 +1,5 @@
-[![Coverage Status](https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=1.0)](https://coveralls.io/github/akopytov/sysbench?branch=1.0)
-[![Build Status](https://travis-ci.org/akopytov/sysbench.svg?branch=1.0)](https://travis-ci.org/akopytov/sysbench)
+[![Coverage Status](https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=master)](https://coveralls.io/github/akopytov/sysbench?branch=master)
+[![Build Status](https://travis-ci.org/akopytov/sysbench.svg?branch=master)](https://travis-ci.org/akopytov/sysbench?branch=master)
 
 About
 =====
