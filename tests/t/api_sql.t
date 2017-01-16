@@ -93,3 +93,39 @@ SQL Lua API tests
   0123456789
 
   $ mysql -uroot sbtest -Nse "DROP TABLE t"
+
+########################################################################
+Multiple connections test
+########################################################################
+  $ SB_ARGS="--verbosity=1 --test=$CRAMTMP/api_sql.lua --max-requests=1 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS"
+  $ cat >$CRAMTMP/api_sql.lua <<EOF
+  > function thread_init()
+  >   drv = sysbench.sql.driver()
+  >   con = {}
+  >   for i=1,10 do
+  >     con[i] = drv:connect()
+  >   end
+  > end
+  > 
+  > function event()
+  >   con[1]:query("DROP TABLE IF EXISTS t")
+  >   con[2]:query("CREATE TABLE t(a INT)")
+  >   for i=1,10 do
+  >     con[i]:query("INSERT INTO t VALUES (" .. i .. ")")
+  >   end
+  > end
+  > EOF
+
+  $ sysbench $SB_ARGS run
+  $ mysql -uroot sbtest -Nse "SELECT * FROM t"
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+  10
+  $ mysql -uroot sbtest -Nse "DROP TABLE t"
