@@ -81,6 +81,7 @@ then
   OPTIMIZE_CFLAGS="-O2"
   GCOV_CFLAGS="-O0 --coverage"
   GCOV_LDFLAGS="-coverage"
+  ASAN_CFLAGS="-fsanitize=address"
 fi
 if test "$ax_cv_c_compiler_vendor" = "sun"
 then
@@ -320,7 +321,6 @@ fi
 AC_CHECK_SIZEOF(size_t)
 
 # Checks for library functions.
-AC_FUNC_MALLOC
 AC_FUNC_MMAP
 AC_FUNC_STRERROR_R
 
@@ -400,6 +400,11 @@ AC_ARG_ENABLE([unreachable],
   [ac_warn_unreachable="$enableval"],
   [ac_warn_unreachable="no"])
 
+AC_ARG_ENABLE([asan],
+  [AS_HELP_STRING([--enable-asan],
+    [Enable AddressSanitizer @<:@default=no@:>@])],
+  [ac_asan="$enableval"],
+  [ac_asan="no"])
 
 AC_ARG_ENABLE([fail],
     [AS_HELP_STRING([--disable-fail],
@@ -425,6 +430,11 @@ then
 else
   # Optimized version. No debug
   CFLAGS="${OPTIMIZE_CFLAGS} ${CFLAGS}"
+fi
+
+if test "$with_asan" = "yes"
+then
+  CFLAGS="${ASAN_CFLAGS} ${CFLAGS}"
 fi
 
 if test "$GCC" = "yes"
