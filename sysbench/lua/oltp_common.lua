@@ -162,6 +162,8 @@ local function get_range_str()
 end
 
 function execute_point_selects(con, table_name)
+   local i
+
    for i=1, oltp_point_selects do
       con:query(string.format("SELECT c FROM %s WHERE id=%u",
                               table_name, sb_rand(1, oltp_table_size)))
@@ -169,6 +171,8 @@ function execute_point_selects(con, table_name)
 end
 
 function execute_simple_ranges(con, table_name)
+   local i
+
    for i=1, oltp_simple_ranges do
       con:query(string.format("SELECT c FROM %s %s",
                               table_name, get_range_str()))
@@ -176,6 +180,8 @@ function execute_simple_ranges(con, table_name)
 end
 
 function execute_sum_ranges(con, table_name)
+   local i
+
    for i=1, oltp_sum_ranges do
       con:query(string.format("SELECT SUM(k) FROM %s %s",
                               table_name, get_range_str()))
@@ -183,6 +189,8 @@ function execute_sum_ranges(con, table_name)
 end
 
 function execute_order_ranges(con, table_name)
+   local i
+
    for i=1, oltp_order_ranges do
       con:query(string.format("SELECT c FROM %s %s ORDER BY c",
                               table_name, get_range_str()))
@@ -190,6 +198,8 @@ function execute_order_ranges(con, table_name)
 end
 
 function execute_distinct_ranges(con, table_name)
+   local i
+
    for i=1, oltp_distinct_ranges do
       con:query(string.format("SELECT DISTINCT c FROM %s %s ORDER BY c",
                               table_name, get_range_str()))
@@ -197,6 +207,8 @@ function execute_distinct_ranges(con, table_name)
 end
 
 function execute_index_updates(con, table_name)
+   local i
+
    for i=1, oltp_index_updates do
       con:query(string.format("UPDATE %s SET k=k+1 WHERE id=%u",
                               table_name, sb_rand(1, oltp_table_size)))
@@ -204,6 +216,8 @@ function execute_index_updates(con, table_name)
 end
 
 function execute_non_index_updates(con, table_name)
+   local i
+
    for i=1, oltp_non_index_updates do
       con:query(string.format("UPDATE %s SET c='%s' WHERE id=%u",
                               table_name, get_c_value(),
@@ -212,6 +226,8 @@ function execute_non_index_updates(con, table_name)
 end
 
 function execute_delete_inserts(con, table_name)
+   local i
+
    for i=1, oltp_delete_inserts do
       local id = sb_rand(1, oltp_table_size)
       local k = sb_rand(1, oltp_table_size)
