@@ -489,13 +489,14 @@ int mysql_drv_disconnect(db_conn_t *sb_conn)
 
 int mysql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
 {
-  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) stmt->connection->ptr;
-  MYSQL      *con = db_mysql_con->mysql;
   MYSQL_STMT *mystmt;
   unsigned int rc;
 
   if (args.dry_run)
     return 0;
+
+  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) stmt->connection->ptr;
+  MYSQL      *con = db_mysql_con->mysql;
 
   if (con == NULL)
     return 1;
@@ -557,8 +558,6 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
 
 int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
-  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) stmt->connection->ptr;
-  MYSQL        *con = db_mysql_con->mysql;
   MYSQL_BIND   *bind;
   unsigned int i;
   my_bool rc;
@@ -566,6 +565,9 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
 
   if (args.dry_run)
     return 0;
+
+  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) stmt->connection->ptr;
+  MYSQL        *con = db_mysql_con->mysql;
 
   if (con == NULL)
     return 1;
@@ -629,11 +631,15 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
 
 int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, size_t len)
 {
-  db_mysql_conn_t *db_mysql_con =(db_mysql_conn_t *) stmt->connection->ptr;
-  MYSQL        *con = db_mysql_con->mysql;
   MYSQL_BIND   *bind;
   unsigned int i;
   my_bool rc;
+
+  if (args.dry_run)
+    return 0;
+
+  db_mysql_conn_t *db_mysql_con =(db_mysql_conn_t *) stmt->connection->ptr;
+  MYSQL        *con = db_mysql_con->mysql;
 
   if (con == NULL || stmt->ptr == NULL)
     return 1;
@@ -924,6 +930,9 @@ int mysql_drv_fetch(db_result_t *rs)
   /* NYI */
   (void)rs;  /* unused */
 
+  if (args.dry_run)
+    return DB_ERROR_NONE;
+
   return 1;
 }
 
@@ -934,6 +943,9 @@ int mysql_drv_fetch(db_result_t *rs)
 
 int mysql_drv_fetch_row(db_result_t *rs, db_row_t *row)
 {
+  if (args.dry_run)
+    return DB_ERROR_NONE;
+
   db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) rs->connection->ptr;
   row->ptr = mysql_fetch_row(rs->ptr);
   DEBUG("mysql_fetch_row(%p) = %p", rs->ptr, row->ptr);

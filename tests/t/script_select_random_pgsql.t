@@ -53,7 +53,7 @@ select_random_*.lua + PostgreSQL tests
           write:                           0
           other:                           0
           total:                           100
-      transactions:                        0      (0.00 per sec.)
+      transactions:                        100    (* per sec.) (glob)
       queries:                             100    (* per sec.) (glob)
       ignored errors:                      0      (0.00 per sec.)
       reconnects:                          0      (0.00 per sec.)
@@ -124,7 +124,7 @@ select_random_*.lua + PostgreSQL tests
           write:                           0
           other:                           0
           total:                           100
-      transactions:                        0      (0.00 per sec.)
+      transactions:                        100    (* per sec.) (glob)
       queries:                             100    (* per sec.) (glob)
       ignored errors:                      0      (0.00 per sec.)
       reconnects:                          0      (0.00 per sec.)
