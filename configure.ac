@@ -19,6 +19,9 @@ AC_CONFIG_SRCDIR([sysbench/sysbench.c])
 AC_CONFIG_HEADER([config/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
+m4_pattern_forbid([^PKG_[A-Z_]+$],
+        [pkg-config has to be installed to build sysbench])
+
 ACX_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CC
