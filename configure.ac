@@ -82,6 +82,9 @@ then
   GCOV_CFLAGS="-O0 --coverage"
   GCOV_LDFLAGS="-coverage"
   ASAN_CFLAGS="-fsanitize=address"
+  ASAN_LDFLAGS="${ASAN_CFLAGS}"
+  MSAN_CFLAGS="-fsanitize=memory"
+  MSAN_LDFLAGS="${MSAN_LDFLAGS}"
 fi
 if test "$ax_cv_c_compiler_vendor" = "sun"
 then
@@ -406,6 +409,12 @@ AC_ARG_ENABLE([asan],
   [ac_asan="$enableval"],
   [ac_asan="no"])
 
+AC_ARG_ENABLE([msan],
+  [AS_HELP_STRING([--enable-msan],
+    [Enable MemorySanitizer @<:@default=no@:>@])],
+  [ac_msan="$enableval"],
+  [ac_msan="no"])
+
 AC_ARG_ENABLE([fail],
     [AS_HELP_STRING([--disable-fail],
        [Turn warnings into failures @<:@default=no@:>@])],
@@ -438,7 +447,17 @@ then
   AX_CHECK_COMPILE_FLAG([-fsanitize=address],
   [
     CFLAGS="${ASAN_CFLAGS} ${CFLAGS}"
-    LDFLAGS="${ASAN_CFLAGS} ${LDFLAGS}"
+    LDFLAGS="${ASAN_LDFLAGS} ${LDFLAGS}"
+  ])
+fi
+
+if test "$ac_msan" = "yes"
+then
+  # Add -fsanitize=memory to CFLAGS/LDFLAGS if supported by the compiler
+  AX_CHECK_COMPILE_FLAG([-fsanitize=memory],
+  [
+    CFLAGS="${MSAN_CFLAGS} ${CFLAGS}"
+    LDFLAGS="${MSAN_CFLAGS} ${LDFLAGS}"
   ])
 fi
 

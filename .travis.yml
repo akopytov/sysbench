@@ -68,7 +68,7 @@ before_script:
   - psql -U postgres -c 'CREATE DATABASE sbtest'
 
 script:
-  - ./autogen.sh && ./configure --enable-coverage --enable-asan --with-mysql --with-pgsql
+  - ./autogen.sh && ./configure --enable-coverage --enable-asan --enable-msan --with-mysql --with-pgsql
   - make
   - make distcheck
   - SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
