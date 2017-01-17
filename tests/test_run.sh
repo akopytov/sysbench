@@ -52,23 +52,28 @@ then
     exit 1
 fi
 
-if [ $# -lt 1 ]
+if [ -z ${srcdir+x} ]
 then
-    if [ -z ${srcdir+x} ]
+    SBTEST_INCDIR="$PWD/include"
+    SBTEST_CONFIG="$SBTEST_INCDIR/config.sh"
+    if [ $# -lt 1 ]
     then
-        SBTEST_INCDIR="$PWD/include"
-        SBTEST_CONFIG="$SBTEST_INCDIR/config.sh"
         tests="t/*.t"
-    else
-        # SBTEST_INCDIR must be an absolute path, because cram changes CWD to a
-        # temporary directory when executing tests. That's why we can just use
-        # $srcdir here
-        SBTEST_INCDIR="$(cd $srcdir; echo $PWD)/include"
-        SBTEST_CONFIG="$PWD/include/config.sh"
-        tests="$srcdir/t/*.t"
     fi
 else
-    tests="$*"
+    # SBTEST_INCDIR must be an absolute path, because cram changes CWD to a
+    # temporary directory when executing tests. That's why we can just use
+    # $srcdir here
+    SBTEST_INCDIR="$(cd $srcdir; echo $PWD)/include"
+    SBTEST_CONFIG="$PWD/include/config.sh"
+    if [ $# -lt 1 ]
+    then
+        tests="$srcdir/t/*.t"
+    fi
+fi
+if [ -z ${tests+x} ]
+then
+   tests="$*"
 fi
 
 export SBTEST_ROOTDIR="$testroot"
