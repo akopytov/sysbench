@@ -23,7 +23,7 @@ EXTRA_DIST = $(test_SCRIPTS) \
 
 testroot = 	$(datadir)
 testdir = 	$(testroot)/sysbench/tests
-test_dirs= 	t
+test_dirs= 	t include include/oltp_legacy
 
 # Used by dist-hook and install-data-local to copy all
 # test files into either dist or install directory
@@ -35,7 +35,7 @@ install_test_files:
 	  from_dir="$(srcdir)/$$dir"; \
 	  to_dir="$(INSTALL_TO_DIR)/$$dir"; \
 	  $(mkinstalldirs) "$$to_dir"; \
-	  for f in `(cd $$from_dir && ls *.t)`; do \
+	  for f in `(cd $$from_dir && ls *.t *.sh *.lua)`; do \
 	    if test -f "$$from_dir/$$f"; then \
 	      $(INSTALL_DATA) "$$from_dir/$$f" "$$to_dir/$$f" ; \
 	    fi; \

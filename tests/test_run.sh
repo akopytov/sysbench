@@ -56,8 +56,15 @@ if [ $# -lt 1 ]
 then
     if [ -z ${srcdir+x} ]
     then
+        SBTEST_INCDIR="$PWD/include"
+        SBTEST_CONFIG="$SBTEST_INCDIR/config.sh"
         tests="t/*.t"
     else
+        # SBTEST_INCDIR must be an absolute path, because cram changes CWD to a
+        # temporary directory when executing tests. That's why we can just use
+        # $srcdir here
+        SBTEST_INCDIR="$(cd $srcdir; echo $PWD)/include"
+        SBTEST_CONFIG="$PWD/include/config.sh"
         tests="$srcdir/t/*.t"
     fi
 else
@@ -67,8 +74,8 @@ fi
 export SBTEST_ROOTDIR="$testroot"
 export SBTEST_SCRIPTDIR="$testroot/../sysbench/lua"
 export SBTEST_SUITEDIR="$testroot/t"
-export SBTEST_INCDIR="$PWD/include"
-export SBTEST_CONFIG="$SBTEST_INCDIR/config.sh"
+export SBTEST_CONFIG
+export SBTEST_INCDIR
 
 . $SBTEST_CONFIG
 
