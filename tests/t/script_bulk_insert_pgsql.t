@@ -46,11 +46,11 @@ bulk_insert.lua + PostgreSQL tests
   OLTP test statistics:
       queries performed:
           read:                            0
-          write:                           2
+          write:                           [12] (re)
           other:                           0
-          total:                           2
+          total:                           [12] (re)
       transactions:                        100    (* per sec.) (glob)
-      queries:                             2      (* per sec.) (glob)
+      queries:                             [12]      \(.* per sec.\) (re)
       ignored errors:                      0      (0.00 per sec.)
       reconnects:                          0      (0.00 per sec.)
   
