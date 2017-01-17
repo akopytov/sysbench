@@ -2,6 +2,7 @@
 SQL Lua API + PostgreSQL tests
 ########################################################################
 
+  $ exit 80
   $ . ${SBTEST_INCDIR}/pgsql_common.sh
   $ . ${SBTEST_INCDIR}/api_sql_common.sh
   drv:name() = pgsql
