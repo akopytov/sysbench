@@ -90,16 +90,16 @@ typedef struct {
 
 /* Lua interpreter states */
 
-static lua_State **states;
+static lua_State **states CK_CC_CACHELINE;
 
 /* Event counter */
-static unsigned int nevents;
+static unsigned int nevents CK_CC_CACHELINE;
 
-static sb_test_t sbtest;
+static sb_test_t sbtest CK_CC_CACHELINE;
 
-static const char *sb_lua_script_path;
+static const char *sb_lua_script_path CK_CC_CACHELINE;
 
-static TLS sb_lua_ctxt_t *tls_lua_ctxt;
+static TLS sb_lua_ctxt_t *tls_lua_ctxt CK_CC_CACHELINE;
 
 /* Lua test operations */
 
