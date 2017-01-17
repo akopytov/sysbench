@@ -148,7 +148,7 @@ end
 
 function sysbench.sql.query(con, query)
    check_type(sql_connection, con, 'sysbench.sql.query')
-   return ffi.gc(ffi.C.db_query(con, query, #query), sysbench.sql.free_results)
+   return ffi.C.db_query(con, query, #query)
 end
 
 function sysbench.sql.bulk_insert_init(con, query)
@@ -268,11 +268,6 @@ function sysbench.sql.close(stmt)
    return ffi.C.db_close(stmt)
 end
 
-function sysbench.sql.fetch_row(rs)
-   check_type(sql_result, rs, 'sysbench.sql.fetch_row')
-   return ffi.C.db_fetch_row(rs)
-end
-
 function sysbench.sql.free_results(result)
    check_type(sql_result, result, 'sysbench.sql.free_results')
    return ffi.C.db_free_results(result)
@@ -334,7 +329,6 @@ ffi.metatype("sql_bind", bind_mt)
 -- sql_results metatable
 local result_mt = {
    __index = {
-      fetch_row = sysbench.sql.fetch_row,
       free = sysbench.sql.free_results
    },
    __tostring = function() return '<sql_result>' end,
