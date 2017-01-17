@@ -2,16 +2,7 @@
 bulk_insert.lua + MySQL tests
 ########################################################################
 
-  $ if [ -z "${SBTEST_MYSQL_ARGS:-}" ]
-  > then
-  >   exit 80
-  > fi
-
-  $ function db_show_table() {
-  >   mysql -uroot sbtest -Nse "SHOW CREATE TABLE $1\G"
-  > }
-
-  $ DB_DRIVER_ARGS="--db-driver=mysql $SBTEST_MYSQL_ARGS"
+  $ . $SBTEST_INCDIR/mysql_common.sh
   $ . $SBTEST_INCDIR/script_bulk_insert_common.sh
   Creating table 'sbtest1'...
   Creating table 'sbtest2'...

@@ -167,9 +167,7 @@ static int mysql_drv_bind_param(db_stmt_t *, db_bind_t *, size_t);
 static int mysql_drv_bind_result(db_stmt_t *, db_bind_t *, size_t);
 static db_error_t mysql_drv_execute(db_stmt_t *, db_result_t *);
 static int mysql_drv_fetch(db_result_t *);
-#if 0
 static int mysql_drv_fetch_row(db_result_t *, db_row_t *);
-#endif
 static db_error_t mysql_drv_query(db_conn_t *, const char *, size_t,
                            db_result_t *);
 static int mysql_drv_free_results(db_result_t *);
@@ -195,11 +193,7 @@ static db_driver_t mysql_driver =
     .bind_result = mysql_drv_bind_result,
     .execute = mysql_drv_execute,
     .fetch = mysql_drv_fetch,
-#if 0
     .fetch_row = mysql_drv_fetch_row,
-#else
-    .fetch_row = NULL,
-#endif
     .free_results = mysql_drv_free_results,
     .close = mysql_drv_close,
     .query = mysql_drv_query,
@@ -916,7 +910,10 @@ db_error_t mysql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
   rs->ptr = (void *)res;
 
   rs->nrows = mysql_num_rows(res);
-  DEBUG("mysql_num_rows(%p) = %u", res, (unsigned int)rs->nrows);
+  DEBUG("mysql_num_rows(%p) = %u", res, (unsigned int) rs->nrows);
+
+  rs->nfields = mysql_num_fields(res);
+  DEBUG("mysql_num_fields(%p) = %u", res, (unsigned int) rs->nfields);
 
   return DB_ERROR_NONE;
 }
@@ -936,29 +933,30 @@ int mysql_drv_fetch(db_result_t *rs)
   return 1;
 }
 
-
-#if 0
 /* Fetch row from result set of a query */
-
 
 int mysql_drv_fetch_row(db_result_t *rs, db_row_t *row)
 {
+  MYSQL_ROW my_row;
+
   if (args.dry_run)
     return DB_ERROR_NONE;
 
-  db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) rs->connection->ptr;
-  row->ptr = mysql_fetch_row(rs->ptr);
-  DEBUG("mysql_fetch_row(%p) = %p", rs->ptr, row->ptr);
-  if (row->ptr == NULL)
+  my_row = mysql_fetch_row(rs->ptr);
+  DEBUG("mysql_fetch_row(%p) = %p", rs->ptr, my_row);
+
+  unsigned long *lengths = mysql_fetch_lengths(rs->ptr);
+  if (lengths == NULL)
+    return DB_ERROR_NONE;
+
+  for (size_t i = 0; i < rs->nfields; i++)
   {
-    log_text(LOG_FATAL, "mysql_fetch_row() failed: %s",
-             mysql_error(db_mysql_con->mysql));
-    return 1;
+    row->values[i].len = lengths[i];
+    row->values[i].ptr = my_row[i];
   }
 
-  return 0;
+  return DB_ERROR_NONE;
 }
-#endif
 
 /* Free result set */
 

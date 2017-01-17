@@ -2,16 +2,7 @@
 oltp_point_select.lua + MySQL tests 
 ########################################################################
 
-  $ if [ -z "${SBTEST_MYSQL_ARGS:-}" ]
-  > then
-  >   exit 80
-  > fi
-
-  $ function db_show_table() {
-  >   mysql -uroot sbtest -Nse "SHOW CREATE TABLE $1\G"
-  > }
-
-  $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-table-engine=innodb $SBTEST_MYSQL_ARGS"
+  $ . $SBTEST_INCDIR/mysql_common.sh
   $ OLTP_SCRIPT_PATH=${SBTEST_SCRIPTDIR}/oltp_point_select.lua
   $ . $SBTEST_INCDIR/script_oltp_common.sh
   sysbench *.* * (glob)

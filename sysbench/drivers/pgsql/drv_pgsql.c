@@ -477,7 +477,9 @@ static db_error_t pgsql_check_status(PGconn *pgcon, PGresult *pgres,
   switch(status) {
   case PGRES_TUPLES_OK:
     rs->nrows = PQntuples(pgres);
+    rs->nfields = PQnfields(pgres);
     rs->stat_type = DB_STAT_READ;
+
     rc = DB_ERROR_NONE;
 
     break;
@@ -656,11 +658,35 @@ int pgsql_drv_fetch(db_result_t *rs)
 
 int pgsql_drv_fetch_row(db_result_t *rs, db_row_t *row)
 {
-  /* NYI */
-  (void)rs;  /* unused */
-  (void)row; /* unused */
-  
-  return 1;
+  intptr_t rownum;
+  int      i;
+
+  /*
+    Use row->ptr as a row number, rather than a pointer to avoid dynamic
+    memory management.
+  */
+  rownum = (intptr_t) row->ptr;
+  if (rownum >= (int) rs->nrows)
+    return DB_ERROR_NONE;
+
+  for (i = 0; i < (int) rs->nfields; i++)
+  {
+    /*
+      PQgetvalue() returns an empty string, not a NULL value for a NULL
+      field. Callers of this function expect a NULL pointer in this case.
+    */
+    if (PQgetisnull(rs->ptr, rownum, i))
+      row->values[i].ptr = NULL;
+    else
+    {
+      row->values[i].len = PQgetlength(rs->ptr, rownum, i);
+      row->values[i].ptr = PQgetvalue(rs->ptr, rownum, i);
+    }
+  }
+
+  row->ptr = (void *) (rownum + 1);
+
+  return DB_ERROR_NONE;
 }
 
 
@@ -673,6 +699,8 @@ int pgsql_drv_free_results(db_result_t *rs)
   {
     PQclear((PGresult *)rs->ptr);
     rs->ptr = NULL;
+
+    rs->row.ptr = 0;
     return 0;
   }
 

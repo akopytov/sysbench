@@ -23,6 +23,10 @@ ffi = require("ffi")
 sysbench.sql = {}
 
 ffi.cdef[[
+/*
+  The following definitions have been copied with modifications from db_driver.h
+*/
+
 typedef enum
 {
   DB_ERROR_NONE,                /* no error(s) */
@@ -39,9 +43,46 @@ typedef struct
   const char      opaque[?];
 } sql_driver;
 
+typedef struct {
+  uint32_t        len;         /* Value length */
+  const char      *ptr;        /* Value string */
+} sql_value;
+
+/* Result set row definition */
+
+typedef struct
+{
+  void            *ptr;        /* Driver-specific row data */
+  sql_value       *values;     /* Array of column values */
+} sql_row;
+
+/* Query type for statistics */
+
+typedef enum
+{
+  DB_STAT_OTHER,
+  DB_STAT_READ,
+  DB_STAT_WRITE,
+  DB_STAT_TRX,
+  DB_STAT_ERROR,
+  DB_STAT_RECONNECT,
+  DB_STAT_MAX
+} sql_stat_type;
+
 typedef struct db_conn sql_connection;
 typedef struct db_stmt sql_statement;
-typedef struct db_result sql_result;
+
+/* Result set definition */
+
+typedef struct
+{
+  sql_stat_type  stat_type;     /* Statistical counter type */
+  uint32_t       nrows;         /* Number of affected rows */
+  uint32_t       nfields;       /* Number of fields */
+  sql_statement  *statement;    /* Pointer to prepared statement (if used) */
+  void           *ptr;          /* Pointer to driver-specific data */
+  sql_row        row;           /* Last fetched row */
+} sql_result;
 
 typedef enum
 {
@@ -82,6 +123,8 @@ void db_bulk_insert_done(sql_connection *);
 
 sql_result *db_query(sql_connection *con, const char *query, size_t len);
 
+sql_row *db_fetch_row(sql_result *rs);
+
 sql_statement *db_prepare(sql_connection *con, const char *query, size_t len);
 int db_bind_param(sql_statement *stmt, sql_bind *params, size_t len);
 int db_bind_result(sql_statement *stmt, sql_bind *results, size_t len);
@@ -96,6 +139,8 @@ local sql_connection = ffi.typeof('sql_connection *')
 local sql_statement = ffi.typeof('sql_statement *')
 local sql_bind = ffi.typeof('sql_bind');
 local sql_result = ffi.typeof('sql_result');
+local sql_value = ffi.typeof('sql_value');
+local sql_row = ffi.typeof('sql_row');
 
 sysbench.sql.type =
    {
@@ -268,6 +313,41 @@ function sysbench.sql.close(stmt)
    return ffi.C.db_close(stmt)
 end
 
+-- Returns the next row of values from a result set, or nil if there are no more
+-- rows to fetch. Values are returned as an array, i.e. a table with numeric
+-- indexes starting from 1. The total number of values (i.e. fields in a result
+-- set) can be obtained from sql_result.nfields.
+function sysbench.sql.fetch_row(rs)
+   check_type(sql_result, rs, 'sysbench.sql.fetch_row')
+
+   local res = {}
+   local row = ffi.C.db_fetch_row(rs)
+
+   if row == nil then
+      return nil
+   end
+
+   local i
+   for i = 0, rs.nfields-1 do
+      if row.values[i].ptr ~= nil then -- not a NULL value
+         res[i+1] = ffi.string(row.values[i].ptr, tonumber(row.values[i].len))
+      end
+   end
+
+   return res
+end
+
+function sysbench.sql.query_row(con, query)
+   check_type(sql_connection, con, 'sysbench.sql.query_row')
+
+   local rs = con:query(query)
+   if rs == nil then
+      return nil
+   end
+
+   return unpack(rs:fetch_row(), 1, rs.nfields)
+end
+
 function sysbench.sql.free_results(result)
    check_type(sql_result, result, 'sysbench.sql.free_results')
    return ffi.C.db_free_results(result)
@@ -293,6 +373,7 @@ local connection_mt = {
    __index = {
       disconnect = sysbench.sql.disconnect,
       query = sysbench.sql.query,
+      query_row = sysbench.sql.query_row,
       bulk_insert_init = sysbench.sql.bulk_insert_init,
       bulk_insert_next = sysbench.sql.bulk_insert_next,
       bulk_insert_done = sysbench.sql.bulk_insert_done,
@@ -329,7 +410,8 @@ ffi.metatype("sql_bind", bind_mt)
 -- sql_results metatable
 local result_mt = {
    __index = {
-      free = sysbench.sql.free_results
+      fetch_row = sysbench.sql.fetch_row,
+      free = sysbench.sql.free_results,
    },
    __tostring = function() return '<sql_result>' end,
    __gc = sysbench.sql.free_results

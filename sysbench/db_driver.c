@@ -537,22 +537,28 @@ db_row_t *db_fetch_row(db_result_t *rs)
     return NULL;
   }
 
-#if 0
-  if (rs->row != NULL)
-    db_free_row(rs->row);
-  rs->row = (db_row_t *)calloc(1, sizeof(db_row_t));
-  if (rs->row == NULL)
-    return NULL;
-  
-  if (con->driver->ops.fetch_row(rs, rs->row))
+  if (con->driver->ops.fetch_row == NULL)
   {
-    db_free_row(rs->row);
+    log_text(LOG_ALERT, "fetching rows is not supported by the driver");
+  }
+
+  if (rs->nrows == 0 || rs->nfields == 0)
+  {
+    log_text(LOG_ALERT, "attempt to fetch row from an empty result set");
     return NULL;
   }
 
-  return rs->row;
-#endif
-  return NULL;
+  if (rs->row.values == NULL)
+  {
+    rs->row.values = malloc(rs->nfields * sizeof(db_value_t));
+  }
+
+  if (con->driver->ops.fetch_row(rs, &rs->row))
+  {
+    return NULL;
+  }
+
+  return &rs->row;
 }
 
 
@@ -594,10 +600,16 @@ static int db_free_results_int(db_conn_t *con)
 
   rc = con->driver->ops.free_results(&con->rs);
 
-#if 0
-  if (rs->row != NULL)
-    db_free_row(rs->row);
-#endif
+  if (con->rs.row.values != NULL)
+  {
+    free(con->rs.row.values);
+    con->rs.row.values = NULL;
+  }
+
+  con->rs.nrows = 0;
+  con->rs.nfields = 0;
+
+  con->rs.statement = NULL;
 
   con->state = DB_CONN_READY;
 
@@ -628,9 +640,18 @@ int db_free_results(db_result_t *rs)
 int db_close(db_stmt_t *stmt)
 {
   int       rc;
-  db_conn_t *con;
+  db_conn_t *con = stmt->connection;
 
-  con = stmt->connection;
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
+    return 0;
+  }
+  else if (con->state == DB_CONN_RESULT_SET &&
+           (rc = db_free_results_int(con)) != 0)
+  {
+    return DB_ERROR_FATAL;
+  }
 
   if (con->state == DB_CONN_INVALID)
   {
@@ -836,7 +857,6 @@ int db_bulk_insert_init(db_conn_t *con, const char *query, size_t query_len)
   if (con->bulk_buffer == NULL)
     return 1;
   
-  con->bulk_supported = driver_caps.multi_rows_insert;
   con->bulk_commit_max = driver_caps.needs_commit ? ROWS_BEFORE_COMMIT : 0;
   con->bulk_commit_cnt = 0;
   strcpy(con->bulk_buffer, query);

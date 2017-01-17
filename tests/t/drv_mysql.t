@@ -2,11 +2,7 @@
 MySQL driver tests
 ########################################################################
 
-  $ if [ -z "${SBTEST_MYSQL_ARGS:-}" ]
-  > then
-  >   exit 80
-  > fi
-  $ DB_DRIVER_ARGS="--db-driver=mysql $SBTEST_MYSQL_ARGS"
+  $ . $SBTEST_INCDIR/mysql_common.sh
   $ . $SBTEST_INCDIR/drv_common.sh
   sysbench *.* * (glob)
   

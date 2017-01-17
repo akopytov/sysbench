@@ -2,11 +2,6 @@
 Basic Lua API tests
 ########################################################################
 
-  $ if [ -z "${SBTEST_MYSQL_ARGS:-}" ]
-  > then
-  >   exit 80
-  > fi
-
   $ SB_ARGS="--verbosity=0 --test=$CRAMTMP/api_basic.lua --max-requests=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS"
 
   $ cat >$CRAMTMP/api_basic.lua <<EOF

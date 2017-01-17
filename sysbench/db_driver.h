@@ -186,14 +186,31 @@ typedef enum {
   DB_STAT_MAX
 } db_stat_type_t;
 
+/* Row value definition */
+
+typedef struct {
+  uint32_t        len;         /* Value length */
+  const char      *ptr;        /* Value string */
+} db_value_t;
+
+/* Result set row definition */
+
+typedef struct db_row
+{
+  void            *ptr;        /* Driver-specific row data */
+  db_value_t      *values;     /* Array of column values */
+} db_row_t;
+
 /* Result set definition */
 
 typedef struct db_result
 {
   db_stat_type_t stat_type;     /* Statistical counter type */
   uint32_t       nrows;         /* Number of affected rows */
+  uint32_t       nfields;       /* Number of fields */
   struct db_stmt *statement;    /* Pointer to prepared statement (if used) */
   void           *ptr;          /* Pointer to driver-specific data */
+  db_row_t       row;           /* Last fetched row */
 } db_result_t;
 
 typedef enum {
@@ -211,11 +228,8 @@ typedef struct db_conn
   db_error_t      db_errno;          /* Driver-independent error code */
   db_conn_state_t state;             /* Connection state */
   db_result_t     rs;                /* Result set */
-  int             thread_id;         /* Assiciated thread id (required to
-                                     collect per-thread stats */
+  int             thread_id;         /* Thread this connection belongs to */
 
-  char            bulk_supported;    /* 1, if multi-row inserts are supported by
-                                     the driver */
   unsigned int    bulk_cnt;          /* Current number of rows in bulk insert buffer */
   unsigned int    bulk_buflen;       /* Current length of bulk_buffer */
   char            *bulk_buffer;      /* Bulk insert query buffer */
@@ -244,14 +258,6 @@ typedef struct db_stmt
   db_stat_type_t  stat_type;       /* Query type */
   void            *ptr;            /* Pointer to driver-specific data structure */
 } db_stmt_t;
-
-/* Result set row definition */
-
-typedef struct db_row
-{
-  db_result_t *result; /* Result set which this row belongs to */
-  void            *ptr;        /* Driver-specific row data */ 
-} db_row_t;
 
 /*
   sizeof(db_stats_t) must be multiple of CK_MD_CACHELINE to avoid cache

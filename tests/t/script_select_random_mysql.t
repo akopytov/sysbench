@@ -2,16 +2,7 @@
 select_random_*.lua + MySQL tests 
 ########################################################################
 
-  $ if [ -z "${SBTEST_MYSQL_ARGS:-}" ]
-  > then
-  >   exit 80
-  > fi
-
-  $ function db_show_table() {
-  >   mysql -uroot sbtest -Nse "SHOW CREATE TABLE $1\G"
-  > }
-
-  $ DB_DRIVER_ARGS="--db-driver=mysql $SBTEST_MYSQL_ARGS"
+  $ . $SBTEST_INCDIR/mysql_common.sh
   $ . $SBTEST_INCDIR/script_select_random_common.sh
   sysbench * (glob)
   
