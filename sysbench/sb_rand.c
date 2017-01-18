@@ -172,7 +172,7 @@ void sb_rand_done(void)
 
 void sb_rand_thread_init(void)
 {
-  /* We use libc PRNG to see xoroshiro128+ */
+  /* We use libc PRNG to seed xoroshiro128+ */
   sb_rng_state[0] = (((uint64_t) random()) << 32) |
     (((uint64_t) random()) & UINT32_MAX);
   sb_rng_state[1] = (((uint64_t) random()) << 32) |
