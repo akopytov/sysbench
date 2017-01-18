@@ -17,7 +17,7 @@
 BUILT_SOURCES = sysbench.lua.h sysbench.rand.lua.h sysbench.sql.lua.h
 CLEARFILES = $(BUILT_SOURCES)
 
-EXTRA_DIST = $(BUILD_SOURCE:.h=)
+EXTRA_DIST = $(BUILT_SOURCES:.h=)
 
 SUFFIXES = .lua .lua.h
 
