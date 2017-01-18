@@ -529,7 +529,7 @@ int ora_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
     if (ora_stmt->params == NULL)
       return 1;
     
-    /* Convert SysBench bind structures to Oracle ones */
+    /* Convert sysbench bind structures to Oracle ones */
     bindp = NULL;
     for (i = 0; i < len; i++)
     {
@@ -1005,7 +1005,7 @@ int ora_drv_done(void)
 }
 
 
-/* Get Oracle type, type length and indicator values from SysBench parameter */
+/* Get Oracle type, type length and indicator values from sysbench parameter */
 
 sword get_oracle_bind_type(db_bind_t *param, ub2 *type, sb4 *len,
                            sb2 *ind)

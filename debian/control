@@ -10,7 +10,7 @@ Package: sysbench
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Cross-platform and multi-threaded benchmark tool
- SysBench is a modular, cross-platform and multi-threaded benchmark tool for
+ sysbench is a modular, cross-platform and multi-threaded benchmark tool for
  evaluating OS parameters that are important for a system running a database
  under intensive load.
  .

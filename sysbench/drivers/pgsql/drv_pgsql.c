@@ -412,7 +412,7 @@ int pgsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
   if (pgstmt->ptypes == NULL)
     return 1;
 
-  /* Convert SysBench data types to PgSQL ones */
+  /* Convert sysbench data types to PgSQL ones */
   for (i = 0; i < len; i++)
     pgstmt->ptypes[i] = get_pgsql_bind_type(params[i].type);
 
@@ -551,7 +551,7 @@ db_error_t pgsql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
       return DB_ERROR_FATAL;
     }
 
-    /* Convert SysBench bind structures to PgSQL data */
+    /* Convert sysbench bind structures to PgSQL data */
     for (i = 0; i < (unsigned)pgstmt->nparams; i++)
     {
       if (stmt->bound_param[i].is_null && *(stmt->bound_param[i].is_null))

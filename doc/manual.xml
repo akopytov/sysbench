@@ -3,7 +3,7 @@
 
 <book id="sysbench-guide">
   <bookinfo>
-    <title>SysBench manual</title>
+    <title>sysbench manual</title>
     
     <authorgroup>
       <author>
@@ -26,11 +26,11 @@
     <title>About this document</title>
 
     <para>
-      This document is a user manual for SysBench, a multi-threaded
+      This document is a user manual for sysbench, a multi-threaded
       benchmark tool available from <ulink
       url="http://launchpad.net/sysbench">http://launchpad.net/sysbench</ulink>.
       This document describes features provided by the 0.4.x development
-      branch of SysBench. New features available in the newer 0.5.x
+      branch of sysbench. New features available in the newer 0.5.x
       branch are not covered by this document.
     </para>
 
@@ -65,7 +65,7 @@
     <title>Introduction</title>
 
     <para>
-      SysBench is a modular, cross-platform and multi-threaded benchmark tool for evaluating OS parameters 
+      sysbench is a modular, cross-platform and multi-threaded benchmark tool for evaluating OS parameters 
       that are important for a system running a database under intensive load. 
     </para>
     <para>
@@ -73,7 +73,7 @@
       complex database benchmarks or even without installing a database at all. 
     </para>
     <section id="features">
-      <title>Features of SysBench</title>
+      <title>Features of sysbench</title>
       <para>
 	Current features allow to test the following system parameters: 
 	<itemizedlist>
@@ -89,12 +89,12 @@
     <section id="design">
       <title>Design</title>
       <para>
-	The design is very simple. SysBench runs a specified number of threads and they all execute requests in parallel.
+	The design is very simple. sysbench runs a specified number of threads and they all execute requests in parallel.
 	The actual workload produced by requests depends on the specified test mode. You can limit either the total number of
 	requests or the total time for the benchmark, or both.
       </para>
       <para>
-	Available test modes are implemented by compiled-in modules, and SysBench was designed to make adding new test modes
+	Available test modes are implemented by compiled-in modules, and sysbench was designed to make adding new test modes
 	an easy task. Each test mode may have additional (or workload-specific) options.
       </para>
     </section>
@@ -162,23 +162,23 @@
       <title>Installation</title>
 
       <para>
-        If you are building SysBench from a Bazaar repository rather than from a release tarball,
+        If you are building sysbench from a Bazaar repository rather than from a release tarball,
         you should run <command>./autogen.sh</command> before building.
       </para>
       <para>
-	The following standart procedure will be sufficient to build SysBench in most cases:
+	The following standart procedure will be sufficient to build sysbench in most cases:
 	<synopsis>
 	  <command>./configure</command>
 	  <command>make</command>
 	  <command>make install</command>
 	</synopsis>
-	The above procedure will try to compile SysBench with MySQL support by default. If you have MySQL headers and libraries
+	The above procedure will try to compile sysbench with MySQL support by default. If you have MySQL headers and libraries
 	in non-standard locations (and no <command>mysql_config</command> can be found in the <constant>PATH</constant>
 	environmental variable), then you can specify them explicitly with <option>--with-mysql-includes</option> and
 	<option>--with-mysql-libs</option> options to <command>./configure</command>. 
       </para>
       <para>
-	To compile SysBench without MySQL support, use <option>--without-mysql</option>. In this case all database-related
+	To compile sysbench without MySQL support, use <option>--without-mysql</option>. In this case all database-related
 	test modes will be unavailable.
       </para>
       <para>
@@ -194,7 +194,7 @@
       <title>General syntax</title>
 
       <para>
-	The general syntax for SysBench is as follows:
+	The general syntax for sysbench is as follows:
 	<screen>
 	  sysbench <emphasis>[common-options]</emphasis> --test=<emphasis>name</emphasis> <emphasis>[test-options]</emphasis> <emphasis>command</emphasis>
 	</screen>
@@ -259,7 +259,7 @@
 	    <row><entry><option>--percentile</option></entry>
 	      <entry>
 		<para>
-		  SysBench measures execution times for all processed
+		  sysbench measures execution times for all processed
 		  requests to display statistical information like minimal, average and
 		  maximum execution time. For most benchmarks it is also useful to know
 		  a request execution time value matching some percentile (e.g. 95%
@@ -288,14 +288,14 @@
     <section id="test_modes">
       <title>Test modes</title>
       This section gives a detailed description for each test mode available
-      in SysBench.
+      in sysbench.
 
       <section id="cpu_mode">
 	<title><option>cpu</option></title>
       </section>
       <para>
 	The <option>cpu</option> is one of the most simple benchmarks in
-	SysBench. In this mode each request consists in calculation of prime numbers up to a value
+	sysbench. In this mode each request consists in calculation of prime numbers up to a value
 	specified by the <option>--cpu-max-primes</option> option. All calculations are performed using 64-bit integers.
       </para>
       <para>
@@ -317,7 +317,7 @@
 	when a scheduler has a large number of threads competing for some set of mutexes.
       </para>
       <para>
-	SysBench creates a specified number of threads and a specified number of mutexes. Then each thread
+	sysbench creates a specified number of threads and a specified number of mutexes. Then each thread
 	starts running the requests consisting of locking the mutex, yielding the CPU, so the thread is
 	placed in the run queue by the scheduler, then unlocking the mutex when the thread is rescheduled back
 	to execution. For each request, the above actions are run several times in a loop, so the more iterations
@@ -398,12 +398,12 @@
 
 	<para>
 	  This test mode can be used to produce various kinds of file I/O workloads. At the <option>prepare</option>
-	  stage SysBench creates a specified number of files with a specified total size, then at the <option>run</option>
+	  stage sysbench creates a specified number of files with a specified total size, then at the <option>run</option>
 	  stage, each thread performs specified I/O operations on this set of files.
 	</para>
 
 	<para>
-	  When the global <option>--validate</option> option is used with the <option>fileio</option> test mode, SysBench
+	  When the global <option>--validate</option> option is used with the <option>fileio</option> test mode, sysbench
 	  performs checksums validation on all data read from the disk. On each write operation the block is filled with random values,
 	  then the checksum is calculated
 	  and stored in the block along with the offset of this block within a file. On each read operation the block is validated
@@ -454,14 +454,14 @@
 	      <term>Asynchronous I/O mode</term>
 	      <listitem>
 		At the moment only Linux AIO implementation is supported. When running in asynchronous mode,
-		SysBench queues a specified number of I/O requests using Linux AIO API, then waits for 
+		sysbench queues a specified number of I/O requests using Linux AIO API, then waits for 
 		at least one of submitted requests to complete. After that a new series of I/O requests
 		is submitted. 
 	      </listitem>
 	    </varlistentry>
 	    <varlistentry>
 	      <term>Slow <option>mmap()</option> mode</term>
-	      <listitem>In this mode SysBench will use <option>mmap</option>'ed I/O. However, a separate
+	      <listitem>In this mode sysbench will use <option>mmap</option>'ed I/O. However, a separate
 		<option>mmap</option> will be used for each I/O request due to the limitation of 32-bit
 		architectures (we cannot <option>mmap()</option> the whole file, as its size migth possibly
 		exceed the maximum of 2 GB of the process address space).
@@ -481,7 +481,7 @@
 	    </varlistentry>
 	    <varlistentry>
 	      <term>Additional flags to <option>open(2)</option></term>
-	      <listitem>SysBench can use additional flags to <option>open(2)</option>, such as <option>O_SYNC</option>,
+	      <listitem>sysbench can use additional flags to <option>open(2)</option>, such as <option>O_SYNC</option>,
                 <option>O_DSYNC</option> and <option>O_DIRECT</option>.
 	      </listitem>
 	    </varlistentry>
@@ -586,7 +586,7 @@
 	      <para>
 		Each thread performs transactions on the test table. If the test table and database support transactions
 		(e.g. InnoDB engine in MySQL), then <option>BEGIN</option>/<option>COMMIT</option> statements will be used
-		to start/stop a transaction. Otherwise, SysBench will use <option>LOCK TABLES</option>/<option>UNLOCK TABLES
+		to start/stop a transaction. Otherwise, sysbench will use <option>LOCK TABLES</option>/<option>UNLOCK TABLES
 		</option> statements (e.g. for MyISAM engine in MySQL). If some rows are deleted in a transaction,
 		the same rows will be inserted within the same transaction, so this test mode does not destruct any data
 		in the test table and can be run multiple times on the same table.
@@ -720,7 +720,7 @@
 		  Percentage of cases when 'special' values are generated (for special distribution)
 		</entry><entry>75</entry></row>
 	      <row><entry><option>--db-ps-mode</option></entry><entry>
-		  If the database driver supports Prepared Statements API, SysBench will use server-side prepared statements for all queries
+		  If the database driver supports Prepared Statements API, sysbench will use server-side prepared statements for all queries
 		  where possible. Otherwise, client-side (or emulated) prepared statements will be used. This option allows to force using
 		  emulation even when PS API is available. Possible values: <option>disable</option>, <option>auto</option>.
 		</entry><entry><option>auto</option></entry></row>
@@ -743,7 +743,7 @@
                           MySQL server host. 
                       </para>
                       <para>
-                          Starting from version 0.4.5 you may specify a list of hosts separated by commas. In this case SysBench will distribute connections between specified MySQL hosts on a round-robin basis. Note that all connection ports and passwords must be the same on all hosts. Also, databases and tables must be prepared explicitely on each host before executing the benchmark.
+                          Starting from version 0.4.5 you may specify a list of hosts separated by commas. In this case sysbench will distribute connections between specified MySQL hosts on a round-robin basis. Note that all connection ports and passwords must be the same on all hosts. Also, databases and tables must be prepared explicitely on each host before executing the benchmark.
                       </para>
                   </entry><entry><option>localhost</option></entry></row>
 	      <row><entry><option>--mysql-port</option></entry><entry>
@@ -757,7 +757,7 @@
 		  MySQL password
 		</entry><entry></entry></row>
 	      <row><entry><option>--mysql-db</option></entry><entry>
-		  MySQL database name. Note SysBench will not automatically create this database. You should create it manually and grant
+		  MySQL database name. Note sysbench will not automatically create this database. You should create it manually and grant
 		  the appropriate privileges to a user which will be used to access the test table.
 		</entry><entry>sbtest</entry></row>
 	      <row><entry><option>--mysql-table-type</option></entry><entry>

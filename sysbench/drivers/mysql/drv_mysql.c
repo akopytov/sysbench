@@ -578,7 +578,7 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
       log_text(LOG_FATAL, "Wrong number of parameters to mysql_stmt_bind_param");
       return 1;
     }
-    /* Convert SysBench bind structures to MySQL ones */
+    /* Convert sysbench bind structures to MySQL ones */
     bind = (MYSQL_BIND *)calloc(len, sizeof(MYSQL_BIND));
     if (bind == NULL)
       return 1;
@@ -638,7 +638,7 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, size_t len)
   if (con == NULL || stmt->ptr == NULL)
     return 1;
 
-  /* Convert SysBench bind structures to MySQL ones */
+  /* Convert sysbench bind structures to MySQL ones */
   bind = (MYSQL_BIND *)calloc(len, sizeof(MYSQL_BIND));
   if (bind == NULL)
     return 1;

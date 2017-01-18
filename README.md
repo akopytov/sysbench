@@ -4,7 +4,7 @@
 About
 =====
 
-SysBench is a modular, cross-platform and multi-threaded benchmark tool
+sysbench is a modular, cross-platform and multi-threaded benchmark tool
 for evaluating OS parameters that are important for a system running a
 database under intensive load.
 
@@ -34,9 +34,9 @@ Installation
 	./configure
 	make
 
-The above will build SysBench with MySQL support by default. If you have MySQL headers and libraries in non-standard locations (and no `mysql_config` can be found in the `PATH`), you can specify them explicitly with `--with-mysql-includes` and `--with-mysql-libs` options to `./configure`.
+The above will build sysbench with MySQL support by default. If you have MySQL headers and libraries in non-standard locations (and no `mysql_config` can be found in the `PATH`), you can specify them explicitly with `--with-mysql-includes` and `--with-mysql-libs` options to `./configure`.
 
-To compile SysBench without MySQL support, use `--without-mysql`. In
+To compile sysbench without MySQL support, use `--without-mysql`. In
 this case all database-related tests will not work, but other tests will
 be functional.
 
@@ -52,7 +52,7 @@ Usage
 General syntax
 --------------
 
-The general syntax for SysBench is as follows:
+The general syntax for sysbench is as follows:
 
 		  sysbench [common-options] --test=name [test-options] command
 
@@ -88,6 +88,6 @@ The table below lists the supported common options, their descriptions and defau
 | `--validate`          | Perform validation of test results where possible                                                                                                                                                                                                                                                                                                                                                                                                                       | off             |
 | `--help`              | Print help on general syntax or on a test mode specified with --test, and exit                                                                                                                                                                                                                                                                                                                                                                                          | off             |
 | `--verbosity`         | Verbosity level (0 - only critical messages, 5 - debug)                                                                                                                                                                                                                                                                                                                                                                                                                 | 4               |
-| `--percentile`        | SysBench measures execution times for all processed requests to display statistical information like minimal, average and maximum execution time. For most benchmarks it is also useful to know a request execution time value matching some percentile (e.g. 95% percentile means we should drop 5% of the most long requests and choose the maximal value from the remaining ones). This option allows to specify a percentile rank of query execution times to count | 95              |
+| `--percentile`        | sysbench measures execution times for all processed requests to display statistical information like minimal, average and maximum execution time. For most benchmarks it is also useful to know a request execution time value matching some percentile (e.g. 95% percentile means we should drop 5% of the most long requests and choose the maximal value from the remaining ones). This option allows to specify a percentile rank of query execution times to count | 95              |
 
 Note that numerical values for all *size* options (like `--thread-stack-size` in this table) may be specified by appending the corresponding multiplicative suffix (K for kilobytes, M for megabytes, G for gigabytes and T for terabytes).
