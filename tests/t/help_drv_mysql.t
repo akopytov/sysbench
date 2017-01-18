@@ -18,7 +18,6 @@ Skip test if the MySQL driver is not available.
     --mysql-ssl[=on|off]             use SSL connections, if available in the client library [off]
     --mysql-ssl-cipher=STRING        use specific cipher for SSL connections []
     --mysql-compression[=on|off]     use compression, if available in the client library [off]
-    --myisam-max-rows=N              max-rows parameter for MyISAM tables [1000000]
     --mysql-debug[=on|off]           dump all client library calls [off]
     --mysql-ignore-errors=[LIST,...] list of errors to ignore, or "all" [1213,1020,1205]
     --mysql-dry-run[=on|off]         Dry run, pretent that all MySQL client API calls are successful without executing them [off]

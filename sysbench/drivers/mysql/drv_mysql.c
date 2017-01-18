@@ -69,7 +69,6 @@ static sb_arg_t mysql_drv_args[] =
   {"mysql-ssl", "use SSL connections, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
   {"mysql-ssl-cipher", "use specific cipher for SSL connections", SB_ARG_TYPE_STRING, ""},
   {"mysql-compression", "use compression, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
-  {"myisam-max-rows", "max-rows parameter for MyISAM tables", SB_ARG_TYPE_INT, "1000000"},
   {"mysql-debug", "dump all client library calls", SB_ARG_TYPE_FLAG, "off"},
   {"mysql-ignore-errors", "list of errors to ignore, or \"all\"",
    SB_ARG_TYPE_LIST, "1213,1020,1205"},
