@@ -18,10 +18,6 @@
 -- Common code for OLTP benchmarks.
 -- -----------------------------------------------------------------------------
 
-assert(type(event) == "function",
-       error("This script is meant to be included by other OLTP scripts and " ..
-                "should not be called directly."))
-
 -- Generate strings of random digits with 11-digit groups separated by dashes
 function get_c_value()
    -- 10 groups, 119 characters
@@ -128,6 +124,10 @@ CREATE TABLE sbtest%d(
 end
 
 function thread_init()
+   assert(event ~= nil,
+          "This script is meant to be included by other OLTP scripts and " ..
+             "should not be called directly.")
+
    set_vars()
 
    drv = sysbench.sql.driver()
