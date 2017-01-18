@@ -72,4 +72,3 @@ end
 function sysbench.rand.uniform_double()
    return ffi.C.sb_rand_uniform_double()
 end
-

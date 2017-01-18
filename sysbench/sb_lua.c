@@ -30,8 +30,13 @@
 #include "sb_thread.h"
 
 #include "ck_pr.h"
-/* Auto-generated headers */
+
+/*
+  Auto-generated headers for internal scripts. If you add a new header here,
+  make sure it is also added to internal_sources.
+*/
 #include "lua/internal/sysbench.lua.h"
+#include "lua/internal/sysbench.rand.lua.h"
 #include "lua/internal/sysbench.sql.lua.h"
 
 #define EVENT_FUNC "event"
@@ -88,6 +93,13 @@ typedef struct {
   sb_lua_db_rs_t *rs;
 } sb_lua_db_stmt_t;
 
+typedef struct {
+  const char *name;
+  const unsigned char *source;
+  /* Use a pointer, since _len variables are not compile-time constants */
+  unsigned int *source_len;
+} internal_script_t;
+
 /* Lua interpreter states */
 
 static lua_State **states CK_CC_CACHELINE;
@@ -122,6 +134,14 @@ static lua_State *gstate;
 
 /* Database driver */
 static TLS db_driver_t *db_driver;
+
+/* List of pre-loaded internal scripts */
+static internal_script_t internal_scripts[] = {
+  {"sysbench.rand.lua", sysbench_rand_lua, &sysbench_rand_lua_len},
+  {"sysbench.lua", sysbench_lua, &sysbench_lua_len},
+  {"sysbench.sql.lua", sysbench_sql_lua, &sysbench_sql_lua_len},
+  {NULL, NULL, 0}
+};
 
 /* Lua test commands */
 static int sb_lua_cmd_prepare(void);
@@ -335,6 +355,25 @@ int sb_lua_op_done(void)
   return 0;
 }
 
+/* Pre-load internal scripts */
+
+static int load_internal_scripts(lua_State *L)
+{
+  for (internal_script_t *s = internal_scripts; s->name != NULL; s++)
+  {
+    if (luaL_loadbuffer(L, (const char *) s->source, s->source_len[0], s->name))
+    {
+      log_text(LOG_FATAL, "failed to load internal module '%s': %s",
+               s->name, lua_tostring(L, -1));
+      return 1;
+    }
+
+    lua_call(L, 0, 0);
+  }
+
+  return 0;
+}
+
 /* Allocate and initialize new interpreter state */
 
 lua_State *sb_lua_new_state(int thread_id)
@@ -449,26 +488,8 @@ lua_State *sb_lua_new_state(int thread_id)
   luaL_newmetatable(L, "sysbench.stmt");
   luaL_newmetatable(L, "sysbench.rs");
 
-  /* Pre-load internal modules */
-  if (luaL_loadbuffer(L, (const char *) sysbench_lua, sysbench_lua_len,
-                      "sysbench.lua"))
-  {
-    log_text(LOG_FATAL, "failed to load internal module sysbench.lua: %s",
-             lua_tostring(L, -1));
+  if (load_internal_scripts(L))
     return NULL;
-  }
-  lua_pushstring(L, "sysbench");
-  lua_call(L, 1, 0);
-
-  if (luaL_loadbuffer(L, (const char *) sysbench_sql_lua, sysbench_sql_lua_len,
-                      "sysbench.sql.lua"))
-  {
-    log_text(LOG_FATAL, "failed to load internal module sysbench.sql.lua: %s",
-             lua_tostring(L, -1));
-    return NULL;
-  }
-  lua_pushstring(L, "sysbench.sql");
-  lua_call(L, 1, 0);
 
   int rc;
 

@@ -75,3 +75,4 @@ third_party/luajit/share/
 third_party/luajit/tmp/
 sysbench/lua/internal/sysbench.lua.h
 sysbench/lua/internal/sysbench.sql.lua.h
+/sysbench/lua/internal/sysbench.rand.lua.h

@@ -20,57 +20,15 @@
 
 ffi = require("ffi")
 
-sysbench.rand = {}
-
-ffi.cdef[[
-uint64_t sb_rand_uniform_uint64(void);
-uint32_t sb_rand_default(uint32_t, uint32_t);
-uint32_t sb_rand_uniform(uint32_t, uint32_t);
-uint32_t sb_rand_gaussian(uint32_t, uint32_t);
-uint32_t sb_rand_special(uint32_t, uint32_t);
-uint32_t sb_rand_pareto(uint32_t, uint32_t);
-uint32_t sb_rand_unique(void);
-void sb_rand_str(const char *, char *);
-double sb_rand_uniform_double(void);
-]]
-
-function sysbench.rand.uniform_uint64()
-   return ffi.C.sb_rand_uniform_uint64()
-end
-
-function sysbench.rand.default(a, b)
-   return ffi.C.sb_rand_default(a, b)
-end
-
-function sysbench.rand.uniform(a, b)
-   return ffi.C.sb_rand_uniform(a, b)
-end
-
-function sysbench.rand.gaussian(a, b)
-   return ffi.C.sb_rand_gaussian(a, b)
-end
-
-function sysbench.rand.special(a, b)
-   return ffi.C.sb_rand_special(a, b)
-end
-
-function sysbench.rand.pareto(a, b)
-   return ffi.C.sb_rand_pareto(a, b)
-end
-
-function sysbench.rand.unique()
-   return ffi.C.sb_rand_unique()
-end
-
-function sysbench.rand.string(fmt)
-   local buflen = #fmt
-   local buf = ffi.new("uint8_t[?]", buflen)
-   ffi.C.sb_rand_str(fmt, buf)
-   return ffi.string(buf, buflen)
-end
-
-function sysbench.rand.uniform_double()
-   return ffi.C.sb_rand_uniform_double()
+-- ----------------------------------------------------------------------
+-- Main event loop. This is a Lua version of sysbench.c:thread_run()
+-- ----------------------------------------------------------------------
+function thread_run(thread_id)
+   while sysbench.more_events() do
+      sysbench.event_start()
+      event(thread_id)
+      sysbench.event_stop()
+   end
 end
 
 -- ----------------------------------------------------------------------
@@ -127,14 +85,3 @@ db_close = sysbench.db.close
 DB_ERROR_NONE = sysbench.db.DB_ERROR_NONE
 DB_ERROR_RESTART_TRANSACTION = sysbench.db.DB_ERROR_RESTART_TRANSACTION
 DB_ERROR_FAILED = sysbench.db.DB_ERROR_FAILED
-
--- ----------------------------------------------------------------------
--- Main event loop. This is a Lua version of sysbench.c:thread_run()
--- ----------------------------------------------------------------------
-function thread_run(thread_id)
-   while sysbench.more_events() do
-      sysbench.event_start()
-      event(thread_id)
-      sysbench.event_stop()
-   end
-end

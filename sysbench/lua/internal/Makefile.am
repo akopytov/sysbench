@@ -14,10 +14,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-BUILT_SOURCES = sysbench.lua.h sysbench.sql.lua.h
-CLEARFILES = sysbench.lua.h sysbench.sql.lua.h
+BUILT_SOURCES = sysbench.lua.h sysbench.rand.lua.h sysbench.sql.lua.h
+CLEARFILES = $(BUILT_SOURCES)
 
-EXTRA_DIST = sysbench.lua sysbench.sql.lua
+EXTRA_DIST = $(BUILD_SOURCE:.h=)
 
 SUFFIXES = .lua .lua.h
 
