@@ -15,9 +15,12 @@
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 -- -----------------------------------------------------------------------------
--- Common code for OLTP benchmarks. This script is meant to be included by other
--- OLTP script and should not be called directly.
+-- Common code for OLTP benchmarks.
 -- -----------------------------------------------------------------------------
+
+assert(type(event) == "function",
+       error("This script is meant to be included by other OLTP scripts and " ..
+                "should not be called directly."))
 
 -- Generate strings of random digits with 11-digit groups separated by dashes
 function get_c_value()
