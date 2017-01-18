@@ -403,6 +403,10 @@ int db_connection_close(db_conn_t *con)
     log_text(LOG_WARNING, "attempt to close an already closed connection");
     return 0;
   }
+  else if(con->state == DB_CONN_RESULT_SET)
+  {
+    db_free_results_int(con);
+  }
 
   rc = drv->ops.disconnect(con);
 
