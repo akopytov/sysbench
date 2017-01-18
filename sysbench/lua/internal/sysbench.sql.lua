@@ -162,7 +162,8 @@ sysbench.sql.type =
 local function check_type(vtype, var, func)
    if var == nil or not ffi.istype(vtype, var) then
       error(string.format("bad argument '%s' to %s() where a '%s' was expected",
-                          var, func, vtype))
+                          var, func, vtype),
+            3)
    end
 end
 
