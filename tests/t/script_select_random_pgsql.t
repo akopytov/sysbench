@@ -2,16 +2,7 @@
 select_random_*.lua + PostgreSQL tests 
 ########################################################################
 
-  $ if [ -z "${SBTEST_PGSQL_ARGS:-}" ]
-  > then
-  >   exit 80
-  > fi
-
-  $ function db_show_table() {
-  >  psql -c "\d+ $1" sbtest
-  > }
-
-  $ DB_DRIVER_ARGS="--db-driver=pgsql $SBTEST_PGSQL_ARGS"
+  $ . $SBTEST_INCDIR/pgsql_common.sh
   $ . $SBTEST_INCDIR/script_select_random_common.sh
   sysbench * (glob)
   

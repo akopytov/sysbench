@@ -2,11 +2,7 @@
 PostgreSQL driver tests
 ########################################################################
 
-  $ if [ -z "${SBTEST_PGSQL_ARGS:-}" ]
-  > then
-  >   exit 80
-  > fi
-  $ DB_DRIVER_ARGS="--db-driver=pgsql $SBTEST_PGSQL_ARGS"
+  $ . $SBTEST_INCDIR/pgsql_common.sh
   $ . $SBTEST_INCDIR/drv_common.sh
   sysbench *.* * (glob)
   
