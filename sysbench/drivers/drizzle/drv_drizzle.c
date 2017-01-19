@@ -368,7 +368,7 @@ db_error_t drizzle_drv_execute(db_stmt_t *stmt, db_result_t *rs)
       if (buf == NULL)
       {
         log_text(LOG_DEBUG, "ERROR: exiting drizzle_drv_execute(), memory allocation failure");
-        return SB_DB_ERROR_FAILED;
+        return DB_ERROR_FATAL;
       }
       need_realloc = 0;
     }
@@ -390,15 +390,15 @@ db_error_t drizzle_drv_execute(db_stmt_t *stmt, db_result_t *rs)
   }
   buf[j] = '\0';
   
-  con->db_errno = drizzle_drv_query(con, buf, j, rs);
+  con->sql_errno = drizzle_drv_query(con, buf, j, rs);
   free(buf);
-  if (con->db_errno != SB_DB_ERROR_NONE)
+  if (con->sql_errno != DB_ERROR_NONE)
   {
     log_text(LOG_DEBUG, "ERROR: exiting drizzle_drv_execute(), database error");
-    return con->db_errno;
+    return con->sql_errno;
   }
   
-  return SB_DB_ERROR_NONE;
+  return DB_ERROR_NONE;
 }
 
 
@@ -432,11 +432,11 @@ db_error_t drizzle_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
      */
     if (rc == 1213 || rc == 1205 ||
         rc == 1020)
-      return SB_DB_ERROR_RESTART_TRANSACTION;
+      return DB_ERROR_IGNORABLE;
     log_text(LOG_ALERT, "Drizzle Query Failed: %u:%s",
              drizzle_result_error_code(result),
              drizzle_result_error(result));
-    return SB_DB_ERROR_FAILED;
+    return DB_ERROR_FATAL;
   }
   else if (ret != DRIZZLE_RETURN_OK)
   {
@@ -446,14 +446,14 @@ db_error_t drizzle_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
              strlen(query), query);
     log_text(LOG_ALERT, "Error %d %s", drizzle_con_errno(con),
              drizzle_con_error(con));
-    return SB_DB_ERROR_FAILED;
+    return DB_ERROR_FATAL;
   }
   DEBUG("drizzle_query \"%s\" returned %d", query, ret);
 
   if (result == NULL)
   {
     DEBUG("drizzle_query(%p, \"%s\") == NULL",con,query);
-    return SB_DB_ERROR_FAILED;
+    return DB_ERROR_FATAL;
   }
 
 
@@ -461,7 +461,7 @@ db_error_t drizzle_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
   rs->nrows= drizzle_result_row_count(result);
   DEBUG("drizzle_result_row_count(%p) == %d",result,rs->nrows);
 
-  return SB_DB_ERROR_NONE;
+  return DB_ERROR_NONE;
 }
 
 
@@ -506,7 +506,7 @@ int drizzle_drv_store_results(db_result_t *rs)
 
 
   if (con == NULL || res == NULL)
-    return SB_DB_ERROR_FAILED;
+    return DB_ERROR_FATAL;
 
 
   if (args.buffer == BUFFER_ALL)
@@ -522,7 +522,7 @@ int drizzle_drv_store_results(db_result_t *rs)
       log_text(LOG_ALERT, "Error %d %s",
                drizzle_con_errno(con),
                drizzle_con_error(con));
-      return SB_DB_ERROR_FAILED;
+      return DB_ERROR_FATAL;
     }
     while ((column = drizzle_column_next(res)) != NULL)
       column_info(column);
@@ -550,7 +550,7 @@ int drizzle_drv_store_results(db_result_t *rs)
           log_text(LOG_ALERT, "Error %d %s",
                    drizzle_con_errno(con),
                    drizzle_con_error(con));
-          return SB_DB_ERROR_FAILED;
+          return DB_ERROR_FATAL;
         }
         if (column == NULL)
           break;
@@ -574,7 +574,7 @@ int drizzle_drv_store_results(db_result_t *rs)
           log_text(LOG_ALERT, "Error %d %s",
                    drizzle_con_errno(con),
                    drizzle_con_error(con));
-          return SB_DB_ERROR_FAILED;
+          return DB_ERROR_FATAL;
         }
 
         if (row == NULL)
@@ -596,7 +596,7 @@ int drizzle_drv_store_results(db_result_t *rs)
           log_text(LOG_ALERT, "Error %d %s",
                    drizzle_con_errno(con),
                    drizzle_con_error(con));
-          return SB_DB_ERROR_FAILED;
+          return DB_ERROR_FATAL;
         }
 
         if (row_num == 0)
@@ -634,7 +634,7 @@ int drizzle_drv_store_results(db_result_t *rs)
             log_text(LOG_ALERT, "Error %d %s",
                      drizzle_con_errno(con),
                      drizzle_con_error(con));
-            return SB_DB_ERROR_FAILED;
+            return DB_ERROR_FATAL;
           }
 
           if (args.buffer == BUFFER_FIELD)
@@ -646,7 +646,7 @@ int drizzle_drv_store_results(db_result_t *rs)
 
     } /* while (1) */
   }
-  return SB_DB_ERROR_NONE;
+  return DB_ERROR_NONE;
 }
 
 

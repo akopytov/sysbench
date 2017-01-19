@@ -14,19 +14,34 @@
 -- along with this program; if not, write to the Free Software
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
--- ----------------------------------------------------------------------
--- Pseudo-random number generation API
--- ----------------------------------------------------------------------
-
 ffi = require("ffi")
 
 -- ----------------------------------------------------------------------
 -- Main event loop. This is a Lua version of sysbench.c:thread_run()
 -- ----------------------------------------------------------------------
 function thread_run(thread_id)
+   local success, ret
+
    while sysbench.more_events() do
       sysbench.event_start()
-      event(thread_id)
+
+      repeat
+         local success, ret = pcall(event, thread_id)
+
+         if not success then
+            if (type(ret) == "table" and
+                ret.errcode == sysbench.error.RESTART_EVENT) then
+            else
+               error(ret, 2) -- propagate unknown errors
+            end
+         end
+      until success
+
+      -- Stop the benchmark if event() returns a non-nil value
+      if ret then
+         break
+      end
+
       sysbench.event_stop()
    end
 end

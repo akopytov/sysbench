@@ -702,16 +702,17 @@ static db_error_t check_error(db_conn_t *sb_con, const char *func,
 {
   sb_list_item_t *pos;
   unsigned int   tmp;
-  unsigned int   error;
   db_mysql_conn_t *db_mysql_con = (db_mysql_conn_t *) sb_con->ptr;
   MYSQL          *con = db_mysql_con->mysql;
 
-  error = mysql_errno(con);
-  DEBUG("mysql_errno(%p) = %u", con, error);
+  const unsigned int error = mysql_errno(con);
+  DEBUG("mysql_errno(%p) = %u", con, sb_con->drv_errno);
+
+  sb_con->drv_errno = (int) error;
 
   /*
     Check if the error code is specified in --mysql-ignore-errors, and return
-    SB_DB_ERROR_RESTART_TRANSACTION if so, or SB_DB_ERROR_FAILED otherwise
+    DB_ERROR_IGNORABLE if so, or DB_ERROR_FATAL otherwise
   */
   SB_LIST_FOR_EACH(pos, args.ignored_errors)
   {
@@ -747,10 +748,10 @@ static db_error_t check_error(db_conn_t *sb_con, const char *func,
   }
 
   if (query)
-    log_text(LOG_ALERT, "%s returned error %u (%s) for query '%s'",
+    log_text(LOG_FATAL, "%s returned error %u (%s) for query '%s'",
              func, error, mysql_error(con), query);
   else
-    log_text(LOG_ALERT, "%s returned error %u (%s)",
+    log_text(LOG_FATAL, "%s returned error %u (%s)",
              func, error, mysql_error(con));
 
   *type = DB_STAT_ERROR;
@@ -1000,8 +1001,12 @@ int mysql_drv_close(db_stmt_t *stmt)
   if (stmt->ptr == NULL)
     return 1;
 
-  DEBUG("mysql_stmt_close(%p)", stmt->ptr);
-  return mysql_stmt_close(stmt->ptr);
+  int rc = mysql_stmt_close(stmt->ptr);
+  DEBUG("mysql_stmt_close(%p) = %d", stmt->ptr, rc);
+
+  stmt->ptr = NULL;
+
+  return rc;
 }
 
 

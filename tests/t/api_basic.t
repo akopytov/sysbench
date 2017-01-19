@@ -59,3 +59,24 @@ Basic Lua API tests
 
   $ sysbench $SB_ARGS help
   tid:(nil) help()
+
+########################################################################
+Error handling
+########################################################################
+
+# Syntax errors in the script
+  $ cat >$CRAMTMP/api_basic.lua <<EOF
+  > foo
+  > EOF
+  $ sysbench $SB_ARGS run
+  PANIC: unprotected error in call to Lua API (*/api_basic.lua:2: '=' expected near '<eof>') (glob)
+  [1]
+
+# Missing event function
+  $ cat >$CRAMTMP/api_basic.lua <<EOF
+  > function foo()
+  > end
+  > EOF
+  $ sysbench $SB_ARGS run
+  FATAL: cannot find the event() function in */api_basic.lua (glob)
+  [1]

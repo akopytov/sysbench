@@ -69,7 +69,14 @@ typedef enum
   DB_STAT_MAX
 } sql_stat_type;
 
-typedef struct db_conn sql_connection;
+typedef struct
+{
+  sql_error_t      sql_errno;        /* Driver-independent error code */
+  int              drv_errno;        /* Driver-specific error code */
+
+  const char      opaque[?];
+} sql_connection;
+
 typedef struct db_stmt sql_statement;
 
 /* Result set definition */
@@ -143,7 +150,7 @@ local sql_value = ffi.typeof('sql_value');
 local sql_row = ffi.typeof('sql_row');
 
 sysbench.sql.type =
-   {
+{
       NONE = ffi.C.SQL_TYPE_NONE,
       TINYINT = ffi.C.SQL_TYPE_TINYINT,
       SMALLINT = ffi.C.SQL_TYPE_SMALLINT,
@@ -159,70 +166,114 @@ sysbench.sql.type =
       VARCHAR = ffi.C.SQL_TYPE_VARCHAR
    }
 
-local function check_type(vtype, var, func)
-   if var == nil or not ffi.istype(vtype, var) then
-      error(string.format("bad argument '%s' to %s() where a '%s' was expected",
-                          var, func, vtype),
-            3)
-   end
-end
-
 -- Initialize a given SQL driver and return a handle to it to create
 -- connections. A nil driver name (i.e. no function argument) initializes the
 -- default driver, i.e. the one specified with --db-driver on the command line.
 function sysbench.sql.driver(driver_name)
    local drv = ffi.C.db_create(driver_name)
    if (drv == nil) then
-      error("failed to initialize the DB driver")
+      error("failed to initialize the DB driver", 2)
    end
    return ffi.gc(drv, ffi.C.db_destroy)
 end
 
-function sysbench.sql.connect(driver)
-   check_type(sql_driver, driver, 'sysbench.sql.connect')
-   local con = ffi.C.db_connection_create(driver)
+-- sql_driver methods
+local driver_methods = {}
+
+function driver_methods.connect(self)
+   local con = ffi.C.db_connection_create(self)
    if con == nil then
-      error('connection creation failed')
+      error("connection creation failed", 2)
    end
    return ffi.gc(con, ffi.C.db_connection_free)
 end
 
-function sysbench.sql.disconnect(con)
-   check_type(sql_connection, con, 'sysbench.sql.disconnect')
-   return ffi.C.db_connection_close(con) == 0
+function driver_methods.name(self)
+   return ffi.string(self.sname)
 end
 
-function sysbench.sql.query(con, query)
-   check_type(sql_connection, con, 'sysbench.sql.query')
-   return ffi.C.db_query(con, query, #query)
+-- sql_driver metatable
+local driver_mt = {
+   __index = driver_methods,
+   __gc = ffi.C.db_destroy,
+   __tostring = function() return '<sql_driver>' end,
+}
+ffi.metatype("sql_driver", driver_mt)
+
+-- sql_connection methods
+local connection_methods = {}
+
+function connection_methods.disconnect(self)
+   return assert(ffi.C.db_connection_close(self) == 0)
 end
 
-function sysbench.sql.bulk_insert_init(con, query)
-   check_type(sql_connection, con, 'sysbench.sql.bulk_insert_init')
-   return ffi.C.db_bulk_insert_init(con, query, #query)
+function connection_methods.check_error(self, rs)
+   if rs ~= nil or self.sql_errno == sysbench.sql.error.NONE then
+      return rs
+   end
+
+   if self.sql_errno == sysbench.sql.error.IGNORABLE then
+      -- Throw an error containing the SQL error number provided by the SQL
+      -- driver. It can be caught by the user script to do some extra steps to
+      -- restart a transaction (e.g. reprepare statements after a
+      -- reconnect). Otherwise it will be caught by thread_run() in
+      -- sysbench.lua, in which case the event will be restarted.
+      error({ errcode = sysbench.error.RESTART_EVENT,
+              sql_errno = self.sql_errno,
+              drv_errno = self.drv_errno})
+   end
+
+   error(string.format("Fatal SQL error, drv_errno = %d", self.drv_errno))
 end
 
-function sysbench.sql.bulk_insert_next(con, val)
-   check_type(sql_connection, con, 'sysbench.sql.bulk_insert_next')
-   return ffi.C.db_bulk_insert_next(con, val, #val)
+function connection_methods.query(self, query)
+   local rs = ffi.C.db_query(self, query, #query)
+   return self:check_error(rs)
 end
 
-function sysbench.sql.bulk_insert_done(con)
-   check_type(sql_connection, con, 'sysbench.sql.bulk_insert_done')
-   return ffi.C.db_bulk_insert_done(con)
+function connection_methods.bulk_insert_init(self, query)
+   return ffi.C.db_bulk_insert_init(self, query, #query)
 end
 
-function sysbench.sql.prepare(con, query)
-   check_type(sql_connection, con, 'sysbench.sql.prepare')
-   local stmt = ffi.C.db_prepare(con, query, #query)
+function connection_methods.bulk_insert_next(self, val)
+   return ffi.C.db_bulk_insert_next(self, val, #val)
+end
+
+function connection_methods.bulk_insert_done(self)
+   return ffi.C.db_bulk_insert_done(self)
+end
+
+function connection_methods.prepare(self, query)
+   local stmt = ffi.C.db_prepare(self, query, #query)
    return stmt
 end
 
-function sysbench.sql.bind_create(stmt, btype, maxlen)
+-- A convenience wrapper around sql_connection:query() and
+-- sql_result:fetch_row(). Executes the specified query and returns the first
+-- row from the result set, if available, or nil otherwise
+function connection_methods.query_row(self, query)
+   local rs = self:query(query)
+   if rs == nil then
+      return nil
+   end
+
+   return unpack(rs:fetch_row(), 1, rs.nfields)
+end
+
+-- sql_connection metatable
+local connection_mt = {
+   __index = connection_methods,
+   __tostring = function() return '<sql_connection>' end,
+   __gc = ffi.C.db_connection_free,
+}
+ffi.metatype("sql_connection", connection_mt)
+
+-- sql_statement methods
+local statement_methods = {}
+
+function statement_methods.bind_create(self, btype, maxlen)
    local sql_type = sysbench.sql.type
    local buf, buflen, datalen, isnull
-
-   check_type(sql_statement, stmt, 'sysbench.sql.bind_create')
 
    if btype == sql_type.TINYINT or
       btype == sql_type.SMALLINT or
@@ -245,7 +296,7 @@ function sysbench.sql.bind_create(stmt, btype, maxlen)
       buf = ffi.new('char[?]', maxlen)
       buflen = maxlen
    else
-      error("Unsupported argument type: " .. btype)
+      error("Unsupported argument type: " .. btype, 2)
    end
 
    datalen = ffi.new('unsigned long[1]')
@@ -254,82 +305,91 @@ function sysbench.sql.bind_create(stmt, btype, maxlen)
    return ffi.new(sql_bind, btype, buf, datalen, buflen, isnull)
 end
 
-function sysbench.sql.bind_set(bind, value)
-   local sql_type = sysbench.sql.type
-   local btype = bind.type
+function statement_methods.bind_param(self, ...)
+   local len = select('#', ...)
+   if len  < 1 then return nil end
 
-   check_type(sql_bind, bind, 'sysbench.sql.bind_set')
+   return ffi.C.db_bind_param(self,
+                              ffi.new("sql_bind[?]", len, {...}),
+                              len)
+end
+
+function statement_methods.execute(self)
+   return ffi.C.db_execute(self)
+end
+
+function statement_methods.close(self)
+   return ffi.C.db_close(self)
+end
+
+-- sql_statement metatable
+local statement_mt = {
+   __index = statement_methods,
+   __tostring = function() return '<sql_statement>' end,
+   __gc = ffi.C.db_close,
+}
+ffi.metatype("sql_statement", statement_mt)
+
+-- sql_bind methods
+local bind_methods = {}
+
+function bind_methods.set(self, value)
+   local sql_type = sysbench.sql.type
+   local btype = self.type
 
    if (value == nil) then
-      bind.is_null[0] = true
+      self.is_null[0] = true
       return
    end
 
-   bind.is_null[0] = false
+   self.is_null[0] = false
 
    if btype == sql_type.TINYINT or
       btype == sql_type.SMALLINT or
       btype == sql_type.INT or
       btype == sql_type.BIGINT
    then
-      ffi.copy(bind.buffer, ffi.new('int64_t[1]', value), 8)
+      ffi.copy(self.buffer, ffi.new('int64_t[1]', value), 8)
    elseif btype == sql_type.FLOAT or
       btype == sql_type.DOUBLE
    then
-      ffi.copy(bind.buffer, ffi.new('double[1]', value), 8)
+      ffi.copy(self.buffer, ffi.new('double[1]', value), 8)
    elseif btype == sql_type.CHAR or
       btype == sql_type.VARCHAR
    then
       local len = #value
-      len = bind.max_len < len and bind.max_len or len
-      ffi.copy(bind.buffer, value, len)
-      bind.data_len[0] = len
+      len = self.max_len < len and self.max_len or len
+      ffi.copy(self.buffer, value, len)
+      self.data_len[0] = len
    else
-      error("Unsupported argument type: " .. btype)
+      error("Unsupported argument type: " .. btype, 2)
    end
 end
 
-function sysbench.sql.bind_destroy(bind)
-   check_type(sql_bind, bind, 'sysbench.sql.bind_destroy')
-end
+-- sql_bind metatable
+local bind_mt = {
+   __index = bind_methods,
+   __tostring = function() return '<sql_bind>' end,
+}
+ffi.metatype("sql_bind", bind_mt)
 
-function sysbench.sql.bind_param(stmt, ...)
-   local len = #{...}
-   local i
-
-   check_type(sql_statement, stmt, 'sysbench.sql.bind_param')
-
-   return ffi.C.db_bind_param(stmt,
-                              ffi.new("sql_bind[?]", len, {...}),
-                              len)
-end
-
-function sysbench.sql.execute(stmt)
-   check_type(sql_statement, stmt, 'sysbench.sql.execute')
-   return ffi.C.db_execute(stmt)
-end
-
-function sysbench.sql.close(stmt)
-   check_type(sql_statement, stmt, 'sysbench.sql.close')
-   return ffi.C.db_close(stmt)
-end
+-- sql_result methods
+local result_methods = {}
 
 -- Returns the next row of values from a result set, or nil if there are no more
 -- rows to fetch. Values are returned as an array, i.e. a table with numeric
 -- indexes starting from 1. The total number of values (i.e. fields in a result
 -- set) can be obtained from sql_result.nfields.
-function sysbench.sql.fetch_row(rs)
-   check_type(sql_result, rs, 'sysbench.sql.fetch_row')
-
+function result_methods.fetch_row(self)
    local res = {}
-   local row = ffi.C.db_fetch_row(rs)
+   local row = ffi.C.db_fetch_row(self)
 
    if row == nil then
       return nil
    end
 
    local i
-   for i = 0, rs.nfields-1 do
+   for i = 0, self.nfields-1 do
       if row.values[i].ptr ~= nil then -- not a NULL value
          res[i+1] = ffi.string(row.values[i].ptr, tonumber(row.values[i].len))
       end
@@ -338,89 +398,20 @@ function sysbench.sql.fetch_row(rs)
    return res
 end
 
-function sysbench.sql.query_row(con, query)
-   check_type(sql_connection, con, 'sysbench.sql.query_row')
-
-   local rs = con:query(query)
-   if rs == nil then
-      return nil
-   end
-
-   return unpack(rs:fetch_row(), 1, rs.nfields)
+function result_methods.free(self)
+   return assert(ffi.C.db_free_results(self) == 0, "db_free_results() failed")
 end
-
-function sysbench.sql.free_results(result)
-   check_type(sql_result, result, 'sysbench.sql.free_results')
-   return ffi.C.db_free_results(result)
-end
-
-function sysbench.sql.driver_name(driver)
-   return ffi.string(driver.sname)
-end
-
--- sql_driver metatable
-local driver_mt = {
-   __index = {
-      connect = sysbench.sql.connect,
-      name = sysbench.sql.driver_name,
-   },
-   __gc = ffi.C.db_destroy,
-   __tostring = function() return '<sql_driver>' end,
-}
-ffi.metatype("sql_driver", driver_mt)
-
--- sql_connection metatable
-local connection_mt = {
-   __index = {
-      disconnect = sysbench.sql.disconnect,
-      query = sysbench.sql.query,
-      query_row = sysbench.sql.query_row,
-      bulk_insert_init = sysbench.sql.bulk_insert_init,
-      bulk_insert_next = sysbench.sql.bulk_insert_next,
-      bulk_insert_done = sysbench.sql.bulk_insert_done,
-      prepare = sysbench.sql.prepare,
-   },
-   __tostring = function() return '<sql_connection>' end,
-   __gc = ffi.C.db_connection_free,
-}
-ffi.metatype("struct db_conn", connection_mt)
-
--- sql_statement metatable
-local statement_mt = {
-   __index = {
-      bind_param = sysbench.sql.bind_param,
-      bind_create = sysbench.sql.bind_create,
-      execute = sysbench.sql.execute,
-      close = sysbench.sql.close
-   },
-   __tostring = function() return '<sql_statement>' end,
-   __gc = sysbench.sql.close,
-}
-ffi.metatype("struct db_stmt", statement_mt)
-
--- sql_bind metatable
-local bind_mt = {
-   __index = {
-      set = sysbench.sql.bind_set
-   },
-   __tostring = function() return '<sql_bind>' end,
-   __gc = sysbench.sql.bind_destroy
-}
-ffi.metatype("sql_bind", bind_mt)
 
 -- sql_results metatable
 local result_mt = {
-   __index = {
-      fetch_row = sysbench.sql.fetch_row,
-      free = sysbench.sql.free_results,
-   },
+   __index = result_methods,
    __tostring = function() return '<sql_result>' end,
-   __gc = sysbench.sql.free_results
+   __gc = ffi.C.db_free_results
 }
 ffi.metatype("sql_result", result_mt)
 
-
 -- error codes
-sysbench.sql.ERROR_NONE = ffi.C.DB_ERROR_NONE
-sysbench.sql.ERROR_IGNORABLE = ffi.C.DB_ERROR_IGNORABLE
-sysbench.sql.ERROR_FATAL = ffi.C.DB_ERROR_FATAL
+sysbench.sql.error = {}
+sysbench.sql.error.NONE = ffi.C.DB_ERROR_NONE
+sysbench.sql.error.IGNORABLE = ffi.C.DB_ERROR_IGNORABLE
+sysbench.sql.error.FATAL = ffi.C.DB_ERROR_FATAL

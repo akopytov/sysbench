@@ -49,7 +49,7 @@ void sb_timer_init(sb_timer_t *t)
 
 void sb_timer_reset(sb_timer_t *t)
 {
-  t->min_time = 0xffffffffffffffffULL;
+  t->min_time = UINT64_MAX;
   t->max_time = 0;
   t->sum_time = 0;
   t->events = 0;
@@ -113,6 +113,8 @@ uint64_t sb_timer_sum(sb_timer_t *t)
 
 uint64_t sb_timer_min(sb_timer_t *t)
 {
+  if (t->events == 0)
+    return 0;
   return t->min_time;
 }
 

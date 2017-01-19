@@ -18,9 +18,19 @@ function thread_init()
 end
 
 function event()
+  local e, m
+
   print("drv:name() = " .. drv:name())
+  print("SQL types:")
   for k,v in pairs(sysbench.sql.type) do print(k .. " = " .. v) end
-  print()
+  print('--')
+
+  print("SQL error codes:")
+  for k,v in pairs(sysbench.sql.error) do print(k .. " = " .. v) end
+  print('--')
+
+  e, m = pcall(sysbench.sql.driver, "non-existing")
+  print(m)
 
   con:query("DROP TABLE IF EXISTS t")
   con:query("CREATE TABLE t(a INT)")
@@ -53,15 +63,43 @@ function event()
   local stmt = con:prepare("UPDATE t SET a = a + ?, b = ?")
   local a = stmt:bind_create(sysbench.sql.type.INT)
   local b = stmt:bind_create(sysbench.sql.type.CHAR, 10)
+
+  print(a)
+  print(b)
+
+  e, m = pcall(stmt.bind_create, stmt, sysbench.sql.type.DATE)
+  print(m)
+
+  print(stmt:bind_param())
+
   stmt:bind_param(a, b)
   a:set(100)
-  rs = stmt:execute()
+  rs1 = stmt:execute()
+  print(rs1)
   a:set(200)
   b:set("01234567890")
-  rs = stmt:execute()
-  rs:free()
+  rs2 = stmt:execute()
+  row = rs2:fetch_row()
+  print(rs2)
+  rs2:free()
+
+  e, m = pcall(rs2.free, rs)
+  print(m)
+
+  e, m = pcall(rs1.free, rs)
+  print(m)
+
   stmt:close()
 
+  print('--')
+  con:disconnect()
+  e, m = pcall(con.query, con, "SELECT 1")
+  print(m)
+
+  con:disconnect()
+
+  print('--')
+  con = drv:connect()
   rs = con:query("SELECT MIN(a), MAX(a), MIN(b), MAX(b) FROM t")
   print(rs.nfields)
   for i = 1, rs.nrows do
@@ -72,7 +110,20 @@ function event()
 end
 EOF
 
+
+# Failed connection handling
 sysbench $SB_ARGS run
+
+SB_ARGS="--verbosity=1 --test=$CRAMTMP/api_sql.lua --max-requests=1 --num-threads=1 $DB_DRIVER_ARGS"
+cat >$CRAMTMP/api_sql.lua <<EOF
+function event()
+  local drv = sysbench.sql.driver()
+  local e,m = pcall(drv.connect, drv)
+  print(m)
+end
+EOF
+
+sysbench $SB_ARGS --mysql-host="non-existing" --pgsql-host="non-existing" run
 
 ########################################################################
 # Multiple connections test

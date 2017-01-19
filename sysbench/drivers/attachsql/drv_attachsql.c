@@ -291,7 +291,7 @@ int attachsql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
     {
       log_text(LOG_ALERT, "libAttachSQL Prepare Failed: %u:%s", attachsql_error_code(error), attachsql_error_message(error));
       attachsql_error_free(error);
-      return SB_DB_ERROR_FAILED;
+      return DB_ERROR_FATAL;
     }
   }
 
@@ -413,11 +413,11 @@ db_error_t attachsql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
     {
       log_text(LOG_ALERT, "libAttachSQL Execute Failed: %u:%s", attachsql_error_code(error), attachsql_error_message(error));
       attachsql_error_free(error);
-      return SB_DB_ERROR_FAILED;
+      return DB_ERROR_FATAL;
     }
   }
 
-  return SB_DB_ERROR_NONE;
+  return DB_ERROR_NONE;
 }
 
 
@@ -452,17 +452,17 @@ db_error_t attachsql_drv_query(db_conn_t *sb_conn, const char *query,
       if (rc == 1213 || rc == 1205 || rc == 1020)
       {
         attachsql_error_free(error);
-        return SB_DB_ERROR_RESTART_TRANSACTION;
+        return DB_ERROR_IGNORABLE;
       }
       log_text(LOG_ALERT, "libAttachSQL Query Failed: %u:%s", attachsql_error_code(error), attachsql_error_message(error));
       attachsql_error_free(error);
-      return SB_DB_ERROR_FAILED;
+      return DB_ERROR_FATAL;
     }
   }
   //rs->connection->ptr= con;
   DEBUG("attachsql_query \"%s\" returned %d", query, aret);
 
-  return SB_DB_ERROR_NONE;
+  return DB_ERROR_NONE;
 }
 
 
@@ -580,7 +580,7 @@ int attachsql_drv_store_results(db_result_t *rs)
     }
   }
 
-  return SB_DB_ERROR_NONE;
+  return DB_ERROR_NONE;
 }
 
 

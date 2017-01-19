@@ -603,29 +603,29 @@ db_error_t ora_drv_execute(db_stmt_t *stmt, db_result_t *rs)
   (void)rs; /* unused */
 
   if (db_con == NULL)
-    return SB_DB_ERROR_FAILED;
+    return DB_ERROR_FATAL;
   ora_con = db_con->ptr;
   if (ora_con == NULL)
-    return SB_DB_ERROR_FAILED;
+    return DB_ERROR_FATAL;
   
   if (!stmt->emulated)
   {
     if (stmt->ptr == NULL)
-      return SB_DB_ERROR_FAILED;
+      return DB_ERROR_FATAL;
 
     if (ora_stmt->type == STMT_TYPE_BEGIN)
     {
       rc = OCITransStart(ora_con->svchp, ora_con->errhp, 3600, OCI_TRANS_NEW);
       CHECKERR("OCITransStart");
 
-      return SB_DB_ERROR_NONE;
+      return DB_ERROR_NONE;
     }
     else if (ora_stmt->type == STMT_TYPE_COMMIT)
     {
       rc = OCITransCommit(ora_con->svchp, ora_con->errhp, OCI_DEFAULT);
       CHECKERR("OCITransCommit");
 
-      return SB_DB_ERROR_NONE;
+      return DB_ERROR_NONE;
     }
     else if (ora_stmt->type == STMT_TYPE_SELECT)
       iters = 0;
@@ -636,7 +636,7 @@ db_error_t ora_drv_execute(db_stmt_t *stmt, db_result_t *rs)
                         NULL, NULL, OCI_DEFAULT);
     CHECKERR("OCIStmtExecute");
     
-    return SB_DB_ERROR_NONE;
+    return DB_ERROR_NONE;
   }
 
   /* Build the actual query string from parameters list */
@@ -651,7 +651,7 @@ db_error_t ora_drv_execute(db_stmt_t *stmt, db_result_t *rs)
       buf = realloc(buf, buflen);
       if (buf == NULL)
       {
-        return SB_DB_ERROR_FAILED;
+        return DB_ERROR_FATAL;
       }
       need_realloc = 0;
     }
@@ -673,15 +673,15 @@ db_error_t ora_drv_execute(db_stmt_t *stmt, db_result_t *rs)
   }
   buf[j] = '\0';
   
-  db_con->db_errno = ora_drv_query(db_con, buf, j, rs);
+  db_con->sql_errno = ora_drv_query(db_con, buf, j, rs);
   free(buf);
 
-  return SB_DB_ERROR_NONE;
+  return DB_ERROR_NONE;
 
  error:
   log_text(LOG_FATAL, "failed query was: '%s'", stmt->query);
   
-  return SB_DB_ERROR_FAILED;
+  return DB_ERROR_FATAL;
 }
 
 
@@ -707,14 +707,14 @@ db_error_t ora_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
     rc = OCITransStart(ora_con->svchp, ora_con->errhp, 3600, OCI_TRANS_NEW);
     CHECKERR("OCITransStart");
 
-    return SB_DB_ERROR_NONE;
+    return DB_ERROR_NONE;
   }
   else if (type == STMT_TYPE_COMMIT)
   {
     rc = OCITransCommit(ora_con->svchp, ora_con->errhp, OCI_DEFAULT);
     CHECKERR("OCITransCommit");
 
-    return SB_DB_ERROR_NONE;
+    return DB_ERROR_NONE;
   }
   else if (type == STMT_TYPE_SELECT)
     iters = 0;
@@ -736,14 +736,14 @@ db_error_t ora_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
 
   OCIHandleFree(stmt, OCI_HTYPE_STMT);
 
-  return SB_DB_ERROR_NONE;
+  return DB_ERROR_NONE;
 
  error:
   log_text(LOG_FATAL, "failed query was: '%s'", query);
   if (stmt != NULL)
     OCIHandleFree(stmt, OCI_HTYPE_STMT);
   
-  return SB_DB_ERROR_FAILED;
+  return DB_ERROR_FATAL;
 }
 
 

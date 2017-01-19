@@ -400,7 +400,7 @@ int db_connection_close(db_conn_t *con)
 
   if (con->state == DB_CONN_INVALID)
   {
-    log_text(LOG_WARNING, "attempt to close an already closed connection");
+    log_text(LOG_ALERT, "attempt to close an already closed connection");
     return 0;
   }
   else if(con->state == DB_CONN_RESULT_SET)
@@ -500,6 +500,8 @@ db_result_t *db_execute(db_stmt_t *stmt)
   db_result_t     *rs = &con->rs;
   int             rc;
 
+  con->drv_errno = 0;
+
   if (con->state == DB_CONN_INVALID)
   {
     log_text(LOG_ALERT, "attempt to use an already closed connection");
@@ -513,7 +515,7 @@ db_result_t *db_execute(db_stmt_t *stmt)
 
   rs->statement = stmt;
 
-  con->db_errno = con->driver->ops.execute(stmt, rs);
+  con->sql_errno = con->driver->ops.execute(stmt, rs);
 
   db_thread_stat_inc(con->thread_id, rs->stat_type);
 
@@ -574,24 +576,38 @@ db_result_t *db_query(db_conn_t *con, const char *query, size_t len)
   db_result_t *rs = &con->rs;
   int         rc;
 
+  con->drv_errno = 0;
+
   if (con->state == DB_CONN_INVALID)
   {
     log_text(LOG_ALERT, "attempt to use an already closed connection");
+    con->sql_errno = DB_ERROR_FATAL;
     return NULL;
   }
   else if (con->state == DB_CONN_RESULT_SET &&
            (rc = db_free_results_int(con)) != 0)
   {
+    con->sql_errno = DB_ERROR_FATAL;
     return NULL;
   }
 
-  con->db_errno = con->driver->ops.query(con, query, len, rs);
+  con->sql_errno = con->driver->ops.query(con, query, len, rs);
 
   db_thread_stat_inc(con->thread_id, rs->stat_type);
 
-  con->state = DB_CONN_RESULT_SET;
+  if (SB_LIKELY(con->sql_errno == DB_ERROR_NONE))
+  {
+    if (rs->stat_type == DB_STAT_READ)
+    {
+      con->state = DB_CONN_RESULT_SET;
+      return rs;
+    }
+    con->state = DB_CONN_READY;
 
-  return rs;
+    return NULL;
+  }
+
+  return NULL;
 }
 
 
@@ -627,12 +643,12 @@ int db_free_results(db_result_t *rs)
   if (con->state == DB_CONN_INVALID)
   {
     log_text(LOG_ALERT, "attempt to use an already closed connection");
-    return 0;
+    return 1;
   }
   else if (con->state != DB_CONN_RESULT_SET)
   {
     log_text(LOG_ALERT, "attempt to free an invalid result set");
-    return 0;
+    return 1;
   }
 
   return db_free_results_int(con);
@@ -927,7 +943,8 @@ static int db_bulk_do_insert(db_conn_t *con, int is_last)
   if (!con->bulk_cnt)
     return 0;
 
-  if (db_query(con, con->bulk_buffer, con->bulk_ptr) == NULL)
+  if (db_query(con, con->bulk_buffer, con->bulk_ptr) == NULL &&
+      con->sql_errno != DB_ERROR_NONE)
     return 1;
 
 
@@ -937,7 +954,8 @@ static int db_bulk_do_insert(db_conn_t *con, int is_last)
 
     if (is_last || con->bulk_commit_cnt >= con->bulk_commit_max)
     {
-      if (db_query(con, "COMMIT", 6) == NULL)
+      if (db_query(con, "COMMIT", 6) == NULL &&
+          con->sql_errno != DB_ERROR_NONE)
         return 1;
       con->bulk_commit_cnt = 0;
     }

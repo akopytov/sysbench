@@ -223,11 +223,12 @@ typedef enum {
 
 typedef struct db_conn
 {
+  db_error_t      sql_errno;         /* Driver-independent error code */
+  int             drv_errno;         /* Driver-specific error code */
   db_driver_t     *driver;           /* DB driver for this connection */
   void            *ptr;              /* Driver-specific data */
-  db_error_t      db_errno;          /* Driver-independent error code */
-  db_conn_state_t state;             /* Connection state */
   db_result_t     rs;                /* Result set */
+  db_conn_state_t state;             /* Connection state */
   int             thread_id;         /* Thread this connection belongs to */
 
   unsigned int    bulk_cnt;          /* Current number of rows in bulk insert buffer */
@@ -239,6 +240,7 @@ typedef struct db_conn
   unsigned int    bulk_commit_max;   /* Maximum value of uncommitted rows */
 
   char            pad[SB_CACHELINE_PAD(sizeof(void *) * 3 + sizeof(db_error_t) +
+                                       sizeof(int) +
                                        sizeof(db_conn_state_t) +
                                        sizeof(db_result_t) +
                                        sizeof(int) * 8)];
