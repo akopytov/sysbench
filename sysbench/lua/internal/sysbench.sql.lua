@@ -71,8 +71,9 @@ typedef enum
 
 typedef struct
 {
-  sql_error_t      sql_errno;        /* Driver-independent error code */
-  int              drv_errno;        /* Driver-specific error code */
+  sql_error_t     error;             /* Driver-independent error code */
+  int             sql_errno;         /* Driver-specific error code */
+  const char      *sql_state;        /* Database-specific SQL state */
 
   const char      opaque[?];
 } sql_connection;
@@ -208,22 +209,27 @@ function connection_methods.disconnect(self)
 end
 
 function connection_methods.check_error(self, rs)
-   if rs ~= nil or self.sql_errno == sysbench.sql.error.NONE then
+   if rs ~= nil or self.error == sysbench.sql.error.NONE then
       return rs
    end
 
-   if self.sql_errno == sysbench.sql.error.IGNORABLE then
+   local sql_state = self.sql_state ~= nil and
+      ffi.string(self.sql_state) or 'unknown'
+
+   if self.error == sysbench.sql.error.IGNORABLE then
       -- Throw an error containing the SQL error number provided by the SQL
       -- driver. It can be caught by the user script to do some extra steps to
       -- restart a transaction (e.g. reprepare statements after a
       -- reconnect). Otherwise it will be caught by thread_run() in
       -- sysbench.lua, in which case the event will be restarted.
       error({ errcode = sysbench.error.RESTART_EVENT,
+              error = self.sql_errno,
               sql_errno = self.sql_errno,
-              drv_errno = self.drv_errno})
+              sql_state = sql_state})
    end
 
-   error(string.format("Fatal SQL error, drv_errno = %d", self.drv_errno))
+   error(string.format("SQL error, sql_errno = %d, sql_state = '%s'",
+                       self.sql_errno, sql_state))
 end
 
 function connection_methods.query(self, query)

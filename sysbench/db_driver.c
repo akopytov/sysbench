@@ -500,7 +500,8 @@ db_result_t *db_execute(db_stmt_t *stmt)
   db_result_t     *rs = &con->rs;
   int             rc;
 
-  con->drv_errno = 0;
+  con->sql_errno = 0;
+  con->sql_state = NULL;
 
   if (con->state == DB_CONN_INVALID)
   {
@@ -515,7 +516,7 @@ db_result_t *db_execute(db_stmt_t *stmt)
 
   rs->statement = stmt;
 
-  con->sql_errno = con->driver->ops.execute(stmt, rs);
+  con->error = con->driver->ops.execute(stmt, rs);
 
   db_thread_stat_inc(con->thread_id, rs->stat_type);
 
@@ -576,26 +577,27 @@ db_result_t *db_query(db_conn_t *con, const char *query, size_t len)
   db_result_t *rs = &con->rs;
   int         rc;
 
-  con->drv_errno = 0;
+  con->sql_errno = 0;
+  con->sql_state = NULL;
 
   if (con->state == DB_CONN_INVALID)
   {
     log_text(LOG_ALERT, "attempt to use an already closed connection");
-    con->sql_errno = DB_ERROR_FATAL;
+    con->error = DB_ERROR_FATAL;
     return NULL;
   }
   else if (con->state == DB_CONN_RESULT_SET &&
            (rc = db_free_results_int(con)) != 0)
   {
-    con->sql_errno = DB_ERROR_FATAL;
+    con->error = DB_ERROR_FATAL;
     return NULL;
   }
 
-  con->sql_errno = con->driver->ops.query(con, query, len, rs);
+  con->error = con->driver->ops.query(con, query, len, rs);
 
   db_thread_stat_inc(con->thread_id, rs->stat_type);
 
-  if (SB_LIKELY(con->sql_errno == DB_ERROR_NONE))
+  if (SB_LIKELY(con->error == DB_ERROR_NONE))
   {
     if (rs->stat_type == DB_STAT_READ)
     {
@@ -944,7 +946,7 @@ static int db_bulk_do_insert(db_conn_t *con, int is_last)
     return 0;
 
   if (db_query(con, con->bulk_buffer, con->bulk_ptr) == NULL &&
-      con->sql_errno != DB_ERROR_NONE)
+      con->error != DB_ERROR_NONE)
     return 1;
 
 
@@ -955,7 +957,7 @@ static int db_bulk_do_insert(db_conn_t *con, int is_last)
     if (is_last || con->bulk_commit_cnt >= con->bulk_commit_max)
     {
       if (db_query(con, "COMMIT", 6) == NULL &&
-          con->sql_errno != DB_ERROR_NONE)
+          con->error != DB_ERROR_NONE)
         return 1;
       con->bulk_commit_cnt = 0;
     }

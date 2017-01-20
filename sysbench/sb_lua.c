@@ -687,7 +687,7 @@ int sb_lua_db_query(lua_State *L)
 
   query = luaL_checklstring(L, 1, &len);
   rs = db_query(con, query, len);
-  if (rs == NULL && con->sql_errno == DB_ERROR_IGNORABLE)
+  if (rs == NULL && con->error == DB_ERROR_IGNORABLE)
     throw_restart_event(L);
 
   if (rs != NULL)
@@ -992,7 +992,7 @@ int sb_lua_db_execute(lua_State *L)
   }
 
   ptr = db_execute(stmt->ptr);
-  if (ptr == NULL && tls_lua_ctxt->con->sql_errno == DB_ERROR_IGNORABLE)
+  if (ptr == NULL && tls_lua_ctxt->con->error == DB_ERROR_IGNORABLE)
   {
     stmt->rs = NULL;
     throw_restart_event(L);

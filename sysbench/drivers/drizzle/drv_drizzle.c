@@ -390,12 +390,12 @@ db_error_t drizzle_drv_execute(db_stmt_t *stmt, db_result_t *rs)
   }
   buf[j] = '\0';
   
-  con->sql_errno = drizzle_drv_query(con, buf, j, rs);
+  con->error = drizzle_drv_query(con, buf, j, rs);
   free(buf);
-  if (con->sql_errno != DB_ERROR_NONE)
+  if (con->error != DB_ERROR_NONE)
   {
     log_text(LOG_DEBUG, "ERROR: exiting drizzle_drv_execute(), database error");
-    return con->sql_errno;
+    return con->error;
   }
   
   return DB_ERROR_NONE;

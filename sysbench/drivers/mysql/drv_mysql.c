@@ -706,9 +706,11 @@ static db_error_t check_error(db_conn_t *sb_con, const char *func,
   MYSQL          *con = db_mysql_con->mysql;
 
   const unsigned int error = mysql_errno(con);
-  DEBUG("mysql_errno(%p) = %u", con, sb_con->drv_errno);
+  DEBUG("mysql_errno(%p) = %u", con, sb_con->sql_errno);
 
-  sb_con->drv_errno = (int) error;
+  sb_con->sql_errno = (int) error;
+  sb_con->sql_state = mysql_sqlstate(con);
+  DEBUG("mysql_state(%p) = %s", con, sb_con->sql_state);
 
   /*
     Check if the error code is specified in --mysql-ignore-errors, and return

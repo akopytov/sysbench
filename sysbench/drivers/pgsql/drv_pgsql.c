@@ -466,12 +466,13 @@ int pgsql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, size_t len)
 /* Check query execution status */
 
 
-static db_error_t pgsql_check_status(PGconn *pgcon, PGresult *pgres,
+static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
                                      const char *funcname, const char *query,
                                      db_result_t *rs)
 {
   ExecStatusType status;
   db_error_t     rc;
+  PGconn * const pgcon = con->ptr;
 
   status = PQresultStatus(pgres);
   switch(status) {
@@ -495,10 +496,12 @@ static db_error_t pgsql_check_status(PGconn *pgcon, PGresult *pgres,
     rs->nrows = 0;
     rs->stat_type = DB_STAT_ERROR;
 
+    con->sql_state = PQresultErrorField(pgres, PG_DIAG_SQLSTATE);
+
     const char * const errmsg = PQerrorMessage(pgcon);
 
-    if (strstr(errmsg, "deadlock detected") ||
-        strstr(errmsg, "duplicate key value violates unique constraint"))
+    if (!strcmp(con->sql_state, "40P01") /* deadlock_detected */ ||
+        !strcmp(con->sql_state, "23505") /* unique violation */)
     {
       PQexec(pgcon, "ROLLBACK");
       rc = DB_ERROR_IGNORABLE;
@@ -572,7 +575,7 @@ db_error_t pgsql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
     pgres = PQexecPrepared(pgcon, pgstmt->name, pgstmt->nparams,
                            (const char **)pgstmt->pvalues, NULL, NULL, 1);
 
-    rc = pgsql_check_status(pgcon, pgres, "PQexecPrepared", NULL, rs);
+    rc = pgsql_check_status(con, pgres, "PQexecPrepared", NULL, rs);
 
     rs->ptr = (void *) pgres;
 
@@ -626,14 +629,14 @@ db_error_t pgsql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
 db_error_t pgsql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
                            db_result_t *rs)
 {
-  PGconn         *con = sb_conn->ptr;
+  PGconn         *pgcon = sb_conn->ptr;
   PGresult       *pgres;
   db_error_t     rc;
 
   (void)len; /* unused */
 
-  pgres = PQexec(con, query);
-  rc = pgsql_check_status(con, pgres, "PQexec", query, rs);
+  pgres = PQexec(pgcon, query);
+  rc = pgsql_check_status(sb_conn, pgres, "PQexec", query, rs);
 
   rs->ptr = pgres;
 

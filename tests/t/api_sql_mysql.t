@@ -50,7 +50,7 @@ SQL Lua API + MySQL tests
   --
   (last message repeated 1 times)
   ALERT: attempt to use an already closed connection
-  [string "sysbench.sql.lua"]:*: Fatal SQL error, drv_errno = 0 (glob)
+  [string "sysbench.sql.lua"]:*: SQL error, sql_errno = 0, sql_state = 'unknown' (glob)
   ALERT: attempt to close an already closed connection
   --
   4

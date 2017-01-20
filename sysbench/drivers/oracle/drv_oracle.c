@@ -673,7 +673,7 @@ db_error_t ora_drv_execute(db_stmt_t *stmt, db_result_t *rs)
   }
   buf[j] = '\0';
   
-  db_con->sql_errno = ora_drv_query(db_con, buf, j, rs);
+  db_con->error = ora_drv_query(db_con, buf, j, rs);
   free(buf);
 
   return DB_ERROR_NONE;
