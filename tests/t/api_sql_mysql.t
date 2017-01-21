@@ -76,14 +76,14 @@ SQL Lua API + MySQL tests
     sql_state = \t22001 (esc)
     sql_errmsg = \tData too long for column 'a' at row 1 (esc)
   */api_sql.lua:*: SQL error, errno = 1406, state = '22001': Data too long for column 'a' at row 1 (glob)
-  FATAL: mysql_drv_query() returned error 1051 (Unknown table 'sbtest.t') for query 'DROP TABLE t'
+  FATAL: mysql_drv_query() returned error 1051 (Unknown table '*t') for query 'DROP TABLE t' (glob)
   Got an error descriptor:
     sql_errno = \t1051 (esc)
     connection = \t<sql_connection> (esc)
     query = \tDROP TABLE t (esc)
     sql_state = \t42S02 (esc)
-    sql_errmsg = \tUnknown table 'sbtest.t' (esc)
-  */api_sql.lua:*: SQL error, errno = 1051, state = '42S02': Unknown table 'sbtest.t' (glob)
+    sql_errmsg = \tUnknown table '*t' (esc) (glob)
+  */api_sql.lua:*: SQL error, errno = 1051, state = '42S02': Unknown table '*t' (glob)
   --
   1
   2

@@ -144,6 +144,9 @@ function event()
   }
   print('--')
   con:query("DROP TABLE IF EXISTS t")
+  if (drv:name() == 'mysql') then
+    con:query("SET sql_mode='STRICT_TRANS_TABLES'")
+  end
   for i = 1, #queries do
     local e, m = pcall(function () con:query(queries[i]) end)
     if not e then print(m) end
