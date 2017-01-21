@@ -74,11 +74,18 @@ typedef struct
   sql_error_t     error;             /* Driver-independent error code */
   int             sql_errno;         /* Driver-specific error code */
   const char      *sql_state;        /* Database-specific SQL state */
+  const char      *sql_errmsg;       /* Database-specific error message */
+  sql_driver      *driver;           /* DB driver for this connection */
 
   const char      opaque[?];
 } sql_connection;
 
-typedef struct db_stmt sql_statement;
+typedef struct
+{
+  sql_connection  *connection;
+
+  const char      opaque[?];
+} sql_statement;
 
 /* Result set definition */
 
@@ -208,33 +215,54 @@ function connection_methods.disconnect(self)
    return assert(ffi.C.db_connection_close(self) == 0)
 end
 
-function connection_methods.check_error(self, rs)
+function connection_methods.check_error(self, rs, query)
    if rs ~= nil or self.error == sysbench.sql.error.NONE then
       return rs
    end
 
-   local sql_state = self.sql_state ~= nil and
-      ffi.string(self.sql_state) or 'unknown'
-
-   if self.error == sysbench.sql.error.IGNORABLE then
-      -- Throw an error containing the SQL error number provided by the SQL
-      -- driver. It can be caught by the user script to do some extra steps to
-      -- restart a transaction (e.g. reprepare statements after a
-      -- reconnect). Otherwise it will be caught by thread_run() in
-      -- sysbench.lua, in which case the event will be restarted.
-      error({ errcode = sysbench.error.RESTART_EVENT,
-              error = self.sql_errno,
-              sql_errno = self.sql_errno,
-              sql_state = sql_state})
+   if self.sql_state == nil or self.sql_errmsg == nil then
+      -- It must be an API error, don't bother trying to downgrade it an
+      -- ignorable error
+      error("SQL API error", 3)
    end
 
-   error(string.format("SQL error, sql_errno = %d, sql_state = '%s'",
-                       self.sql_errno, sql_state))
+   local sql_state = ffi.string(self.sql_state)
+   local sql_errmsg = ffi.string(self.sql_errmsg)
+
+   -- Create an error descriptor containing connection, failed query, SQL error
+   -- number, state and error message provided by the SQL driver
+   errdesc = {
+      connection = self,
+      query = query,
+      sql_errno = self.sql_errno,
+      sql_state = sql_state,
+      sql_errmsg = sql_errmsg
+   }
+
+   -- Check if the error has already been marked as ignorable by the driver, or
+   -- there is an error hook that allows downgrading it to IGNORABLE
+   if (self.error == sysbench.sql.error.FATAL and
+          type(sysbench.hooks.sql_error_ignorable) == "function" and
+          sysbench.hooks.sql_error_ignorable(errdesc)) or
+      self.error == sysbench.sql.error.IGNORABLE
+   then
+      -- Throw a 'restart event' exception that can be caught by the user script
+      -- to do some extra steps to restart a transaction (e.g. reprepare
+      -- statements after a reconnect). Otherwise it will be caught by
+      -- thread_run() in sysbench.lua, in which case the entire current event
+      -- will be restarted without extra processing.
+      errdesc.errcode = sysbench.error.RESTART_EVENT
+      error(errdesc, 3)
+   end
+
+   -- Just throw a regular error message on a fatal error
+   error(string.format("SQL error, errno = %d, state = '%s': %s",
+                       self.sql_errno, sql_state, sql_errmsg), 2)
 end
 
 function connection_methods.query(self, query)
    local rs = ffi.C.db_query(self, query, #query)
-   return self:check_error(rs)
+   return self:check_error(rs, query)
 end
 
 function connection_methods.bulk_insert_init(self, query)
@@ -259,6 +287,7 @@ end
 -- row from the result set, if available, or nil otherwise
 function connection_methods.query_row(self, query)
    local rs = self:query(query)
+
    if rs == nil then
       return nil
    end
@@ -321,7 +350,8 @@ function statement_methods.bind_param(self, ...)
 end
 
 function statement_methods.execute(self)
-   return ffi.C.db_execute(self)
+   local rs = ffi.C.db_execute(self)
+   return self.connection:check_error(rs, '<prepared statement>')
 end
 
 function statement_methods.close(self)

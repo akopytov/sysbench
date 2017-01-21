@@ -709,8 +709,12 @@ static db_error_t check_error(db_conn_t *sb_con, const char *func,
   DEBUG("mysql_errno(%p) = %u", con, sb_con->sql_errno);
 
   sb_con->sql_errno = (int) error;
+
   sb_con->sql_state = mysql_sqlstate(con);
   DEBUG("mysql_state(%p) = %s", con, sb_con->sql_state);
+
+  sb_con->sql_errmsg = mysql_error(con);
+  DEBUG("mysql_error(%p) = %s", con, sb_con->sql_errmsg);
 
   /*
     Check if the error code is specified in --mysql-ignore-errors, and return
@@ -724,7 +728,7 @@ static db_error_t check_error(db_conn_t *sb_con, const char *func,
 
     if (error == tmp || !strcmp(val, "all"))
     {
-      log_text(LOG_DEBUG, "Ignoring error %u %s, ", error, mysql_error(con));
+      log_text(LOG_DEBUG, "Ignoring error %u %s, ", error, sb_con->sql_errmsg);
 
       /* Check if we should reconnect */
       switch (error)
@@ -751,10 +755,10 @@ static db_error_t check_error(db_conn_t *sb_con, const char *func,
 
   if (query)
     log_text(LOG_FATAL, "%s returned error %u (%s) for query '%s'",
-             func, error, mysql_error(con), query);
+             func, error, sb_con->sql_errmsg, query);
   else
     log_text(LOG_FATAL, "%s returned error %u (%s)",
-             func, error, mysql_error(con));
+             func, error, sb_con->sql_errmsg);
 
   *type = DB_STAT_ERROR;
 

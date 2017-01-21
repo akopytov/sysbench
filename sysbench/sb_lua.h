@@ -1,5 +1,5 @@
 /* Copyright (C) 2006 MySQL AB
-   Copyright (C) 2006-2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2006-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,12 @@
 #endif
 
 #include "sysbench.h"
+#include "lua.h"
 
 /* Load a specified Lua script */
 
 sb_test_t *sb_load_lua(const char *testname);
+
+bool sb_lua_hook_defined(lua_State *L, const char *name);
+
+int sb_lua_hook_call(const char *name);

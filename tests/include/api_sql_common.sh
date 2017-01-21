@@ -109,10 +109,9 @@ function event()
   print('--')
 end
 EOF
-
+sysbench $SB_ARGS run
 
 # Failed connection handling
-sysbench $SB_ARGS run
 
 SB_ARGS="--verbosity=1 --test=$CRAMTMP/api_sql.lua --max-requests=1 --num-threads=1 $DB_DRIVER_ARGS"
 cat >$CRAMTMP/api_sql.lua <<EOF
@@ -122,8 +121,38 @@ function event()
   print(m)
 end
 EOF
-
 sysbench $SB_ARGS --mysql-host="non-existing" --pgsql-host="non-existing" run
+
+# Error hooks
+SB_ARGS="--verbosity=1 --test=$CRAMTMP/api_sql.lua --max-requests=1 --num-threads=1 $DB_DRIVER_ARGS"
+cat >$CRAMTMP/api_sql.lua <<EOF
+function sysbench.hooks.sql_error_ignorable(e)
+  print("Got an error descriptor:")
+  for k,v in pairs(e) do print("  " .. k .. " = ", v) end
+end
+
+function event()
+  local drv = sysbench.sql.driver()
+  local con = drv:connect()
+  local queries = {
+    "CREATE TABLE t(a CHAR(1) NOT NULL)",
+    "INSERT INTO t VALUES (1)",
+    "INSERT INTO t VALUES (NULL)",
+    [[INSERT INTO t VALUES ("test")]],
+    "DROP TABLE t",
+    "DROP TABLE t"
+  }
+  print('--')
+  con:query("DROP TABLE IF EXISTS t")
+  for i = 1, #queries do
+    local e, m = pcall(function () con:query(queries[i]) end)
+    if not e then print(m) end
+  end
+  print('--')
+end
+EOF
+sysbench $SB_ARGS run
+
 
 ########################################################################
 # Multiple connections test

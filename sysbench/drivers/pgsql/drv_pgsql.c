@@ -497,8 +497,7 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
     rs->stat_type = DB_STAT_ERROR;
 
     con->sql_state = PQresultErrorField(pgres, PG_DIAG_SQLSTATE);
-
-    const char * const errmsg = PQerrorMessage(pgcon);
+    con->sql_errmsg = PQerrorMessage(pgcon);
 
     if (!strcmp(con->sql_state, "40P01") /* deadlock_detected */ ||
         !strcmp(con->sql_state, "23505") /* unique violation */)
@@ -508,7 +507,8 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
     }
     else
     {
-      log_text(LOG_FATAL, "%s() failed: %d %s", funcname, status, errmsg);
+      log_text(LOG_FATAL, "%s() failed: %d %s", funcname, status,
+               con->sql_errmsg);
 
       if (query != NULL)
         log_text(LOG_FATAL, "failed query was: %s", query);

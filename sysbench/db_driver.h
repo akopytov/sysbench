@@ -226,6 +226,7 @@ typedef struct db_conn
   db_error_t      error;             /* Database-independent error code */
   int             sql_errno;         /* Database-specific error code */
   const char      *sql_state;        /* Database-specific SQL state */
+  const char      *sql_errmsg;       /* Database-specific error message */
   db_driver_t     *driver;           /* DB driver for this connection */
   void            *ptr;              /* Driver-specific data */
   db_result_t     rs;                /* Result set */
@@ -242,6 +243,7 @@ typedef struct db_conn
 
   char            pad[SB_CACHELINE_PAD(sizeof(db_error_t) +
                                        sizeof(int) +
+                                       sizeof(void *) +
                                        sizeof(void *) +
                                        sizeof(void *) +
                                        sizeof(void *) +

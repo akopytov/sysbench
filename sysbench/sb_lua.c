@@ -182,7 +182,7 @@ static void check_connection(lua_State *L, sb_lua_ctxt_t *ctxt)
 static bool func_available(lua_State *L, const char *func)
 {
   lua_getglobal(L, func);
-  bool rc = !lua_isnil(L, -1) && lua_type(L, -1) == LUA_TFUNCTION;
+  bool rc = lua_isfunction(L, -1);
   lua_pop(L, 1);
 
   return rc;
@@ -1109,4 +1109,19 @@ int sb_lua_event_stop(lua_State *L)
   sb_event_stop(tls_lua_ctxt->thread_id);
 
   return 0;
+}
+
+/* Check if a specified hook exists */
+
+bool sb_lua_hook_defined(lua_State *L, const char *name)
+{
+  lua_getglobal(L, "sysbench");
+  lua_getfield(L, -1, "hooks");
+  lua_getfield(L, -1, name);
+
+  bool rc = lua_isfunction(L, -1);
+
+  lua_pop(L, 3);
+
+  return rc;
 }

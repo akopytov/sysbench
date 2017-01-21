@@ -50,7 +50,7 @@ SQL Lua API + MySQL tests
   --
   (last message repeated 1 times)
   ALERT: attempt to use an already closed connection
-  [string "sysbench.sql.lua"]:*: SQL error, sql_errno = 0, sql_state = 'unknown' (glob)
+  */api_sql.lua:*: SQL API error (glob)
   ALERT: attempt to close an already closed connection
   --
   4
@@ -59,6 +59,32 @@ SQL Lua API + MySQL tests
   FATAL: unable to connect to MySQL server on host 'non-existing', port 3306, aborting...
   FATAL: error 2005: Unknown MySQL server host 'non-existing' (0)
   connection creation failed
+  --
+  FATAL: mysql_drv_query() returned error 1048 (Column 'a' cannot be null) for query 'INSERT INTO t VALUES (NULL)'
+  Got an error descriptor:
+    sql_errno = \t1048 (esc)
+    connection = \t<sql_connection> (esc)
+    query = \tINSERT INTO t VALUES (NULL) (esc)
+    sql_state = \t23000 (esc)
+    sql_errmsg = \tColumn 'a' cannot be null (esc)
+  */api_sql.lua:*: SQL error, errno = 1048, state = '23000': Column 'a' cannot be null (glob)
+  FATAL: mysql_drv_query() returned error 1406 (Data too long for column 'a' at row 1) for query 'INSERT INTO t VALUES ("test")'
+  Got an error descriptor:
+    sql_errno = \t1406 (esc)
+    connection = \t<sql_connection> (esc)
+    query = \tINSERT INTO t VALUES ("test") (esc)
+    sql_state = \t22001 (esc)
+    sql_errmsg = \tData too long for column 'a' at row 1 (esc)
+  */api_sql.lua:*: SQL error, errno = 1406, state = '22001': Data too long for column 'a' at row 1 (glob)
+  FATAL: mysql_drv_query() returned error 1051 (Unknown table 'sbtest.t') for query 'DROP TABLE t'
+  Got an error descriptor:
+    sql_errno = \t1051 (esc)
+    connection = \t<sql_connection> (esc)
+    query = \tDROP TABLE t (esc)
+    sql_state = \t42S02 (esc)
+    sql_errmsg = \tUnknown table 'sbtest.t' (esc)
+  */api_sql.lua:*: SQL error, errno = 1051, state = '42S02': Unknown table 'sbtest.t' (glob)
+  --
   1
   2
   3
