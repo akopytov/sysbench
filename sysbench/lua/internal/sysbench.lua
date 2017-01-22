@@ -16,14 +16,20 @@
 
 ffi = require("ffi")
 
+ffi.cdef[[
+void sb_event_start(int thread_id);
+void sb_event_stop(int thread_id);
+bool sb_lua_more_events(int thread_id);
+]]
+
 -- ----------------------------------------------------------------------
 -- Main event loop. This is a Lua version of sysbench.c:thread_run()
 -- ----------------------------------------------------------------------
 function thread_run(thread_id)
    local success, ret
 
-   while sysbench.more_events() do
-      sysbench.event_start()
+   while ffi.C.sb_lua_more_events(thread_id) do
+      ffi.C.sb_event_start(thread_id)
 
       repeat
          local success, ret = pcall(event, thread_id)
@@ -42,7 +48,7 @@ function thread_run(thread_id)
          break
       end
 
-      sysbench.event_stop()
+      ffi.C.sb_event_stop(thread_id)
    end
 end
 

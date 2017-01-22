@@ -91,6 +91,8 @@ typedef enum {
   SB_LUA_ERROR_RESTART_EVENT
 } sb_lua_error_t;
 
+bool sb_lua_more_events(int);
+
 /* Lua interpreter states */
 
 static lua_State **states CK_CC_CACHELINE;
@@ -159,9 +161,6 @@ static int sb_lua_db_execute(lua_State *);
 static int sb_lua_db_close(lua_State *);
 static int sb_lua_db_store_results(lua_State *);
 static int sb_lua_db_free_results(lua_State *);
-static int sb_lua_more_events(lua_State *);
-static int sb_lua_event_start(lua_State *);
-static int sb_lua_event_stop(lua_State *);
 
 static unsigned int sb_lua_table_size(lua_State *, int);
 
@@ -463,12 +462,6 @@ lua_State *sb_lua_new_state(int thread_id)
   /* sysbench.tid */
   if (thread_id >= 0)
     SB_LUA_VAR("tid", thread_id);
-
-  /* Export functions into per-state 'sysbench' table  */
-
-  SB_LUA_FUNC("more_events", sb_lua_more_events);
-  SB_LUA_FUNC("event_start", sb_lua_event_start);
-  SB_LUA_FUNC("event_stop", sb_lua_event_stop);
 
   /* Export functions into per-state 'sysbench.db' table  */
 
@@ -1079,36 +1072,12 @@ unsigned int sb_lua_table_size(lua_State *L, int index)
 
 /* Check if there are more events to execute */
 
-int sb_lua_more_events(lua_State *L)
+bool sb_lua_more_events(int thread_id)
 {
   sb_event_t    e;
 
-  e = sb_next_event(&sbtest, tls_lua_ctxt->thread_id);
-  lua_pushboolean(L, e.type == SB_REQ_TYPE_SCRIPT);
-
-  return 1;
-}
-
-/* Exported wrapper for sb_event_start() */
-
-int sb_lua_event_start(lua_State *L)
-{
-  (void) L; /* unused */
-
-  sb_event_start(tls_lua_ctxt->thread_id);
-
-  return 0;
-}
-
-/* Exported wrapper for sb_event_stop() */
-
-int sb_lua_event_stop(lua_State *L)
-{
-  (void) L; /* unused */
-
-  sb_event_stop(tls_lua_ctxt->thread_id);
-
-  return 0;
+  e = sb_next_event(&sbtest, thread_id);
+  return e.type == SB_REQ_TYPE_SCRIPT;
 }
 
 /* Check if a specified hook exists */
