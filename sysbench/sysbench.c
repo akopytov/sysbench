@@ -521,6 +521,13 @@ void sb_event_stop(int thread_id)
     sb_histogram_update(&sb_latency_histogram, NS2MS(value));
 
   db_thread_stat_inc(thread_id, DB_STAT_TRX);
+
+  if (sb_globals.tx_rate > 0)
+  {
+    pthread_mutex_lock(&event_queue_mutex);
+    sb_globals.concurrency--;
+    pthread_mutex_unlock(&event_queue_mutex);
+  }
 }
 
 
@@ -543,13 +550,6 @@ static int thread_run(sb_test_t *test, int thread_id)
     rc = test->ops.execute_event(&event, thread_id);
 
     sb_event_stop(thread_id);
-
-    if (sb_globals.tx_rate > 0)
-    {
-      pthread_mutex_lock(&event_queue_mutex);
-      sb_globals.concurrency--;
-      pthread_mutex_unlock(&event_queue_mutex);
-    }
   }
 
   return rc;
