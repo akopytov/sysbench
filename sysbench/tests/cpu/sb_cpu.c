@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -59,8 +59,6 @@ static sb_test_t cpu_test =
 
 /* Upper limit for primes */
 static unsigned int    max_prime;
-/* Request counter */
-static unsigned int    req_performed;
 
 int register_test_cpu(sb_list_t * tests)
 {
@@ -79,8 +77,6 @@ int cpu_init(void)
   }
   max_prime= (unsigned int)prime_option;
 
-  req_performed = 0;
-
   return 0;
 }
 
@@ -90,19 +86,6 @@ sb_event_t cpu_next_event(int thread_id)
   sb_event_t req;
 
   (void) thread_id; /* unused */
-
-  if (sb_globals.max_requests > 0)
-  {
-    SB_THREAD_MUTEX_LOCK();
-    if (req_performed >= sb_globals.max_requests)
-    {
-      req.type = SB_REQ_TYPE_NULL;
-      SB_THREAD_MUTEX_UNLOCK();
-      return req;
-    }
-    req_performed++;
-    SB_THREAD_MUTEX_UNLOCK();
-  }
 
   req.type = SB_REQ_TYPE_CPU;
 

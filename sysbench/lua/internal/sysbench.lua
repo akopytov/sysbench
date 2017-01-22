@@ -19,7 +19,7 @@ ffi = require("ffi")
 ffi.cdef[[
 void sb_event_start(int thread_id);
 void sb_event_stop(int thread_id);
-bool sb_lua_more_events(int thread_id);
+bool sb_more_events(int thread_id);
 ]]
 
 -- ----------------------------------------------------------------------
@@ -28,7 +28,7 @@ bool sb_lua_more_events(int thread_id);
 function thread_run(thread_id)
    local success, ret
 
-   while ffi.C.sb_lua_more_events(thread_id) do
+   while ffi.C.sb_more_events(thread_id) do
       ffi.C.sb_event_start(thread_id)
 
       repeat

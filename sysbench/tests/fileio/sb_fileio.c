@@ -27,6 +27,7 @@
 #ifdef STDC_HEADERS
 # include <stdio.h>
 # include <stdlib.h>
+# include <inttypes.h>
 #endif
 
 #ifdef HAVE_UNISTD_H 
@@ -199,6 +200,9 @@ static FILE_DESCRIPTOR *files;
 /* test mode type */
 static file_test_mode_t test_mode;
 
+/* Limit on the number of events */
+static uint64_t max_events;
+
 /* Previous request needed for validation */
 static sb_file_request_t prev_req;
 
@@ -331,6 +335,10 @@ int file_init(void)
   init_vars();
   clear_stats();
 
+  /* Use our own limit on the number of events */
+  max_events = sb_globals.max_requests;
+  sb_globals.max_requests = 0;
+
   return 0;
 }
 
@@ -433,7 +441,7 @@ sb_event_t file_get_seq_request(void)
     file_req->operation = FILE_OP_TYPE_READ;
 
   /* Do final fsync on all files and quit if we are done */
-  if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
+  if (max_events > 0 && req_performed >= max_events)
   {
     /* no fsync for reads */
     if (file_fsync_end && file_req->operation == FILE_OP_TYPE_WRITE &&
@@ -548,7 +556,7 @@ sb_event_t file_get_rnd_request(int thread_id)
   }
 
   /* fsync all files (if requested by user) as soon as we are done */
-  if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
+  if (max_events > 0 && req_performed >= max_events)
   {
     if (file_fsync_end != 0 &&
         (real_mode == MODE_RND_WRITE || real_mode == MODE_RND_RW ||
@@ -788,8 +796,8 @@ void file_print_mode(void)
     case MODE_RND_WRITE:
     case MODE_RND_READ:
     case MODE_RND_RW:
-      log_text(LOG_NOTICE, "Number of IO requests: %d",
-               sb_globals.max_requests);
+      log_text(LOG_NOTICE, "Number of IO requests: %" PRIu64,
+               max_events);
       log_text(LOG_NOTICE,
                "Read/Write ratio for combined random IO test: %2.2f",
                file_rw_ratio);

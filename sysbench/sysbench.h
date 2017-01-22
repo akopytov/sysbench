@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -180,10 +180,13 @@ typedef struct
 
 typedef struct
 {
+  int             error CK_CC_CACHELINE;        /* global error flag */
+  unsigned int    tx_rate;      /* target transaction rate */
+  unsigned int    max_requests; /* maximum number of requests */
+  unsigned int    max_time_ns;     /* total execution time limit */
+  pthread_mutex_t exec_mutex CK_CC_CACHELINE;   /* execution mutex */
   sb_cmd_t        command;      /* command passed from command line */
-  int             error;        /* global error - everyone exit */
-  pthread_mutex_t exec_mutex;   /* execution mutex */
-  unsigned int    num_threads;  /* number of threads to use */
+  unsigned int    num_threads CK_CC_CACHELINE;  /* number of threads to use */
   unsigned int    num_running;  /* number of threads currently active */
   unsigned int    report_interval; /* intermediate reports interval */
   unsigned int    percentile;   /* percentile rank for latency stats */
@@ -191,11 +194,7 @@ typedef struct
   /* array of report checkpoints */
   unsigned int    checkpoints[MAX_CHECKPOINTS];
   unsigned int    n_checkpoints; /* number of checkpoints */
-  unsigned int    tx_rate;      /* target transaction rate */
-  unsigned int    max_requests; /* maximum number of requests */
-  unsigned int    max_time;     /* total execution time limit */
   unsigned char   debug;        /* debug flag */
-  int             force_shutdown; /* whether we must force test shutdown */
   unsigned int    timeout;      /* forced shutdown timeout */
   unsigned char   validate;     /* validation flag */
   unsigned char   verbosity;    /* log verbosity */
@@ -204,11 +203,13 @@ typedef struct
   int             concurrency;  /* number of concurrent requests when tx-rate is
                                 used */
   /* 1 when forced shutdown is in progress, 0 otherwise */
+  int             force_shutdown; /* whether we must force test shutdown */
   int             forced_shutdown_in_progress;
+  uint64_t        nevents CK_CC_CACHELINE; /* event counter */
 } sb_globals_t;
 
-extern sb_globals_t sb_globals;
-extern pthread_mutex_t event_queue_mutex;
+extern sb_globals_t sb_globals CK_CC_CACHELINE;
+extern pthread_mutex_t event_queue_mutex CK_CC_CACHELINE;
 
 /* Global execution timer */
 extern sb_timer_t      sb_exec_timer CK_CC_CACHELINE;
@@ -220,6 +221,7 @@ extern sb_timer_t      sb_checkpoint_timer2;
 
 extern TLS int sb_tls_thread_id;
 
+bool sb_more_events(int thread_id);
 sb_event_t sb_next_event(sb_test_t *test, int thread_id);
 void sb_event_start(int thread_id);
 void sb_event_stop(int thread_id);

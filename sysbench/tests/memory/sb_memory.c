@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -201,7 +201,10 @@ int memory_init(void)
       memset(buffers[i], 0, memory_block_size);
     }
   }
-  
+
+  /* Use our own limit on the number of events */
+  sb_globals.max_requests = 0;
+
   return 0;
 }
 

@@ -152,9 +152,6 @@ static int report_thread_created;
 static int checkpoints_thread_created;
 static int eventgen_thread_created;
 
-/* Time limit (--max-time) in nanoseconds */
-static uint64_t max_time_ns CK_CC_CACHELINE;
-
 /* Global execution timer */
 sb_timer_t      sb_exec_timer CK_CC_CACHELINE;
 
@@ -412,12 +409,35 @@ void print_run_mode(sb_test_t *test)
 
   if (sb_globals.force_shutdown)
     log_text(LOG_NOTICE, "Forcing shutdown in %u seconds",
-             sb_globals.max_time + sb_globals.timeout);
+             (unsigned) NS2SEC(sb_globals.max_time_ns) + sb_globals.timeout);
   
   log_text(LOG_NOTICE, "");
 
   if (test->ops.print_mode != NULL)
     test->ops.print_mode();
+}
+
+bool sb_more_events(int thread_id)
+{
+  (void) thread_id; /* unused */
+
+  if (sb_globals.error)
+    return false;
+
+  /* Check if we have a time limit */
+  if (sb_globals.max_time_ns > 0 &&
+      sb_timer_value(&sb_exec_timer) >= sb_globals.max_time_ns)
+  {
+    log_text(LOG_INFO, "Time limit exceeded, exiting...");
+    return false;
+  }
+
+  /* Check if we have a limit on the number of events */
+  if (sb_globals.max_requests > 0 &&
+      ck_pr_faa_64(&sb_globals.nevents, 1) >= sb_globals.max_requests)
+    return false;
+
+  return true;
 }
 
 /*
@@ -427,23 +447,9 @@ void print_run_mode(sb_test_t *test)
 
 sb_event_t sb_next_event(sb_test_t *test, int thread_id)
 {
-  sb_event_t          event;
   sb_list_item_t      *pos;
   event_queue_elem_t  *elem;
   unsigned long long  queue_start_time = 0;
-
-  event.type = SB_REQ_TYPE_NULL;
-
-  if (sb_globals.error)
-    return event;
-
-  /* Check if we have a time limit */
-  if (max_time_ns > 0 &&
-      sb_timer_value(&sb_exec_timer) >= max_time_ns)
-  {
-    log_text(LOG_INFO, "Time limit exceeded, exiting...");
-    return event;
-  }
 
   /* If we are in tx_rate mode, we take events from queue */
   if (sb_globals.tx_rate > 0)
@@ -451,6 +457,10 @@ sb_event_t sb_next_event(sb_test_t *test, int thread_id)
     if (queue_is_full)
     {
       log_text(LOG_FATAL, "Event queue is full.");
+
+      sb_event_t          event;
+      event.type = SB_REQ_TYPE_NULL;
+
       return event;
     }
     pthread_mutex_lock(&event_queue_mutex);
@@ -476,9 +486,7 @@ sb_event_t sb_next_event(sb_test_t *test, int thread_id)
 
   }
 
-  event = test->ops.next_event(thread_id);
-
-  return event;
+  return test->ops.next_event(thread_id);
 }
 
 
@@ -524,9 +532,12 @@ static int thread_run(sb_test_t *test, int thread_id)
   sb_event_t        event;
   int               rc = 0;
 
-  while ((event = sb_next_event(test, thread_id)).type != SB_REQ_TYPE_NULL &&
-         rc == 0)
+  while (sb_more_events(thread_id) && rc == 0)
   {
+    event = sb_next_event(test, thread_id);
+    if (event.type == SB_REQ_TYPE_NULL)
+      break;
+
     sb_event_start(thread_id);
 
     rc = test->ops.execute_event(&event, thread_id);
@@ -934,7 +945,7 @@ static int run_test(sb_test_t *test)
     /* Set the alarm to force shutdown */
     signal(SIGALRM, sigalrm_forced_shutdown_handler);
 
-    alarm(sb_globals.max_time + sb_globals.timeout);
+    alarm(NS2SEC(sb_globals.max_time_ns) + sb_globals.timeout);
   }
 #endif
 
@@ -1044,30 +1055,29 @@ static int init(void)
     return 1;
   }
   sb_globals.max_requests = sb_get_value_int("max-requests");
-  sb_globals.max_time = sb_get_value_int("max-time");
-  max_time_ns = SEC2NS(sb_globals.max_time);
+  sb_globals.max_time_ns = SEC2NS(sb_get_value_int("max-time"));
 
-  if (!sb_globals.max_requests && !sb_globals.max_time)
+  if (!sb_globals.max_requests && !sb_globals.max_time_ns)
     log_text(LOG_WARNING, "WARNING: Both max-requests and max-time are 0, running endless test");
 
-  if (sb_globals.max_time > 0)
+  if (sb_globals.max_time_ns > 0)
   {
     /* Parse the --forced-shutdown value */
     tmp = sb_get_value_string("forced-shutdown");
     if (tmp == NULL)
     {
       sb_globals.force_shutdown = 1;
-      sb_globals.timeout = sb_globals.max_time / 20;
+      sb_globals.timeout = NS2SEC(sb_globals.max_time_ns) / 20;
     }
     else if (strcasecmp(tmp, "off"))
     {
       char *endptr;
     
       sb_globals.force_shutdown = 1;
-      sb_globals.timeout = (unsigned int)strtol(tmp, &endptr, 10);
+      sb_globals.timeout = (unsigned) strtol(tmp, &endptr, 10);
       if (*endptr == '%')
-        sb_globals.timeout = (unsigned int)(sb_globals.timeout *
-                                            (double)sb_globals.max_time / 100);
+        sb_globals.timeout = (unsigned) (sb_globals.timeout *
+                                         NS2SEC(sb_globals.max_time_ns) / 100);
       else if (*tmp == '\0' || *endptr != '\0')
       {
         log_text(LOG_FATAL, "Invalid value for --forced-shutdown: '%s'", tmp);

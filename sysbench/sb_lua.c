@@ -97,9 +97,6 @@ bool sb_lua_more_events(int);
 
 static lua_State **states CK_CC_CACHELINE;
 
-/* Event counter */
-static unsigned int nevents CK_CC_CACHELINE;
-
 static sb_test_t sbtest CK_CC_CACHELINE;
 
 static const char *sb_lua_script_path CK_CC_CACHELINE;
@@ -124,7 +121,6 @@ static lua_State *gstate;
 
 static int sb_lua_op_init(void);
 static int sb_lua_op_done(void);
-static sb_event_t sb_lua_next_event(int);
 static int sb_lua_op_thread_init(int);
 static int sb_lua_op_thread_run(int);
 static int sb_lua_op_thread_done(int);
@@ -132,7 +128,6 @@ static void sb_lua_op_print_stats(sb_stat_t type);
 
 static sb_operations_t lua_ops = {
    .init = sb_lua_op_init,
-   .next_event = &sb_lua_next_event,
    .done = sb_lua_op_done
 };
 
@@ -262,24 +257,6 @@ int sb_lua_op_init(void)
   }
 
   return 0;
-}
-
-sb_event_t sb_lua_next_event(int thread_id)
-{
-  sb_event_t req;
-
-  (void) thread_id; /* unused */
-
-  if (sb_globals.max_requests > 0 &&
-      ck_pr_faa_uint(&nevents, 1) >= sb_globals.max_requests)
-  {
-    req.type = SB_REQ_TYPE_NULL;
-    return req;
-  }
-
-  req.type = SB_REQ_TYPE_SCRIPT;
-
-  return req;
 }
 
 int sb_lua_op_thread_init(int thread_id)
@@ -1068,16 +1045,6 @@ unsigned int sb_lua_table_size(lua_State *L, int index)
   }
 
   return i;
-}
-
-/* Check if there are more events to execute */
-
-bool sb_lua_more_events(int thread_id)
-{
-  sb_event_t    e;
-
-  e = sb_next_event(&sbtest, thread_id);
-  return e.type == SB_REQ_TYPE_SCRIPT;
 }
 
 /* Check if a specified hook exists */

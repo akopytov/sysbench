@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #endif
 
 #include "sysbench.h"
+#include "ck_pr.h"
 
 /* How to test scheduler pthread_yield or sched_yield */
 #ifdef HAVE_PTHREAD_YIELD
@@ -92,7 +93,7 @@ int threads_init(void)
   thread_yields = sb_get_value_int("thread-yields");
   thread_locks = sb_get_value_int("thread-locks");
   req_performed = 0;
-  
+
   return 0;
 }
 
@@ -135,18 +136,8 @@ sb_event_t threads_next_event(int thread_id)
 
   (void) thread_id; /* unused */
 
-  SB_THREAD_MUTEX_LOCK();
-  if (sb_globals.max_requests > 0 && req_performed >= sb_globals.max_requests)
-  {
-    sb_req.type = SB_REQ_TYPE_NULL;
-    SB_THREAD_MUTEX_UNLOCK();
-    return sb_req;
-  }
-  
   sb_req.type = SB_REQ_TYPE_THREADS;
-  threads_req->lock_num = req_performed % thread_locks; 
-  req_performed++;
-  SB_THREAD_MUTEX_UNLOCK();
+  threads_req->lock_num = ck_pr_faa_uint(&req_performed, 1) % thread_locks;
 
   return sb_req;
 }
