@@ -182,8 +182,8 @@ typedef struct
 {
   int             error CK_CC_CACHELINE;        /* global error flag */
   unsigned int    tx_rate;      /* target transaction rate */
-  unsigned int    max_requests; /* maximum number of requests */
-  unsigned int    max_time_ns;     /* total execution time limit */
+  uint64_t        max_requests; /* maximum number of requests */
+  uint64_t        max_time_ns;  /* total execution time limit */
   pthread_mutex_t exec_mutex CK_CC_CACHELINE;   /* execution mutex */
   sb_cmd_t        command;      /* command passed from command line */
   unsigned int    num_threads CK_CC_CACHELINE;  /* number of threads to use */

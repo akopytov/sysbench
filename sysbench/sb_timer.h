@@ -123,7 +123,7 @@ static inline uint64_t sb_timer_stop(sb_timer_t *t)
 }
 
 /*
-  get the current timer value in nanoseconds without affecting is state, i.e.
+  get the current timer value in nanoseconds without affecting its state, i.e.
   is safe to be used concurrently on a shared timer.
 */
 static inline uint64_t sb_timer_value(sb_timer_t *t)
