@@ -67,11 +67,11 @@ SQL Lua API + MySQL tests
     sql_state = \t23000 (esc)
     sql_errmsg = \tColumn 'a' cannot be null (esc)
   */api_sql.lua:*: SQL error, errno = 1048, state = '23000': Column 'a' cannot be null (glob)
-  FATAL: mysql_drv_query() returned error 1406 (Data too long for column 'a' at row 1) for query 'INSERT INTO t VALUES ("test")'
+  FATAL: mysql_drv_query() returned error 1406 (Data too long for column 'a' at row 1) for query 'INSERT INTO t VALUES ('test')'
   Got an error descriptor:
     sql_errno = \t1406 (esc)
     connection = \t<sql_connection> (esc)
-    query = \tINSERT INTO t VALUES ("test") (esc)
+    query = \tINSERT INTO t VALUES ('test') (esc)
     sql_state = \t22001 (esc)
     sql_errmsg = \tData too long for column 'a' at row 1 (esc)
   */api_sql.lua:*: SQL error, errno = 1406, state = '22001': Data too long for column 'a' at row 1 (glob)

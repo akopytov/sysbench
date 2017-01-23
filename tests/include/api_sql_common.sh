@@ -136,7 +136,7 @@ function event()
     "CREATE TABLE t(a CHAR(1) NOT NULL)",
     "INSERT INTO t VALUES (1)",
     "INSERT INTO t VALUES (NULL)",
-    [[INSERT INTO t VALUES ("test")]],
+    [[INSERT INTO t VALUES ('test')]],
     "DROP TABLE t",
     "DROP TABLE t"
   }

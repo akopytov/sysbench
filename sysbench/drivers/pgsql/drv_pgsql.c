@@ -168,9 +168,7 @@ int register_driver_pgsql(sb_list_t *drivers)
   return 0;
 }
 
-
 /* PgSQL driver initialization */
-
 
 int pgsql_drv_init(void)
 {
@@ -223,9 +221,13 @@ int pgsql_drv_describe(drv_caps_t *caps)
   return 0;
 }
 
+static void empty_notice_processor(void *arg, const char *msg)
+{
+  (void) arg; /* unused */
+  (void) msg; /* unused */
+}
 
 /* Connect to database */
-
 
 int pgsql_drv_connect(db_conn_t *sb_conn)
 {
@@ -245,7 +247,9 @@ int pgsql_drv_connect(db_conn_t *sb_conn)
     PQfinish(con);
     return 1;
   }
-  
+
+  /* Silence the default notice receiver spitting NOTICE message to stderr */
+  PQsetNoticeProcessor(con, empty_notice_processor, NULL);
   sb_conn->ptr = con;
   
   return 0;
