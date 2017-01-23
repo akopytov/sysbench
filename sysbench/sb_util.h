@@ -42,6 +42,14 @@
 # define SB_ATTRIBUTE_UNUSED
 #endif
 
+#ifdef __linux__
+# define DLEXT ".so"
+#elif defined(__MACH__)
+# define DLEXT ".dylib"
+#else
+# error Cannot detect the dynamic library suffix for this platform
+#endif
+
 /*
   Calculate the smallest multiple of m that is not smaller than n, when m is a
   power of 2.

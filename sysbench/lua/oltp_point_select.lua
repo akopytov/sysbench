@@ -18,13 +18,7 @@
 -- OLTP Point Select benchmark
 -- ----------------------------------------------------------------------
 
-pathtest = string.match(test, "(.*/)")
-
-if pathtest then
-   dofile(pathtest .. "oltp_common.lua")
-else
-   require("oltp_common")
-end
+require("oltp_common")
 
 function prepare_statements()
    -- use 1 query per event, rather than oltp_point_selects which defaults to 10

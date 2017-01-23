@@ -17,7 +17,7 @@
 
 SUBDIRS = drivers tests lua .
 
-AM_CPPFLAGS += -DDATA_PATH=\"$(pkgdatadir)\"
+AM_CPPFLAGS += -DDATADIR=\"$(pkgdatadir)\" -DLIBDIR=\"$(pkglibdir)\"
 
 bin_PROGRAMS = sysbench
 

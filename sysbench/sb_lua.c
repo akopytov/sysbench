@@ -186,10 +186,6 @@ static bool func_available(lua_State *L, const char *func)
 
 sb_test_t *sb_load_lua(const char *testname)
 {
-#ifdef DATA_PATH
-  setenv("LUA_PATH", DATA_PATH LUA_DIRSEP "?.lua", 0);
-#endif
-
   sb_lua_script_path = testname;
 
   /* Initialize global interpreter state */
@@ -386,6 +382,73 @@ static void sb_lua_var_string(lua_State *L, const char *name, const char *s)
     lua_settable(L, -3);
 }
 
+/*
+  Set package.path and package.cpath in a given environment. Also honor
+  LUA_PATH/LUA_CPATH to mimic the default Lua behavior.
+*/
+static void sb_lua_set_paths(lua_State *L)
+{
+  lua_getglobal(L, "package");
+
+  int top = lua_gettop(L);
+
+  lua_pushliteral(L, "./?.lua;");
+  lua_pushliteral(L, "./?/init.lua;");
+  lua_pushliteral(L, "./sysbench/lua/?.lua;");
+
+  const char *home = getenv("HOME");
+  if (home != NULL)
+  {
+    lua_pushstring(L, home);
+    lua_pushliteral(L, "/.luarocks/share/lua/5.1/?.lua;");
+    lua_pushstring(L, home);
+    lua_pushliteral(L, "/.luarocks/share/lua/5.1/?/init.lua;");
+    lua_pushstring(L, home);
+    lua_pushliteral(L, "/.luarocks/share/lua/?.lua;");
+    lua_pushstring(L, home);
+    lua_pushliteral(L, "/.luarocks/share/lua/?/init.lua;");
+  }
+
+  lua_pushliteral(L, DATADIR "/?.lua;");
+  lua_concat(L, lua_gettop(L) - top);
+
+  /* Mimic the default Lua behavior with respect to LUA_PATH and ';;' */
+  const char *path = getenv("LUA_PATH");
+  if (path != NULL)
+  {
+    const char *def = lua_tostring(L, -1);
+    path = luaL_gsub(L, path, ";;", ";\1;");
+    luaL_gsub(L, path, "\1", def);
+    lua_remove(L, -2);
+    lua_remove(L, -2);
+  }
+  lua_setfield(L, top, "path");
+
+  lua_pushliteral(L, "./?" DLEXT ";");
+  if (home != NULL) {
+    lua_pushstring(L, home);
+    lua_pushliteral(L, "/.luarocks/lib/lua/5.1/?" DLEXT ";");
+    lua_pushstring(L, home);
+    lua_pushliteral(L, "/.luarocks/lib/lua/?" DLEXT ";");
+  }
+  lua_pushliteral(L, LIBDIR ";");
+  lua_concat(L, lua_gettop(L) - top);
+
+  /* Mimic the default Lua behavior with respect to LUA_CPATH and ';;' */
+  path = getenv("LUA_CPATH");
+  if (path != NULL)
+  {
+    const char *def = lua_tostring(L, -1);
+    path = luaL_gsub(L, path, ";;", ";\1;");
+    luaL_gsub(L, path, "\1", def);
+    lua_remove(L, -2);
+    lua_remove(L, -2);
+  }
+  lua_setfield(L, top, "cpath");
+
+  lua_pop(L, 1); /* package */
+}
+
 /* Allocate and initialize new interpreter state */
 
 lua_State *sb_lua_new_state(int thread_id)
@@ -396,8 +459,10 @@ lua_State *sb_lua_new_state(int thread_id)
   char           *tmp;
 
   L = luaL_newstate();
-  
+
   luaL_openlibs(L);
+
+  sb_lua_set_paths(L);
 
   /* Export all global options */
   pos = sb_options_enum_start();
@@ -498,31 +563,8 @@ lua_State *sb_lua_new_state(int thread_id)
 
   if ((rc = luaL_loadfile(L, sb_lua_script_path)))
   {
-    if (rc != LUA_ERRFILE)
-    {
-      lua_error(L);
-      return NULL;
-    }
-#ifdef DATA_PATH
-    /* first location failed - look in DATA_PATH */
-    char p[PATH_MAX + 1];
-    strncpy(p, DATA_PATH LUA_DIRSEP, sizeof(p));
-    strncat(p, sb_lua_script_path, sizeof(p)-strlen(p)-1);
-    if (!strrchr(sb_lua_script_path, '.'))
-    {
-      /* add .lua extension if there isn't one */
-      strncat(p, ".lua", sizeof(p)-strlen(p)-1);
-    }
-
-    if (luaL_loadfile(L, p))
-    {
-      lua_error(L);
-      return NULL;
-    }
-#else
     lua_error(L);
     return NULL;
-#endif
   }
 
   if (lua_pcall(L, 0, 0, 0))

@@ -17,13 +17,8 @@
 -- ----------------------------------------------------------------------
 -- Read-Only OLTP benchmark
 -- ----------------------------------------------------------------------
-pathtest = string.match(test, "(.*/)")
 
-if pathtest then
-   dofile(pathtest .. "oltp_common.lua")
-else
-   require("oltp_common")
-end
+require("oltp_common")
 
 function prepare_statements()
    prepare_point_selects()

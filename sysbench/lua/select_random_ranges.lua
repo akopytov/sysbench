@@ -8,13 +8,7 @@
 -- Override oltp_tables_count, this test only supports a single table
 oltp_tables_count = 1
 
-pathtest = string.match(test, "(.*/)")
-
-if pathtest then
-   dofile(pathtest .. "oltp_common.lua")
-else
-   require("oltp_common")
-end
+require("oltp_common")
 
 function thread_init()
    set_vars_ranges()
