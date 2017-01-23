@@ -449,7 +449,7 @@ lua_State *sb_lua_new_state(int thread_id)
 
   /* Export functions into per-state 'sysbench.db' table  */
 
-  lua_pushstring(L, "db");
+  lua_pushliteral(L, "db");
   lua_newtable(L);
 
   sb_lua_var_func(L, "connect", sb_lua_db_connect);
@@ -472,7 +472,7 @@ lua_State *sb_lua_new_state(int thread_id)
 
   lua_settable(L, -3); /* sysbench.db */
 
-  lua_pushstring(L, "error");
+  lua_pushliteral(L, "error");
   lua_newtable(L);
 
   sb_lua_var_number(L, "NONE", SB_LUA_ERROR_NONE);
@@ -647,7 +647,7 @@ static void throw_restart_event(lua_State *L)
   log_text(LOG_DEBUG, "Ignored error encountered, restarting transaction");
 
   lua_newtable(L);
-  lua_pushstring(L, "errcode");
+  lua_pushliteral(L, "errcode");
   lua_pushnumber(L, SB_LUA_ERROR_RESTART_EVENT);
   lua_settable(L, -3);
 
