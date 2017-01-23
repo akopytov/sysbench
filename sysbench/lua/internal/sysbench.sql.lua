@@ -278,7 +278,10 @@ function connection_methods.bulk_insert_done(self)
 end
 
 function connection_methods.prepare(self, query)
-   local stmt = assert(ffi.C.db_prepare(self, query, #query))
+   local stmt = ffi.C.db_prepare(self, query, #query)
+   if stmt == nil then
+      self:check_error(nil, query)
+   end
    return stmt
 end
 

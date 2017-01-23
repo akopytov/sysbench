@@ -449,6 +449,7 @@ db_stmt_t *db_prepare(db_conn_t *con, const char *query, size_t len)
 
   if (con->driver->ops.prepare(stmt, query, len))
   {
+    con->error = DB_ERROR_FATAL;
     free(stmt);
     return NULL;
   }
