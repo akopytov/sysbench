@@ -17,7 +17,7 @@
 #define PACKAGE "sysbench"
 #endif
 #ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION "0.5"
+#define PACKAGE_VERSION "1.0"
 #endif
 
 #define strcasecmp _stricmp

@@ -365,6 +365,27 @@ static int load_internal_scripts(lua_State *L)
   return 0;
 }
 
+static void sb_lua_var_number(lua_State *L, const char *name, lua_Number n)
+{
+    lua_pushstring(L, name);
+    lua_pushnumber(L, n);
+    lua_settable(L, -3);
+}
+
+static void sb_lua_var_func(lua_State *L, const char *name, lua_CFunction f)
+{
+    lua_pushstring(L, name);
+    lua_pushcfunction(L, f);
+    lua_settable(L, -3);
+}
+
+static void sb_lua_var_string(lua_State *L, const char *name, const char *s)
+{
+    lua_pushstring(L, name);
+    lua_pushstring(L, s);
+    lua_settable(L, -3);
+}
+
 /* Allocate and initialize new interpreter state */
 
 lua_State *sb_lua_new_state(int thread_id)
@@ -418,63 +439,52 @@ lua_State *sb_lua_new_state(int thread_id)
     lua_setglobal(L, opt->name);
   }
 
-#define SB_LUA_VAR(luaname, cname)              \
-  do {                                          \
-    lua_pushstring(L, luaname);                 \
-    lua_pushnumber(L, cname);                   \
-    lua_settable(L, -3);                        \
-  } while (0)
-
-#define SB_LUA_FUNC(luaname, cname)             \
-  do {                                          \
-    lua_pushstring(L, luaname);                 \
-    lua_pushcfunction(L, cname);                \
-    lua_settable(L, -3);                        \
-  } while (0)
-
   /* Export variables into per-state 'sysbench' table */
 
   lua_newtable(L);
 
   /* sysbench.tid */
   if (thread_id >= 0)
-    SB_LUA_VAR("tid", thread_id);
+    sb_lua_var_number(L, "tid", thread_id);
 
   /* Export functions into per-state 'sysbench.db' table  */
 
   lua_pushstring(L, "db");
   lua_newtable(L);
 
-  SB_LUA_FUNC("connect", sb_lua_db_connect);
-  SB_LUA_FUNC("disconnect", sb_lua_db_disconnect);
-  SB_LUA_FUNC("query", sb_lua_db_query);
-  SB_LUA_FUNC("bulk_insert_init", sb_lua_db_bulk_insert_init);
-  SB_LUA_FUNC("bulk_insert_next", sb_lua_db_bulk_insert_next);
-  SB_LUA_FUNC("bulk_insert_done", sb_lua_db_bulk_insert_done);
-  SB_LUA_FUNC("prepare", sb_lua_db_prepare);
-  SB_LUA_FUNC("bind_param", sb_lua_db_bind_param);
-  SB_LUA_FUNC("bind_result", sb_lua_db_bind_result);
-  SB_LUA_FUNC("execute", sb_lua_db_execute);
-  SB_LUA_FUNC("close", sb_lua_db_close);
-  SB_LUA_FUNC("store_results", sb_lua_db_store_results);
-  SB_LUA_FUNC("free_results", sb_lua_db_free_results);
+  sb_lua_var_func(L, "connect", sb_lua_db_connect);
+  sb_lua_var_func(L, "disconnect", sb_lua_db_disconnect);
+  sb_lua_var_func(L, "query", sb_lua_db_query);
+  sb_lua_var_func(L, "bulk_insert_init", sb_lua_db_bulk_insert_init);
+  sb_lua_var_func(L, "bulk_insert_next", sb_lua_db_bulk_insert_next);
+  sb_lua_var_func(L, "bulk_insert_done", sb_lua_db_bulk_insert_done);
+  sb_lua_var_func(L, "prepare", sb_lua_db_prepare);
+  sb_lua_var_func(L, "bind_param", sb_lua_db_bind_param);
+  sb_lua_var_func(L, "bind_result", sb_lua_db_bind_result);
+  sb_lua_var_func(L, "execute", sb_lua_db_execute);
+  sb_lua_var_func(L, "close", sb_lua_db_close);
+  sb_lua_var_func(L, "store_results", sb_lua_db_store_results);
+  sb_lua_var_func(L, "free_results", sb_lua_db_free_results);
 
-  SB_LUA_VAR("DB_ERROR_NONE", DB_ERROR_NONE);
-  SB_LUA_VAR("DB_ERROR_RESTART_TRANSACTION", DB_ERROR_IGNORABLE);
-  SB_LUA_VAR("DB_ERROR_FAILED", DB_ERROR_FATAL);
+  sb_lua_var_number(L, "DB_ERROR_NONE", DB_ERROR_NONE);
+  sb_lua_var_number(L, "DB_ERROR_RESTART_TRANSACTION", DB_ERROR_IGNORABLE);
+  sb_lua_var_number(L, "DB_ERROR_FAILED", DB_ERROR_FATAL);
 
   lua_settable(L, -3); /* sysbench.db */
 
   lua_pushstring(L, "error");
   lua_newtable(L);
 
-  SB_LUA_VAR("NONE", SB_LUA_ERROR_NONE);
-  SB_LUA_VAR("RESTART_EVENT", SB_LUA_ERROR_RESTART_EVENT);
+  sb_lua_var_number(L, "NONE", SB_LUA_ERROR_NONE);
+  sb_lua_var_number(L, "RESTART_EVENT", SB_LUA_ERROR_RESTART_EVENT);
 
   lua_settable(L, -3); /* sysbench.error */
 
-#undef SB_LUA_VAR
-#undef SB_LUA_FUNC
+   /* sysbench.version */
+  sb_lua_var_string(L, "version", PACKAGE_VERSION);
+   /* sysbench.version_string */
+  sb_lua_var_string(L, "version_string",
+                    PACKAGE_NAME " " PACKAGE_VERSION SB_GIT_SHA);
 
   lua_setglobal(L, "sysbench");
 

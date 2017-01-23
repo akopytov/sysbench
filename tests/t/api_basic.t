@@ -59,6 +59,19 @@ Basic Lua API tests
 
   $ sysbench $SB_ARGS help
   tid:(nil) help()
+ 
+  $ cat >$CRAMTMP/api_basic.lua <<EOF
+  > function event()
+  >   print(sysbench.version)
+  >   print(sysbench.version_string)
+  > end
+  > EOF
+
+  $ sysbench $SB_ARGS --max-requests=1 run |
+  > sed -e "s/$SBTEST_VERSION_STRING/VERSION_STRING/" \
+  >     -e "s/$SBTEST_VERSION/VERSION/"
+  VERSION
+  VERSION_STRING
 
 ########################################################################
 Error handling

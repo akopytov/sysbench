@@ -18,5 +18,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-export SBTEST_VERSION=@PACKAGE_VERSION@@SB_GIT_SHA@
+export SBTEST_VERSION_STRING="sysbench @PACKAGE_VERSION@@SB_GIT_SHA@"
+export SBTEST_VERSION="@PACKAGE_VERSION@"
 export SBTEST_HAS_MYSQL=@USE_MYSQL@
