@@ -8,6 +8,20 @@ os:
   - linux
   - osx
 
+env:
+    matrix:
+      - OS=el DIST=6
+      - OS=el DIST=7
+      - OS=fedora DIST=23
+      - OS=fedora DIST=24
+      - OS=ubuntu DIST=trusty
+      - OS=ubuntu DIST=precise
+      - OS=ubuntu DIST=wily
+      - OS=ubuntu DIST=xenial
+      - OS=debian DIST=jessie
+      - OS=debian DIST=wheezy
+      - OS=debian DIST=stretch
+
 compiler:
   - gcc
   - clang
