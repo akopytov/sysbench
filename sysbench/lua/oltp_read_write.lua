@@ -26,27 +26,45 @@ else
    require("oltp_common")
 end
 
-function event()
-   local table_name = "sbtest" .. sb_rand_uniform(1, oltp_tables_count)
-
+function prepare_statements()
    if not oltp_skip_trx then
-      con:query("BEGIN")
+      prepare_begin()
+      prepare_commit()
    end
 
-   execute_point_selects(con, table_name)
+   prepare_point_selects()
 
    if oltp_range_selects then
-      execute_simple_ranges(con, table_name)
-      execute_sum_ranges(con, table_name)
-      execute_order_ranges(con, table_name)
-      execute_distinct_ranges(con, table_name)
+      prepare_simple_ranges()
+      prepare_sum_ranges()
+      prepare_order_ranges()
+      prepare_distinct_ranges()
    end
 
-   execute_index_updates(con, table_name)
-   execute_non_index_updates(con, table_name)
-   execute_delete_inserts(con, table_name)
+   prepare_index_updates()
+   prepare_non_index_updates()
+   prepare_delete_inserts()
+end
+
+function event()
+   if not oltp_skip_trx then
+      begin()
+   end
+
+   execute_point_selects()
+
+   if oltp_range_selects then
+      execute_simple_ranges()
+      execute_sum_ranges()
+      execute_order_ranges()
+      execute_distinct_ranges()
+   end
+
+   execute_index_updates()
+   execute_non_index_updates()
+   execute_delete_inserts()
 
    if not oltp_skip_trx then
-      con:query("COMMIT")
+      commit()
    end
 end

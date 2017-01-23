@@ -278,7 +278,7 @@ function connection_methods.bulk_insert_done(self)
 end
 
 function connection_methods.prepare(self, query)
-   local stmt = ffi.C.db_prepare(self, query, #query)
+   local stmt = assert(ffi.C.db_prepare(self, query, #query))
    return stmt
 end
 
@@ -303,50 +303,97 @@ local connection_mt = {
 }
 ffi.metatype("sql_connection", connection_mt)
 
--- sql_statement methods
-local statement_methods = {}
-
-function statement_methods.bind_create(self, btype, maxlen)
+-- sql_param
+local sql_param = {}
+function sql_param.set(self, value)
    local sql_type = sysbench.sql.type
-   local buf, buflen, datalen, isnull
+   local btype = self.type
+
+   if (value == nil) then
+      self.is_null[0] = true
+      return
+   end
+
+   self.is_null[0] = false
 
    if btype == sql_type.TINYINT or
       btype == sql_type.SMALLINT or
       btype == sql_type.INT or
       btype == sql_type.BIGINT
    then
-      btype = sql_type.BIGINT
-      buf = ffi.new('int64_t[1]')
-      buflen = 8
+      self.buffer[0] = value
    elseif btype == sql_type.FLOAT or
       btype == sql_type.DOUBLE
    then
-      btype = sql_type.DOUBLE
-      buf = ffi.new('double[1]')
-      buflen = 8
+      self.buffer[1] = value
    elseif btype == sql_type.CHAR or
       btype == sql_type.VARCHAR
    then
-      btype = sql_type.VARCHAR
-      buf = ffi.new('char[?]', maxlen)
-      buflen = maxlen
+      local len = #value
+      len = self.max_len < len and self.max_len or len
+      ffi.copy(self.buffer, value, len)
+      self.data_len[0] = len
+   else
+      error("Unsupported argument type: " .. btype, 2)
+   end
+end
+sql_param.__index = sql_param
+sql_param.__tostring = function () return '<sql_param>' end
+
+-- sql_statement methods
+local statement_methods = {}
+
+function statement_methods.bind_create(self, btype, max_len)
+   local sql_type = sysbench.sql.type
+
+   local param = setmetatable({}, sql_param)
+
+   if btype == sql_type.TINYINT or
+      btype == sql_type.SMALLINT or
+      btype == sql_type.INT or
+      btype == sql_type.BIGINT
+   then
+      param.type = sql_type.BIGINT
+      param.buffer = ffi.new('int64_t[1]')
+      param.max_len = 8
+   elseif btype == sql_type.FLOAT or
+      btype == sql_type.DOUBLE
+   then
+      param.type = sql_type.DOUBLE
+      param.buffer = ffi.new('double[1]')
+      param.max_len = 8
+   elseif btype == sql_type.CHAR or
+      btype == sql_type.VARCHAR
+   then
+      param.type = sql_type.VARCHAR
+      param.buffer = ffi.new('char[?]', max_len)
+      param.max_len = max_len
    else
       error("Unsupported argument type: " .. btype, 2)
    end
 
-   datalen = ffi.new('unsigned long[1]')
-   isnull = ffi.new('char[1]')
+   param.data_len = ffi.new('unsigned long[1]')
+   param.is_null = ffi.new('char[1]')
 
-   return ffi.new(sql_bind, btype, buf, datalen, buflen, isnull)
+   return param
 end
 
 function statement_methods.bind_param(self, ...)
    local len = select('#', ...)
    if len  < 1 then return nil end
 
-   return ffi.C.db_bind_param(self,
-                              ffi.new("sql_bind[?]", len, {...}),
-                              len)
+   local binds = ffi.new("sql_bind[?]", len)
+
+   local i, param
+
+   for i, param in ipairs({...}) do
+      binds[i-1].type = param.type
+      binds[i-1].buffer = param.buffer
+      binds[i-1].data_len = param.datalen
+      binds[i-1].max_len = param.max_len
+      binds[i-1].is_null = param.is_null
+   end
+   return ffi.C.db_bind_param(self, binds, len)
 end
 
 function statement_methods.execute(self)
@@ -366,45 +413,7 @@ local statement_mt = {
 }
 ffi.metatype("sql_statement", statement_mt)
 
--- sql_bind methods
-local bind_methods = {}
-
-function bind_methods.set(self, value)
-   local sql_type = sysbench.sql.type
-   local btype = self.type
-
-   if (value == nil) then
-      self.is_null[0] = true
-      return
-   end
-
-   self.is_null[0] = false
-
-   if btype == sql_type.TINYINT or
-      btype == sql_type.SMALLINT or
-      btype == sql_type.INT or
-      btype == sql_type.BIGINT
-   then
-      ffi.copy(self.buffer, ffi.new('int64_t[1]', value), 8)
-   elseif btype == sql_type.FLOAT or
-      btype == sql_type.DOUBLE
-   then
-      ffi.copy(self.buffer, ffi.new('double[1]', value), 8)
-   elseif btype == sql_type.CHAR or
-      btype == sql_type.VARCHAR
-   then
-      local len = #value
-      len = self.max_len < len and self.max_len or len
-      ffi.copy(self.buffer, value, len)
-      self.data_len[0] = len
-   else
-      error("Unsupported argument type: " .. btype, 2)
-   end
-end
-
--- sql_bind metatable
 local bind_mt = {
-   __index = bind_methods,
    __tostring = function() return '<sql_bind>' end,
 }
 ffi.metatype("sql_bind", bind_mt)

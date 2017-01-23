@@ -26,6 +26,11 @@ else
    require("oltp_common")
 end
 
+function prepare_statements()
+   -- We do not use prepared statements here, but oltp_common.sh expects this
+   -- function to be defined
+end
+
 function event()
    local table_name = "sbtest" .. sb_rand_uniform(1, oltp_tables_count)
    local k_val = sysbench.rand.default(1, oltp_table_size)

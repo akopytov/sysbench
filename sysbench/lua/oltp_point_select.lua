@@ -26,8 +26,14 @@ else
    require("oltp_common")
 end
 
+function prepare_statements()
+   -- use 1 query per event, rather than oltp_point_selects which defaults to 10
+   -- in other OLTP scripts
+   oltp_point_selects=1
+
+   prepare_point_selects()
+end
+
 function event()
-  con:query(string.format("SELECT c FROM sbtest%d WHERE id=%d",
-                          sysbench.rand.uniform(1, oltp_tables_count),
-                          sysbench.rand.default(1, oltp_table_size)))
+   execute_point_selects()
 end

@@ -101,7 +101,6 @@ CREATE TABLE sbtest%d(
 
    local c_val
    local pad_val
-   local i
 
    for i = 1,oltp_table_size do
 
@@ -129,11 +128,131 @@ CREATE TABLE sbtest%d(
    end
 end
 
+local t = sysbench.sql.type
+local stmt_defs = {
+   point_selects = {
+      "SELECT c FROM sbtest%u WHERE id=?",
+      t.INT},
+   simple_ranges = {
+      "SELECT c FROM sbtest%u WHERE id BETWEEN ? AND ?",
+      t.INT, t.INT},
+   sum_ranges = {
+      "SELECT SUM(k) FROM sbtest%u WHERE id BETWEEN ? AND ?",
+       t.INT, t.INT},
+   order_ranges = {
+      "SELECT c FROM sbtest%u WHERE id BETWEEN ? AND ? ORDER BY c",
+       t.INT, t.INT},
+   distinct_ranges = {
+      "SELECT DISTINCT c FROM sbtest%u WHERE id BETWEEN ? AND ? ORDER BY c",
+      t.INT, t.INT},
+   index_updates = {
+      "UPDATE sbtest%u SET k=k+1 WHERE id=?",
+      t.INT},
+   non_index_updates = {
+      "UPDATE sbtest%u SET c=? WHERE id=?",
+      {t.CHAR, 120}, t.INT},
+   deletes = {
+      "DELETE FROM sbtest%u WHERE id=?",
+      t.INT},
+   inserts = {
+      "INSERT INTO sbtest%u (id, k, c, pad) VALUES (?, ?, ?, ?)",
+      t.INT, t.INT, {t.CHAR, 120}, {t.CHAR, 60}},
+}
+
+function prepare_begin()
+   stmt.begin = con:prepare("BEGIN")
+end
+
+function prepare_commit()
+   stmt.commit = con:prepare("COMMIT")
+end
+
+function prepare_for_each_table(key)
+   for t = 1, oltp_tables_count do
+      stmt[t][key] = con:prepare(string.format(stmt_defs[key][1], t))
+
+      local nparam = #stmt_defs[key] - 1
+
+      if nparam > 0 then
+         param[t][key] = {}
+      end
+
+      for p = 1, nparam do
+         local btype = stmt_defs[key][p+1]
+         local len
+
+         if type(btype) == "table" then
+            len = btype[2]
+            btype = btype[1]
+         end
+         if btype == sysbench.sql.type.VARCHAR or
+            btype == sysbench.sql.type.CHAR then
+               param[t][key][p] = stmt[t][key]:bind_create(btype, len)
+         else
+            param[t][key][p] = stmt[t][key]:bind_create(btype)
+         end
+      end
+
+      if nparam > 0 then
+         stmt[t][key]:bind_param(unpack(param[t][key]))
+      end
+   end
+end
+
+function prepare_point_selects()
+   prepare_for_each_table("point_selects")
+end
+
+function prepare_simple_ranges()
+   prepare_for_each_table("simple_ranges")
+end
+
+function prepare_sum_ranges()
+   prepare_for_each_table("sum_ranges")
+end
+
+function prepare_order_ranges()
+   prepare_for_each_table("order_ranges")
+end
+
+function prepare_distinct_ranges()
+   prepare_for_each_table("distinct_ranges")
+end
+
+function prepare_index_updates()
+   prepare_for_each_table("index_updates")
+end
+
+function prepare_non_index_updates()
+   prepare_for_each_table("non_index_updates")
+end
+
+function prepare_delete_inserts()
+   prepare_for_each_table("deletes")
+   prepare_for_each_table("inserts")
+end
+
 function thread_init()
    set_vars()
 
    drv = sysbench.sql.driver()
    con = drv:connect()
+
+   -- Create global nested tables for prepared statements and their
+   -- parameters. We need a statement and a parameter set for each combination
+   -- of connection/table/query
+   stmt = {}
+   param = {}
+
+   local t
+
+   for t = 1, oltp_tables_count do
+      stmt[t] = {}
+      param[t] = {}
+   end
+
+   -- This function is a 'callback' defined by individual benchmark scripts
+   prepare_statements()
 end
 
 function prepare()
@@ -161,88 +280,103 @@ function cleanup()
    end
 end
 
-local function get_range_str()
-   local start = sb_rand(1, oltp_table_size)
-   return string.format("WHERE id BETWEEN %u AND %u",
-                        start, start + oltp_range_size - 1)
+local function get_table_num()
+   return sysbench.rand.uniform(1, oltp_tables_count)
 end
 
-function execute_point_selects(con, table_name)
+local function get_id()
+   return sysbench.rand.default(1, oltp_table_size)
+end
+
+function begin()
+   stmt.begin:execute()
+end
+
+function commit()
+   stmt.commit:execute()
+end
+
+function execute_point_selects()
+   local tnum = get_table_num()
    local i
 
    for i=1, oltp_point_selects do
-      con:query(string.format("SELECT c FROM %s WHERE id=%u",
-                              table_name, sb_rand(1, oltp_table_size)))
+      param[tnum].point_selects[1]:set(get_id())
+
+      stmt[tnum].point_selects:execute()
    end
 end
 
-function execute_simple_ranges(con, table_name)
+local function execute_range(key)
+   local tnum = get_table_num()
    local i
 
-   for i=1, oltp_simple_ranges do
-      con:query(string.format("SELECT c FROM %s %s",
-                              table_name, get_range_str()))
+   for i=1, _G["oltp_" .. key] do
+      local id = get_id()
+
+      param[tnum][key][1]:set(id)
+      param[tnum][key][2]:set(id + oltp_range_size - 1)
+
+      stmt[tnum][key]:execute()
    end
 end
 
-function execute_sum_ranges(con, table_name)
-   local i
-
-   for i=1, oltp_sum_ranges do
-      con:query(string.format("SELECT SUM(k) FROM %s %s",
-                              table_name, get_range_str()))
-   end
+function execute_simple_ranges()
+   execute_range("simple_ranges")
 end
 
-function execute_order_ranges(con, table_name)
-   local i
-
-   for i=1, oltp_order_ranges do
-      con:query(string.format("SELECT c FROM %s %s ORDER BY c",
-                              table_name, get_range_str()))
-   end
+function execute_sum_ranges()
+   execute_range("sum_ranges")
 end
 
-function execute_distinct_ranges(con, table_name)
-   local i
-
-   for i=1, oltp_distinct_ranges do
-      con:query(string.format("SELECT DISTINCT c FROM %s %s ORDER BY c",
-                              table_name, get_range_str()))
-   end
+function execute_order_ranges()
+   execute_range("order_ranges")
 end
 
-function execute_index_updates(con, table_name)
+function execute_distinct_ranges()
+   execute_range("distinct_ranges")
+end
+
+function execute_index_updates()
+   local tnum = get_table_num()
    local i
 
    for i=1, oltp_index_updates do
-      con:query(string.format("UPDATE %s SET k=k+1 WHERE id=%u",
-                              table_name, sb_rand(1, oltp_table_size)))
+      param[tnum].index_updates[1]:set(get_id())
+
+      stmt[tnum].index_updates:execute()
    end
 end
 
-function execute_non_index_updates(con, table_name)
+function execute_non_index_updates()
+   local tnum = get_table_num()
    local i
 
    for i=1, oltp_non_index_updates do
-      con:query(string.format("UPDATE %s SET c='%s' WHERE id=%u",
-                              table_name, get_c_value(),
-                              sb_rand(1, oltp_table_size)))
+      param[tnum].non_index_updates[1]:set(get_c_value())
+      param[tnum].non_index_updates[2]:set(get_id())
+
+      stmt[tnum].non_index_updates:execute()
    end
 end
 
-function execute_delete_inserts(con, table_name)
+function execute_delete_inserts()
+   local tnum = get_table_num()
    local i
 
    for i=1, oltp_delete_inserts do
-      local id = sb_rand(1, oltp_table_size)
+      local id = get_id()
       local k = sb_rand(1, oltp_table_size)
 
-      con:query(string.format("DELETE FROM %s WHERE id=%u", table_name, id))
-      con:query(string.format("INSERT INTO %s (id, k, c, pad) VALUES " ..
-                                 "(%d, %d, '%s', '%s')",
-                              table_name, id, k,
-                              get_c_value(), get_pad_value()))
+      param[tnum].deletes[1]:set(id)
+
+      param[tnum].inserts[1]:set(id)
+      param[tnum].inserts[2]:set(k)
+      param[tnum].inserts[3]:set(get_c_value())
+      param[tnum].inserts[4]:set(get_pad_value())
+
+      stmt[tnum].deletes:execute()
+      stmt[tnum].inserts:execute()
    end
 end
 

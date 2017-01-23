@@ -26,8 +26,10 @@ else
    require("oltp_common")
 end
 
-function event()
-   local table_name = "sbtest" .. sb_rand_uniform(1, oltp_tables_count)
+function prepare_statements()
+   prepare_index_updates()
+end
 
-   execute_index_updates(con, table_name)
+function event()
+   execute_index_updates(con)
 end

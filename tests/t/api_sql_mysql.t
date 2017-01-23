@@ -37,12 +37,11 @@ SQL Lua API + MySQL tests
   --
   nil 2
   --
-  <sql_bind>
-  <sql_bind>
+  <sql_param>
+  <sql_param>
   Unsupported argument type: 8
   nil
   <sql_result>
-  ALERT: attempt to fetch row from an empty result set
   <sql_result>
   ALERT: attempt to free an invalid result set
   db_free_results() failed

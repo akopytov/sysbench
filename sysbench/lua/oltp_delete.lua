@@ -26,8 +26,10 @@ else
    require("oltp_common")
 end
 
-function event()
-   local table_name = "sbtest" .. sb_rand_uniform(1, oltp_tables_count)
+function prepare_statements()
+   prepare_delete_inserts()
+end
 
-   execute_delete_inserts(con, table_name)
+function event()
+   execute_delete_inserts()
 end

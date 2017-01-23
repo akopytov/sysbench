@@ -520,9 +520,19 @@ db_result_t *db_execute(db_stmt_t *stmt)
 
   db_thread_stat_inc(con->thread_id, rs->stat_type);
 
-  con->state = DB_CONN_RESULT_SET;
+ if (SB_LIKELY(con->error == DB_ERROR_NONE))
+  {
+    if (rs->stat_type == DB_STAT_READ)
+    {
+      con->state = DB_CONN_RESULT_SET;
+      return rs;
+    }
+    con->state = DB_CONN_READY;
 
-  return rs;
+    return NULL;
+  }
+
+  return NULL;
 }
 
 

@@ -1028,9 +1028,12 @@ int sb_lua_db_free_results(lua_State *L)
   rs = (sb_lua_db_rs_t *)luaL_checkudata(L, 1, "sysbench.rs");
   luaL_argcheck(L, rs != NULL, 1, "result set expected");
 
-  db_free_results(rs->ptr);
-  rs->ptr = NULL;
-  
+  if (rs->ptr != NULL)
+  {
+    db_free_results(rs->ptr);
+    rs->ptr = NULL;
+  }
+
   return 0;
 }
 
