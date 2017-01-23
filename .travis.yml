@@ -28,6 +28,28 @@ compiler:
 
 matrix:
   exclude:
+    - env: OS=el DIST=6
+      os: osx
+    - env: OS=el DIST=7
+      os: osx
+    - env: OS=fedora DIST=23
+      os: osx
+    - env: OS=fedora DIST=24
+      os: osx
+    - env: OS=ubuntu DIST=trusty
+      os: osx
+    - env: OS=ubuntu DIST=precise
+      os: osx
+    - env: OS=ubuntu DIST=wily
+      os: osx
+    - env: OS=ubuntu DIST=xenial
+      os: osx
+    - env: OS=debian DIST=jessie
+      os: osx
+    - env: OS=debian DIST=wheezy
+      os: osx
+    - env: OS=debian DIST=stretch
+      os: osx
     - os: osx
       compiler: gcc
 
