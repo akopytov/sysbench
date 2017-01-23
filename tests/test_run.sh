@@ -82,6 +82,8 @@ export SBTEST_SUITEDIR="$testroot/t"
 export SBTEST_CONFIG
 export SBTEST_INCDIR
 
+export LUA_PATH="$SBTEST_SCRIPTDIR/?.lua"
+
 . $SBTEST_CONFIG
 
 cram --shell=/bin/bash --verbose $tests
