@@ -55,49 +55,37 @@ SQL Lua API + PostgreSQL tests
   4
   301 400 0123456789 0123456789
   --
-  FATAL: Connection to database failed: could not translate host name "non-existing" to address: nodename nor servname provided, or not known
+  FATAL: Connection to database failed: could not translate host name "non-existing" to address: * (glob)
   
   connection creation failed
   --
-  FATAL: PQexec() failed: 7 ERROR:  null value in column "a" violates not-null constraint
-  DETAIL:  Failing row contains (null).
-  
+  FATAL: PQexec() failed: 7 null value in column "a" violates not-null constraint
   FATAL: failed query was: INSERT INTO t VALUES (NULL)
   Got an error descriptor:
     sql_errno = \t0 (esc)
     connection = \t<sql_connection> (esc)
     query = \tINSERT INTO t VALUES (NULL) (esc)
     sql_state = \t23502 (esc)
-    sql_errmsg = \tERROR:  null value in column "a" violates not-null constraint (esc)
-  DETAIL:  Failing row contains (null).
-  
-  */api_sql.lua:*: SQL error, errno = 0, state = '23502': ERROR:  null value in column "a" violates not-null constraint (glob)
-  DETAIL:  Failing row contains (null).
-  
-  FATAL: PQexec() failed: 7 ERROR:  value too long for type character(1)
-  
+    sql_errmsg = \tnull value in column "a" violates not-null constraint (esc)
+  */api_sql.lua:*: SQL error, errno = 0, state = '23502': null value in column "a" violates not-null constraint (glob)
+  FATAL: PQexec() failed: 7 value too long for type character(1)
   FATAL: failed query was: INSERT INTO t VALUES ('test')
   Got an error descriptor:
     sql_errno = \t0 (esc)
     connection = \t<sql_connection> (esc)
     query = \tINSERT INTO t VALUES ('test') (esc)
     sql_state = \t22001 (esc)
-    sql_errmsg = \tERROR:  value too long for type character(1) (esc)
-  
-  */api_sql.lua:*: SQL error, errno = 0, state = '22001': ERROR:  value too long for type character(1) (glob)
-  
-  FATAL: PQexec() failed: 7 ERROR:  table "t" does not exist
-  
+    sql_errmsg = \tvalue too long for type character(1) (esc)
+  */api_sql.lua:*: SQL error, errno = 0, state = '22001': value too long for type character(1) (glob)
+  FATAL: PQexec() failed: 7 table "t" does not exist
   FATAL: failed query was: DROP TABLE t
   Got an error descriptor:
     sql_errno = \t0 (esc)
     connection = \t<sql_connection> (esc)
     query = \tDROP TABLE t (esc)
     sql_state = \t42P01 (esc)
-    sql_errmsg = \tERROR:  table "t" does not exist (esc)
-  
-  */api_sql.lua:*: SQL error, errno = 0, state = '42P01': ERROR:  table "t" does not exist (glob)
-  
+    sql_errmsg = \ttable "t" does not exist (esc)
+  */api_sql.lua:*: SQL error, errno = 0, state = '42P01': table "t" does not exist (glob)
   --
   1
   2

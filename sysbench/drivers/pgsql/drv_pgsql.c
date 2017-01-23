@@ -501,7 +501,7 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
     rs->stat_type = DB_STAT_ERROR;
 
     con->sql_state = PQresultErrorField(pgres, PG_DIAG_SQLSTATE);
-    con->sql_errmsg = PQerrorMessage(pgcon);
+    con->sql_errmsg = PQresultErrorField(pgres, PG_DIAG_MESSAGE_PRIMARY);
 
     if (!strcmp(con->sql_state, "40P01") /* deadlock_detected */ ||
         !strcmp(con->sql_state, "23505") /* unique violation */)
