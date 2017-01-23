@@ -392,7 +392,7 @@ function statement_methods.bind_param(self, ...)
    for i, param in ipairs({...}) do
       binds[i-1].type = param.type
       binds[i-1].buffer = param.buffer
-      binds[i-1].data_len = param.datalen
+      binds[i-1].data_len = param.data_len
       binds[i-1].max_len = param.max_len
       binds[i-1].is_null = param.is_null
    end

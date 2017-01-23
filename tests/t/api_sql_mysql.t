@@ -37,6 +37,9 @@ SQL Lua API + MySQL tests
   --
   nil 2
   --
+  FATAL: mysql_stmt_prepare() failed
+  FATAL: MySQL error: 1146 "Table 'sbtest.nonexisting' doesn't exist"
+  SQL API error
   <sql_param>
   <sql_param>
   Unsupported argument type: 8

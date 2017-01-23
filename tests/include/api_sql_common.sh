@@ -60,6 +60,10 @@ function event()
   con:query("DROP TABLE t2")
   con:query("ALTER TABLE t ADD COLUMN b CHAR(10)")
 
+  e, m = pcall(con.prepare, con, "SELECT * FROM nonexisting")
+  print(m)
+  print('--')
+
   local stmt = con:prepare("UPDATE t SET a = a + ?, b = ?")
   local a = stmt:bind_create(sysbench.sql.type.INT)
   local b = stmt:bind_create(sysbench.sql.type.CHAR, 10)

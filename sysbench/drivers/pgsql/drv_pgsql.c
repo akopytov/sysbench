@@ -34,7 +34,7 @@
 #include "sb_rand.h"
 
 /* Maximum length of text representation of bind parameters */
-#define MAX_PARAM_LENGTH 256
+#define MAX_PARAM_LENGTH 256UL
 
 /* PostgreSQL driver arguments */
 
@@ -359,6 +359,11 @@ int pgsql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
     if (PQresultStatus(pgres) != PGRES_COMMAND_OK)
     {
       log_text(LOG_FATAL, "PQprepare() failed: %s", PQerrorMessage(con));
+
+      free(stmt->query);
+      free(pgstmt->name);
+      free(pgstmt);
+
       return 1;
     }
     pgstmt->prepared = 1;
@@ -440,9 +445,8 @@ int pgsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
     if (pgstmt->pvalues[i] != NULL)
     {
       free(pgstmt->pvalues[i]);
-      pgstmt->pvalues[i] = NULL;
     }
-      
+
     pgstmt->pvalues[i] = (char *)malloc(MAX_PARAM_LENGTH);
     if (pgstmt->pvalues[i] == NULL)
       return 1;
@@ -547,6 +551,7 @@ db_error_t pgsql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
   char            need_realloc;
   int             n;
   db_error_t      rc;
+  unsigned long   len;
 
   if (!stmt->emulated)
   {
@@ -567,8 +572,14 @@ db_error_t pgsql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
       switch (stmt->bound_param[i].type) {
         case DB_TYPE_CHAR:
         case DB_TYPE_VARCHAR:
-          strncpy(pgstmt->pvalues[i], stmt->bound_param[i].buffer,
-                  MAX_PARAM_LENGTH);
+
+          len = stmt->bound_param[i].data_len[0];
+
+          memcpy(pgstmt->pvalues[i], stmt->bound_param[i].buffer,
+                 SB_MIN(MAX_PARAM_LENGTH, len));
+          /* PostgreSQL requires a zero-terminated string */
+          pgstmt->pvalues[i][len] = '\0';
+
           break;
         default:
           db_print_value(stmt->bound_param + i, pgstmt->pvalues[i],

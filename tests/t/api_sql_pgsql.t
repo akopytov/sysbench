@@ -37,6 +37,12 @@ SQL Lua API + PostgreSQL tests
   --
   bar nil
   --
+  FATAL: PQprepare() failed: ERROR:  relation "nonexisting" does not exist
+  LINE 1: SELECT * FROM nonexisting
+                        ^
+  
+  SQL API error
+  --
   <sql_param>
   <sql_param>
   Unsupported argument type: 8
