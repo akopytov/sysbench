@@ -221,7 +221,8 @@ static bool check_print_stats(void)
 
 int db_thread_stat_init(void)
 {
-  thread_stats = malloc(sb_globals.num_threads * sizeof(db_stats_t));
+  thread_stats = sb_memalign(sb_globals.num_threads * sizeof(db_stats_t),
+                             CK_MD_CACHELINE);
 
   return thread_stats == NULL;
 }
