@@ -15,7 +15,7 @@
 
 set -eu
 
-ARGS="--test=${OLTP_SCRIPT_PATH} $DB_DRIVER_ARGS --oltp-tables-count=8"
+ARGS="${OLTP_SCRIPT_PATH} $DB_DRIVER_ARGS --oltp-tables-count=8"
 
 sysbench $ARGS prepare
 
@@ -43,7 +43,7 @@ db_show_table sbtest7 || true # Error on non-existing table
 db_show_table sbtest8 || true # Error on non-existing table
 
 # Test --oltp-create-secondary=off
-ARGS="--test=${OLTP_SCRIPT_PATH} $DB_DRIVER_ARGS --oltp-tables-count=1"
+ARGS="${OLTP_SCRIPT_PATH} $DB_DRIVER_ARGS --oltp-tables-count=1"
 
 sysbench $ARGS --oltp-create-secondary=off prepare
 

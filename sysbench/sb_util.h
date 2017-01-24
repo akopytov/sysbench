@@ -99,6 +99,12 @@
     typedef char cta[(expr) ? 1 : -1] SB_ATTRIBUTE_UNUSED;              \
   } while(0)
 
+#ifdef HAVE_ISATTY
+# define SB_ISATTY() isatty(0)
+#else
+# error No isatty() implementation for this platform!
+#endif
+
 /*
   Allocate a buffer of a specified size such that the address is a multiple of a
   specified alignment.

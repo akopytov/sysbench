@@ -7,7 +7,7 @@ Legacy basic Lua API tests
   >   exit 80
   > fi
 
-  $ SB_ARGS="--verbosity=0 --test=$CRAMTMP/api_legacy_basic.lua --max-requests=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS"
+  $ SB_ARGS="--verbosity=0 --max-requests=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS $CRAMTMP/api_legacy_basic.lua"
 
   $ cat >$CRAMTMP/api_legacy_basic.lua <<EOF
   > function prepare(thread_id)
@@ -54,3 +54,11 @@ Legacy basic Lua API tests
 
   $ sysbench $SB_ARGS help
   tid:(nil) help()
+
+  $ cat >$CRAMTMP/api_legacy_basic.lua <<EOF
+  > function prepare()
+  >   print(test)
+  > end
+  > EOF
+  $ sysbench $SB_ARGS prepare
+  */api_legacy_basic.lua (glob)

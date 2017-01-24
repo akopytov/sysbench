@@ -51,17 +51,6 @@
 /* Maximum number of elements in --report-checkpoints list */
 #define MAX_CHECKPOINTS 256
 
-/* Sysbench commands */
-typedef enum
-{
-  SB_COMMAND_NULL,
-  SB_COMMAND_PREPARE,
-  SB_COMMAND_RUN,
-  SB_COMMAND_CLEANUP,
-  SB_COMMAND_HELP,
-  SB_COMMAND_VERSION
-} sb_cmd_t;
-
 /* Request types definition */
 
 typedef enum
@@ -185,7 +174,8 @@ typedef struct
   uint64_t        max_requests; /* maximum number of requests */
   uint64_t        max_time_ns;  /* total execution time limit */
   pthread_mutex_t exec_mutex CK_CC_CACHELINE;   /* execution mutex */
-  sb_cmd_t        command;      /* command passed from command line */
+  const char      *testname;    /* test name or script path to execute */
+  const char      *cmdname;     /* command passed from command line */
   unsigned int    num_threads CK_CC_CACHELINE;  /* number of threads to use */
   unsigned int    num_running;  /* number of threads currently active */
   unsigned int    report_interval; /* intermediate reports interval */

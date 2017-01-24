@@ -346,6 +346,7 @@ alarm \
 directio \
 fdatasync \
 gettimeofday \
+isatty \
 memalign \
 memset \
 mkstemp \

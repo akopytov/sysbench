@@ -2,7 +2,7 @@
 memory benchmark tests
 ########################################################################
 
-  $ args="--test=memory --memory-block-size=4K --memory-total-size=1G --max-requests=100 --num-threads=2"
+  $ args="memory --memory-block-size=4K --memory-total-size=1G --max-requests=100 --num-threads=2"
 
 The --memory-hugetlb option is supported and printed by 'sysbench
 help' only on Linux.

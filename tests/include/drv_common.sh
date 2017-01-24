@@ -14,7 +14,7 @@ function event()
 end
 EOF
 
-sysbench --test=test.lua \
+sysbench test.lua \
          --max-requests=10 \
          --num-threads=2 \
          $DB_DRIVER_ARGS \

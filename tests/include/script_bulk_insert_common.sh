@@ -14,7 +14,7 @@
 
 set -eu
 
-ARGS="--test=${SBTEST_SCRIPTDIR}/bulk_insert.lua $DB_DRIVER_ARGS --num-threads=2 --verbosity=1"
+ARGS="${SBTEST_SCRIPTDIR}/bulk_insert.lua $DB_DRIVER_ARGS --num-threads=2 --verbosity=1"
 
 sysbench $ARGS prepare
 

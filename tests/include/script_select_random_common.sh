@@ -16,7 +16,7 @@ set -eu
 
 for test in select_random_points select_random_ranges
 do
-    ARGS="--test=${SBTEST_SCRIPTDIR}/${test}.lua $DB_DRIVER_ARGS --oltp-tables-count=8"
+    ARGS="${SBTEST_SCRIPTDIR}/${test}.lua $DB_DRIVER_ARGS --oltp-tables-count=8"
 
     sysbench $ARGS prepare
 
@@ -36,5 +36,5 @@ do
         db_show_table sbtest${i} || true # Error on non-existing table
     done
 
-    ARGS="--test=${SBTEST_SCRIPTDIR}/select_random_points.lua $DB_DRIVER_ARGS --oltp-tables-count=8"
+    ARGS="${SBTEST_SCRIPTDIR}/select_random_points.lua $DB_DRIVER_ARGS --oltp-tables-count=8"
 done

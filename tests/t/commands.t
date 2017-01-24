@@ -1,4 +1,4 @@
-  $ commands=$(sysbench help | grep 'Commands:' | cut -d ' ' -f 2-)
+  $ commands=$(sysbench --help | grep 'Commands' | cut -d ' ' -f 6-)
   $ for cmd in $commands; do
   > if [ ! -r ${SBTEST_SUITEDIR}/cmd_${cmd}.t ]
   > then

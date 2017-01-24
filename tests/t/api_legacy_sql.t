@@ -7,7 +7,7 @@ Legacy SQL Lua API tests
   >   exit 80
   > fi
 
-  $ SB_ARGS="--verbosity=1 --test=$CRAMTMP/api_legacy_sql.lua --max-requests=1 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS"
+  $ SB_ARGS="--verbosity=1 --max-requests=1 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS $CRAMTMP/api_legacy_sql.lua"
   $ cat >$CRAMTMP/api_legacy_sql.lua <<EOF
   > function event(thread_id)
   >   db_query("CREATE TABLE t(a INT)")

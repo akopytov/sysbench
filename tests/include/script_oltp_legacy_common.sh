@@ -14,7 +14,7 @@
 
 set -eu
 
-ARGS="--test=${SBTEST_INCDIR}/oltp_legacy/oltp.lua $DB_DRIVER_ARGS --oltp-tables-count=8"
+ARGS="${SBTEST_INCDIR}/oltp_legacy/oltp.lua $DB_DRIVER_ARGS --oltp-tables-count=8"
 
 sysbench $ARGS prepare
 
@@ -42,7 +42,7 @@ db_show_table sbtest7 || true # Error on non-existing table
 db_show_table sbtest8 || true # Error on non-existing table
 
 # Test --oltp-create-secondary=off
-ARGS="--test=${SBTEST_INCDIR}/oltp_legacy/oltp.lua $DB_DRIVER_ARGS --oltp-tables-count=1"
+ARGS="${SBTEST_INCDIR}/oltp_legacy/oltp.lua $DB_DRIVER_ARGS --oltp-tables-count=1"
 
 sysbench $ARGS --oltp-create-secondary=off prepare
 

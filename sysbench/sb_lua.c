@@ -551,6 +551,13 @@ lua_State *sb_lua_new_state(int thread_id)
   sb_lua_var_string(L, "version_string",
                     PACKAGE_NAME " " PACKAGE_VERSION SB_GIT_SHA);
 
+  lua_pushliteral(L, "test");
+  lua_newtable(L);
+
+  sb_lua_var_string(L, "path", sb_lua_script_path);
+
+  lua_settable(L, -3); /* sysbench.test */
+
   lua_setglobal(L, "sysbench");
 
   luaL_newmetatable(L, "sysbench.stmt");

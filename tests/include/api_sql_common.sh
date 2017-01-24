@@ -10,7 +10,7 @@
 
 set -eu
 
-SB_ARGS="--verbosity=1 --test=$CRAMTMP/api_sql.lua --max-requests=1 --num-threads=1 $DB_DRIVER_ARGS"
+SB_ARGS="--verbosity=1 --max-requests=1 --num-threads=1 $DB_DRIVER_ARGS $CRAMTMP/api_sql.lua"
 cat >$CRAMTMP/api_sql.lua <<EOF
 function thread_init()
   drv = sysbench.sql.driver()
@@ -115,7 +115,6 @@ sysbench $SB_ARGS run
 
 # Failed connection handling
 
-SB_ARGS="--verbosity=1 --test=$CRAMTMP/api_sql.lua --max-requests=1 --num-threads=1 $DB_DRIVER_ARGS"
 cat >$CRAMTMP/api_sql.lua <<EOF
 function event()
   local drv = sysbench.sql.driver()
@@ -126,7 +125,6 @@ EOF
 sysbench $SB_ARGS --mysql-host="non-existing" --pgsql-host="non-existing" run
 
 # Error hooks
-SB_ARGS="--verbosity=1 --test=$CRAMTMP/api_sql.lua --max-requests=1 --num-threads=1 $DB_DRIVER_ARGS"
 cat >$CRAMTMP/api_sql.lua <<EOF
 function sysbench.hooks.sql_error_ignorable(e)
   print("Got an error descriptor:")

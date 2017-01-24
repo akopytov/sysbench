@@ -2,7 +2,7 @@
 threads benchmark tests
 ########################################################################
 
-  $ args="--test=threads --max-requests=100 --num-threads=2"
+  $ args="threads --max-requests=100 --num-threads=2"
   $ sysbench $args help
   sysbench *.* * (glob)
   

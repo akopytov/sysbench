@@ -2,7 +2,7 @@
 fileio benchmark tests
 ########################################################################
 
-  $ fileio_args="--test=fileio --file-num=4 --file-total-size=32M"
+  $ fileio_args="fileio --file-num=4 --file-total-size=32M"
 
   $ sysbench $fileio_args prepare
   sysbench *.* * (glob)

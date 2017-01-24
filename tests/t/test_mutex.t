@@ -1,7 +1,7 @@
 ########################################################################
 mutex benchmark tests
 ########################################################################
-  $ args="--test=mutex --max-requests=10 --num-threads=2"
+  $ args="mutex --max-requests=10 --num-threads=2"
   $ sysbench $args help
   sysbench *.* * (glob)
   

@@ -114,10 +114,9 @@ sb_arg_t general_args[] =
    "representing the amount of time in seconds elapsed from start of test "
    "when report checkpoint(s) must be performed. Report checkpoints are off by "
    "default.", SB_ARG_TYPE_LIST, ""},
-  {"test", "test to run", SB_ARG_TYPE_STRING, NULL},
   {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
   {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
-  {"help", "print help and exit", SB_ARG_TYPE_FLAG, NULL},
+  {"help", "print help and exit", SB_ARG_TYPE_FLAG, "off"},
   {"version", "print version and exit", SB_ARG_TYPE_FLAG, "off"},
   {"config-file", "File containing command line options", SB_ARG_TYPE_FILE, NULL},
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
@@ -240,8 +239,8 @@ void print_help(void)
   sb_test_t      *test;
   
   printf("Usage:\n");
-  printf("  sysbench --test=<test-name> [options]... <command>\n\n");
-  printf("Commands: prepare run cleanup help version\n\n");
+  printf("  sysbench [options]... [testname] [command]\n\n");
+  printf("Commands implemented by most tests: prepare run cleanup help\n\n");
   printf("General options:\n");
   sb_print_options(general_args);
 
@@ -258,24 +257,8 @@ void print_help(void)
     printf("  %s - %s\n", test->sname, test->lname);
   }
   printf("\n");
-  printf("See 'sysbench --test=<name> help' for a list of options for each test.\n\n");
-}
-
-
-static sb_cmd_t parse_command(char *cmd)
-{
-  if (!strcmp(cmd, "prepare"))
-    return SB_COMMAND_PREPARE;
-  else if (!strcmp(cmd, "run"))
-    return SB_COMMAND_RUN;
-  else if (!strcmp(cmd, "help"))
-    return SB_COMMAND_HELP;
-  else if (!strcmp(cmd, "cleanup"))
-    return SB_COMMAND_CLEANUP;
-  else if (!strcmp(cmd, "version"))
-    return SB_COMMAND_VERSION;
-
-  return SB_COMMAND_NULL;
+  printf("See 'sysbench <testname> help' for a list of options for "
+         "each test.\n\n");
 }
 
 
@@ -283,13 +266,14 @@ static int parse_arguments(int argc, char *argv[])
 {
   int               i;
   char              *name;
-  char              *value;
+  const char        *value;
   char              *tmp;
   sb_list_item_t    *pos;
   sb_test_t         *test;
   option_t          *opt;
-  
-  sb_globals.command = SB_COMMAND_NULL;
+  const char *      testname;
+  const char *      cmdname;
+  char              ctmp;
 
   /* Set default values for general options */
   if (sb_register_arg_set(general_args))
@@ -303,37 +287,42 @@ static int parse_arguments(int argc, char *argv[])
     if (sb_register_arg_set(test->args))
       return 1;
   }
-  
+
   /* Parse command line arguments */
+  testname = NULL;
+  cmdname = NULL;
+
   for (i = 1; i < argc; i++) {
     if (strncmp(argv[i], "--", 2)) {
-      if (sb_globals.command != SB_COMMAND_NULL)
+      if (testname == NULL)
       {
-        fprintf(stderr, "Multiple commands are not allowed.\n");
-        return 1;
+        testname = argv[i];
+        continue;
       }
-      sb_globals.command = parse_command(argv[i]);
-      if (sb_globals.command == SB_COMMAND_NULL)
+      if (cmdname == NULL)
       {
-        fprintf(stderr, "Unknown command: %s.\n", argv[i]);
-        return 1;
+        cmdname = argv[i];
+        continue;
       }
-      continue;
+
+      fprintf(stderr, "Unrecognized command line argument: %s\n", argv[i]);
+
+      return 1;
     }
+
     name = argv[i] + 2;
     tmp = strchr(name, '=');
     if (tmp != NULL)
     {
+      ctmp = *tmp;
       *tmp = '\0';
       value = tmp + 1;
-    } else
+    }
+    else
+    {
       value = NULL;
+    }
 
-    if (sb_globals.command == SB_COMMAND_HELP)
-      return 1;
-    if (sb_globals.command == SB_COMMAND_VERSION)
-      return 0;
-    
     /* Search available options */
     opt = sb_find_option(name);
     if (opt == NULL)
@@ -343,7 +332,13 @@ static int parse_arguments(int argc, char *argv[])
     }
     else if (set_option(name, value, opt->type))
       return 1;
+
+    if (tmp != NULL)
+      *tmp = ctmp;
   }
+
+  sb_globals.testname = testname;
+  sb_globals.cmdname = cmdname;
 
   return 0;
 }
@@ -1014,7 +1009,7 @@ static int run_test(sb_test_t *test)
 }
 
 
-static sb_test_t *find_test(char *name)
+static sb_test_t *find_test(const char *name)
 {
   sb_list_item_t *pos;
   sb_test_t      *test;
@@ -1157,7 +1152,6 @@ static int init(void)
 
 int main(int argc, char *argv[])
 {
-  char      *testname;
   sb_test_t *test = NULL;
   
   /* Initialize options library */
@@ -1165,53 +1159,80 @@ int main(int argc, char *argv[])
 
   /* First register the logger */
   if (log_register())
-    exit(1);
+    return EXIT_FAILURE;
 
   /* Register available tests */
   if (register_tests())
   {
     fprintf(stderr, "Failed to register tests.\n");
-    exit(1);
+    return EXIT_FAILURE;
   }
 
   /* Parse command line arguments */
-  if (parse_arguments(argc,argv))
+  if (parse_arguments(argc, argv))
+    return EXIT_FAILURE;
+
+  if (sb_get_value_flag("help"))
   {
     print_help();
-    exit(1);
+    return EXIT_SUCCESS;
   }
 
-  if (sb_globals.command == SB_COMMAND_VERSION || sb_get_value_flag("version"))
+  if (sb_get_value_flag("version"))
   {
     printf("%s\n", VERSION_STRING);
-    exit(0);
+    return EXIT_SUCCESS;
   }
   
-  if (sb_globals.command == SB_COMMAND_NULL)
-  {
-    fprintf(stderr, "Missing required command argument.\n");
-    print_help();
-    exit(1);
-  }
-
   /* Initialize global variables and logger */
   if (init() || log_init() || db_thread_stat_init())
-    exit(1);
+    return EXIT_FAILURE;
 
   print_header();
 
-  testname = sb_get_value_string("test");
-  if (testname != NULL)
+  if (sb_globals.testname != NULL)
   {
-    test = find_test(testname);
-    
-    /* Check if the testname is a script filename */
+    /* Is it a built-in test name? */
+    test = find_test(sb_globals.testname);
+
+    if (test != NULL && sb_globals.cmdname == NULL)
+    {
+      /* Command is a mandatory argument for built-in tests */
+      fprintf(stderr, "The '%s' test requires a command argument. "
+              "See 'sysbench %s help'\n", test->sname, test->sname);
+      return EXIT_FAILURE;
+    }
+
+
     if (test == NULL)
-      test = sb_load_lua(testname);
+    {
+      /* Is it a path? */
+      if (access(sb_globals.testname, R_OK))
+      {
+        fprintf(stderr, "Cannot find script %s: %s\n", sb_globals.testname,
+                strerror(errno));
+        return EXIT_FAILURE;
+      }
+      test = sb_load_lua(sb_globals.testname);
+
+      if (sb_globals.cmdname == NULL)
+      {
+        /* No command specified, there's nothing more todo */
+        return test != NULL ? EXIT_SUCCESS: EXIT_FAILURE;
+      }
+    }
+  }
+  else
+  {
+    if (SB_ISATTY())
+      log_text(LOG_NOTICE, "Reading the script from the standard input:\n");
+
+    test = sb_load_lua(NULL);
+
+    return test != NULL ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
-  /* 'help' command */
-  if (sb_globals.command == SB_COMMAND_HELP)
+  if (!strcmp(sb_globals.cmdname, "help"))
   {
     if (test == NULL)
       print_help();
@@ -1225,24 +1246,9 @@ int main(int argc, char *argv[])
       if (test->cmds.help != NULL)
         test->cmds.help();
     }
-    exit(0);
+    return EXIT_SUCCESS;
   }
-
-  if (testname == NULL)
-  {
-    fprintf(stderr, "Missing required argument: --test.\n");
-    print_help();
-    exit(1);
-  }
-
-  if (test == NULL)
-  {
-      fprintf(stderr, "Invalid test name: %s.\n", testname);
-      exit(1);
-  }
-  
-  /* 'prepare' command */
-  if (sb_globals.command == SB_COMMAND_PREPARE)
+  else if (!strcmp(sb_globals.cmdname, "prepare"))
   {
     if (test->cmds.prepare == NULL)
     {
@@ -1253,24 +1259,28 @@ int main(int argc, char *argv[])
 
     return test->cmds.prepare();
   }
-
-  /* 'cleanup' command */
-  if (sb_globals.command == SB_COMMAND_CLEANUP)
+  else if (!strcmp(sb_globals.cmdname, "cleanup"))
   {
     if (test->cmds.cleanup == NULL)
     {
       fprintf(stderr, "'%s' test does not have the 'cleanup' command.\n",
               test->sname);
-      exit(1);
+      return EXIT_FAILURE;
     }
 
-    exit(test->cmds.cleanup());
+    return test->cmds.cleanup();
   }
-  
-  /* 'run' command */
-  current_test = test;
-  if (run_test(test))
-    exit(1);
+  else if (!strcmp(sb_globals.cmdname, "run"))
+  {
+    current_test = test;
+    if (run_test(test))
+      return EXIT_FAILURE;
+  }
+  else
+  {
+    fprintf(stderr, "Unknown command: %s", sb_globals.cmdname);
+    return EXIT_FAILURE;
+  }
 
   db_done();
 

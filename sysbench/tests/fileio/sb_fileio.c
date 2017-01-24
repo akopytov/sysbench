@@ -1772,7 +1772,7 @@ int parse_arguments(void)
   mode = sb_get_value_string("file-test-mode");
 
   /* File test mode is necessary only for 'run' command */
-  if (sb_globals.command == SB_COMMAND_RUN)
+  if (!strcmp(sb_globals.cmdname, "run"))
   {
     if (mode == NULL)
     {
