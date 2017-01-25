@@ -72,7 +72,7 @@ static sb_arg_t mysql_drv_args[] =
   {"mysql-debug", "dump all client library calls", SB_ARG_TYPE_FLAG, "off"},
   {"mysql-ignore-errors", "list of errors to ignore, or \"all\"",
    SB_ARG_TYPE_LIST, "1213,1020,1205"},
-  {"mysql-dry-run", "Dry run, pretent that all MySQL client API calls are successful without executing them",
+  {"mysql-dry-run", "Dry run, pretend that all MySQL client API calls are successful without executing them",
    SB_ARG_TYPE_FLAG, "off"},
 
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
