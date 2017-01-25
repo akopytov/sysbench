@@ -64,11 +64,11 @@ The general command line syntax for sysbench is:
   *command* too, as in that case it would be parsed as a *testname*),
   then sysbench expects a Lua script to execute on its standard input.
 
-- *command* is an optional argument that will passed by sysbench to the
-  built-in test or script specified with *testname*. *command* defines
-  the *action* that must be performed by the test. The list of available
-  command depends on a particular test. Some tests also implement their
-  own custom commands.
+- *command* is an optional argument that will be passed by sysbench to
+  the built-in test or script specified with *testname*. *command*
+  defines the *action* that must be performed by the test. The list of
+  available commands depends on a particular test. Some tests also
+  implement their own custom commands.
 
   Below is a description of typical test commands and their purpose:
 
