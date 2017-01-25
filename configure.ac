@@ -264,11 +264,13 @@ AM_CONDITIONAL(USE_ORACLE, test x$with_oracle != xno)
 
 AS_IF([test x$with_pgsql != xno], [
     AC_CHECK_PGSQL([$with_pgsql])
+    USE_PGSQL=1
     AC_DEFINE(USE_PGSQL,1,[Define to 1 if you want to compile with PostgreSQL support])
     AC_SUBST([PGSQL_LIBS])
     AC_SUBST([PGSQL_CFLAGS])
 ])
 AM_CONDITIONAL(USE_PGSQL, test x$with_pgsql != xno)
+AC_SUBST([USE_PGSQL])
 
 # Check for libaio
 AC_CHECK_AIO

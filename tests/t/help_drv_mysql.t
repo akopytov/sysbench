@@ -1,11 +1,11 @@
 Skip test if the MySQL driver is not available.
 
-  $ if ! sysbench help | sed -n '/Compiled-in database drivers:/,/^$/p' | grep mysql > /dev/null 2>&1
+  $ if [ -z "$SBTEST_HAS_MYSQL" ]
   > then
   >   exit 80
   > fi
 
-  $ sysbench help | sed -n '/mysql options:/,/^$/p'
+  $ sysbench --help | sed -n '/mysql options:/,/^$/p'
   mysql options:
     --mysql-host=[LIST,...]          MySQL server host [localhost]
     --mysql-port=[LIST,...]          MySQL server port [3306]
