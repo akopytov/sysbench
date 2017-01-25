@@ -15,7 +15,7 @@ separately.
     --num-threads=N                 number of threads to use [1]
     --max-requests=N                limit for total number of requests [10000]
     --max-time=N                    limit for total execution time in seconds [0]
-    --forced-shutdown=STRING        amount of time to wait after --max-time before forcing shutdown [off]
+    --forced-shutdown=STRING        number of seconds to wait after --max-time before forcing shutdown, or 'off' to disable [off]
     --thread-stack-size=SIZE        size of stack per thread [64K]
     --tx-rate=N                     target transaction rate (tps) [0]
     --report-interval=N             periodically report intermediate statistics with a specified interval in seconds. 0 disables intermediate reports [0]

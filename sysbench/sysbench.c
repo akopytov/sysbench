@@ -99,27 +99,29 @@ static int thread_stack_size;
 /* General options */
 sb_arg_t general_args[] =
 {
-  {"num-threads", "number of threads to use", SB_ARG_TYPE_INT, "1"},
-  {"max-requests", "limit for total number of requests", SB_ARG_TYPE_INT, "10000"},
-  {"max-time", "limit for total execution time in seconds", SB_ARG_TYPE_INT, "0"},
-  {"forced-shutdown", "amount of time to wait after --max-time before forcing shutdown",
-   SB_ARG_TYPE_STRING, "off"},
-  {"thread-stack-size", "size of stack per thread", SB_ARG_TYPE_SIZE, "64K"},
-  {"tx-rate", "target transaction rate (tps)", SB_ARG_TYPE_INT, "0"},
-  {"report-interval", "periodically report intermediate statistics "
-   "with a specified interval in seconds. 0 disables intermediate reports",
-    SB_ARG_TYPE_INT, "0"},
-  {"report-checkpoints", "dump full statistics and reset all counters at "
-   "specified points in time. The argument is a list of comma-separated values "
-   "representing the amount of time in seconds elapsed from start of test "
-   "when report checkpoint(s) must be performed. Report checkpoints are off by "
-   "default.", SB_ARG_TYPE_LIST, ""},
-  {"debug", "print more debugging info", SB_ARG_TYPE_FLAG, "off"},
-  {"validate", "perform validation checks where possible", SB_ARG_TYPE_FLAG, "off"},
-  {"help", "print help and exit", SB_ARG_TYPE_FLAG, "off"},
-  {"version", "print version and exit", SB_ARG_TYPE_FLAG, "off"},
-  {"config-file", "File containing command line options", SB_ARG_TYPE_FILE, NULL},
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
+  SB_OPT("num-threads", "number of threads to use", "1", INT),
+  SB_OPT("max-requests", "limit for total number of requests", "10000", INT),
+  SB_OPT("max-time", "limit for total execution time in seconds", "0", INT),
+  SB_OPT("forced-shutdown",
+         "number of seconds to wait after --max-time before forcing shutdown, "
+         "or 'off' to disable", "off", STRING),
+  SB_OPT("thread-stack-size", "size of stack per thread", "64K", SIZE),
+  SB_OPT("tx-rate", "target transaction rate (tps)", "0", INT),
+  SB_OPT("report-interval", "periodically report intermediate statistics with "
+         "a specified interval in seconds. 0 disables intermediate reports",
+         "0", INT),
+  SB_OPT("report-checkpoints", "dump full statistics and reset all counters at "
+         "specified points in time. The argument is a list of comma-separated "
+         "values representing the amount of time in seconds elapsed from start "
+         "of test when report checkpoint(s) must be performed. Report "
+         "checkpoints are off by default.", "", LIST),
+  SB_OPT("debug", "print more debugging info", "off", BOOL),
+  SB_OPT("validate", "perform validation checks where possible", "off", BOOL),
+  SB_OPT("help", "print help and exit", "off", BOOL),
+  SB_OPT("version", "print version and exit", "off", BOOL),
+  SB_OPT("config-file", "File containing command line options", NULL, FILE),
+
+  SB_OPT_END
 };
 
 /* Thread descriptors */
@@ -261,44 +263,72 @@ void print_help(void)
          "each test.\n\n");
 }
 
-
-static int parse_arguments(int argc, char *argv[])
+/*
+  Set an option value if a default value has been previously set with
+  sb_register_arg_set(), i.e. if it's a 'known' option, or ignore_unknown is
+  'true'. In which case return 0, otherwise return 1.
+*/
+static int parse_option(char *name, bool ignore_unknown)
 {
-  int               i;
-  char              *name;
   const char        *value;
   char              *tmp;
-  sb_list_item_t    *pos;
-  sb_test_t         *test;
   option_t          *opt;
+  char              ctmp;
+  int               rc;
+
+  tmp = strchr(name, '=');
+  if (tmp != NULL)
+  {
+    ctmp = *tmp;
+    *tmp = '\0';
+    value = tmp + 1;
+  }
+  else
+  {
+    value = NULL;
+  }
+
+  opt = sb_find_option(name);
+  if (opt != NULL || ignore_unknown)
+    rc = set_option(name, value, opt != NULL ? opt->type : SB_ARG_TYPE_STRING);
+  else
+    rc =  1;
+
+  if (tmp != NULL)
+    *tmp = ctmp;
+
+  return rc;
+}
+
+/*
+  Parse general command line arguments. Test-specific argument are parsed by
+  parse_test_arguments() at a later stage when a builtin test or a Lua script is
+  known.
+*/
+
+static int parse_general_arguments(int argc, char *argv[])
+{
   const char *      testname;
   const char *      cmdname;
-  char              ctmp;
 
   /* Set default values for general options */
   if (sb_register_arg_set(general_args))
     return 1;
-  /* Set default values for test specific options */
-  SB_LIST_FOR_EACH(pos, &tests)
-  {
-    test = SB_LIST_ENTRY(pos, sb_test_t, listitem);
-    if (test->args == NULL)
-      break;
-    if (sb_register_arg_set(test->args))
-      return 1;
-  }
 
   /* Parse command line arguments */
   testname = NULL;
   cmdname = NULL;
 
-  for (i = 1; i < argc; i++) {
-    if (strncmp(argv[i], "--", 2)) {
+  for (int i = 1; i < argc; i++)
+  {
+    if (strncmp(argv[i], "--", 2))
+    {
       if (testname == NULL)
       {
         testname = argv[i];
         continue;
       }
+
       if (cmdname == NULL)
       {
         cmdname = argv[i];
@@ -310,35 +340,43 @@ static int parse_arguments(int argc, char *argv[])
       return 1;
     }
 
-    name = argv[i] + 2;
-    tmp = strchr(name, '=');
-    if (tmp != NULL)
+    if (!parse_option(argv[i]+2, false))
     {
-      ctmp = *tmp;
-      *tmp = '\0';
-      value = tmp + 1;
+      /* An option from general_args. Exclude it from future processing */
+      argv[i] = NULL;
     }
-    else
-    {
-      value = NULL;
-    }
-
-    /* Search available options */
-    opt = sb_find_option(name);
-    if (opt == NULL)
-    {
-      if (set_option(name, value, SB_ARG_TYPE_STRING))
-        return 1;
-    }
-    else if (set_option(name, value, opt->type))
-      return 1;
-
-    if (tmp != NULL)
-      *tmp = ctmp;
   }
 
   sb_globals.testname = testname;
   sb_globals.cmdname = cmdname;
+
+  return 0;
+}
+
+/* Parse test-specific arguments */
+
+static int parse_test_arguments(sb_test_t *test, int argc, char *argv[])
+{
+  /* Set default values */
+  if (test->args != NULL && sb_register_arg_set(test->args))
+    return 1;
+
+  for (int i = 1; i < argc; i++)
+  {
+    /* Skip already parsed and non-option arguments */
+    if (argv[i] == NULL || strncmp(argv[i], "--", 2))
+      continue;
+
+    /*
+      At this stage an unrecognized option must throw a error, unless the test
+      defines no options (for compatibility with legacy Lua scripts). In the
+      latter case we just export all unrecognized options as strings.
+    */
+    if (parse_option(argv[i]+2, test->args == NULL))
+        return 1;
+
+    argv[i] = NULL;
+  }
 
   return 0;
 }
@@ -1169,7 +1207,7 @@ int main(int argc, char *argv[])
   }
 
   /* Parse command line arguments */
-  if (parse_arguments(argc, argv))
+  if (parse_general_arguments(argc, argv))
     return EXIT_FAILURE;
 
   if (sb_get_value_flag("help"))
@@ -1203,7 +1241,6 @@ int main(int argc, char *argv[])
       return EXIT_FAILURE;
     }
 
-
     if (test == NULL)
     {
       /* Is it a path? */
@@ -1231,6 +1268,10 @@ int main(int argc, char *argv[])
 
     return test != NULL ? EXIT_SUCCESS : EXIT_FAILURE;
   }
+
+  /* Load and parse test-specific options */
+  if (parse_test_arguments(test, argc, argv))
+    return EXIT_FAILURE;
 
   if (!strcmp(sb_globals.cmdname, "help"))
   {

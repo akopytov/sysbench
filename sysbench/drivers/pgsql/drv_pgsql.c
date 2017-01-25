@@ -40,13 +40,13 @@
 
 static sb_arg_t pgsql_drv_args[] =
 {
-  {"pgsql-host", "PostgreSQL server host", SB_ARG_TYPE_STRING, "localhost"},
-  {"pgsql-port", "PostgreSQL server port", SB_ARG_TYPE_INT, "5432"},
-  {"pgsql-user", "PostgreSQL user", SB_ARG_TYPE_STRING, "sbtest"},
-  {"pgsql-password", "PostgreSQL password", SB_ARG_TYPE_STRING, ""},
-  {"pgsql-db", "PostgreSQL database name", SB_ARG_TYPE_STRING, "sbtest"},
-  
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
+  SB_OPT("pgsql-host", "PostgreSQL server host", "localhost", STRING),
+  SB_OPT("pgsql-port", "PostgreSQL server port", "5432", INT),
+  SB_OPT("pgsql-user", "PostgreSQL user", "sbtest", STRING),
+  SB_OPT("pgsql-password", "PostgreSQL password", "", STRING),
+  SB_OPT("pgsql-db", "PostgreSQL database name", "sbtest", STRING),
+
+  SB_OPT_END
 };
 
 typedef struct

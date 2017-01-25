@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,15 +20,25 @@
 #define OPTIONS_H
 
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "sb_list.h"
+
+/* Helper option declaration macros */
+#define SB_OPT(n, d, v, t)                   \
+  { .name = (n),                             \
+    .desc = (d),                             \
+    .type = SB_ARG_TYPE_##t,                 \
+    .value = (v) }
+
+#define SB_OPT_END { .type = SB_ARG_TYPE_NULL }
 
 /* Option types definition */
 
 typedef enum
 {
   SB_ARG_TYPE_NULL,
-  SB_ARG_TYPE_FLAG,
+  SB_ARG_TYPE_BOOL,
   SB_ARG_TYPE_INT,
   SB_ARG_TYPE_SIZE,
   SB_ARG_TYPE_FLOAT,
@@ -38,13 +48,17 @@ typedef enum
   SB_ARG_TYPE_MAX
 } sb_arg_type_t;
 
+/* Option validation function */
+typedef bool sb_arg_validate_t(const char *, const char *);
+
 /* Test option definition */
 typedef struct
 {
-  const char     *name;
-  const char     *desc;
-  sb_arg_type_t  type;
-  const char     *value; 
+  const char         *name;
+  const char         *desc;
+  sb_arg_type_t      type;
+  const char         *value;
+  sb_arg_validate_t  *validate;
 } sb_arg_t;
 
 typedef struct

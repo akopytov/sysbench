@@ -449,28 +449,33 @@ static void sb_lua_set_paths(lua_State *L)
   lua_pop(L, 1); /* package */
 }
 
-/* Allocate and initialize new interpreter state */
-
-lua_State *sb_lua_new_state(int thread_id)
+/* Export command line options */
+static int export_options(lua_State *L)
 {
-  lua_State      *L;
   sb_list_item_t *pos;
   option_t       *opt;
   char           *tmp;
 
-  L = luaL_newstate();
-
-  luaL_openlibs(L);
-
-  sb_lua_set_paths(L);
-
-  /* Export all global options */
   pos = sb_options_enum_start();
   while ((pos = sb_options_enum_next(pos, &opt)) != NULL)
   {
+    /*
+      The only purpose of the following check if to keep compatibility with
+      legacy scripts where options were exported to the global namespace. In
+      which case name collisions with user-defined functions and variables might
+      occur. For example, the --help option might redefine the help() function.
+    */
+    lua_getglobal(L, opt->name);
+    if (!lua_isnil(L, -1))
+    {
+      lua_pop(L, 1);
+      continue;
+    }
+    lua_pop(L, 1);
+
     switch (opt->type)
     {
-      case SB_ARG_TYPE_FLAG:
+      case SB_ARG_TYPE_BOOL:
         lua_pushboolean(L, sb_opt_to_flag(opt));
         break;
       case SB_ARG_TYPE_INT:
@@ -500,9 +505,27 @@ lua_State *sb_lua_new_state(int thread_id)
         lua_pushnil(L);
         break;
     }
-    
+
     lua_setglobal(L, opt->name);
   }
+
+  return 0;
+}
+
+/* Allocate and initialize new interpreter state */
+
+lua_State *sb_lua_new_state(int thread_id)
+{
+  lua_State      *L;
+
+  L = luaL_newstate();
+
+  luaL_openlibs(L);
+
+  sb_lua_set_paths(L);
+
+  if (export_options(L))
+    return NULL;
 
   /* Export variables into per-state 'sysbench' table */
 
@@ -606,52 +629,41 @@ int sb_lua_close_state(lua_State *state)
   return 0;
 }
 
-/* Prepare command */
-
-int sb_lua_cmd_prepare(void)
+/* Execute a given command */
+static int execute_command(const char *cmd)
 {
-  lua_getglobal(gstate, PREPARE_FUNC);
+  export_options(gstate);
+
+  lua_getglobal(gstate, cmd);
 
   if (lua_pcall(gstate, 0, 1, 0) != 0)
   {
-    log_text(LOG_FATAL, "failed to execute function `"PREPARE_FUNC"': %s",
-             lua_tostring(gstate, -1));
+    call_error(gstate, cmd);
     return 1;
   }
 
   return 0;
+}
+
+/* Prepare command */
+
+int sb_lua_cmd_prepare(void)
+{
+  return execute_command(PREPARE_FUNC);
 }
 
 /* Cleanup command */
 
 int sb_lua_cmd_cleanup(void)
 {
-  lua_getglobal(gstate, CLEANUP_FUNC);
-
-  if (lua_pcall(gstate, 0, 1, 0) != 0)
-  {
-    log_text(LOG_FATAL, "failed to execute function `"CLEANUP_FUNC"': %s",
-             lua_tostring(gstate, -1));
-    return 1;
-  }
-
-  return 0;
+  return execute_command(CLEANUP_FUNC);
 }
 
 /* Help command */
 
 int sb_lua_cmd_help(void)
 {
-  lua_getglobal(gstate, HELP_FUNC);
-
-  if (lua_pcall(gstate, 0, 1, 0) != 0)
-  {
-    log_text(LOG_FATAL, "failed to execute function `"HELP_FUNC"': %s",
-             lua_tostring(gstate, -1));
-    return 1;
-  }
-
-  return 0;
+  return execute_command(HELP_FUNC);
 }
 
 

@@ -46,7 +46,7 @@ static sb_arg_t drizzle_drv_args[] =
   {"drizzle-password", "Drizzle password", SB_ARG_TYPE_STRING, ""},
   {"drizzle-db", "Drizzle database name", SB_ARG_TYPE_STRING, "sbtest"},
   {"drizzle-buffer", "Level of library buffering (none, field, row, all)", SB_ARG_TYPE_STRING, "none"},
-  {"drizzle-mysql", "Use MySQL Protocol", SB_ARG_TYPE_FLAG, "off"}, 
+  {"drizzle-mysql", "Use MySQL Protocol", SB_ARG_TYPE_BOOL, "off"},
   
   {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
 };

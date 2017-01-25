@@ -56,26 +56,28 @@ db_bind_t *gresults;
 
 static sb_arg_t mysql_drv_args[] =
 {
-  {"mysql-host", "MySQL server host", SB_ARG_TYPE_LIST, "localhost"},
-  {"mysql-port", "MySQL server port", SB_ARG_TYPE_LIST, "3306"},
-  {"mysql-socket", "MySQL socket", SB_ARG_TYPE_LIST, NULL},
-  {"mysql-user", "MySQL user", SB_ARG_TYPE_STRING, "sbtest"},
-  {"mysql-password", "MySQL password", SB_ARG_TYPE_STRING, ""},
-  {"mysql-db", "MySQL database name", SB_ARG_TYPE_STRING, "sbtest"},
-  {"mysql-table-engine", "storage engine to use for the test table {myisam,innodb,bdb,heap,ndbcluster,federated}",
-   SB_ARG_TYPE_STRING, "innodb"},
-  {"mysql-engine-trx", "whether storage engine used is transactional or not {yes,no,auto}",
-   SB_ARG_TYPE_STRING, "auto"},
-  {"mysql-ssl", "use SSL connections, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
-  {"mysql-ssl-cipher", "use specific cipher for SSL connections", SB_ARG_TYPE_STRING, ""},
-  {"mysql-compression", "use compression, if available in the client library", SB_ARG_TYPE_FLAG, "off"},
-  {"mysql-debug", "dump all client library calls", SB_ARG_TYPE_FLAG, "off"},
-  {"mysql-ignore-errors", "list of errors to ignore, or \"all\"",
-   SB_ARG_TYPE_LIST, "1213,1020,1205"},
-  {"mysql-dry-run", "Dry run, pretend that all MySQL client API calls are successful without executing them",
-   SB_ARG_TYPE_FLAG, "off"},
+  SB_OPT("mysql-host", "MySQL server host", "localhost", LIST),
+  SB_OPT("mysql-port", "MySQL server port", "3306", LIST),
+  SB_OPT("mysql-socket", "MySQL socket", NULL, LIST),
+  SB_OPT("mysql-user", "MySQL user", "sbtest", STRING),
+  SB_OPT("mysql-password", "MySQL password", "", STRING),
+  SB_OPT("mysql-db", "MySQL database name", "sbtest", STRING),
+  SB_OPT("mysql-table-engine",
+         "storage engine to use for the test table {myisam,innodb,bdb,"
+         "heap,ndbcluster,federated}", "innodb", STRING),
+  SB_OPT("mysql-ssl", "use SSL connections, if available in the client "
+         "library", "off", BOOL),
+  SB_OPT("mysql-ssl-cipher", "use specific cipher for SSL connections", "",
+         STRING),
+  SB_OPT("mysql-compression", "use compression, if available in the "
+         "client library", "off", BOOL),
+  SB_OPT("mysql-debug", "trace all client library calls", "off", BOOL),
+  SB_OPT("mysql-ignore-errors", "list of errors to ignore, or \"all\"",
+         "1213,1020,1205", LIST),
+  SB_OPT("mysql-dry-run", "Dry run, pretend that all MySQL client API "
+         "calls are successful without executing them", "off", BOOL),
 
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
+  SB_OPT_END
 };
 
 typedef struct

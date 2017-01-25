@@ -85,20 +85,13 @@ static int db_free_results_int(db_conn_t *con);
 
 static sb_arg_t db_args[] =
 {
-  {
-    "db-driver",
-    "specifies database driver to use ('help' to get list of available drivers)",
-   SB_ARG_TYPE_STRING, NULL
-  },
-  {
-    "db-ps-mode", "prepared statements usage mode {auto, disable}",
-    SB_ARG_TYPE_STRING, "auto"
-  },
-  {
-    "db-debug", "print database-specific debug information",
-    SB_ARG_TYPE_FLAG, "off"
-  },
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
+  SB_OPT("db-driver", "specifies database driver to use "
+         "('help' to get list of available drivers)", NULL, STRING),
+  SB_OPT("db-ps-mode", "prepared statements usage mode {auto, disable}", "auto",
+         STRING),
+  SB_OPT("db-debug", "print database-specific debug information", "off", BOOL),
+
+  SB_OPT_END
 };
 
 static inline uint64_t db_stat_val(db_stats_t stats, db_stat_type_t type)

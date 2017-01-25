@@ -89,11 +89,11 @@ static int oper_handler_done(void);
 
 static sb_arg_t text_handler_args[] =
 {
-  {"verbosity", "verbosity level {5 - debug, 0 - only critical messages}",
-   SB_ARG_TYPE_INT, "3"},
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
+  SB_OPT("verbosity", "verbosity level {5 - debug, 0 - only critical messages}",
+         "3", INT),
+
+  SB_OPT_END
 };
-  
 
 static log_handler_t text_handler = {
   {
@@ -109,13 +109,12 @@ static log_handler_t text_handler = {
 
 static sb_arg_t oper_handler_args[] =
 {
-  {"percentile", "percentile to calculate in latency statistics (1-100). "
-   "Use the special value of 0 to disable percentile calculations",
-   SB_ARG_TYPE_INT, "95"},
-  {"histogram", "print latency histogram in report",
-   SB_ARG_TYPE_FLAG, "off"},
+  SB_OPT("percentile", "percentile to calculate in latency statistics (1-100). "
+         "Use the special value of 0 to disable percentile calculations",
+         "95", INT),
+  SB_OPT("histogram", "print latency histogram in report", "off", BOOL),
 
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
+  SB_OPT_END
 };
 
 static log_handler_t oper_handler = {

@@ -32,8 +32,9 @@
 /* CPU test arguments */
 static sb_arg_t cpu_args[] =
 {
-  {"cpu-max-prime", "upper limit for primes generator", SB_ARG_TYPE_INT, "10000"},
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
+  SB_OPT("cpu-max-prime", "upper limit for primes generator", "10000", INT),
+
+  SB_OPT_END
 };
 
 /* CPU test operations */

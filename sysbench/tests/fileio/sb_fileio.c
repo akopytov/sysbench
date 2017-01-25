@@ -207,28 +207,35 @@ static uint64_t max_events;
 static sb_file_request_t prev_req;
 
 static sb_arg_t fileio_args[] = {
-  {"file-num", "number of files to create", SB_ARG_TYPE_INT, "128"},
-  {"file-block-size", "block size to use in all IO operations", SB_ARG_TYPE_INT, "16384"},
-  {"file-total-size", "total size of files to create", SB_ARG_TYPE_SIZE, "2G"},
-  {"file-test-mode", "test mode {seqwr, seqrewr, seqrd, rndrd, rndwr, rndrw}",
-   SB_ARG_TYPE_STRING, NULL},
-  {"file-io-mode", "file operations mode {sync,async,mmap}", SB_ARG_TYPE_STRING, "sync"},
+  SB_OPT("file-num", "number of files to create", "128", INT),
+  SB_OPT("file-block-size", "block size to use in all IO operations", "16384",
+         INT),
+  SB_OPT("file-total-size", "total size of files to create", "2G", SIZE),
+  SB_OPT("file-test-mode",
+         "test mode {seqwr, seqrewr, seqrd, rndrd, rndwr, rndrw}", NULL,
+         STRING),
+  SB_OPT("file-io-mode", "file operations mode {sync,async,mmap}", "sync",
+         STRING),
 #ifdef HAVE_LIBAIO
-  {"file-async-backlog", "number of asynchronous operatons to queue per thread", SB_ARG_TYPE_INT, "128"},
+  SB_OPT("file-async-backlog",
+         "number of asynchronous operatons to queue per thread", "128", INT),
 #endif
-  {"file-extra-flags", "additional flags to use on opening files {sync,dsync,direct}",
-   SB_ARG_TYPE_STRING, ""},
-  {"file-fsync-freq", "do fsync() after this number of requests (0 - don't use fsync())",
-   SB_ARG_TYPE_INT, "100"},
-  {"file-fsync-all", "do fsync() after each write operation", SB_ARG_TYPE_FLAG, "off"},
-  {"file-fsync-end", "do fsync() at the end of test", SB_ARG_TYPE_FLAG, "on"},
-  {"file-fsync-mode", "which method to use for synchronization {fsync, fdatasync}",
-   SB_ARG_TYPE_STRING, "fsync"},
-  {"file-merged-requests", "merge at most this number of IO requests if possible (0 - don't merge)",
-   SB_ARG_TYPE_INT, "0"},
-  {"file-rw-ratio", "reads/writes ratio for combined test", SB_ARG_TYPE_FLOAT, "1.5"},
+  SB_OPT("file-extra-flags",
+         "additional flags to use on opening files {sync,dsync,direct}",
+         "", STRING),
+  SB_OPT("file-fsync-freq", "do fsync() after this number of requests "
+         "(0 - don't use fsync())", "100", INT),
+  SB_OPT("file-fsync-all", "do fsync() after each write operation", "off",
+         BOOL),
+  SB_OPT("file-fsync-end", "do fsync() at the end of test", "on", BOOL),
+  SB_OPT("file-fsync-mode",
+         "which method to use for synchronization {fsync, fdatasync}",
+         "fsync", STRING),
+  SB_OPT("file-merged-requests", "merge at most this number of IO requests "
+         "if possible (0 - don't merge)", "0", INT),
+  SB_OPT("file-rw-ratio", "reads/writes ratio for combined test", "1.5", FLOAT),
 
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
+  SB_OPT_END
 };
 
 /* fileio test commands */

@@ -40,13 +40,13 @@ typedef struct
 /* Mutex test arguments */
 static sb_arg_t mutex_args[] =
 {
-  {"mutex-num", "total size of mutex array", SB_ARG_TYPE_INT, "4096"},
-  {"mutex-locks", "number of mutex locks to do per thread",
-   SB_ARG_TYPE_INT, "50000"},
-  {"mutex-loops", "number of empty loops to do inside mutex lock",
-   SB_ARG_TYPE_INT, "10000"},
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
-}; 
+  SB_OPT("mutex-num", "total size of mutex array", "4096", INT),
+  SB_OPT("mutex-locks", "number of mutex locks to do per thread", "50000", INT),
+  SB_OPT("mutex-loops", "number of empty loops to do inside mutex lock",
+         "10000", INT),
+
+  SB_OPT_END
+};
 
 /* Mutex test operations */
 static int mutex_init(void);

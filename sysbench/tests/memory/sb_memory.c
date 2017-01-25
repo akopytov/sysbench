@@ -39,19 +39,18 @@
 /* Memory test arguments */
 static sb_arg_t memory_args[] =
 {
-  {"memory-block-size", "size of memory block for test",
-   SB_ARG_TYPE_SIZE, "1K"},
-  {"memory-total-size", "total size of data to transfer",
-   SB_ARG_TYPE_SIZE, "100G"},
-  {"memory-scope", "memory access scope {global,local}", SB_ARG_TYPE_STRING,
-   "global"},
+  SB_OPT("memory-block-size", "size of memory block for test", "1K", SIZE),
+  SB_OPT("memory-total-size", "total size of data to transfer", "100G", SIZE),
+  SB_OPT("memory-scope", "memory access scope {global,local}", "global",
+         STRING),
 #ifdef HAVE_LARGE_PAGES
-  {"memory-hugetlb", "allocate memory from HugeTLB pool", SB_ARG_TYPE_FLAG, "off"},
+  SB_OPT("memory-hugetlb", "allocate memory from HugeTLB pool", "off", BOOL),
 #endif
-  {"memory-oper", "type of memory operations {read, write, none}",
-   SB_ARG_TYPE_STRING, "write"},
-  {"memory-access-mode", "memory access mode {seq,rnd}", SB_ARG_TYPE_STRING, "seq"},
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
+  SB_OPT("memory-oper", "type of memory operations {read, write, none}",
+         "write", STRING),
+  SB_OPT("memory-access-mode", "memory access mode {seq,rnd}", "seq", STRING),
+
+  SB_OPT_END
 };
 
 /* Memory test operations */

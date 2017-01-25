@@ -134,11 +134,11 @@ int set_option(const char *name, const char *value, sb_arg_type_t type)
     return 1;
   free_values(&opt->values);
   opt->type = type;
-  if (type != SB_ARG_TYPE_FLAG && (value == NULL || value[0] == '\0'))
+  if (type != SB_ARG_TYPE_BOOL && (value == NULL || value[0] == '\0'))
     return 0;
   
   switch (type) {
-    case SB_ARG_TYPE_FLAG:
+    case SB_ARG_TYPE_BOOL:
       if (value == NULL || !strcmp(value, "on")) 
         add_value(&opt->values, "on");
       break;

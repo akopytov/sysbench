@@ -43,13 +43,11 @@
 /* Threads test arguments */
 static sb_arg_t threads_args[] =
 {
-  {
-    "thread-yields", "number of yields to do per request", SB_ARG_TYPE_INT,
-  "1000"
-  },
-  {"thread-locks", "number of locks per thread", SB_ARG_TYPE_INT, "8"},
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
-}; 
+  SB_OPT("thread-yields", "number of yields to do per request", "1000", INT),
+  SB_OPT("thread-locks", "number of locks per thread", "8", INT),
+
+  SB_OPT_END
+};
 
 /* Threads test operations */
 static int threads_init(void);

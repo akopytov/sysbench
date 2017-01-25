@@ -17,5 +17,5 @@ Make sure all available DB drivers are covered
   sysbench * (glob)
   
   (FATAL: invalid database driver name: 'nonexisting'|FATAL: No DB drivers available) (re)
-  FATAL: failed to execute function `cleanup': * failed to initialize the DB driver (glob)
+  FATAL: `cleanup' function failed: * failed to initialize the DB driver (glob)
   [1]
