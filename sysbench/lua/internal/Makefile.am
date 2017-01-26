@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 BUILT_SOURCES = sysbench.lua.h sysbench.rand.lua.h sysbench.sql.lua.h \
-                sysbench.cmdline.lua.h
+                sysbench.compat.lua.h sysbench.cmdline.lua.h
 
 CLEARFILES = $(BUILT_SOURCES)
 

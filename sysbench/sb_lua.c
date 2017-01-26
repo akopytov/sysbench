@@ -41,6 +41,7 @@
 */
 #include "lua/internal/sysbench.lua.h"
 #include "lua/internal/sysbench.cmdline.lua.h"
+#include "lua/internal/sysbench.compat.lua.h"
 #include "lua/internal/sysbench.rand.lua.h"
 #include "lua/internal/sysbench.sql.lua.h"
 
@@ -114,6 +115,7 @@ static TLS db_driver_t *db_driver;
 static internal_script_t internal_scripts[] = {
   {"sysbench.rand.lua", sysbench_rand_lua, &sysbench_rand_lua_len},
   {"sysbench.lua", sysbench_lua, &sysbench_lua_len},
+  {"sysbench.compat.lua", sysbench_compat_lua, &sysbench_compat_lua_len},
   {"sysbench.cmdline.lua", sysbench_cmdline_lua, &sysbench_cmdline_lua_len},
   {"sysbench.sql.lua", sysbench_sql_lua, &sysbench_sql_lua_len},
   {NULL, NULL, 0}

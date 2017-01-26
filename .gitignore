@@ -79,3 +79,4 @@ sysbench/lua/internal/sysbench.sql.lua.h
 /sysbench/lua/internal/sysbench.opt.lua.h
 tests/t/*.err
 /sysbench/lua/internal/sysbench.cmdline.lua.h
+/sysbench/lua/internal/sysbench.compat.lua.h
