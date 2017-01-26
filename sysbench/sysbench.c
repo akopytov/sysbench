@@ -268,6 +268,7 @@ void print_help(void)
   sb_register_arg_set(), i.e. if it's a 'known' option, or ignore_unknown is
   'true'. In which case return 0, otherwise return 1.
 */
+
 static int parse_option(char *name, bool ignore_unknown)
 {
   const char        *value;
@@ -290,7 +291,8 @@ static int parse_option(char *name, bool ignore_unknown)
 
   opt = sb_find_option(name);
   if (opt != NULL || ignore_unknown)
-    rc = set_option(name, value, opt != NULL ? opt->type : SB_ARG_TYPE_STRING);
+    rc = set_option(name, value,
+                    opt != NULL ? opt->type : SB_ARG_TYPE_STRING) == NULL;
   else
     rc =  1;
 

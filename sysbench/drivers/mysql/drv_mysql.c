@@ -62,9 +62,6 @@ static sb_arg_t mysql_drv_args[] =
   SB_OPT("mysql-user", "MySQL user", "sbtest", STRING),
   SB_OPT("mysql-password", "MySQL password", "", STRING),
   SB_OPT("mysql-db", "MySQL database name", "sbtest", STRING),
-  SB_OPT("mysql-table-engine",
-         "storage engine to use for the test table {myisam,innodb,bdb,"
-         "heap,ndbcluster,federated}", "innodb", STRING),
   SB_OPT("mysql-ssl", "use SSL connections, if available in the client "
          "library", "off", BOOL),
   SB_OPT("mysql-ssl-cipher", "use specific cipher for SSL connections", "",

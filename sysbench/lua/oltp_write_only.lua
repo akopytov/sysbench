@@ -21,7 +21,7 @@
 require("oltp_common")
 
 function prepare_statements()
-   if not oltp_skip_trx then
+   if not sysbench.opt.skip_trx then
       prepare_begin()
       prepare_commit()
    end
@@ -32,7 +32,7 @@ function prepare_statements()
 end
 
 function event()
-   if not oltp_skip_trx then
+   if not sysbench.opt.skip_trx then
       begin()
    end
 
@@ -40,7 +40,7 @@ function event()
    execute_non_index_updates()
    execute_delete_inserts()
 
-   if not oltp_skip_trx then
+   if not sysbench.opt.skip_trx then
       commit()
    end
 end

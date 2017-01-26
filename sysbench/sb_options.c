@@ -100,9 +100,13 @@ int sb_register_arg_set(sb_arg_t *set)
   unsigned int i;
 
   for (i=0; set[i].name != NULL; i++)
-    if (set_option(set[i].name, set[i].value, set[i].type))
+  {
+    option_t * const opt = set_option(set[i].name, set[i].value, set[i].type);
+    if (opt == NULL)
       return 1;
-  
+    opt->validate = set->validate;
+  }
+
   return 0;
 }
 
@@ -123,7 +127,7 @@ static void read_config_file(const char *filename)
   }
 }
 
-int set_option(const char *name, const char *value, sb_arg_type_t type)
+option_t *set_option(const char *name, const char *value, sb_arg_type_t type)
 {
   option_t *opt;
   char     *tmpbuf;
@@ -131,11 +135,15 @@ int set_option(const char *name, const char *value, sb_arg_type_t type)
 
   opt = add_option(&options, name);
   if (opt == NULL)
-    return 1;
+    return NULL;
   free_values(&opt->values);
   opt->type = type;
+
+  if (opt->validate != NULL && !opt->validate(name, value))
+    return NULL;
+
   if (type != SB_ARG_TYPE_BOOL && (value == NULL || value[0] == '\0'))
-    return 0;
+    return opt;
   
   switch (type) {
     case SB_ARG_TYPE_BOOL:
@@ -166,10 +174,10 @@ int set_option(const char *name, const char *value, sb_arg_type_t type)
       break;
     default:
       printf("Unknown argument type: %d", type);
-      return 1;
+      return NULL;
   }
 
-  return 0;
+  return opt;
 }
 
 

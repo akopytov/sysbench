@@ -26,17 +26,17 @@ function prepare_statements()
 end
 
 function event()
-   local table_name = "sbtest" .. sb_rand_uniform(1, oltp_tables_count)
-   local k_val = sysbench.rand.default(1, oltp_table_size)
+   local table_name = "sbtest" .. sysbench.rand.uniform(1, sysbench.opt.tables)
+   local k_val = sysbench.rand.default(1, sysbench.opt.table_size)
    local c_val = get_c_value()
    local pad_val = get_pad_value()
 
-   if (drv:name() == "pgsql" and oltp_auto_inc) then
+   if (drv:name() == "pgsql" and sysbench.opt.auto_inc) then
       con:query(string.format("INSERT INTO %s (k, c, pad) VALUES " ..
                                  "(%d, '%s', '%s')",
                               table_name, k_val, c_val, pad_val))
    else
-      if (oltp_auto_inc) then
+      if (sysbench.opt.auto_inc) then
          i = 0
       else
          i = sysbench.rand.unique()

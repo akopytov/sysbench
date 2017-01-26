@@ -39,7 +39,7 @@ typedef enum
 } sb_arg_type_t;
 
 /* Option validation function */
-typedef bool sb_arg_validate_t(const char *, const char *);
+typedef bool sb_opt_validate_t(const char *, const char *);
 
 /* Test option definition */
 typedef struct
@@ -48,7 +48,7 @@ typedef struct
   const char         *desc;
   const char         *value;
   sb_arg_type_t      type;
-  sb_arg_validate_t  *validate;
+  sb_opt_validate_t  *validate;
 } sb_arg_t;
 
 int sb_lua_set_test_args(sb_arg_t *args, size_t len);
@@ -92,8 +92,8 @@ function sysbench.cmdline.read_option_defs()
 
    for name, def in pairs(sysbench.option_defs) do
       -- name
-      assert(type(name) == "string", "wrong table structure in " ..
-                "sysbench.option_defs")
+      assert(type(name) == "string" and type(def) == "table",
+             "wrong table structure in sysbench.option_defs")
       args[i].name = name
 
       -- description

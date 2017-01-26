@@ -49,7 +49,7 @@ typedef enum
 } sb_arg_type_t;
 
 /* Option validation function */
-typedef bool sb_arg_validate_t(const char *, const char *);
+typedef bool sb_opt_validate_t(const char *, const char *);
 
 /* Test option definition */
 typedef struct
@@ -58,7 +58,7 @@ typedef struct
   const char         *desc;
   const char         *value;
   sb_arg_type_t      type;
-  sb_arg_validate_t  *validate;
+  sb_opt_validate_t  *validate;
 } sb_arg_t;
 
 typedef struct
@@ -76,6 +76,8 @@ typedef struct
   sb_list_t       values;
   char            ignore;
 
+  sb_opt_validate_t *validate;
+
   sb_list_item_t  listitem;
 } option_t;
   
@@ -89,7 +91,7 @@ int sb_options_done(void);
 int sb_register_arg_set(sb_arg_t *set);
 
 /* Set value 'value' of type 'type' for option 'name' */
-int set_option(const char *name, const char *value, sb_arg_type_t type);
+option_t *set_option(const char *name, const char *value, sb_arg_type_t type);
 
 /* Find option specified by 'name' */
 option_t *sb_find_option(const char *name);

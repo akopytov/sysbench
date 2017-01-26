@@ -21,14 +21,14 @@
 require("oltp_common")
 
 function prepare_statements()
-   if not oltp_skip_trx then
+   if not sysbench.opt.skip_trx then
       prepare_begin()
       prepare_commit()
    end
 
    prepare_point_selects()
 
-   if oltp_range_selects then
+   if sysbench.opt.range_selects then
       prepare_simple_ranges()
       prepare_sum_ranges()
       prepare_order_ranges()
@@ -41,13 +41,13 @@ function prepare_statements()
 end
 
 function event()
-   if not oltp_skip_trx then
+   if not sysbench.opt.skip_trx then
       begin()
    end
 
    execute_point_selects()
 
-   if oltp_range_selects then
+   if sysbench.opt.range_selects then
       execute_simple_ranges()
       execute_sum_ranges()
       execute_order_ranges()
@@ -58,7 +58,7 @@ function event()
    execute_non_index_updates()
    execute_delete_inserts()
 
-   if not oltp_skip_trx then
+   if not sysbench.opt.skip_trx then
       commit()
    end
 end

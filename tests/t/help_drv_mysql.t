@@ -13,7 +13,6 @@ Skip test if the MySQL driver is not available.
     --mysql-user=STRING              MySQL user [sbtest]
     --mysql-password=STRING          MySQL password []
     --mysql-db=STRING                MySQL database name [sbtest]
-    --mysql-table-engine=STRING      storage engine to use for the test table {myisam,innodb,bdb,heap,ndbcluster,federated} [innodb]
     --mysql-ssl[=on|off]             use SSL connections, if available in the client library [off]
     --mysql-ssl-cipher=STRING        use specific cipher for SSL connections []
     --mysql-compression[=on|off]     use compression, if available in the client library [off]

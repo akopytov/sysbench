@@ -5,18 +5,34 @@
 -- http://kb.askmonty.org/v/segmented-key-cache
 --
 
--- Override oltp_tables_count, this test only supports a single table
-oltp_tables_count = 1
-
 require("oltp_common")
 
-function thread_init()
-   set_vars_points()
+-- Add random_points to the list of standard OLTP options
+sysbench.option_defs.random_points =
+   {"Number of random points in the IN() clause in generated SELECTs", 10}
 
+-- Override standard prepare/cleanup OLTP functions, as this benchmark does not
+-- support multiple tables
+oltp_prepare = prepare
+oltp_cleanup = cleanup
+
+function prepare()
+   assert(sysbench.opt.tables == 1, "this benchmark does not support " ..
+             "--tables > 1")
+   oltp_prepare()
+end
+
+function cleanup()
+   assert(sysbench.opt.tables == 1, "this benchmark does not support " ..
+             "--tables > 1")
+   oltp_cleanup()
+end
+
+function thread_init()
    drv = sysbench.sql.driver()
    con = drv:connect()
 
-   local points = string.rep("?, ", random_points - 1) .. "?"
+   local points = string.rep("?, ", sysbench.opt.random_points - 1) .. "?"
 
    stmt = con:prepare(string.format([[
         SELECT id, k, c, pad
@@ -25,29 +41,24 @@ function thread_init()
         ]], points))
 
    params = {}
-   for j = 1,random_points do
+   for j = 1, sysbench.opt.random_points do
       params[j] = stmt:bind_create(sysbench.sql.type.INT)
    end
 
    stmt:bind_param(unpack(params))
 
-   rlen = oltp_table_size / num_threads
+   rlen = sysbench.opt.table_size / sysbench.opt.num_threads
 end
 
 function event(thread_id)
    -- To prevent overlapping of our range queries we need to partition the whole
    -- table into num_threads segments and then make each thread work with its
    -- own segment.
-   for i = 1,random_points do
+   for i = 1, sysbench.opt.random_points do
       local rmin = rlen * thread_id
       local rmax = rmin + rlen
       params[i]:set(sb_rand(rmin, rmax))
    end
 
    stmt:execute()
-end
-
-function set_vars_points()
-   set_vars()
-   random_points = random_points or 10
 end

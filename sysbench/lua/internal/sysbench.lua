@@ -117,6 +117,5 @@ DB_ERROR_NONE = sysbench.db.DB_ERROR_NONE
 DB_ERROR_RESTART_TRANSACTION = sysbench.db.DB_ERROR_RESTART_TRANSACTION
 DB_ERROR_FAILED = sysbench.db.DB_ERROR_FAILED
 
--- This was an unused parameter in drv_mysql.c which was always 1M
--- define to keep legacy OLTP scripts functional
+mysql_table_engine = mysql_table_engine or "innodb"
 myisam_max_rows = 1000000

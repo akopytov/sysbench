@@ -3,7 +3,7 @@ oltp_read_write.lua + MySQL tests
 ########################################################################
 
   $ . $SBTEST_INCDIR/mysql_common.sh
-  $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-table-engine=myisam $SBTEST_MYSQL_ARGS"
+  $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-storage-engine=myisam $SBTEST_MYSQL_ARGS"
   $ OLTP_SCRIPT_PATH=${SBTEST_SCRIPTDIR}/oltp_read_write.lua
   $ . $SBTEST_INCDIR/script_oltp_common.sh
   sysbench *.* * (glob)
@@ -185,7 +185,7 @@ oltp_read_write.lua + MySQL tests
   
   Dropping table 'sbtest1'...
 
-  $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-table-engine=innodb $SBTEST_MYSQL_ARGS"
+  $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-storage-engine=innodb $SBTEST_MYSQL_ARGS"
   $ . $SBTEST_INCDIR/script_oltp_common.sh
   sysbench *.* * (glob)
   

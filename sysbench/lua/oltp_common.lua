@@ -24,6 +24,53 @@ function init()
                 "should not be called directly.")
 end
 
+-- Command line options
+sysbench.option_defs = {
+   table_size =
+      {"Number of rows per table", 10000},
+   range_size =
+      {"Range size for range SELECT queries", 100},
+   tables =
+      {"Number of tables", 1},
+   point_selects =
+      {"Number of point SELECT queries per transaction", 10},
+   simple_ranges =
+      {"Number of simple range SELECT queries per transaction", 1},
+   sum_ranges =
+      {"Number of SELECT SUM() queries per transaction", 1},
+   order_ranges =
+      {"Number of SELECT ORDER BY queries per transaction", 1},
+   distinct_ranges =
+      {"Number of SELECT DISTINCT queries per transaction", 1},
+   index_updates =
+      {"Number of UPDATE index queries per transaction", 1},
+   non_index_updates =
+      {"Number of UPDATE non-index queries per transaction", 1},
+   delete_inserts =
+      {"Number of DELETE/INSERT combination per transaction", 1},
+   range_selects =
+      {"Enable/disable all range SELECT queries", true},
+   auto_inc =
+   {"Use AUTO_INCREMENT column as Primary Key (for MySQL), " ..
+       "or its alternatives in other DBMS. When disabled, use " ..
+       "client-generated IDs", true},
+   skip_trx =
+      {"Don't start explicit transactions and execute all queries as " ..
+          "in the AUTOCOMMIT mode", false},
+   secondary =
+      {"Use a secondary index in place of the PRIMARY KEY", false},
+   create_secondary =
+      {"Create a secondary index in addition to the PRIMARY KEY", true},
+   mysql_storage_engine =
+      {"Storage engine, if MySQL is used", "innodb"},
+   pgsql_variant =
+      {"Use this PostgreSQL variant when running with the " ..
+          "PostgreSQL driver. The only currently supported " ..
+          "variant is 'redshift'. When enabled, " ..
+          "create_secondary is automatically disabled, and " ..
+          "delete_inserts is set to 0"}
+}
+
 -- Generate strings of random digits with 11-digit groups separated by dashes
 function get_c_value()
    -- 10 groups, 119 characters
@@ -45,7 +92,7 @@ local function create_table(drv, con, table_num)
    local extra_table_options = ""
    local query
 
-   if oltp_secondary then
+   if sysbench.opt.secondary then
      id_index_def = "KEY xid"
    else
      id_index_def = "PRIMARY KEY"
@@ -54,16 +101,16 @@ local function create_table(drv, con, table_num)
    if drv:name() == "mysql" or drv:name() == "attachsql" or
       drv:name() == "drizzle"
    then
-      if oltp_auto_inc then
+      if sysbench.opt.auto_inc then
          id_def = "INTEGER NOT NULL AUTO_INCREMENT"
       else
          id_def = "INTEGER NOT NULL"
       end
-      engine_def = "/*! ENGINE = " .. mysql_table_engine .. " */"
+      engine_def = "/*! ENGINE = " .. sysbench.opt.mysql_storage_engine .. " */"
       extra_table_options = mysql_table_options or ""
    elseif drv:name() == "pgsql"
    then
-      if not oltp_auto_inc then
+      if not sysbench.opt.auto_inc then
          id_def = "INTEGER NOT NULL"
       elseif pgsql_variant == 'redshift' then
         id_def = "INTEGER IDENTITY(1,1)"
@@ -89,9 +136,9 @@ CREATE TABLE sbtest%d(
    con:query(query)
 
    print(string.format("Inserting %d records into 'sbtest%d'",
-                       oltp_table_size, table_num))
+                       sysbench.opt.table_size, table_num))
 
-   if oltp_auto_inc then
+   if sysbench.opt.auto_inc then
       query = "INSERT INTO sbtest" .. table_num .. "(k, c, pad) VALUES"
    else
       query = "INSERT INTO sbtest" .. table_num .. "(id, k, c, pad) VALUES"
@@ -102,17 +149,19 @@ CREATE TABLE sbtest%d(
    local c_val
    local pad_val
 
-   for i = 1,oltp_table_size do
+   for i = 1, sysbench.opt.table_size do
 
       c_val = get_c_value()
       pad_val = get_pad_value()
 
-      if (oltp_auto_inc) then
+      if (sysbench.opt.auto_inc) then
          query = string.format("(%d, '%s', '%s')",
-                               sb_rand(1, oltp_table_size), c_val, pad_val)
+                               sb_rand(1, sysbench.opt.table_size), c_val,
+                               pad_val)
       else
          query = string.format("(%d, %d, '%s', '%s')",
-                               i, sb_rand(1, oltp_table_size), c_val, pad_val)
+                               i, sb_rand(1, sysbench.opt.table_size), c_val,
+                               pad_val)
       end
 
       con:bulk_insert_next(query)
@@ -120,7 +169,7 @@ CREATE TABLE sbtest%d(
 
    con:bulk_insert_done()
 
-   if oltp_create_secondary then
+   if sysbench.opt.create_secondary then
       print(string.format("Creating secondary indexes on 'sbtest%d'...",
                           table_num))
       con:query(string.format("CREATE INDEX k_%d ON sbtest%d(k)",
@@ -168,7 +217,7 @@ function prepare_commit()
 end
 
 function prepare_for_each_table(key)
-   for t = 1, oltp_tables_count do
+   for t = 1, sysbench.opt.tables do
       stmt[t][key] = con:prepare(string.format(stmt_defs[key][1], t))
 
       local nparam = #stmt_defs[key] - 1
@@ -233,8 +282,6 @@ function prepare_delete_inserts()
 end
 
 function thread_init()
-   set_vars()
-
    drv = sysbench.sql.driver()
    con = drv:connect()
 
@@ -246,7 +293,7 @@ function thread_init()
 
    local t
 
-   for t = 1, oltp_tables_count do
+   for t = 1, sysbench.opt.tables do
       stmt[t] = {}
       param[t] = {}
    end
@@ -256,36 +303,32 @@ function thread_init()
 end
 
 function prepare()
-   set_vars()
-
    local drv = sysbench.sql.driver()
    local con = drv:connect()
    local i
 
-   for i = 1,oltp_tables_count do
+   for i = 1, sysbench.opt.tables do
      create_table(drv, con, i)
    end
 end
 
 function cleanup()
-   set_vars()
-
    local drv = sysbench.sql.driver()
    local con = drv:connect()
    local i
 
-   for i = 1,oltp_tables_count do
+   for i = 1, sysbench.opt.tables do
       print(string.format("Dropping table 'sbtest%d'...", i))
       con:query("DROP TABLE IF EXISTS sbtest" .. i )
    end
 end
 
 local function get_table_num()
-   return sysbench.rand.uniform(1, oltp_tables_count)
+   return sysbench.rand.uniform(1, sysbench.opt.tables)
 end
 
 local function get_id()
-   return sysbench.rand.default(1, oltp_table_size)
+   return sysbench.rand.default(1, sysbench.opt.table_size)
 end
 
 function begin()
@@ -300,7 +343,7 @@ function execute_point_selects()
    local tnum = get_table_num()
    local i
 
-   for i=1, oltp_point_selects do
+   for i=1, sysbench.opt.point_selects do
       param[tnum].point_selects[1]:set(get_id())
 
       stmt[tnum].point_selects:execute()
@@ -311,11 +354,11 @@ local function execute_range(key)
    local tnum = get_table_num()
    local i
 
-   for i=1, _G["oltp_" .. key] do
+   for i=1, sysbench.opt[key] do
       local id = get_id()
 
       param[tnum][key][1]:set(id)
-      param[tnum][key][2]:set(id + oltp_range_size - 1)
+      param[tnum][key][2]:set(id + sysbench.opt.range_size - 1)
 
       stmt[tnum][key]:execute()
    end
@@ -341,7 +384,7 @@ function execute_index_updates()
    local tnum = get_table_num()
    local i
 
-   for i=1, oltp_index_updates do
+   for i=1, sysbench.opt.index_updates do
       param[tnum].index_updates[1]:set(get_id())
 
       stmt[tnum].index_updates:execute()
@@ -352,7 +395,7 @@ function execute_non_index_updates()
    local tnum = get_table_num()
    local i
 
-   for i=1, oltp_non_index_updates do
+   for i=1, sysbench.opt.non_index_updates do
       param[tnum].non_index_updates[1]:set(get_c_value())
       param[tnum].non_index_updates[2]:set(get_id())
 
@@ -364,9 +407,9 @@ function execute_delete_inserts()
    local tnum = get_table_num()
    local i
 
-   for i=1, oltp_delete_inserts do
+   for i=1, sysbench.opt.delete_inserts do
       local id = get_id()
-      local k = sb_rand(1, oltp_table_size)
+      local k = get_id()
 
       param[tnum].deletes[1]:set(id)
 
@@ -378,48 +421,4 @@ function execute_delete_inserts()
       stmt[tnum].deletes:execute()
       stmt[tnum].inserts:execute()
    end
-end
-
-function set_vars()
-   oltp_table_size = tonumber(oltp_table_size) or 10000
-   oltp_range_size = tonumber(oltp_range_size) or 100
-   oltp_tables_count = tonumber(oltp_tables_count) or 1
-   oltp_point_selects = tonumber(oltp_point_selects) or 10
-   oltp_simple_ranges = tonumber(oltp_simple_ranges) or 1
-   oltp_sum_ranges = tonumber(oltp_sum_ranges) or 1
-   oltp_order_ranges = tonumber(oltp_order_ranges) or 1
-   oltp_distinct_ranges = tonumber(oltp_distinct_ranges) or 1
-   oltp_index_updates = tonumber(oltp_index_updates) or 1
-   oltp_non_index_updates = tonumber(oltp_non_index_updates) or 1
-   oltp_delete_inserts = tonumber(oltp_delete_inserts) or 1
-
-   if (oltp_range_selects == 'off') then
-      oltp_range_selects = false
-   else
-      oltp_range_selects = true
-   end
-
-   if (oltp_auto_inc == 'off') then
-      oltp_auto_inc = false
-   else
-      oltp_auto_inc = true
-   end
-
-   if (oltp_skip_trx == 'on') then
-      oltp_skip_trx = true
-   else
-      oltp_skip_trx = false
-   end
-
-   if (oltp_create_secondary == 'off') then
-      oltp_create_secondary = false
-   else
-      oltp_create_secondary = true
-   end
-
-   if (pgsql_variant == 'redshift') then
-      oltp_create_secondary = false
-      oltp_delete_inserts = 0
-   end
-
 end

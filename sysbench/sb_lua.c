@@ -195,6 +195,104 @@ static void xfree(const void *ptr)
     free((void *) ptr);
 }
 
+/* Export command line options */
+
+static int export_options(lua_State *L)
+{
+  sb_list_item_t *pos;
+  option_t       *opt;
+  char           *tmp;
+
+  /*
+    Export options to the 'sysbench.opt' table, if the script declares supported
+    options with sysbench.option_defs, or to the global namespace otherwise
+  */
+  if (sbtest.args != NULL)
+  {
+    lua_getglobal(L, "sysbench");
+    lua_pushliteral(L, "opt");
+    lua_newtable(L);
+  }
+
+  pos = sb_options_enum_start();
+  while ((pos = sb_options_enum_next(pos, &opt)) != NULL)
+  {
+    /*
+      The only purpose of the following check if to keep compatibility with
+      legacy scripts where options were exported to the global namespace. In
+      which case name collisions with user-defined functions and variables might
+      occur. For example, the --help option might redefine the help() function.
+    */
+    if (sbtest.args == NULL)
+    {
+      lua_getglobal(L, opt->name);
+      if (lua_isfunction(L, -1))
+      {
+        lua_pop(L, 1);
+        continue;
+      }
+      lua_pop(L, 1);
+    }
+    else
+    {
+      lua_pushstring(L, opt->name);
+    }
+
+    switch (opt->type)
+    {
+      case SB_ARG_TYPE_BOOL:
+        lua_pushboolean(L, sb_opt_to_flag(opt));
+        break;
+      case SB_ARG_TYPE_INT:
+        lua_pushnumber(L, sb_opt_to_int(opt));
+        break;
+      case SB_ARG_TYPE_DOUBLE:
+        lua_pushnumber(L, sb_opt_to_double(opt));
+        break;
+      case SB_ARG_TYPE_SIZE:
+        lua_pushnumber(L, sb_opt_to_size(opt));
+        break;
+      case SB_ARG_TYPE_STRING:
+        tmp = sb_opt_to_string(opt);
+        lua_pushstring(L, tmp ? tmp : "");
+        break;
+      case SB_ARG_TYPE_LIST:
+        lua_newtable(L);
+
+        sb_list_item_t *val;
+        int count = 1;
+
+        SB_LIST_FOR_EACH(val, sb_opt_to_list(opt))
+        {
+          lua_pushstring(L, SB_LIST_ENTRY(val, value_t, listitem)->data);
+          lua_rawseti(L, -2, count++);
+        }
+
+        break;
+      case SB_ARG_TYPE_FILE:
+        /* no need to export anything */
+        lua_pushnil(L);
+        break;
+      default:
+        log_text(LOG_WARNING, "Global option '%s' will not be exported, because"
+                 " the type is unknown", opt->name);
+        lua_pushnil(L);
+        break;
+    }
+
+    /* set var = value */
+    if (sbtest.args != NULL)
+      lua_settable(L, -3);
+    else
+      lua_setglobal(L, opt->name);
+  }
+
+  if (sbtest.args != NULL)
+    lua_settable(L, -3); /* set sysbench.opt */
+
+  return 0;
+}
+
 /* Load a specified Lua script */
 
 sb_test_t *sb_load_lua(const char *testname)
@@ -292,6 +390,9 @@ int sb_lua_op_thread_init(int thread_id)
     return 1;
 
   states[thread_id] = L;
+
+  if (export_options(L))
+    return 1;
 
   lua_getglobal(L, THREAD_INIT_FUNC);
   if (!lua_isnil(L, -1))
@@ -493,104 +594,6 @@ static void sb_lua_set_paths(lua_State *L)
   lua_pop(L, 1); /* package */
 }
 
-/* Export command line options */
-
-static int export_options(lua_State *L)
-{
-  sb_list_item_t *pos;
-  option_t       *opt;
-  char           *tmp;
-
-  /*
-    Export options to the 'sysbench.opt' table, if the script declares supported
-    options with sysbench.option_defs, or to the global namespace otherwise
-  */
-  if (sbtest.args != NULL)
-  {
-    lua_getglobal(L, "sysbench");
-    lua_pushliteral(L, "opt");
-    lua_newtable(L);
-  }
-
-  pos = sb_options_enum_start();
-  while ((pos = sb_options_enum_next(pos, &opt)) != NULL)
-  {
-    /*
-      The only purpose of the following check if to keep compatibility with
-      legacy scripts where options were exported to the global namespace. In
-      which case name collisions with user-defined functions and variables might
-      occur. For example, the --help option might redefine the help() function.
-    */
-    if (sbtest.args == NULL)
-    {
-      lua_getglobal(L, opt->name);
-      if (!lua_isnil(L, -1))
-      {
-        lua_pop(L, 1);
-        continue;
-      }
-      lua_pop(L, 1);
-    }
-    else
-    {
-      lua_pushstring(L, opt->name);
-    }
-
-    switch (opt->type)
-    {
-      case SB_ARG_TYPE_BOOL:
-        lua_pushboolean(L, sb_opt_to_flag(opt));
-        break;
-      case SB_ARG_TYPE_INT:
-        lua_pushnumber(L, sb_opt_to_int(opt));
-        break;
-      case SB_ARG_TYPE_DOUBLE:
-        lua_pushnumber(L, sb_opt_to_double(opt));
-        break;
-      case SB_ARG_TYPE_SIZE:
-        lua_pushnumber(L, sb_opt_to_size(opt));
-        break;
-      case SB_ARG_TYPE_STRING:
-        tmp = sb_opt_to_string(opt);
-        lua_pushstring(L, tmp ? tmp : "");
-        break;
-      case SB_ARG_TYPE_LIST:
-        lua_newtable(L);
-
-        sb_list_item_t *val;
-        int count = 1;
-
-        SB_LIST_FOR_EACH(val, sb_opt_to_list(opt))
-        {
-          lua_pushstring(L, SB_LIST_ENTRY(val, value_t, listitem)->data);
-          lua_rawseti(L, -2, count++);
-        }
-
-        break;
-      case SB_ARG_TYPE_FILE:
-        /* no need to export anything */
-        lua_pushnil(L);
-        break;
-      default:
-        log_text(LOG_WARNING, "Global option '%s' will not be exported, because"
-                 " the type is unknown", opt->name);
-        lua_pushnil(L);
-        break;
-    }
-
-    /* set var = value */
-    if (sbtest.args != NULL)
-      lua_settable(L, -3);
-    else
-      lua_setglobal(L, opt->name);
-  }
-
-  if (sbtest.args != NULL)
-    lua_settable(L, -3); /* set sysbench.opt */
-
-  return 0;
-}
-
 /* Create a deep copy of the 'args' array and set it to sbtest.args */
 
 int sb_lua_set_test_args(sb_arg_t *args, size_t len)
@@ -659,9 +662,6 @@ static lua_State *sb_lua_new_state(int thread_id)
 
   sb_lua_set_paths(L);
 
-  if (export_options(L))
-    return NULL;
-
   /* Export variables into per-state 'sysbench' table */
 
   lua_newtable(L);
@@ -724,9 +724,7 @@ static lua_State *sb_lua_new_state(int thread_id)
   if (load_internal_scripts(L))
     return NULL;
 
-  int rc;
-
-  if ((rc = luaL_loadfile(L, sbtest.lname)))
+  if (luaL_loadfile(L, sbtest.lname))
   {
     lua_error(L);
     return NULL;
@@ -767,7 +765,8 @@ int sb_lua_close_state(lua_State *state)
 /* Execute a given command */
 static int execute_command(const char *cmd)
 {
-  export_options(gstate);
+  if (export_options(gstate))
+    return 1;
 
   lua_getglobal(gstate, cmd);
 
