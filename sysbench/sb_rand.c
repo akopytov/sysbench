@@ -46,18 +46,23 @@ int sb_rand_seed; /* optional seed set on the command line */
 
 static sb_arg_t rand_args[] =
 {
-  {"rand-type", "random numbers distribution {uniform,gaussian,special,pareto}",
-   SB_ARG_TYPE_STRING, "special"},
-  {"rand-spec-iter", "number of iterations used for numbers generation", SB_ARG_TYPE_INT, "12"},
-  {"rand-spec-pct", "percentage of values to be treated as 'special' (for special distribution)",
-   SB_ARG_TYPE_INT, "1"},
-  {"rand-spec-res", "percentage of 'special' values to use (for special distribution)",
-   SB_ARG_TYPE_INT, "75"},
-  {"rand-seed", "seed for random number generator. When 0, the current time is "
-   "used as a RNG seed.", SB_ARG_TYPE_INT, "0"},
-  {"rand-pareto-h", "parameter h for pareto distibution", SB_ARG_TYPE_FLOAT,
-   "0.2"},
-  {NULL, NULL, SB_ARG_TYPE_NULL, NULL}
+  SB_OPT("rand-type",
+         "random numbers distribution {uniform,gaussian,special,pareto}",
+         "special", STRING),
+  SB_OPT("rand-spec-iter",
+         "number of iterations used for numbers generation", "12", INT),
+  SB_OPT("rand-spec-pct",
+         "percentage of values to be treated as 'special' "
+         "(for special distribution)", "1", INT),
+  SB_OPT("rand-spec-res",
+         "percentage of 'special' values to use "
+         "(for special distribution)", "75", INT),
+  SB_OPT("rand-seed",
+         "seed for random number generator. When 0, the current time is "
+         "used as a RNG seed.", "0", INT),
+  SB_OPT("rand-pareto-h", "parameter h for pareto distibution", "0.2", DOUBLE),
+
+  SB_OPT_END
 };
 
 static rand_dist_t rand_type;
@@ -143,7 +148,7 @@ int sb_rand_init(void)
   rand_res = sb_get_value_int("rand-spec-res");
   rand_res_mult = 100.0 / (100.0 - rand_res);
 
-  pareto_h  = sb_get_value_float("rand-pareto-h");
+  pareto_h  = sb_get_value_double("rand-pareto-h");
   pareto_power = log(pareto_h) / log(1.0-pareto_h);
 
   /* Seed PRNG for the main thread. Worker thread do their own seeding */

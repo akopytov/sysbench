@@ -233,7 +233,7 @@ static sb_arg_t fileio_args[] = {
          "fsync", STRING),
   SB_OPT("file-merged-requests", "merge at most this number of IO requests "
          "if possible (0 - don't merge)", "0", INT),
-  SB_OPT("file-rw-ratio", "reads/writes ratio for combined test", "1.5", FLOAT),
+  SB_OPT("file-rw-ratio", "reads/writes ratio for combined test", "1.5", DOUBLE),
 
   SB_OPT_END
 };
@@ -1907,7 +1907,7 @@ int parse_arguments(void)
     return 1;
   }
 
-  file_rw_ratio = sb_get_value_float("file-rw-ratio");
+  file_rw_ratio = sb_get_value_double("file-rw-ratio");
   if (file_rw_ratio < 0)
   {
     log_text(LOG_FATAL, "Invalid value for --file-rw-ratio: %f.", file_rw_ratio);

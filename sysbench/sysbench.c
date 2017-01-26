@@ -373,7 +373,10 @@ static int parse_test_arguments(sb_test_t *test, int argc, char *argv[])
       latter case we just export all unrecognized options as strings.
     */
     if (parse_option(argv[i]+2, test->args == NULL))
-        return 1;
+    {
+      fprintf(stderr, "invalid option: %s\n", argv[i]);
+      return 1;
+    }
 
     argv[i] = NULL;
   }
@@ -1250,7 +1253,12 @@ int main(int argc, char *argv[])
                 strerror(errno));
         return EXIT_FAILURE;
       }
-      test = sb_load_lua(sb_globals.testname);
+
+      if ((test = sb_load_lua(sb_globals.testname)) == NULL)
+      {
+        fprintf(stderr, "Script execution failed");
+        return EXIT_FAILURE;
+      }
 
       if (sb_globals.cmdname == NULL)
       {

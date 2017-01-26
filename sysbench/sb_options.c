@@ -66,7 +66,7 @@ static char *opt_formats[] = {
   "[=on|off]",		/* SB_ARG_TYPE_FLAG */
   "=N",			/* SB_ARG_TYPE_INT */
   "=SIZE",		/* SB_ARG_TYPE_SIZE */
-  "=N",			/* SB_ARG_TYPE_FLOAT */
+  "=N",			/* SB_ARG_TYPE_DOUBLE */
   "=STRING",    	/* SB_ARG_TYPE_STRING */
   "=[LIST,...]",	/* SB_ARG_TYPE_LIST */
   "=FILENAME"		/* SB_ARG_TYPE_FILE */
@@ -144,7 +144,7 @@ int set_option(const char *name, const char *value, sb_arg_type_t type)
       break;
     case SB_ARG_TYPE_INT:
     case SB_ARG_TYPE_SIZE:
-    case SB_ARG_TYPE_FLOAT:
+    case SB_ARG_TYPE_DOUBLE:
     case SB_ARG_TYPE_STRING:
       add_value(&opt->values, value);
       break;
@@ -326,24 +326,23 @@ unsigned long long sb_get_value_size(const char *name)
 }
 
 
-float sb_opt_to_float(option_t *opt)
+double sb_opt_to_double(option_t *opt)
 {
   value_t        *val;
   sb_list_item_t *pos;
-  float          res;
+  double          res;
 
   SB_LIST_FOR_EACH(pos, &opt->values)
   {
     val = SB_LIST_ENTRY(pos, value_t, listitem);
-    if (sscanf(val->data, "%f", &res) < 1)
-      res = 0;
+    res = strtod(val->data, NULL);
   }
 
   return res;
 }
 
 
-float sb_get_value_float(const char *name)
+double sb_get_value_double(const char *name)
 {
   option_t       *opt;
 
@@ -351,7 +350,7 @@ float sb_get_value_float(const char *name)
   if (opt == NULL)
     return 0;
 
-  return sb_opt_to_float(opt);
+  return sb_opt_to_double(opt);
 }
 
 

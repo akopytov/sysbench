@@ -101,5 +101,5 @@ Error handling
   > end
   > EOF
   $ sysbench $SB_ARGS run
-  FATAL: cannot find the event() function in */api_basic.lua (glob)
+  FATAL: cannot find the event() function in *api_basic.lua (glob)
   [1]

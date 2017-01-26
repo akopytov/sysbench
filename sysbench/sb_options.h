@@ -41,7 +41,7 @@ typedef enum
   SB_ARG_TYPE_BOOL,
   SB_ARG_TYPE_INT,
   SB_ARG_TYPE_SIZE,
-  SB_ARG_TYPE_FLOAT,
+  SB_ARG_TYPE_DOUBLE,
   SB_ARG_TYPE_STRING,
   SB_ARG_TYPE_LIST,
   SB_ARG_TYPE_FILE,
@@ -56,8 +56,8 @@ typedef struct
 {
   const char         *name;
   const char         *desc;
-  sb_arg_type_t      type;
   const char         *value;
+  sb_arg_type_t      type;
   sb_arg_validate_t  *validate;
 } sb_arg_t;
 
@@ -103,7 +103,7 @@ int sb_get_value_int(const char *name);
 
 unsigned long long sb_get_value_size(const char *name);
 
-float sb_get_value_float(const char *name);
+double sb_get_value_double(const char *name);
 
 char *sb_get_value_string(const char *name);
 
@@ -117,7 +117,7 @@ int sb_opt_to_int(option_t *);
 
 unsigned long long sb_opt_to_size(option_t *);
 
-float sb_opt_to_float(option_t *);
+double sb_opt_to_double(option_t *);
 
 char *sb_opt_to_string(option_t *);
 

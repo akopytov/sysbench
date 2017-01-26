@@ -20,6 +20,10 @@
 # include "config.h"
 #endif
 
+#ifdef HAVE_LIBGEN_H
+# include <libgen.h>
+#endif
+
 #include "sb_lua.h"
 #include "lua.h"
 #include "lualib.h"
@@ -33,9 +37,10 @@
 
 /*
   Auto-generated headers for internal scripts. If you add a new header here,
-  make sure it is also added to the internal_sources array below.
+  make sure it is also added to the internal_scripts array below.
 */
 #include "lua/internal/sysbench.lua.h"
+#include "lua/internal/sysbench.cmdline.lua.h"
 #include "lua/internal/sysbench.rand.lua.h"
 #include "lua/internal/sysbench.sql.lua.h"
 
@@ -92,14 +97,13 @@ typedef enum {
 } sb_lua_error_t;
 
 bool sb_lua_more_events(int);
+int sb_lua_set_test_args(sb_arg_t *args, size_t len);
 
 /* Lua interpreter states */
 
 static lua_State **states CK_CC_CACHELINE;
 
 static sb_test_t sbtest CK_CC_CACHELINE;
-
-static const char *sb_lua_script_path CK_CC_CACHELINE;
 
 static TLS sb_lua_ctxt_t *tls_lua_ctxt CK_CC_CACHELINE;
 
@@ -110,6 +114,7 @@ static TLS db_driver_t *db_driver;
 static internal_script_t internal_scripts[] = {
   {"sysbench.rand.lua", sysbench_rand_lua, &sysbench_rand_lua_len},
   {"sysbench.lua", sysbench_lua, &sysbench_lua_len},
+  {"sysbench.cmdline.lua", sysbench_cmdline_lua, &sysbench_cmdline_lua_len},
   {"sysbench.sql.lua", sysbench_sql_lua, &sysbench_sql_lua_len},
   {NULL, NULL, 0}
 };
@@ -159,6 +164,8 @@ static int sb_lua_db_free_results(lua_State *);
 
 static unsigned int sb_lua_table_size(lua_State *, int);
 
+static int read_option_defs(lua_State *L);
+
 static void call_error(lua_State *L, const char *name)
 {
   const char * const err = lua_tostring(L, -1);
@@ -182,15 +189,34 @@ static bool func_available(lua_State *L, const char *func)
   return rc;
 }
 
+static void xfree(const void *ptr)
+{
+  if (ptr != NULL)
+    free((void *) ptr);
+}
+
 /* Load a specified Lua script */
 
 sb_test_t *sb_load_lua(const char *testname)
 {
-  sb_lua_script_path = testname;
+  if (testname != NULL)
+  {
+    char *tmp = strdup(testname);
+    sbtest.sname = strdup(basename(tmp));
+    sbtest.lname = tmp;
+  }
+  else
+  {
+    sbtest.sname = strdup("<stdin>");
+    sbtest.lname = NULL;
+  }
 
   /* Initialize global interpreter state */
   gstate = sb_lua_new_state(-1);
   if (gstate == NULL)
+    goto error;
+
+  if (read_option_defs(gstate))
     goto error;
 
   /* Test commands */
@@ -225,8 +251,10 @@ sb_test_t *sb_load_lua(const char *testname)
  error:
 
   sb_lua_close_state(gstate);
-  if (states != NULL)
-    free(states);
+  xfree(states);
+
+  xfree(sbtest.sname);
+  xfree(sbtest.lname);
 
   return NULL;
 }
@@ -248,7 +276,7 @@ int sb_lua_op_init(void)
   if (!func_available(gstate, EVENT_FUNC))
   {
     log_text(LOG_FATAL, "cannot find the event() function in %s",
-             sb_lua_script_path);
+             sbtest.sname);
     return 1;
   }
 
@@ -325,8 +353,7 @@ void sb_lua_op_print_stats(sb_stat_t type)
 
 int sb_lua_op_done(void)
 {
-  if (states != NULL)
-    free(states);
+  xfree(states);
 
   lua_getglobal(gstate, DONE_FUNC);
   if (!lua_isnil(gstate, -1))
@@ -337,6 +364,23 @@ int sb_lua_op_done(void)
       return 1;
     }
   }
+
+  sb_lua_close_state(gstate);
+
+  if (sbtest.args != NULL)
+  {
+    for (size_t i = 0; sbtest.args[i].name != NULL; i++)
+    {
+      xfree(sbtest.args[i].name);
+      xfree(sbtest.args[i].desc);
+      xfree(sbtest.args[i].value);
+    }
+
+    free(sbtest.args);
+  }
+
+  xfree(sbtest.sname);
+  xfree(sbtest.lname);
 
   return 0;
 }
@@ -450,11 +494,23 @@ static void sb_lua_set_paths(lua_State *L)
 }
 
 /* Export command line options */
+
 static int export_options(lua_State *L)
 {
   sb_list_item_t *pos;
   option_t       *opt;
   char           *tmp;
+
+  /*
+    Export options to the 'sysbench.opt' table, if the script declares supported
+    options with sysbench.option_defs, or to the global namespace otherwise
+  */
+  if (sbtest.args != NULL)
+  {
+    lua_getglobal(L, "sysbench");
+    lua_pushliteral(L, "opt");
+    lua_newtable(L);
+  }
 
   pos = sb_options_enum_start();
   while ((pos = sb_options_enum_next(pos, &opt)) != NULL)
@@ -465,13 +521,20 @@ static int export_options(lua_State *L)
       which case name collisions with user-defined functions and variables might
       occur. For example, the --help option might redefine the help() function.
     */
-    lua_getglobal(L, opt->name);
-    if (!lua_isnil(L, -1))
+    if (sbtest.args == NULL)
     {
+      lua_getglobal(L, opt->name);
+      if (!lua_isnil(L, -1))
+      {
+        lua_pop(L, 1);
+        continue;
+      }
       lua_pop(L, 1);
-      continue;
     }
-    lua_pop(L, 1);
+    else
+    {
+      lua_pushstring(L, opt->name);
+    }
 
     switch (opt->type)
     {
@@ -481,8 +544,8 @@ static int export_options(lua_State *L)
       case SB_ARG_TYPE_INT:
         lua_pushnumber(L, sb_opt_to_int(opt));
         break;
-      case SB_ARG_TYPE_FLOAT:
-        lua_pushnumber(L, sb_opt_to_float(opt));
+      case SB_ARG_TYPE_DOUBLE:
+        lua_pushnumber(L, sb_opt_to_double(opt));
         break;
       case SB_ARG_TYPE_SIZE:
         lua_pushnumber(L, sb_opt_to_size(opt));
@@ -492,11 +555,20 @@ static int export_options(lua_State *L)
         lua_pushstring(L, tmp ? tmp : "");
         break;
       case SB_ARG_TYPE_LIST:
-        /*FIXME: should be exported as tables */
-        lua_pushnil(L);
+        lua_newtable(L);
+
+        sb_list_item_t *val;
+        int count = 1;
+
+        SB_LIST_FOR_EACH(val, sb_opt_to_list(opt))
+        {
+          lua_pushstring(L, SB_LIST_ENTRY(val, value_t, listitem)->data);
+          lua_rawseti(L, -2, count++);
+        }
+
         break;
       case SB_ARG_TYPE_FILE:
-        /* FIXME: no need to export anything */
+        /* no need to export anything */
         lua_pushnil(L);
         break;
       default:
@@ -506,15 +578,78 @@ static int export_options(lua_State *L)
         break;
     }
 
-    lua_setglobal(L, opt->name);
+    /* set var = value */
+    if (sbtest.args != NULL)
+      lua_settable(L, -3);
+    else
+      lua_setglobal(L, opt->name);
   }
+
+  if (sbtest.args != NULL)
+    lua_settable(L, -3); /* set sysbench.opt */
 
   return 0;
 }
 
+/* Create a deep copy of the 'args' array and set it to sbtest.args */
+
+int sb_lua_set_test_args(sb_arg_t *args, size_t len)
+{
+  sbtest.args = malloc((len + 1) * sizeof(sb_arg_t));
+
+  for (size_t i = 0; i < len; i++)
+  {
+    sbtest.args[i].name = strdup(args[i].name);
+    sbtest.args[i].desc = strdup(args[i].desc);
+    sbtest.args[i].type = args[i].type;
+
+    sbtest.args[i].value = args[i].value != NULL ? strdup(args[i].value) : NULL;
+    sbtest.args[i].validate = args[i].validate;
+  }
+
+  sbtest.args[len] = (sb_arg_t) {.name = NULL};
+
+  return 0;
+}
+
+/*
+  Parse command line options definitions, if present in the script as a
+  'sysbench.option_defs' table. If there was a parsing error, return 1. Return 0
+  on success.
+*/
+
+static int read_option_defs(lua_State *L)
+{
+  lua_getglobal(L, "sysbench");
+  lua_getfield(L, -1, "cmdline");
+  lua_getfield(L, -1, "read_option_defs");
+
+  if (!lua_isfunction(L, -1))
+  {
+    log_text(LOG_WARNING,
+             "Cannot find the sysbench.cmdline.read_option_defs() function");
+    lua_pop(L, 2);
+
+    return 1;
+  }
+
+  if (lua_pcall(L, 0, 1, 0) != 0)
+  {
+    call_error(L, "sysbench.cmdline.read_option_defs");
+    lua_pop(L, 3);
+    return 1;
+  }
+
+  int rc = lua_toboolean(L, -1) == 0;
+
+  lua_pop(L, 4);
+
+  return rc;
+}
+
 /* Allocate and initialize new interpreter state */
 
-lua_State *sb_lua_new_state(int thread_id)
+static lua_State *sb_lua_new_state(int thread_id)
 {
   lua_State      *L;
 
@@ -577,7 +712,7 @@ lua_State *sb_lua_new_state(int thread_id)
   lua_pushliteral(L, "test");
   lua_newtable(L);
 
-  sb_lua_var_string(L, "path", sb_lua_script_path);
+  sb_lua_var_string(L, "path", sbtest.lname);
 
   lua_settable(L, -3); /* sysbench.test */
 
@@ -591,7 +726,7 @@ lua_State *sb_lua_new_state(int thread_id)
 
   int rc;
 
-  if ((rc = luaL_loadfile(L, sb_lua_script_path)))
+  if ((rc = luaL_loadfile(L, sbtest.lname)))
   {
     lua_error(L);
     return NULL;
@@ -641,6 +776,8 @@ static int execute_command(const char *cmd)
     call_error(gstate, cmd);
     return 1;
   }
+
+  lua_pop(gstate, 1);
 
   return 0;
 }
@@ -707,7 +844,7 @@ static void throw_restart_event(lua_State *L)
 {
   log_text(LOG_DEBUG, "Ignored error encountered, restarting transaction");
 
-  lua_newtable(L);
+  lua_createtable(L, 0, 1);
   lua_pushliteral(L, "errcode");
   lua_pushnumber(L, SB_LUA_ERROR_RESTART_EVENT);
   lua_settable(L, -3);
