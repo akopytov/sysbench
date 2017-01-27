@@ -352,11 +352,8 @@ gettimeofday \
 isatty \
 memalign \
 memset \
-mkstemp \
-popen \
 posix_memalign \
 pthread_yield \
-_setjmp \
 setvbuf \
 sqrt \
 strdup \
