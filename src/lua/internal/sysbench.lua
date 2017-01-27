@@ -35,8 +35,8 @@ function thread_run(thread_id)
          local success, ret = pcall(event, thread_id)
 
          if not success then
-            if type(ret) != "table" or
-               ret.errcode != sysbench.error.RESTART_EVENT
+            if type(ret) ~= "table" or
+               ret.errcode ~= sysbench.error.RESTART_EVENT
             then
                error(ret, 2) -- propagate unknown errors
             end
