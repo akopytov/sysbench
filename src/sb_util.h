@@ -93,7 +93,7 @@
 #define SB_CONTAINER_OF(ptr, type, member) ((type *)(void *)(           \
     (char *)(SB_MEMBER_TYPE(type, member) *){ ptr } - offsetof(type, member)))
 
-/* Compile-timer assertion */
+/* Compile-time assertion */
 #define SB_COMPILE_TIME_ASSERT(expr)                                    \
   do {                                                                  \
     typedef char cta[(expr) ? 1 : -1] SB_ATTRIBUTE_UNUSED;              \
