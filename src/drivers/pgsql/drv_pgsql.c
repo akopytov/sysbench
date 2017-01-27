@@ -528,8 +528,8 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
 
   default:
     rs->nrows = 0;
-    rs->stat_type = DB_STAT_OTHER;
-    rc = DB_ERROR_NONE;
+    rs->stat_type = DB_STAT_ERROR;
+    rc = DB_ERROR_FATAL;
   }
 
   return rc;
