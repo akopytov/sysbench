@@ -949,6 +949,8 @@ static int run_test(sb_test_t *test)
     }
   }
 
+  log_text(LOG_NOTICE, "Initializing worker threads...\n");
+
   /* Starting the worker threads */
   for(i = 0; i < sb_globals.num_threads; i++)
   {
@@ -966,8 +968,6 @@ static int run_test(sb_test_t *test)
 
   alarm(THREAD_INIT_TIMEOUT);
 #endif
-
-  log_text(LOG_NOTICE, "Initializing worker threads...\n");
 
   if (sb_barrier_wait(&thread_start_barrier) < 0)
   {
