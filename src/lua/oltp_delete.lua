@@ -1,3 +1,4 @@
+#!/usr/bin/env sysbench
 -- Copyright (C) 2006-2017 Alexey Kopytov <akopytov@gmail.com>
 
 -- This program is free software; you can redistribute it and/or modify

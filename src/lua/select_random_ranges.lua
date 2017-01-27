@@ -1,3 +1,4 @@
+#!/usr/bin/env sysbench
 -- This test is designed for testing MariaDB's key_cache_segments for MyISAM,
 -- and should work with other storage engines as well.
 --

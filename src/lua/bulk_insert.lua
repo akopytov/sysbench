@@ -1,3 +1,4 @@
+#!/usr/bin/env sysbench
 -- -------------------------------------------------------------------------- --
 -- Bulk insert benchmark: do multi-row INSERTs concurrently in --num-threads
 -- threads with each thread inserting into its own table. The number of INSERTs
