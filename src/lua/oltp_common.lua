@@ -291,8 +291,6 @@ function thread_init()
    stmt = {}
    param = {}
 
-   local t
-
    for t = 1, sysbench.opt.tables do
       stmt[t] = {}
       param[t] = {}
@@ -305,7 +303,6 @@ end
 function prepare()
    local drv = sysbench.sql.driver()
    local con = drv:connect()
-   local i
 
    for i = 1, sysbench.opt.tables do
      create_table(drv, con, i)
@@ -315,7 +312,6 @@ end
 function cleanup()
    local drv = sysbench.sql.driver()
    local con = drv:connect()
-   local i
 
    for i = 1, sysbench.opt.tables do
       print(string.format("Dropping table 'sbtest%d'...", i))
@@ -343,7 +339,7 @@ function execute_point_selects()
    local tnum = get_table_num()
    local i
 
-   for i=1, sysbench.opt.point_selects do
+   for i = 1, sysbench.opt.point_selects do
       param[tnum].point_selects[1]:set(get_id())
 
       stmt[tnum].point_selects:execute()
@@ -352,9 +348,8 @@ end
 
 local function execute_range(key)
    local tnum = get_table_num()
-   local i
 
-   for i=1, sysbench.opt[key] do
+   for i = 1, sysbench.opt[key] do
       local id = get_id()
 
       param[tnum][key][1]:set(id)
@@ -382,9 +377,8 @@ end
 
 function execute_index_updates()
    local tnum = get_table_num()
-   local i
 
-   for i=1, sysbench.opt.index_updates do
+   for i = 1, sysbench.opt.index_updates do
       param[tnum].index_updates[1]:set(get_id())
 
       stmt[tnum].index_updates:execute()
@@ -393,9 +387,8 @@ end
 
 function execute_non_index_updates()
    local tnum = get_table_num()
-   local i
 
-   for i=1, sysbench.opt.non_index_updates do
+   for i = 1, sysbench.opt.non_index_updates do
       param[tnum].non_index_updates[1]:set(get_c_value())
       param[tnum].non_index_updates[2]:set(get_id())
 
@@ -405,9 +398,8 @@ end
 
 function execute_delete_inserts()
    local tnum = get_table_num()
-   local i
 
-   for i=1, sysbench.opt.delete_inserts do
+   for i = 1, sysbench.opt.delete_inserts do
       local id = get_id()
       local k = get_id()
 
