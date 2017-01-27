@@ -15,7 +15,7 @@ CFLAGS=${SAVE_CFLAGS}
 CXXFLAGS=${SAVE_CXXFLAGS}
  
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AC_CONFIG_SRCDIR([sysbench/sysbench.c])
+AC_CONFIG_SRCDIR([src/sysbench.c])
 AC_CONFIG_HEADER([config/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -521,8 +521,7 @@ fi
 
 AM_CFLAGS="${CC_WARNINGS} ${GPROF_PROFILING} ${GPROF_COVERAGE} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
 
-AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/sysbench ${LUAJIT_CFLAGS} \
-${CK_CFLAGS}"
+AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/src ${LUAJIT_CFLAGS} ${CK_CFLAGS}"
 
 AM_LDFLAGS="$PTHREAD_LIBS"
 
@@ -550,21 +549,21 @@ doc/xsl/catalog.xml
 doc/Makefile
 third_party/luajit/Makefile
 third_party/concurrency_kit/Makefile
-sysbench/Makefile
-sysbench/drivers/Makefile
-sysbench/drivers/mysql/Makefile
-sysbench/drivers/drizzle/Makefile
-sysbench/drivers/oracle/Makefile
-sysbench/drivers/pgsql/Makefile
-sysbench/drivers/attachsql/Makefile
-sysbench/tests/Makefile
-sysbench/tests/cpu/Makefile
-sysbench/tests/fileio/Makefile
-sysbench/tests/memory/Makefile
-sysbench/tests/threads/Makefile
-sysbench/tests/mutex/Makefile
-sysbench/lua/Makefile
-sysbench/lua/internal/Makefile
+src/Makefile
+src/drivers/Makefile
+src/drivers/mysql/Makefile
+src/drivers/drizzle/Makefile
+src/drivers/oracle/Makefile
+src/drivers/pgsql/Makefile
+src/drivers/attachsql/Makefile
+src/tests/Makefile
+src/tests/cpu/Makefile
+src/tests/fileio/Makefile
+src/tests/memory/Makefile
+src/tests/threads/Makefile
+src/tests/mutex/Makefile
+src/lua/Makefile
+src/lua/internal/Makefile
 tests/Makefile
 tests/include/config.sh
 ])

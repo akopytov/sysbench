@@ -541,7 +541,7 @@ static void sb_lua_set_paths(lua_State *L)
 
   lua_pushliteral(L, "./?.lua;");
   lua_pushliteral(L, "./?/init.lua;");
-  lua_pushliteral(L, "./sysbench/lua/?.lua;");
+  lua_pushliteral(L, "./src/lua/?.lua;");
 
   const char *home = getenv("HOME");
   if (home != NULL)

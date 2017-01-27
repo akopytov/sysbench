@@ -26,7 +26,7 @@ if USE_BUNDLED_CK
   CK_DIR = third_party/concurrency_kit
 endif
 
-SUBDIRS = doc $(LUAJIT_DIR) $(CK_DIR) sysbench tests
+SUBDIRS = doc $(LUAJIT_DIR) $(CK_DIR) src tests
 
 EXTRA_DIST = autogen.sh README.md README-WIN.txt README-Oracle.md ChangeLog
 

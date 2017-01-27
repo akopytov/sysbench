@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (C) 2016 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2016-2017 Alexey Kopytov <akopytov@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,35 +21,26 @@ set -eu
 testroot=$(cd $(dirname "$0"); echo $PWD)
 
 # Find the sysbench binary to use
-if [ -x "$testroot/../sysbench/sysbench" ]
-then
-    # Invoked from a source directory?
-    PATH="$testroot/../sysbench:$PATH"
-elif  [ -x "$testroot/../bin" ]
-then
-    # Invoked from a standalone install root directory?
-    PATH="$testroot/../bin:$PATH"
-elif [ -x "$testroot/../../../bin/sysbench" ]
-then
-    # Invoked from a system-wide install (e.g. /usr/local/share/sysbench/tests)?
-    PATH="$testroot/../../../bin:$PATH"
-elif [ -x "$PWD/../sysbench/sysbench" ]
-then
-    # Invoked from the build directory by 'make distcheck'?
-    PATH="$PWD/../sysbench:$PATH"
-fi
+dirlist=( "$testroot/../src"       # source directory
+          "$testroot/../bin"       # standalone install root directory
+          "$testroot/../../../bin" # system-wide install (e.g. /usr/local/share/sysbench/tests)
+          "$PWD/../src" )          # build directory by 'make distcheck'
 
-if ! which sysbench >/dev/null 2>&1
+for dir in ${dirlist[@]}
+do
+    if [ -x "$dir/sysbench" ]
+    then
+        sysbench_dir="$dir"
+    fi
+done
+
+if [ -z ${sysbench_dir+x} ]
 then
-    echo "Cannot find sysbench in PATH=$PATH"
-    echo "testroot=$testroot"
-    echo "PWD=$PWD"
-    ls -l $PWD
-    ls -l $PWD/../sysbench
-    ls -l $testroot
-    ls -l $testroot/..
-    ls -l $testroot/../sysbench
+    echo "Cannot find sysbench in the following list of directories: \
+${dirlist[@]}"
     exit 1
+else
+    PATH="${sysbench_dir}:$PATH"
 fi
 
 if [ -z ${srcdir+x} ]
@@ -77,7 +68,7 @@ then
 fi
 
 export SBTEST_ROOTDIR="$testroot"
-export SBTEST_SCRIPTDIR="$testroot/../sysbench/lua"
+export SBTEST_SCRIPTDIR="$testroot/../src/lua"
 export SBTEST_SUITEDIR="$testroot/t"
 export SBTEST_CONFIG
 export SBTEST_INCDIR
