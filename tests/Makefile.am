@@ -35,7 +35,7 @@ install_test_files:
 	  from_dir="$(srcdir)/$$dir"; \
 	  to_dir="$(INSTALL_TO_DIR)/$$dir"; \
 	  $(mkinstalldirs) "$$to_dir"; \
-	  for f in `(cd $$from_dir && ls *.t *.sh *.lua)`; do \
+	  for f in `(cd $$from_dir && ls *.t *.sh *.lua) 2>/dev/null`; do \
 	    if test -f "$$from_dir/$$f"; then \
 	      $(INSTALL_DATA) "$$from_dir/$$f" "$$to_dir/$$f" ; \
 	    fi; \
