@@ -338,7 +338,7 @@ double sb_opt_to_double(option_t *opt)
 {
   value_t        *val;
   sb_list_item_t *pos;
-  double          res;
+  double          res = 0;
 
   SB_LIST_FOR_EACH(pos, &opt->values)
   {

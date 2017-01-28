@@ -264,7 +264,7 @@ static int parse_option(char *name, bool ignore_unknown)
   const char        *value;
   char              *tmp;
   option_t          *opt;
-  char              ctmp;
+  char              ctmp = 0;
   int               rc;
 
   tmp = strchr(name, '=');
