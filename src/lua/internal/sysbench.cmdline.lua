@@ -64,6 +64,9 @@ sysbench.cmdline.ARG_LIST = ffi.C.SB_ARG_TYPE_LIST
 sysbench.cmdline.ARG_FILE = ffi.C.SB_ARG_TYPE_FILE
 sysbench.cmdline.ARG_MAX = ffi.C.SB_ARG_TYPE_MAX
 
+-- Attribute indicating that a custom command can be executed in parallel
+sysbench.cmdline.PARALLEL_COMMAND = true
+
 local arg_types = {
    boolean = sysbench.cmdline.ARG_BOOL,
    string = sysbench.cmdline.ARG_STRING,
@@ -71,7 +74,7 @@ local arg_types = {
    table = sysbench.cmdline.ARG_LIST
 }
 
--- Parse command line options definitions, if present in the script as a a
+-- Parse command line options definitions, if present in the script as a
 -- 'sysbench.option_defs' table. If no such table exists, or if there a parsing
 -- error, return false. Return true on success.
 function sysbench.cmdline.read_option_defs()
@@ -136,4 +139,31 @@ function sysbench.cmdline.read_option_defs()
    end
 
    return ffi.C.sb_lua_set_test_args(args, i) == 0
+end
+
+function sysbench.cmdline.command_defined(name)
+   return type(sysbench.cmdline.commands) == "table" and
+      sysbench.cmdline.commands[name] ~= nil and
+      sysbench.cmdline.commands[name][1] ~= nil
+end
+
+function sysbench.cmdline.command_parallel(name)
+   return sysbench.cmdline.command_defined(name) and
+      sysbench.cmdline.commands[name][2] == sysbench.cmdline.PARALLEL_COMMAND
+end
+
+function sysbench.cmdline.call_command(name)
+   if not sysbench.cmdline.command_defined(name) then
+      return false
+   end
+
+   local rc = sysbench.cmdline.commands[name][1]()
+
+   if rc == nil then
+      -- handle the case when the command does not return and value as success
+      return true
+   else
+      -- otherwise return success for any returned value other than false
+      return rc and true or false
+   end
 end

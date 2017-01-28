@@ -13,7 +13,7 @@ threads benchmark tests
   $ sysbench $args prepare
   sysbench *.* * (glob)
   
-  'threads' test does not have the 'prepare' command.
+  'threads' test does not implement the 'prepare' command.
   [1]
   $ sysbench $args run
   sysbench *.* * (glob)
@@ -46,5 +46,5 @@ threads benchmark tests
   $ sysbench $args cleanup
   sysbench *.* * (glob)
   
-  'threads' test does not have the 'cleanup' command.
+  'threads' test does not implement the 'cleanup' command.
   [1]

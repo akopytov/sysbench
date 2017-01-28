@@ -272,7 +272,7 @@ static sb_test_t fileio_test =
 #endif
     .done = file_done
   },
-  .cmds = {
+  .builtin_cmds = {
    .prepare = file_cmd_prepare,
    .cleanup = file_cmd_cleanup
   },

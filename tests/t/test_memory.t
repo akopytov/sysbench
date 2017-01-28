@@ -28,7 +28,7 @@ help' only on Linux.
   $ sysbench $args prepare
   sysbench *.* * (glob)
   
-  'memory' test does not have the 'prepare' command.
+  'memory' test does not implement the 'prepare' command.
   [1]
   $ sysbench $args run
   sysbench *.* * (glob)
@@ -65,5 +65,5 @@ help' only on Linux.
   $ sysbench $args cleanup
   sysbench *.* * (glob)
   
-  'memory' test does not have the 'cleanup' command.
+  'memory' test does not implement the 'cleanup' command.
   [1]

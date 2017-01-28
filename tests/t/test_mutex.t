@@ -13,7 +13,7 @@ mutex benchmark tests
   $ sysbench $args prepare
   sysbench *.* * (glob)
   
-  'mutex' test does not have the 'prepare' command.
+  'mutex' test does not implement the 'prepare' command.
   [1]
   $ sysbench $args run
   sysbench *.* * (glob)
@@ -46,5 +46,5 @@ mutex benchmark tests
   $ sysbench $args cleanup
   sysbench *.* * (glob)
   
-  'mutex' test does not have the 'cleanup' command.
+  'mutex' test does not implement the 'cleanup' command.
   [1]

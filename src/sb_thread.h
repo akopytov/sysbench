@@ -36,11 +36,29 @@
 # include <pthread.h>
 #endif
 
+/* Thread context definition */
+
+typedef struct
+{
+  pthread_t     thread;
+  unsigned int  id;
+} sb_thread_ctxt_t;
+
+extern pthread_attr_t sb_thread_attr;
+
 int sb_thread_create(pthread_t *thread, const pthread_attr_t *attr,
                      void *(*start_routine) (void *), void *arg);
 
 int sb_thread_join(pthread_t thread, void **retval);
 
 int sb_thread_cancel(pthread_t thread);
+
+int sb_thread_create_workers(void *(*worker_routine)(void*));
+
+int sb_thread_join_workers(void);
+
+int sb_thread_init(void);
+
+void sb_thread_done(void);
 
 #endif /* SB_THREAD_H */

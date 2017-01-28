@@ -166,7 +166,7 @@ Command line options tests
   $ sysbench cmdline.lua prepare
   sysbench * (glob)
   
-  'cmdline.lua' test does not have the 'prepare' command.
+  'cmdline.lua' test does not implement the 'prepare' command.
   [1]
 
   $ sysbench --non-existing-option=3 cmdline.lua prepare
@@ -184,7 +184,7 @@ Command line options tests
   $ sysbench cmdline.lua cleanup
   sysbench * (glob)
   
-  'cmdline.lua' test does not have the 'cleanup' command.
+  'cmdline.lua' test does not implement the 'cleanup' command.
   [1]
 
   $ cat >cmdline.lua <<EOF
@@ -198,7 +198,7 @@ Command line options tests
   $ sysbench cmdline.lua help
   sysbench * (glob)
   
-  FATAL: `sysbench.cmdline.read_option_defs' function failed: [string "sysbench.cmdline.lua"]:95: wrong table structure in sysbench.option_defs
+  FATAL: `sysbench.cmdline.read_option_defs' function failed: [string "sysbench.cmdline.lua"]:*: wrong table structure in sysbench.option_defs (glob)
   Script execution failed (no-eol)
   [1]
 
@@ -206,4 +206,66 @@ Command line options tests
   sysbench * (glob)
   
   invalid option: --invalid-option
+  [1]
+
+# Custom commands
+
+  $ sysbench <<EOF
+  > sysbench.cmdline.commands = {
+  >   cmd1 = "wrong structure"
+  > }
+  > EOF
+  sysbench * (glob)
+  
+  $ sysbench <<EOF
+  > sysbench.cmdline.commands = {
+  >   cmd1 = { non_existing_func }
+  > }
+  > EOF
+  sysbench * (glob)
+  
+  $ cat >cmdline.lua <<EOF
+  > ffi.cdef "unsigned int sleep(unsigned int);"
+  > function cmd1_func()
+  >  print("cmd1, sysbench.tid = " .. sysbench.tid)
+  > end
+  > function cmd2_func()
+  >   ffi.C.sleep(sysbench.tid % 2)
+  >   print("cmd2, sysbench.tid = " .. sysbench.tid)
+  > end
+  > function prepare_func()
+  >   ffi.C.sleep(sysbench.tid % 2)
+  >   print("prepare_func, sysbench.tid = " .. sysbench.tid)
+  > end
+  > sysbench.cmdline.commands = {
+  >  cmd1 = { cmd1_func },
+  >  cmd2 = { cmd2_func, sysbench.cmdline.PARALLEL_COMMAND },
+  >  prepare = { prepare_func, sysbench.cmdline.PARALLEL_COMMAND }
+  > }
+  > EOF
+
+  $ sysbench --num-threads=2 cmdline.lua cmd1
+  sysbench * (glob)
+  
+  cmd1, sysbench.tid = 0
+  $ sysbench --num-threads=2 cmdline.lua cmd2
+  sysbench * (glob)
+  
+  Initializing worker threads...
+  
+  cmd2, sysbench.tid = [01] (re)
+  cmd2, sysbench.tid = [01] (re)
+
+  $ sysbench --num-threads=2 cmdline.lua prepare
+  sysbench * (glob)
+  
+  Initializing worker threads...
+  
+  prepare_func, sysbench.tid = [01] (re)
+  prepare_func, sysbench.tid = [01] (re)
+
+  $ sysbench --num-threads=2 cmdline.lua cmd3
+  sysbench * (glob)
+  
+  Unknown command: cmd3 (no-eol)
   [1]

@@ -90,13 +90,10 @@ typedef enum
   SB_STAT_CUMULATIVE
 } sb_stat_t;
 
-/* Test commands definition */
+/* Commands */
 
-typedef int sb_cmd_help(void);
-typedef int sb_cmd_prepare(void);
-typedef int sb_cmd_run(void);
-typedef int sb_cmd_cleanup(void);
-
+typedef int sb_builtin_cmd_func_t(void);
+typedef int sb_custom_cmd_func_t(int);
 
 /* Test operations definition */
 
@@ -116,11 +113,11 @@ typedef int sb_op_done(void);
 
 typedef struct
 {
-  sb_cmd_help     *help;     /* print help */
-  sb_cmd_prepare  *prepare;  /* prepare for the test */
-  sb_cmd_run      *run;      /* run the test */
-  sb_cmd_cleanup  *cleanup;  /* cleanup the test database, files, etc. */
-} sb_commands_t;
+  sb_builtin_cmd_func_t *help;  /* print help */
+  sb_builtin_cmd_func_t *prepare; /* prepare for the test */
+  sb_builtin_cmd_func_t *run;   /* run the test */
+  sb_builtin_cmd_func_t *cleanup; /* cleanup the test database, files, etc. */
+} sb_builtin_cmds_t;
 
 /* Test operations structure definition */
 
@@ -146,24 +143,14 @@ typedef struct
 
 typedef struct sb_test
 {
-  const char       *sname;
-  const char       *lname;
-  sb_operations_t  ops;
-  sb_commands_t    cmds;
-  sb_arg_t         *args;
+  const char        *sname;
+  const char        *lname;
+  sb_operations_t   ops;
+  sb_builtin_cmds_t builtin_cmds;
+  sb_arg_t          *args;
 
-  sb_list_item_t   listitem;
+  sb_list_item_t    listitem;
 } sb_test_t;
-
-/* Thread context definition */
-
-typedef struct
-{
-  sb_test_t     *test;
-  pthread_t     thread;
-  unsigned int  id;
-} sb_thread_ctxt_t;
-
 
 /* sysbench global variables */
 

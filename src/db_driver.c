@@ -364,7 +364,7 @@ db_conn_t *db_connection_create(db_driver_t *drv)
   con->driver = drv;
   con->state = DB_CONN_READY;
 
-  db_set_thread(con, sb_tls_thread_id);
+  con->thread_id =  sb_tls_thread_id;
 
   if (drv->ops.connect(con))
   {
@@ -373,14 +373,6 @@ db_conn_t *db_connection_create(db_driver_t *drv)
   }
 
   return con;
-}
-
-
-/* Associate connection with a thread (required only for statistics */
-
-void db_set_thread(db_conn_t *con, int thread_id)
-{
-  con->thread_id = thread_id;
 }
 
 

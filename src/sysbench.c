@@ -93,9 +93,6 @@ typedef struct {
 /* Mutex to protect report_interval */
 static pthread_mutex_t    report_interval_mutex;
 
-/* Stack size for each thread */
-static int thread_stack_size;
-
 /* General options */
 sb_arg_t general_args[] =
 {
@@ -124,9 +121,6 @@ sb_arg_t general_args[] =
   SB_OPT_END
 };
 
-/* Thread descriptors */
-sb_thread_ctxt_t *threads;
-
 /* List of available tests */
 sb_list_t        tests;
 
@@ -136,10 +130,6 @@ sb_test_t        *current_test;
 
 /* Barrier to ensure we start the benchmark run when all workers are ready */
 static sb_barrier_t thread_start_barrier;
-
-/* Mutexes */
-
-static pthread_attr_t  thread_attr;
 
 /* structures to handle queue of events, needed for tx_rate mode */
 pthread_mutex_t           event_queue_mutex;
@@ -600,12 +590,11 @@ static int thread_run(sb_test_t *test, int thread_id)
 static void *worker_thread(void *arg)
 {
   sb_thread_ctxt_t   *ctxt;
-  sb_test_t          *test;
   unsigned int       thread_id;
   int                rc;
 
   ctxt = (sb_thread_ctxt_t *)arg;
-  test = ctxt->test;
+  sb_test_t * const test = current_test;
 
   sb_tls_thread_id = thread_id = ctxt->id;
 
@@ -841,14 +830,13 @@ static int threads_started_callback(void *arg)
   return 0;
 }
 
+
 /*
-  Main test function. Start threads.
-  Wait for them to complete and measure time
+  Main test function: start threads, wait for them to finish and measure time.
 */
 
 static int run_test(sb_test_t *test)
 {
-  unsigned int i;
   int          err;
   pthread_t    report_thread;
   pthread_t    checkpoints_thread;
@@ -867,11 +855,6 @@ static int run_test(sb_test_t *test)
   sb_timer_init(&sb_intermediate_timer);
   sb_timer_init(&sb_checkpoint_timer1);
   sb_timer_init(&sb_checkpoint_timer2);
-  for(i = 0; i < sb_globals.num_threads; i++)
-  {
-    threads[i].id = i;
-    threads[i].test = test;
-  }    
 
   /* prepare test */
   if (test->ops.prepare != NULL && test->ops.prepare() != 0)
@@ -886,18 +869,6 @@ static int run_test(sb_test_t *test)
   queue_is_full = 0;
 
   sb_globals.num_running = 0;
-
-  /* initialize attr */
-  pthread_attr_init(&thread_attr);
-#ifdef PTHREAD_SCOPE_SYSTEM
-  pthread_attr_setscope(&thread_attr,PTHREAD_SCOPE_SYSTEM);
-#endif
-  pthread_attr_setstacksize(&thread_attr, thread_stack_size);
-
-#ifdef HAVE_THR_SETCONCURRENCY
-  /* Set thread concurrency (required on Solaris) */
-  thr_setconcurrency(sb_globals.num_threads);
-#endif
 
   pthread_mutex_init(&report_interval_mutex, NULL);
 
@@ -917,8 +888,8 @@ static int run_test(sb_test_t *test)
   if (sb_globals.report_interval > 0)
   {
     /* Create a thread for intermediate statistic reports */
-    if ((err = sb_thread_create(&report_thread, &thread_attr, &report_thread_proc,
-                                NULL)) != 0)
+    if ((err = sb_thread_create(&report_thread, &sb_thread_attr,
+                                &report_thread_proc, NULL)) != 0)
     {
       log_errno(LOG_FATAL,
                 "sb_thread_create() for the reporting thread failed.");
@@ -928,8 +899,8 @@ static int run_test(sb_test_t *test)
 
   if (sb_globals.tx_rate > 0)
   {
-    if ((err = sb_thread_create(&eventgen_thread, &thread_attr, &eventgen_thread_proc,
-                                NULL)) != 0)
+    if ((err = sb_thread_create(&eventgen_thread, &sb_thread_attr,
+                                &eventgen_thread_proc, NULL)) != 0)
     {
       log_errno(LOG_FATAL,
                 "sb_thread_create() for the reporting thread failed.");
@@ -940,7 +911,7 @@ static int run_test(sb_test_t *test)
   if (sb_globals.n_checkpoints > 0)
   {
     /* Create a thread for checkpoint statistic reports */
-    if ((err = sb_thread_create(&checkpoints_thread, &thread_attr,
+    if ((err = sb_thread_create(&checkpoints_thread, &sb_thread_attr,
                                 &checkpoints_thread_proc, NULL)) != 0)
     {
       log_errno(LOG_FATAL,
@@ -949,18 +920,8 @@ static int run_test(sb_test_t *test)
     }
   }
 
-  log_text(LOG_NOTICE, "Initializing worker threads...\n");
-
-  /* Starting the worker threads */
-  for(i = 0; i < sb_globals.num_threads; i++)
-  {
-    if ((err = sb_thread_create(&(threads[i].thread), &thread_attr,
-                                &worker_thread, (void*)(threads + i))) != 0)
-    {
-      log_errno(LOG_FATAL, "sb_thread_create() for thread #%d failed.", i);
-      return 1;
-    }
-  }
+  if ((err = sb_thread_create_workers(&worker_thread)))
+    return err;
 
 #ifdef HAVE_ALARM
   /* Exit with an error if thread initialization timeout expires */
@@ -987,13 +948,8 @@ static int run_test(sb_test_t *test)
   }
 #endif
 
-  for(i = 0; i < sb_globals.num_threads; i++)
-  {
-    if((err = sb_thread_join(threads[i].thread, NULL)) != 0)
-      log_errno(LOG_FATAL, "sb_thread_join() for thread #%d failed.", i);
-
-    ck_pr_dec_uint(&sb_globals.num_running);
-  }
+  if ((err = sb_thread_join_workers()))
+    return err;
 
   sb_timer_stop(&sb_exec_timer);
   sb_timer_stop(&sb_intermediate_timer);
@@ -1126,20 +1082,9 @@ static int init(void)
       sb_globals.force_shutdown = 0;
   }
 
-  threads = (sb_thread_ctxt_t *)malloc(sb_globals.num_threads * 
-                                       sizeof(sb_thread_ctxt_t));
-  if (threads == NULL)
-  {
-    log_text(LOG_FATAL, "Memory allocation failure.\n");
-    return 1;
-  }
-
-  thread_stack_size = sb_get_value_size("thread-stack-size");
-  if (thread_stack_size <= 0)
-  {
-    log_text(LOG_FATAL, "Invalid value for thread-stack-size: %d.\n", thread_stack_size);
-    return 1;
-  }
+  int err;
+  if ((err = sb_thread_init()))
+    return err;
 
   sb_globals.debug = sb_get_value_flag("debug");
   /* Automatically set logger verbosity to 'debug' */
@@ -1196,7 +1141,7 @@ static int init(void)
 int main(int argc, char *argv[])
 {
   sb_test_t *test = NULL;
-  
+
   /* Initialize options library */
   sb_options_init();
 
@@ -1283,7 +1228,11 @@ int main(int argc, char *argv[])
   if (parse_test_arguments(test, argc, argv))
     return EXIT_FAILURE;
 
-  if (!strcmp(sb_globals.cmdname, "help"))
+  if (sb_lua_custom_command_defined(sb_globals.cmdname))
+  {
+    return sb_lua_call_custom_command(sb_globals.cmdname);
+  }
+  else if (!strcmp(sb_globals.cmdname, "help"))
   {
     if (test == NULL)
       print_help();
@@ -1294,32 +1243,32 @@ int main(int argc, char *argv[])
         printf("%s options:\n", test->sname);
         sb_print_options(test->args);
       }
-      if (test->cmds.help != NULL)
-        test->cmds.help();
+      if (test->builtin_cmds.help != NULL)
+        test->builtin_cmds.help();
     }
     return EXIT_SUCCESS;
   }
   else if (!strcmp(sb_globals.cmdname, "prepare"))
   {
-    if (test->cmds.prepare == NULL)
+    if (test->builtin_cmds.prepare == NULL)
     {
-      fprintf(stderr, "'%s' test does not have the 'prepare' command.\n",
+      fprintf(stderr, "'%s' test does not implement the 'prepare' command.\n",
               test->sname);
       exit(1);
     }
 
-    return test->cmds.prepare();
+    return test->builtin_cmds.prepare();
   }
   else if (!strcmp(sb_globals.cmdname, "cleanup"))
   {
-    if (test->cmds.cleanup == NULL)
+    if (test->builtin_cmds.cleanup == NULL)
     {
-      fprintf(stderr, "'%s' test does not have the 'cleanup' command.\n",
+      fprintf(stderr, "'%s' test does not implement the 'cleanup' command.\n",
               test->sname);
       return EXIT_FAILURE;
     }
 
-    return test->cmds.cleanup();
+    return test->builtin_cmds.cleanup();
   }
   else if (!strcmp(sb_globals.cmdname, "run"))
   {
@@ -1341,6 +1290,7 @@ int main(int argc, char *argv[])
 
   sb_rand_done();
 
+  sb_thread_done();
+
   exit(0);
 }
-

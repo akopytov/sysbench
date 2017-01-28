@@ -58,7 +58,6 @@
 /* Interpreter context */
 
 typedef struct {
-  int       thread_id; /* sysbench thread id */
   db_conn_t *con;      /* Database connection */
 } sb_lua_ctxt_t;
 
@@ -98,7 +97,7 @@ typedef enum {
 } sb_lua_error_t;
 
 bool sb_lua_more_events(int);
-int sb_lua_set_test_args(sb_arg_t *args, size_t len);
+int sb_lua_set_test_args(sb_arg_t *, size_t);
 
 /* Lua interpreter states */
 
@@ -124,6 +123,9 @@ static internal_script_t internal_scripts[] = {
 /* Main (global) interpreter state */
 static lua_State *gstate;
 
+/* Custom command name */
+static const char * sb_lua_custom_command;
+
 /* Lua test operations */
 
 static int sb_lua_op_init(void);
@@ -135,6 +137,8 @@ static void sb_lua_op_print_stats(sb_stat_t type);
 
 static sb_operations_t lua_ops = {
    .init = sb_lua_op_init,
+   .thread_init = sb_lua_op_thread_init,
+   .thread_done = sb_lua_op_thread_done,
    .done = sb_lua_op_done
 };
 
@@ -144,7 +148,7 @@ static int sb_lua_cmd_cleanup(void);
 static int sb_lua_cmd_help(void);
 
 /* Initialize interpreter state */
-static lua_State *sb_lua_new_state(int);
+static lua_State *sb_lua_new_state(void);
 
 /* Close interpretet state */
 static int sb_lua_close_state(lua_State *);
@@ -312,7 +316,7 @@ sb_test_t *sb_load_lua(const char *testname)
   }
 
   /* Initialize global interpreter state */
-  gstate = sb_lua_new_state(-1);
+  gstate = sb_lua_new_state();
   if (gstate == NULL)
     goto error;
 
@@ -321,20 +325,16 @@ sb_test_t *sb_load_lua(const char *testname)
 
   /* Test commands */
   if (func_available(gstate, PREPARE_FUNC))
-    sbtest.cmds.prepare = &sb_lua_cmd_prepare;
+    sbtest.builtin_cmds.prepare = &sb_lua_cmd_prepare;
 
   if (func_available(gstate, CLEANUP_FUNC))
-    sbtest.cmds.cleanup = &sb_lua_cmd_cleanup;
+    sbtest.builtin_cmds.cleanup = &sb_lua_cmd_cleanup;
 
   if (func_available(gstate, HELP_FUNC))
-    sbtest.cmds.help = &sb_lua_cmd_help;
+    sbtest.builtin_cmds.help = &sb_lua_cmd_help;
 
   /* Test operations */
   sbtest.ops = lua_ops;
-
-  sbtest.ops.thread_init = &sb_lua_op_thread_init;
-
-  sbtest.ops.thread_done = &sb_lua_op_thread_done;
 
   if (func_available(gstate, THREAD_RUN_FUNC))
     sbtest.ops.thread_run = &sb_lua_op_thread_run;
@@ -387,7 +387,7 @@ int sb_lua_op_thread_init(int thread_id)
 {
   lua_State * L;
 
-  L = sb_lua_new_state(thread_id);
+  L = sb_lua_new_state();
   if (L == NULL)
     return 1;
 
@@ -596,7 +596,7 @@ static void sb_lua_set_paths(lua_State *L)
   lua_pop(L, 1); /* package */
 }
 
-/* Create a deep copy of the 'args' array and set it to sbtest.args */
+/* Create a deep copy of the 'args' array and store it in sbtest.args */
 
 int sb_lua_set_test_args(sb_arg_t *args, size_t len)
 {
@@ -633,7 +633,7 @@ static int read_option_defs(lua_State *L)
   {
     log_text(LOG_WARNING,
              "Cannot find the sysbench.cmdline.read_option_defs() function");
-    lua_pop(L, 2);
+    lua_pop(L, 3);
 
     return 1;
   }
@@ -641,20 +641,20 @@ static int read_option_defs(lua_State *L)
   if (lua_pcall(L, 0, 1, 0) != 0)
   {
     call_error(L, "sysbench.cmdline.read_option_defs");
-    lua_pop(L, 3);
+    lua_pop(L, 2);
     return 1;
   }
 
   int rc = lua_toboolean(L, -1) == 0;
 
-  lua_pop(L, 4);
+  lua_pop(L, 3);
 
   return rc;
 }
 
 /* Allocate and initialize new interpreter state */
 
-static lua_State *sb_lua_new_state(int thread_id)
+static lua_State *sb_lua_new_state()
 {
   lua_State      *L;
 
@@ -669,8 +669,7 @@ static lua_State *sb_lua_new_state(int thread_id)
   lua_newtable(L);
 
   /* sysbench.tid */
-  if (thread_id >= 0)
-    sb_lua_var_number(L, "tid", thread_id);
+  sb_lua_var_number(L, "tid", sb_tls_thread_id);
 
   /* Export functions into per-state 'sysbench.db' table  */
 
@@ -743,8 +742,6 @@ static lua_State *sb_lua_new_state(int thread_id)
   if (tls_lua_ctxt == NULL)
     return NULL;
 
-  tls_lua_ctxt->thread_id = thread_id;
-
   return L;
 }
 
@@ -816,7 +813,6 @@ int sb_lua_db_connect(lua_State *L)
   tls_lua_ctxt->con = db_connection_create(db_driver);
   if (tls_lua_ctxt->con == NULL)
     luaL_error(L, "Failed to connect to the database");
-  db_set_thread(tls_lua_ctxt->con, tls_lua_ctxt->thread_id);
 
   return 0;
 }
@@ -1263,6 +1259,9 @@ unsigned int sb_lua_table_size(lua_State *L, int index)
 
 bool sb_lua_hook_defined(lua_State *L, const char *name)
 {
+  if (L == NULL)
+    return false;
+
   lua_getglobal(L, "sysbench");
   lua_getfield(L, -1, "hooks");
   lua_getfield(L, -1, name);
@@ -1272,4 +1271,149 @@ bool sb_lua_hook_defined(lua_State *L, const char *name)
   lua_pop(L, 3);
 
   return rc;
+}
+
+/* Check if a specified custom command exists */
+
+bool sb_lua_custom_command_defined(const char *name)
+{
+  lua_State * const L = gstate;
+
+  if (L == NULL)
+    return false;
+
+  lua_getglobal(L, "sysbench");
+  lua_getfield(L, -1, "cmdline");
+  lua_getfield(L, -1, "command_defined");
+
+  if (!lua_isfunction(L, -1))
+  {
+    log_text(LOG_WARNING,
+             "Cannot find the sysbench.cmdline.command_defined function");
+    lua_pop(L, 3);
+
+    return 1;
+  }
+
+  lua_pushstring(L, name);
+
+  if (lua_pcall(L, 1, 1, 0) != 0)
+  {
+    call_error(L, "sysbench.cmdline.command_defined");
+    lua_pop(L, 2);
+    return 1;
+  }
+
+  bool rc = lua_toboolean(L, -1);
+
+  lua_pop(L, 3);
+
+  return rc;
+}
+
+/* Check if a specified custom command supports parallel execution */
+
+static bool sb_lua_custom_command_parallel(const char *name)
+{
+  lua_State * const L = gstate;
+
+  lua_getglobal(L, "sysbench");
+  lua_getfield(L, -1, "cmdline");
+  lua_getfield(L, -1, "command_parallel");
+
+  if (!lua_isfunction(L, -1))
+  {
+    log_text(LOG_WARNING,
+             "Cannot find the sysbench.cmdline.command_parallel function");
+    lua_pop(L, 3);
+
+    return 1;
+  }
+
+  lua_pushstring(L, name);
+
+  if (lua_pcall(L, 1, 1, 0) != 0)
+  {
+    call_error(L, "sysbench.cmdline.command_parallel");
+    lua_pop(L, 2);
+    return 1;
+  }
+
+  bool rc = lua_toboolean(L, -1);
+
+  lua_pop(L, 3);
+
+  return rc;
+}
+
+static int call_custom_command(lua_State *L)
+{
+  lua_getglobal(L, "sysbench");
+  lua_getfield(L, -1, "cmdline");
+  lua_getfield(L, -1, "call_command");
+
+  if (!lua_isfunction(L, -1))
+  {
+    log_text(LOG_WARNING,
+             "Cannot find the sysbench.cmdline.call_command function");
+    lua_pop(L, 3);
+
+    return 1;
+  }
+
+  lua_pushstring(L, sb_lua_custom_command);
+
+  if (lua_pcall(L, 1, 1, 0) != 0)
+  {
+    call_error(L, "sysbench.cmdline.command_defined");
+    lua_pop(L, 2);
+    return 1;
+  }
+
+  bool rc = lua_toboolean(L, -1);
+
+  lua_pop(L, 3);
+
+  return rc ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+
+static void *cmd_worker_thread(void *arg)
+{
+  sb_thread_ctxt_t   *ctxt= (sb_thread_ctxt_t *)arg;
+
+  sb_tls_thread_id = ctxt->id;
+
+  lua_State * const L = sb_lua_new_state();
+
+  if (L == NULL)
+  {
+    log_text(LOG_FATAL, "failed to create a thread to execute command");
+    return NULL;
+  }
+
+  call_custom_command(L);
+
+  sb_lua_close_state(L);
+
+  return NULL;
+}
+
+/* Call a specified custom command */
+
+int sb_lua_call_custom_command(const char *name)
+{
+  sb_lua_custom_command = name;
+
+  if (sb_lua_custom_command_parallel(name))
+  {
+    int err;
+
+    if ((err = sb_thread_create_workers(cmd_worker_thread)))
+      return err;
+
+    return sb_thread_join_workers();
+  }
+
+  return call_custom_command(gstate);
 }

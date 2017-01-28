@@ -58,7 +58,7 @@ Basic Lua API tests
   tid:(nil) cleanup()
 
   $ sysbench $SB_ARGS help
-  tid:(nil) help()
+  tid:0 help()
  
   $ cat >$CRAMTMP/api_basic.lua <<EOF
   > function event()
