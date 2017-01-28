@@ -1224,6 +1224,8 @@ int main(int argc, char *argv[])
     return test != NULL ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
+  current_test = test;
+
   /* Load and parse test-specific options */
   if (parse_test_arguments(test, argc, argv))
     return EXIT_FAILURE;
@@ -1234,19 +1236,22 @@ int main(int argc, char *argv[])
   }
   else if (!strcmp(sb_globals.cmdname, "help"))
   {
-    if (test == NULL)
-      print_help();
-    else
+    if (test->builtin_cmds.help != NULL)
     {
-      if (test->args != NULL)
-      {
-        printf("%s options:\n", test->sname);
-        sb_print_options(test->args);
-      }
-      if (test->builtin_cmds.help != NULL)
-        test->builtin_cmds.help();
+      test->builtin_cmds.help();
+      return EXIT_SUCCESS;
     }
-    return EXIT_SUCCESS;
+    else if (test->args != NULL)
+    {
+      printf("%s options:\n", test->sname);
+      sb_print_test_options();
+      return EXIT_SUCCESS;
+    }
+
+    /* We don't know want to print as help text, let the user know */
+    fprintf(stderr, "'%s' test does not implement the 'help' command.\n",
+            test->sname);
+    return EXIT_FAILURE;
   }
   else if (!strcmp(sb_globals.cmdname, "prepare"))
   {
@@ -1254,7 +1259,7 @@ int main(int argc, char *argv[])
     {
       fprintf(stderr, "'%s' test does not implement the 'prepare' command.\n",
               test->sname);
-      exit(1);
+      return EXIT_FAILURE;
     }
 
     return test->builtin_cmds.prepare();
@@ -1272,7 +1277,6 @@ int main(int argc, char *argv[])
   }
   else if (!strcmp(sb_globals.cmdname, "run"))
   {
-    current_test = test;
     if (run_test(test))
       return EXIT_FAILURE;
   }
@@ -1293,4 +1297,12 @@ int main(int argc, char *argv[])
   sb_thread_done();
 
   exit(0);
+}
+
+/* Print a description of available command line options for the current test */
+
+void sb_print_test_options(void)
+{
+  if (current_test != NULL)
+    sb_print_options(current_test->args);
 }

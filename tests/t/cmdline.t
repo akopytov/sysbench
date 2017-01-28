@@ -110,7 +110,9 @@ Command line options tests
   > }
   > 
   > function help()
-  >   local o = sysbench.opt
+  >    print("Available options:")
+  >    sysbench.cmdline.print_test_options()
+  >    local o = sysbench.opt
   >    print(o.str_opt1)
   >    print(o.str_opt2)
   >    print(o.str_opt3)
@@ -133,7 +135,7 @@ Command line options tests
   $ sysbench cmdline.lua help
   sysbench * (glob)
   
-  cmdline.lua options:
+  Available options:
     --dash-opt=STRING      dash-opt desc [dash-opt val]
     --str_opt1=STRING      str_opt1 description
     --bool_opt3[=on|off]   bool_opt3 description
@@ -185,6 +187,16 @@ Command line options tests
   sysbench * (glob)
   
   'cmdline.lua' test does not implement the 'cleanup' command.
+  [1]
+
+  $ cat >cmdline.lua <<EOF
+  > 
+  > EOF
+
+  $ sysbench cmdline.lua help
+  sysbench * (glob)
+  
+  'cmdline.lua' test does not implement the 'help' command.
   [1]
 
   $ cat >cmdline.lua <<EOF

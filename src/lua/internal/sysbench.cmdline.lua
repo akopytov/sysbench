@@ -167,3 +167,14 @@ function sysbench.cmdline.call_command(name)
       return rc and true or false
    end
 end
+
+ffi.cdef[[
+void sb_print_test_options(void);
+]]
+
+-- ----------------------------------------------------------------------
+-- Print descriptions of command line options, if defined by option_defs
+-- ----------------------------------------------------------------------
+function sysbench.cmdline.print_test_options()
+   ffi.C.sb_print_test_options()
+end

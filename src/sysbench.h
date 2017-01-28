@@ -203,4 +203,7 @@ sb_event_t sb_next_event(sb_test_t *test, int thread_id);
 void sb_event_start(int thread_id);
 void sb_event_stop(int thread_id);
 
+/* Print a description of available command line options for the current test */
+void sb_print_test_options(void);
+
 #endif
