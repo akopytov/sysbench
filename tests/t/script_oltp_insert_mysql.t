@@ -112,6 +112,16 @@ oltp_point_select.lua + MySQL tests
     KEY `k_8` (`k`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
+  sysbench * (glob)
+  
+  Prewarming table sbtest1
+  Prewarming table sbtest2
+  Prewarming table sbtest3
+  Prewarming table sbtest4
+  Prewarming table sbtest5
+  Prewarming table sbtest6
+  Prewarming table sbtest7
+  Prewarming table sbtest8
   sysbench *.* * (glob)
   
   Running the test with following options:

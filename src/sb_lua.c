@@ -1348,6 +1348,9 @@ static bool sb_lua_custom_command_parallel(const char *name)
 
 static int call_custom_command(lua_State *L)
 {
+  if (export_options(L))
+    return 1;
+
   lua_getglobal(L, "sysbench");
   lua_getfield(L, -1, "cmdline");
   lua_getfield(L, -1, "call_command");
@@ -1365,7 +1368,7 @@ static int call_custom_command(lua_State *L)
 
   if (lua_pcall(L, 1, 1, 0) != 0)
   {
-    call_error(L, "sysbench.cmdline.command_defined");
+    call_error(L, "sysbench.cmdline.call_command");
     lua_pop(L, 2);
     return 1;
   }
@@ -1383,6 +1386,9 @@ static void *cmd_worker_thread(void *arg)
   sb_thread_ctxt_t   *ctxt= (sb_thread_ctxt_t *)arg;
 
   sb_tls_thread_id = ctxt->id;
+
+  /* Initialize thread-local RNG state */
+  sb_rand_thread_init();
 
   lua_State * const L = sb_lua_new_state();
 
@@ -1405,7 +1411,7 @@ int sb_lua_call_custom_command(const char *name)
 {
   sb_lua_custom_command = name;
 
-  if (sb_lua_custom_command_parallel(name))
+  if (sb_lua_custom_command_parallel(name) && sb_globals.num_threads > 1)
   {
     int err;
 

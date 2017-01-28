@@ -122,6 +122,9 @@ oltp_point_select.lua + PostgreSQL tests
   Did not find any relation named "sbtest9".
   sysbench *.* * (glob)
   
+  FATAL: *: prewarm is currently MySQL only (glob)
+  sysbench *.* * (glob)
+  
   Running the test with following options:
   Number of threads: 2
   Initializing random number generator from current time
