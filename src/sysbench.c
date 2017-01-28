@@ -992,7 +992,7 @@ static int run_test(sb_test_t *test)
     if((err = sb_thread_join(threads[i].thread, NULL)) != 0)
       log_errno(LOG_FATAL, "sb_thread_join() for thread #%d failed.", i);
 
-    sb_globals.num_running--;
+    ck_pr_dec_uint(&sb_globals.num_running);
   }
 
   sb_timer_stop(&sb_exec_timer);
