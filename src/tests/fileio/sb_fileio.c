@@ -252,7 +252,8 @@ static int file_execute_event(sb_event_t *, int);
 static int file_thread_done(int);
 #endif
 static int file_done(void);
-static void file_print_stats(sb_report_t);
+static void file_report_intermediate(sb_stat_t *);
+static void file_report_cumulative(sb_stat_t *);
 
 static sb_test_t fileio_test =
 {
@@ -264,7 +265,8 @@ static sb_test_t fileio_test =
     .print_mode = file_print_mode,
     .next_event = file_next_event,
     .execute_event = file_execute_event,
-    .print_stats = file_print_stats,
+    .report_intermediate = file_report_intermediate,
+    .report_cumulative = file_report_cumulative,
 #ifdef HAVE_LIBAIO
     .thread_done = file_thread_done,
 #else
@@ -832,75 +834,73 @@ void file_print_mode(void)
   log_text(LOG_NOTICE, "Doing %s test", get_test_mode_str(test_mode));
 }
 
+/*
+  Print intermediate test statistics.
 
-/* Print test statistics */
+  TODO: remove the mutex, use sb_stat_t and sb_counter_t.
+*/
 
-
-void file_print_stats(sb_report_t type)
+void file_report_intermediate(sb_stat_t *stat)
 {
-  double seconds;
   unsigned long long diff_read;
   unsigned long long diff_written;
   unsigned long long diff_other_ops;
 
-  switch (type) {
-  case SB_REPORT_INTERMEDIATE:
-    {
-      SB_THREAD_MUTEX_LOCK();
+  SB_THREAD_MUTEX_LOCK();
 
-      seconds = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
+  diff_read = bytes_read - last_bytes_read;
+  diff_written = bytes_written - last_bytes_written;
+  diff_other_ops = other_ops - last_other_ops;
 
-      diff_read = bytes_read - last_bytes_read;
-      diff_written = bytes_written - last_bytes_written;
-      diff_other_ops = other_ops - last_other_ops;
+  last_bytes_read = bytes_read;
+  last_bytes_written = bytes_written;
+  last_other_ops = other_ops;
 
-      last_bytes_read = bytes_read;
-      last_bytes_written = bytes_written;
-      last_other_ops = other_ops;
+  SB_THREAD_MUTEX_UNLOCK();
 
-      SB_THREAD_MUTEX_UNLOCK();
-
-      const double percentile_val =
-        sb_histogram_get_pct_intermediate(&sb_latency_histogram,
-                                          sb_globals.percentile);
-
-      log_timestamp(LOG_NOTICE, seconds,
-                    "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "
-                    "latency: %4.3f ms (%uth pct.)",
-                    diff_read / megabyte / seconds,
-                    diff_written / megabyte / seconds,
-                    diff_other_ops / seconds,
-                    percentile_val,
-                    sb_globals.percentile);
-
-      break;
-    }
-
-  case SB_REPORT_CUMULATIVE:
-    seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
-
-    log_text(LOG_NOTICE, "\n"
-             "File operations:\n"
-             "    reads/s:                      %4.2f\n"
-             "    writes/s:                     %4.2f\n"
-             "    fsyncs/s:                     %4.2f\n"
-             "\n"
-             "Throughput:\n"
-             "    read, MiB/s:                  %4.2f\n"
-             "    written, MiB/s:               %4.2f",
-             read_ops / seconds, write_ops / seconds, other_ops / seconds,
-             bytes_read / megabyte / seconds,
-             bytes_written / megabyte / seconds);
-
-    clear_stats();
-
-    break;
-  }
+  log_timestamp(LOG_NOTICE, stat->time_total,
+                "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "
+                "latency (ms,%u%%): %4.3f",
+                diff_read / megabyte / stat->time_interval,
+                diff_written / megabyte / stat->time_interval,
+                diff_other_ops / stat->time_interval,
+                sb_globals.percentile,
+                SEC2MS(stat->latency_pct));
 }
 
+/*
+  Print cumulative test statistics.
+
+  TODO: remove the mutex, use sb_stat_t and sb_counter_t.
+*/
+
+void file_report_cumulative(sb_stat_t *stat)
+{
+  const double seconds = stat->time_interval;
+
+  SB_THREAD_MUTEX_LOCK();
+
+  log_text(LOG_NOTICE, "\n"
+           "File operations:\n"
+           "    reads/s:                      %4.2f\n"
+           "    writes/s:                     %4.2f\n"
+           "    fsyncs/s:                     %4.2f\n"
+           "\n"
+           "Throughput:\n"
+           "    read, MiB/s:                  %4.2f\n"
+           "    written, MiB/s:               %4.2f",
+           read_ops / seconds, write_ops / seconds, other_ops / seconds,
+           bytes_read / megabyte / seconds,
+           bytes_written / megabyte / seconds);
+
+  clear_stats();
+
+  SB_THREAD_MUTEX_UNLOCK();
+
+  sb_report_cumulative(stat);
+}
 
 /* Return name for I/O mode */
-
 
 const char *get_io_mode_str(file_io_mode_t mode)
 {
@@ -1169,11 +1169,6 @@ void clear_stats(void)
   last_bytes_read = 0;
   bytes_written = 0;
   last_bytes_written = 0;
-  /*
-    So that intermediate stats are calculated from the current moment
-    rather than from the previous intermediate report
-  */
-  sb_timer_checkpoint(&sb_intermediate_timer);
 }
 
 

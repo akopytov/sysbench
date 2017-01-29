@@ -58,7 +58,8 @@ static int memory_init(void);
 static void memory_print_mode(void);
 static sb_event_t memory_next_event(int);
 static int memory_execute_event(sb_event_t *, int);
-static void memory_print_stats(sb_report_t type);
+static void memory_report_intermediate(sb_stat_t *);
+static void memory_report_cumulative(sb_stat_t *);
 
 static sb_test_t memory_test =
 {
@@ -69,7 +70,8 @@ static sb_test_t memory_test =
     .print_mode = memory_print_mode,
     .next_event = memory_next_event,
     .execute_event = memory_execute_event,
-    .print_stats = memory_print_stats
+    .report_intermediate = memory_report_intermediate,
+    .report_cumulative = memory_report_cumulative
   },
   .args = memory_args
 };
@@ -339,44 +341,51 @@ void memory_print_mode(void)
   log_text(LOG_INFO, "Memory scope type: %s", str);
 }
 
+/*
+  Print intermediate test statistics.
 
-void memory_print_stats(sb_report_t type)
+  TODO: remove the mutex, use sb_stat_t and sb_counter_t.
+*/
+
+void memory_report_intermediate(sb_stat_t *stat)
 {
-  double       seconds;
   const double megabyte = 1024.0 * 1024.0;
 
-  switch (type) {
-  case SB_REPORT_INTERMEDIATE:
-    SB_THREAD_MUTEX_LOCK();
-    seconds = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
+  SB_THREAD_MUTEX_LOCK();
 
-    log_timestamp(LOG_NOTICE, seconds,
-                  "%4.2f MiB/sec,",
-                  (double)(total_bytes - last_bytes) / megabyte / seconds);
-    last_bytes = total_bytes;
-    SB_THREAD_MUTEX_UNLOCK();
+  log_timestamp(LOG_NOTICE, stat->time_total,
+                "%4.2f MiB/sec,", (double)(total_bytes - last_bytes) /
+                megabyte / stat->time_interval);
+  last_bytes = total_bytes;
 
-    break;
+  SB_THREAD_MUTEX_UNLOCK();
+}
 
-  case SB_REPORT_CUMULATIVE:
-    seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
+/*
+  Print cumulative test statistics.
 
-    log_text(LOG_NOTICE, "Operations performed: %d (%8.2f ops/sec)\n",
-             total_ops, total_ops / seconds);
-    if (memory_oper != SB_MEM_OP_NONE)
-      log_text(LOG_NOTICE, "%4.2f MiB transferred (%4.2f MiB/sec)\n",
-               total_bytes / megabyte,
-               total_bytes / megabyte / seconds);
-    total_ops = 0;
-    total_bytes = 0;
-    /*
-      So that intermediate stats are calculated from the current moment
-      rather than from the previous intermediate report
-    */
-    sb_timer_checkpoint(&sb_intermediate_timer);
+  TODO: remove the mutex, use sb_stat_t and sb_counter_t.
+*/
 
-    break;
-  }
+void memory_report_cumulative(sb_stat_t *stat)
+{
+  const double megabyte = 1024.0 * 1024.0;
+
+  SB_THREAD_MUTEX_LOCK();
+
+  log_text(LOG_NOTICE, "Operations performed: %d (%8.2f ops/sec)\n",
+           total_ops, total_ops / stat->time_interval);
+
+  if (memory_oper != SB_MEM_OP_NONE)
+    log_text(LOG_NOTICE, "%4.2f MiB transferred (%4.2f MiB/sec)\n",
+             total_bytes / megabyte,
+             total_bytes / megabyte / stat->time_interval);
+  total_ops = 0;
+  total_bytes = 0;
+
+  SB_THREAD_MUTEX_UNLOCK();
+
+  sb_report_cumulative(stat);
 }
 
 #ifdef HAVE_LARGE_PAGES

@@ -133,7 +133,7 @@ oltp_point_select.lua + MySQL tests
   
   Threads started!
   
-  OLTP test statistics:
+  SQL statistics:
       queries performed:
           read:                            0
           write:                           100
@@ -147,13 +147,13 @@ oltp_point_select.lua + MySQL tests
   General statistics:
       total time:                          *s (glob)
       total number of events:              100
-      total time taken by event execution: *s (glob)
   
-  Latency statistics:
-           min:                              *.*ms (glob)
-           avg:                              *.*ms (glob)
-           max:                              *.*ms (glob)
-           approx.  95th percentile:         *.*ms (glob)
+  Latency (ms):
+           min:                              *.* (glob)
+           avg:                              *.* (glob)
+           max:                              *.* (glob)
+           95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)

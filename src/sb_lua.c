@@ -133,12 +133,13 @@ static int sb_lua_op_done(void);
 static int sb_lua_op_thread_init(int);
 static int sb_lua_op_thread_run(int);
 static int sb_lua_op_thread_done(int);
-static void sb_lua_op_print_stats(sb_report_t type);
 
 static sb_operations_t lua_ops = {
    .init = sb_lua_op_init,
    .thread_init = sb_lua_op_thread_init,
    .thread_done = sb_lua_op_thread_done,
+   .report_intermediate = db_report_intermediate,
+   .report_cumulative = db_report_cumulative,
    .done = sb_lua_op_done
 };
 
@@ -339,8 +340,6 @@ sb_test_t *sb_load_lua(const char *testname)
   if (func_available(gstate, THREAD_RUN_FUNC))
     sbtest.ops.thread_run = &sb_lua_op_thread_run;
 
-  sbtest.ops.print_stats = &sb_lua_op_print_stats;
-
   /* Allocate per-thread interpreters array */
   states = (lua_State **)calloc(sb_globals.num_threads, sizeof(lua_State *));
   if (states == NULL)
@@ -447,11 +446,6 @@ int sb_lua_op_thread_done(int thread_id)
   sb_lua_close_state(L);
 
   return rc;
-}
-
-void sb_lua_op_print_stats(sb_report_t type)
-{
-  db_print_stats(type);
 }
 
 int sb_lua_op_done(void)

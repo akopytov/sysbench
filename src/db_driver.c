@@ -933,43 +933,32 @@ int db_bulk_insert_done(db_conn_t *con)
   return 0;
 }
 
-static void db_print_stats_intermediate(void)
+void db_report_intermediate(sb_stat_t *stat)
 {
-  sb_counters_t cnt;
-
-  /* Don't print stats if no drivers are used */
+  /* Use default stats handler if no drivers are used */
   if (!check_print_stats())
+  {
+    sb_report_intermediate(stat);
     return;
+  }
 
-  const double percentile_val =
-    sb_histogram_get_pct_intermediate(&sb_latency_histogram,
-                                      sb_globals.percentile);
-  sb_counters_agg_intermediate(cnt);
+  const double seconds = stat->time_interval;
 
-  const double seconds = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
-
-  const uint64_t events     = cnt[SB_CNT_EVENT];
-  const uint64_t reads      = cnt[SB_CNT_READ];
-  const uint64_t writes     = cnt[SB_CNT_WRITE];
-  const uint64_t others     = cnt[SB_CNT_OTHER];
-  const uint64_t errors     = cnt[SB_CNT_ERROR];
-  const uint64_t reconnects = cnt[SB_CNT_RECONNECT];
-
-  log_timestamp(LOG_NOTICE, NS2SEC(sb_timer_value(&sb_exec_timer)),
-                "threads: %d tps: %4.2f "
+  log_timestamp(LOG_NOTICE, stat->time_total,
+                "threads: %u tps: %4.2f "
                 "qps: %4.2f (r/w/o: %4.2f/%4.2f/%4.2f) "
-                "latency: %4.2fms (%u%%) errors/s: %4.2f "
+                "latency (ms,%u%%): %4.2f errors/s: %4.2f "
                 "reconnects/s: %4.2f",
-                sb_globals.num_running,
-                events / seconds,
-                (reads + writes + others) / seconds,
-                reads / seconds,
-                writes / seconds,
-                others / seconds,
-                percentile_val,
+                stat->threads_running,
+                stat->events / seconds,
+                (stat->reads + stat->writes + stat->other) / seconds,
+                stat->reads / seconds,
+                stat->writes / seconds,
+                stat->other / seconds,
                 sb_globals.percentile,
-                errors / seconds,
-                reconnects / seconds);
+                SEC2MS(stat->latency_pct),
+                stat->errors / seconds,
+                stat->reconnects / seconds);
 
   if (sb_globals.tx_rate > 0)
   {
@@ -982,46 +971,40 @@ static void db_print_stats_intermediate(void)
 }
 
 
-static void db_print_stats_cumulative(void)
+void db_report_cumulative(sb_stat_t *stat)
 {
-  sb_counters_t cnt;
   sb_timer_t    exec_timer;
   sb_timer_t    fetch_timer;
 
-  /* Don't print stats if no drivers are used */
+  /* Use default stats handler if no drivers are used */
   if (!check_print_stats())
+  {
+    sb_report_cumulative(stat);
     return;
+  }
 
-  sb_counters_agg_cumulative(cnt);
+  const double seconds = stat->time_interval;
+  const uint64_t queries = stat->reads + stat->writes + stat->other;
 
-  const double seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
-
-  const uint64_t events     = cnt[SB_CNT_EVENT];
-  const uint64_t reads      = cnt[SB_CNT_READ];
-  const uint64_t writes     = cnt[SB_CNT_WRITE];
-  const uint64_t others     = cnt[SB_CNT_OTHER];
-  const uint64_t errors     = cnt[SB_CNT_ERROR];
-  const uint64_t reconnects = cnt[SB_CNT_RECONNECT];
-
-  log_text(LOG_NOTICE, "OLTP test statistics:");
+  log_text(LOG_NOTICE, "SQL statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
   log_text(LOG_NOTICE, "        read:                            %" PRIu64,
-           reads);
+           stat->reads);
   log_text(LOG_NOTICE, "        write:                           %" PRIu64,
-           writes);
+           stat->writes);
   log_text(LOG_NOTICE, "        other:                           %" PRIu64,
-           others);
+           stat->other);
   log_text(LOG_NOTICE, "        total:                           %" PRIu64,
-           reads + writes + others);
+           queries);
   log_text(LOG_NOTICE, "    transactions:                        %-6" PRIu64
-           " (%.2f per sec.)", events, events / seconds);
+           " (%.2f per sec.)", stat->events, stat->events / seconds);
   log_text(LOG_NOTICE, "    queries:                             %-6" PRIu64
-           " (%.2f per sec.)", reads + writes + others,
-           (reads + writes + others) / seconds);
+           " (%.2f per sec.)", queries,
+           queries / seconds);
   log_text(LOG_NOTICE, "    ignored errors:                      %-6" PRIu64
-           " (%.2f per sec.)", errors, errors / seconds);
+           " (%.2f per sec.)", stat->errors, stat->errors / seconds);
   log_text(LOG_NOTICE, "    reconnects:                          %-6" PRIu64
-           " (%.2f per sec.)", reconnects, reconnects / seconds);
+           " (%.2f per sec.)", stat->reconnects, stat->reconnects / seconds);
 
   if (db_globals.debug)
   {
@@ -1055,17 +1038,9 @@ static void db_print_stats_cumulative(void)
     log_text(LOG_DEBUG, "  total:                                %.4fs",
              NS2SEC(sb_timer_sum(&fetch_timer)));
   }
-}
 
-
-/* Print database-specific test stats */
-
-void db_print_stats(sb_report_t type)
-{
-  if (type == SB_REPORT_INTERMEDIATE)
-    db_print_stats_intermediate();
-  else
-    db_print_stats_cumulative();
+  /* Report sysbench general stats */
+  sb_report_cumulative(stat);
 }
 
 

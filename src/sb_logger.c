@@ -53,15 +53,6 @@
 #define OPER_LOG_MIN_VALUE   1e-3
 #define OPER_LOG_MAX_VALUE   1E5
 
-/* per-thread timers for response time stats */
-sb_timer_t *timers;
-
-/*
-  Mutex protecting timers.
-  TODO: replace with an rwlock (and implement pthread rwlocks for Windows).
-*/
-pthread_mutex_t timers_mutex;
-
 /* Array of message handlers (one chain per message type) */
 
 static sb_list_t handlers[LOG_MSG_TYPE_MAX];
@@ -72,9 +63,6 @@ static unsigned char initialized;
 static pthread_mutex_t text_mutex;
 static unsigned int    text_cnt;
 static char            text_buf[TEXT_BUFFER_SIZE];
-
-/* Temporary copy of timers */
-static sb_timer_t *timers_copy;
 
 
 static int text_handler_init(void);
@@ -488,7 +476,6 @@ int text_handler_process(log_msg_t *msg)
 
 int oper_handler_init(void)
 {
-  unsigned int i;
   int          tmp;
 
   tmp = sb_get_value_int("percentile");
@@ -511,195 +498,14 @@ int oper_handler_init(void)
                         OPER_LOG_MIN_VALUE, OPER_LOG_MAX_VALUE))
     return 1;
 
-  timers = sb_memalign(sb_globals.num_threads * sizeof(sb_timer_t),
-                       CK_MD_CACHELINE);
-  timers_copy = sb_memalign(sb_globals.num_threads * sizeof(sb_timer_t),
-                            CK_MD_CACHELINE);
-  if (timers == NULL || timers_copy == NULL)
-  {
-    log_text(LOG_FATAL, "Memory allocation failure");
-    return 1;
-  }
-
-  for (i = 0; i < sb_globals.num_threads; i++)
-    sb_timer_init(&timers[i]);
-
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_init(&timers_mutex, NULL);
-
   return 0;
 }
 
-
-/*
-  Print global stats either from the last checkpoint (if used) or
-  from the test start.
-*/
-
-int print_global_stats(void)
-{
-  double       diff;
-  unsigned int i;
-  unsigned int nthreads;
-  sb_timer_t   t;
-  /* variables to count thread fairness */
-  double       events_avg;
-  double       events_stddev;
-  double       time_avg;
-  double       time_stddev;
-  unsigned long long total_time_ns;
-
-  sb_timer_init(&t);
-  nthreads = sb_globals.num_threads;
-
-  /* Create a temporary copy of timers and reset them */
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_lock(&timers_mutex);
-
-  memcpy(timers_copy, timers, sb_globals.num_threads * sizeof(sb_timer_t));
-  for (i = 0; i < sb_globals.num_threads; i++)
-    sb_timer_reset(&timers[i]);
-
-  total_time_ns = sb_timer_checkpoint(&sb_checkpoint_timer2);
-
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_unlock(&timers_mutex);
-
-  if (sb_globals.forced_shutdown_in_progress)
-  {
-    /*
-      In case we print statistics on forced shutdown, there may be (potentially
-      long running or hung) transactions which are still in progress.
-
-      We still want to reflect them in statistics, so stop running timers to
-      consider long transactions as done at the forced shutdown time, and print
-      a counter of still running transactions.
-    */
-    unsigned int unfinished = 0;
-
-    for (i = 0; i < nthreads; i++)
-    {
-      if (sb_timer_running(&timers_copy[i]))
-      {
-        unfinished++;
-        sb_timer_stop(&timers_copy[i]);
-      };
-    }
-
-    if (unfinished > 0)
-    {
-      log_text(LOG_NOTICE, "");
-      log_text(LOG_NOTICE, "Number of unfinished transactions on "
-               "forced shutdown: %u", unfinished);
-    }
-  }
-
-  for(i = 0; i < nthreads; i++)
-    t = sb_timer_merge(&t, &timers_copy[i]);
-
-  /* Print total statistics */
-  log_text(LOG_NOTICE, "");
-  log_text(LOG_NOTICE, "General statistics:");
-  log_text(LOG_NOTICE, "    total time:                          %.4fs",
-           NS2SEC(total_time_ns));
-  log_text(LOG_NOTICE, "    total number of events:              %llu",
-           (unsigned long long) t.events);
-  log_text(LOG_NOTICE, "    total time taken by event execution: %.4fs",
-           NS2SEC(sb_timer_sum(&t)));
-
-  log_text(LOG_NOTICE, "");
-
-  if (sb_globals.histogram)
-  {
-    log_text(LOG_NOTICE, "Latency histogram (values are in milliseconds)");
-    sb_histogram_print(&sb_latency_histogram);
-    log_text(LOG_NOTICE, " ");
-  }
-
-  log_text(LOG_NOTICE, "Latency statistics:");
-  log_text(LOG_NOTICE, "         min:                            %10.2fms",
-           NS2MS(sb_timer_min(&t)));
-  log_text(LOG_NOTICE, "         avg:                            %10.2fms",
-           NS2MS(sb_timer_avg(&t)));
-  log_text(LOG_NOTICE, "         max:                            %10.2fms",
-           NS2MS(sb_timer_max(&t)));
-
-  /* Print approximate percentile value for event latency */
-  if (sb_globals.percentile > 0)
-  {
-    log_text(LOG_NOTICE, "         approx. %3dth percentile:       %10.2fms",
-             sb_globals.percentile,
-             sb_histogram_get_pct_checkpoint(&sb_latency_histogram,
-                                             sb_globals.percentile));
-  }
-  else
-  {
-    log_text(LOG_NOTICE, "         percentile stats:               disabled");
-  }
-  log_text(LOG_NOTICE, "");
-
-  /*
-    Check how fair thread distribution over task is.
-    We check amount of events/thread as well as avg event execution time.
-    Fairness is calculated in %, looking at maximum and average difference
-    from the average time/request and req/thread
-   */
-  events_avg = (double)t.events / nthreads;
-  time_avg = NS2SEC(sb_timer_sum(&t)) / nthreads;
-  events_stddev = 0;
-  time_stddev = 0;
-  for(i = 0; i < nthreads; i++)
-  {
-    diff = fabs(events_avg - timers_copy[i].events);
-    events_stddev += diff*diff;
-    
-    diff = fabs(time_avg - NS2SEC(sb_timer_sum(&timers_copy[i])));
-    time_stddev += diff*diff;
-  }
-  events_stddev = sqrt(events_stddev / nthreads);
-  time_stddev = sqrt(time_stddev / nthreads);
-  
-  log_text(LOG_NOTICE, "Threads fairness:");
-  log_text(LOG_NOTICE, "    events (avg/stddev):           %.4f/%3.2f",
-           events_avg, events_stddev);
-  log_text(LOG_NOTICE, "    execution time (avg/stddev):   %.4f/%3.2f",
-           time_avg, time_stddev);
-  log_text(LOG_NOTICE, "");
-
-  if (sb_globals.debug)
-  {
-    log_text(LOG_DEBUG, "Verbose per-thread statistics:\n");
-    for(i = 0; i < nthreads; i++)
-    {
-      log_text(LOG_DEBUG, "    thread #%3d: min: %.4fs  avg: %.4fs  max: %.4fs  "
-               "events: %llu",i,
-               NS2SEC(sb_timer_min(&timers_copy[i])),
-               NS2SEC(sb_timer_avg(&timers_copy[i])),
-               NS2SEC(sb_timer_max(&timers_copy[i])),
-               (unsigned long long) timers_copy[i].events);
-      log_text(LOG_DEBUG, "                 "
-               "total time taken by even execution: %.4fs",
-               NS2SEC(sb_timer_sum(&timers_copy[i]))
-               );
-    }
-    log_text(LOG_NOTICE, "");
-  }
-
-  return 0;
-}
 
 /* Uninitialize operations messages handler */
 
 int oper_handler_done(void)
 {
-  print_global_stats();
-
-  free(timers);
-  free(timers_copy);
-
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_destroy(&timers_mutex);
-
   sb_histogram_done(&sb_latency_histogram);
 
   return 0;

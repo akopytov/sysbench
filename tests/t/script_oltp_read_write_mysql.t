@@ -134,7 +134,7 @@ oltp_read_write.lua + MySQL tests
   
   Threads started!
   
-  OLTP test statistics:
+  SQL statistics:
       queries performed:
           read:                            1400
           write:                           400
@@ -148,13 +148,13 @@ oltp_read_write.lua + MySQL tests
   General statistics:
       total time:                          *s (glob)
       total number of events:              100
-      total time taken by event execution: *s (glob)
   
-  Latency statistics:
-           min:                              *.*ms (glob)
-           avg:                              *.*ms (glob)
-           max:                              *.*ms (glob)
-           approx.  95th percentile:         *.*ms (glob)
+  Latency (ms):
+           min:                              *.* (glob)
+           avg:                              *.* (glob)
+           max:                              *.* (glob)
+           95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
@@ -325,7 +325,7 @@ oltp_read_write.lua + MySQL tests
   
   Threads started!
   
-  OLTP test statistics:
+  SQL statistics:
       queries performed:
           read:                            1400
           write:                           400
@@ -339,13 +339,13 @@ oltp_read_write.lua + MySQL tests
   General statistics:
       total time:                          *s (glob)
       total number of events:              100
-      total time taken by event execution: *s (glob)
   
-  Latency statistics:
-           min:                              *.*ms (glob)
-           avg:                              *.*ms (glob)
-           max:                              *.*ms (glob)
-           approx.  95th percentile:         *.*ms (glob)
+  Latency (ms):
+           min:                              *.* (glob)
+           avg:                              *.* (glob)
+           max:                              *.* (glob)
+           95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)

@@ -75,13 +75,13 @@
   General statistics:
       total time: *s (glob)
       total number of events:              1
-      total time taken by event execution: *s (glob)
   
-  Latency statistics:
-           min: *ms (glob)
-           avg: *ms (glob)
-           max: *ms (glob)
-           approx.  95th percentile: *ms (glob)
+  Latency (ms):
+           min: *.* (glob)
+           avg: *.* (glob)
+           max: *.* (glob)
+           95th percentile: *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           1.0000/0.00

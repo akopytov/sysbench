@@ -84,11 +84,28 @@ typedef struct
   } u;
 } sb_event_t;
 
-typedef enum
-{
-  SB_REPORT_INTERMEDIATE,
-  SB_REPORT_CUMULATIVE
-} sb_report_t;
+/* Statistics */
+
+typedef struct {
+  uint32_t threads_running;     /* Number of active threads */
+
+  double   time_interval;       /* Time elapsed since the last report */
+  double   time_total;          /* Time elapsed since the benchmark start */
+
+  double   latency_pct;         /* Latency percentile */
+
+  double   latency_min;         /* Minimum latency (cumulative reports only) */
+  double   latency_max;         /* Maximum latency (cumulative reports only) */
+  double   latency_avg;         /* Average latency (cumulative reports only) */
+  double   latency_sum;         /* Sum latency (cumulative reports only) */
+
+  uint64_t events;              /* Number of executed events */
+  uint64_t reads;               /* Number of read operations */
+  uint64_t writes;              /* Number of write operations */
+  uint64_t other;               /* Number of other operations */
+  uint64_t errors;              /* Number of ignored errors */
+  uint64_t reconnects;          /* Number of reconnects to server */
+} sb_stat_t;
 
 /* Commands */
 
@@ -104,7 +121,7 @@ typedef int sb_op_thread_run(int);
 typedef void sb_op_print_mode(void);
 typedef sb_event_t sb_op_next_event(int);
 typedef int sb_op_execute_event(sb_event_t *, int);
-typedef void sb_op_print_stats(sb_report_t);
+typedef void sb_op_report(sb_stat_t *);
 typedef int sb_op_thread_done(int);
 typedef int sb_op_cleanup(void);
 typedef int sb_op_done(void);
@@ -131,7 +148,8 @@ typedef struct
   sb_op_print_mode      *print_mode;      /* print mode function */
   sb_op_next_event      *next_event;      /* event generation function */
   sb_op_execute_event   *execute_event;   /* event execution function */
-  sb_op_print_stats     *print_stats;     /* stats generation function */
+  sb_op_report          *report_intermediate; /* intermediate reports handler */
+  sb_op_report          *report_cumulative;   /* cumulative reports handler */
   sb_op_thread_run      *thread_run;      /* main thread loop */
   sb_op_thread_done     *thread_done;     /* thread finalize function */
   sb_op_cleanup         *cleanup;         /* called after exit from thread,
@@ -193,8 +211,7 @@ extern sb_timer_t      sb_exec_timer CK_CC_CACHELINE;
 
 /* timers for checkpoint reports */
 extern sb_timer_t      sb_intermediate_timer;
-extern sb_timer_t      sb_checkpoint_timer1;
-extern sb_timer_t      sb_checkpoint_timer2;
+extern sb_timer_t      sb_checkpoint_timer;
 
 extern TLS int sb_tls_thread_id;
 
@@ -205,5 +222,11 @@ void sb_event_stop(int thread_id);
 
 /* Print a description of available command line options for the current test */
 void sb_print_test_options(void);
+
+/* Default intermediate reports handler */
+void sb_report_intermediate(sb_stat_t *stat);
+
+/* Default cumulative reports handler */
+void sb_report_cumulative(sb_stat_t *stat);
 
 #endif

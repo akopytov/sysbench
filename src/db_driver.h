@@ -310,7 +310,8 @@ int db_bulk_insert_next(db_conn_t *, const char *, size_t);
 int db_bulk_insert_done(db_conn_t *);
 
 /* Print database-specific test stats */
-void db_print_stats(sb_report_t type);
+void db_report_intermediate(sb_stat_t *);
+void db_report_cumulative(sb_stat_t *);
 
 /* DB drivers registrars */
 

@@ -140,13 +140,21 @@ static int report_thread_created;
 static int checkpoints_thread_created;
 static int eventgen_thread_created;
 
+/* per-thread timers for response time stats */
+static sb_timer_t *timers;
+
+/* Mutex protecting timers. */
+static pthread_mutex_t timers_mutex;
+
+/* Temporary copy of timers for checkpoint reports */
+static sb_timer_t *timers_copy;
+
 /* Global execution timer */
 sb_timer_t      sb_exec_timer CK_CC_CACHELINE;
 
 /* timers for intermediate/checkpoint reports */
 sb_timer_t sb_intermediate_timer CK_CC_CACHELINE;
-sb_timer_t sb_checkpoint_timer1  CK_CC_CACHELINE;
-sb_timer_t sb_checkpoint_timer2  CK_CC_CACHELINE;
+sb_timer_t sb_checkpoint_timer   CK_CC_CACHELINE;
 
 TLS int sb_tls_thread_id;
 
@@ -167,6 +175,226 @@ static void sigalrm_thread_init_timeout_handler(int sig)
   exit(2);
 }
 
+/* Default intermediate reports handler */
+
+void sb_report_intermediate(sb_stat_t *stat)
+{
+  log_timestamp(LOG_NOTICE, stat->time_total,
+                "threads: %" PRIu32 " events/s: %4.2f latency (ms,%u%%): %4.2f",
+                stat->threads_running,
+                stat->events / stat->time_interval,
+                sb_globals.percentile,
+                SEC2MS(stat->latency_pct));
+}
+
+
+static void report_get_common_stat(sb_stat_t *stat, sb_counters_t cnt)
+{
+  memset(stat, 0, sizeof(sb_stat_t));
+
+  stat->threads_running = sb_globals.num_running;
+
+  stat->events     = cnt[SB_CNT_EVENT];
+  stat->reads      = cnt[SB_CNT_READ];
+  stat->writes     = cnt[SB_CNT_WRITE];
+  stat->other      = cnt[SB_CNT_OTHER];
+  stat->errors     = cnt[SB_CNT_ERROR];
+  stat->reconnects = cnt[SB_CNT_RECONNECT];
+
+  stat->time_total = NS2SEC(sb_timer_value(&sb_exec_timer));
+}
+
+
+static void report_intermediate(void)
+{
+  sb_stat_t stat;
+  sb_counters_t cnt;
+
+  /*
+    sb_globals.report_interval may be set to 0 by the master thread to
+    silence intermediate reports at the end of the test
+  */
+  if (ck_pr_load_uint(&sb_globals.report_interval) == 0)
+  {
+    return;
+  }
+
+  sb_counters_agg_intermediate(cnt);
+  report_get_common_stat(&stat, cnt);
+
+  stat.latency_pct =
+    MS2SEC(sb_histogram_get_pct_intermediate(&sb_latency_histogram,
+                                             sb_globals.percentile));
+
+  stat.time_interval = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
+
+  if (current_test && current_test->ops.report_intermediate)
+    current_test->ops.report_intermediate(&stat);
+  else
+    sb_report_intermediate(&stat);
+}
+
+/* Default cumulative reports handler */
+
+void sb_report_cumulative(sb_stat_t *stat)
+{
+  const unsigned int nthreads = sb_globals.num_threads;
+
+  if (sb_globals.forced_shutdown_in_progress)
+  {
+    /*
+      In case we print statistics on forced shutdown, there may be (potentially
+      long running or hung) transactions which are still in progress.
+
+      We still want to reflect them in statistics, so stop running timers to
+      consider long transactions as done at the forced shutdown time, and print
+      a counter of still running transactions.
+    */
+    unsigned unfinished = 0;
+
+    for (unsigned i = 0; i < nthreads; i++)
+    {
+      if (sb_timer_running(&timers_copy[i]))
+      {
+        unfinished++;
+        sb_timer_stop(&timers_copy[i]);
+      };
+    }
+
+    if (unfinished > 0)
+    {
+      log_text(LOG_NOTICE, "");
+      log_text(LOG_NOTICE, "Number of unfinished transactions on "
+               "forced shutdown: %u", unfinished);
+    }
+  }
+
+  log_text(LOG_NOTICE, "");
+  log_text(LOG_NOTICE, "General statistics:");
+  log_text(LOG_NOTICE, "    total time:                          %.4fs",
+           stat->time_total);
+  log_text(LOG_NOTICE, "    total number of events:              %llu",
+           stat->events);
+
+  log_text(LOG_NOTICE, "");
+
+  log_text(LOG_NOTICE, "Latency (ms):");
+  log_text(LOG_NOTICE, "         min:                            %10.2f",
+           SEC2MS(stat->latency_min));
+  log_text(LOG_NOTICE, "         avg:                            %10.2f",
+           SEC2MS(stat->latency_avg));
+  log_text(LOG_NOTICE, "         max:                            %10.2f",
+           SEC2MS(stat->latency_max));
+
+  if (sb_globals.percentile > 0)
+    log_text(LOG_NOTICE, "        %3dth percentile:                %10.2f",
+             sb_globals.percentile, SEC2MS(stat->latency_pct));
+  else
+    log_text(LOG_NOTICE, "         percentile stats:               disabled");
+
+  log_text(LOG_NOTICE, "         sum:                            %10.2f",
+           SEC2MS(stat->latency_sum));
+  log_text(LOG_NOTICE, "");
+
+  /* Aggregate temporary timers copy */
+  sb_timer_t t;
+  sb_timer_init(&t);
+  for(unsigned i = 0; i < nthreads; i++)
+    t = sb_timer_merge(&t, &timers_copy[i]);
+
+  /* Calculate and print events distribution by threads */
+  const double events_avg = (double) t.events / nthreads;
+  const double time_avg = stat->latency_sum / nthreads;
+
+  double events_stddev = 0;
+  double time_stddev = 0;
+
+  for(unsigned i = 0; i < nthreads; i++)
+  {
+    double diff = fabs(events_avg - timers_copy[i].events);
+    events_stddev += diff * diff;
+
+    diff = fabs(time_avg - NS2SEC(sb_timer_sum(&timers_copy[i])));
+    time_stddev += diff * diff;
+  }
+  events_stddev = sqrt(events_stddev / nthreads);
+  time_stddev = sqrt(time_stddev / nthreads);
+
+  log_text(LOG_NOTICE, "Threads fairness:");
+  log_text(LOG_NOTICE, "    events (avg/stddev):           %.4f/%3.2f",
+           events_avg, events_stddev);
+  log_text(LOG_NOTICE, "    execution time (avg/stddev):   %.4f/%3.2f",
+           time_avg, time_stddev);
+  log_text(LOG_NOTICE, "");
+
+  if (sb_globals.debug)
+  {
+    log_text(LOG_DEBUG, "Verbose per-thread statistics:\n");
+    for(unsigned i = 0; i < nthreads; i++)
+    {
+      log_text(LOG_DEBUG, "    thread #%3d: min: %.4fs  avg: %.4fs  max: %.4fs  "
+               "events: %" PRIu64,
+               i,
+               NS2SEC(sb_timer_min(&timers_copy[i])),
+               NS2SEC(sb_timer_avg(&timers_copy[i])),
+               NS2SEC(sb_timer_max(&timers_copy[i])),
+               timers_copy[i].events);
+      log_text(LOG_DEBUG, "                 "
+               "total time taken by event execution: %.4fs",
+               NS2SEC(sb_timer_sum(&timers_copy[i])));
+    }
+    log_text(LOG_NOTICE, "");
+  }
+}
+
+static void report_cumulative(void)
+{
+  sb_stat_t stat;
+  unsigned i;
+  sb_counters_t cnt;
+
+  sb_counters_agg_cumulative(cnt);
+  report_get_common_stat(&stat, cnt);
+
+  stat.latency_pct =
+    MS2SEC(sb_histogram_get_pct_checkpoint(&sb_latency_histogram,
+                                           sb_globals.percentile));
+
+  sb_timer_t t;
+  sb_timer_init(&t);
+
+  const unsigned nthreads = sb_globals.num_threads;
+
+  /* Create a temporary copy of timers and reset them */
+  if (sb_globals.n_checkpoints > 0)
+    pthread_mutex_lock(&timers_mutex);
+
+  memcpy(timers_copy, timers, nthreads * sizeof(sb_timer_t));
+  for (i = 0; i < nthreads; i++)
+    sb_timer_reset(&timers[i]);
+
+  if (sb_globals.n_checkpoints > 0)
+    pthread_mutex_unlock(&timers_mutex);
+
+  /* Aggregate temporary timers copy */
+  for(i = 0; i < nthreads; i++)
+    t = sb_timer_merge(&t, &timers_copy[i]);
+
+  /* Calculate aggregate latency values */
+  stat.latency_min = NS2SEC(sb_timer_min(&t));
+  stat.latency_max = NS2SEC(sb_timer_max(&t));
+  stat.latency_avg = NS2SEC(sb_timer_avg(&t));
+  stat.latency_sum = NS2SEC(sb_timer_sum(&t));
+
+  stat.time_interval = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer));
+
+  if (current_test && current_test->ops.report_cumulative)
+    current_test->ops.report_cumulative(&stat);
+  else
+    sb_report_cumulative(&stat);
+}
+
+
 static void sigalrm_forced_shutdown_handler(int sig)
 {
   if (sig != SIGALRM)
@@ -176,14 +404,12 @@ static void sigalrm_forced_shutdown_handler(int sig)
 
   sb_timer_stop(&sb_exec_timer);
   sb_timer_stop(&sb_intermediate_timer);
-  sb_timer_stop(&sb_checkpoint_timer1);
-  sb_timer_stop(&sb_checkpoint_timer2);
+  sb_timer_stop(&sb_checkpoint_timer);
 
   log_text(LOG_FATAL,
            "The --max-time limit has expired, forcing shutdown...");
 
-  if (current_test && current_test->ops.print_stats)
-    current_test->ops.print_stats(SB_REPORT_CUMULATIVE);
+  report_cumulative();
 
   log_done();
 
@@ -723,13 +949,6 @@ static void *report_thread_proc(void *arg)
   if (sb_barrier_wait(&thread_start_barrier) < 0)
     return NULL;
 
-  if (current_test->ops.print_stats == NULL)
-  {
-    log_text(LOG_DEBUG, "Reporting is not supported by the current test, "
-             "terminating the reporting thread");
-    return NULL;
-  }
-
   report_thread_created = 1;
 
   pause_ns = interval_ns;
@@ -737,12 +956,8 @@ static void *report_thread_proc(void *arg)
   for (;;)
   {
     usleep(pause_ns / 1000);
-    /*
-      sb_globals.report_interval may be set to 0 by the master thread
-      to silence report at the end of the test
-    */
-    if (ck_pr_load_uint(&sb_globals.report_interval) > 0)
-      current_test->ops.print_stats(SB_REPORT_INTERMEDIATE);
+
+    report_intermediate();
 
     curr_ns = sb_timer_value(&sb_exec_timer);
     do
@@ -773,13 +988,6 @@ static void *checkpoints_thread_proc(void *arg)
   if (sb_barrier_wait(&thread_start_barrier) < 0)
     return NULL;
 
-  if (current_test->ops.print_stats == NULL)
-  {
-    log_text(LOG_DEBUG, "Reporting is not supported by the current test, "
-             "terminating the checkpoints thread");
-    return NULL;
-  }
-
   checkpoints_thread_created = 1;
 
   for (i = 0; i < sb_globals.n_checkpoints; i++)
@@ -792,12 +1000,10 @@ static void *checkpoints_thread_proc(void *arg)
     pause_ns = next_ns - curr_ns;
     usleep(pause_ns / 1000);
 
-    SB_THREAD_MUTEX_LOCK();
     log_timestamp(LOG_NOTICE, NS2SEC(sb_timer_value(&sb_exec_timer)),
                   "Checkpoint report:");
-    current_test->ops.print_stats(SB_REPORT_CUMULATIVE);
-    print_global_stats();
-    SB_THREAD_MUTEX_UNLOCK();
+
+    report_cumulative();
   }
 
   return NULL;
@@ -817,8 +1023,7 @@ static int threads_started_callback(void *arg)
 
   sb_timer_start(&sb_exec_timer);
   sb_timer_copy(&sb_intermediate_timer, &sb_exec_timer);
-  sb_timer_copy(&sb_checkpoint_timer1, &sb_exec_timer);
-  sb_timer_copy(&sb_checkpoint_timer2, &sb_exec_timer);
+  sb_timer_copy(&sb_checkpoint_timer, &sb_exec_timer);
 
   log_text(LOG_NOTICE, "Threads started!\n");
 
@@ -848,8 +1053,7 @@ static int run_test(sb_test_t *test)
   /* initialize timers */
   sb_timer_init(&sb_exec_timer);
   sb_timer_init(&sb_intermediate_timer);
-  sb_timer_init(&sb_checkpoint_timer1);
-  sb_timer_init(&sb_checkpoint_timer2);
+  sb_timer_init(&sb_checkpoint_timer);
 
   /* prepare test */
   if (test->ops.prepare != NULL && test->ops.prepare() != 0)
@@ -946,8 +1150,7 @@ static int run_test(sb_test_t *test)
 
   sb_timer_stop(&sb_exec_timer);
   sb_timer_stop(&sb_intermediate_timer);
-  sb_timer_stop(&sb_checkpoint_timer1);
-  sb_timer_stop(&sb_checkpoint_timer2);
+  sb_timer_stop(&sb_checkpoint_timer);
 
   /* Silence periodic reports if they were on */
   ck_pr_store_uint(&sb_globals.report_interval, 0);
@@ -961,10 +1164,19 @@ static int run_test(sb_test_t *test)
   /* cleanup test */
   if (test->ops.cleanup != NULL && test->ops.cleanup() != 0)
     return 1;
-  
+
   /* print test-specific stats */
-  if (test->ops.print_stats != NULL && !sb_globals.error)
-    test->ops.print_stats(SB_REPORT_CUMULATIVE);
+  if (!sb_globals.error)
+  {
+    if (sb_globals.histogram)
+    {
+      log_text(LOG_NOTICE, "Latency histogram (values are in milliseconds)");
+      sb_histogram_print(&sb_latency_histogram);
+      log_text(LOG_NOTICE, " ");
+    }
+
+    report_cumulative();
+  }
 
   pthread_mutex_destroy(&sb_globals.exec_mutex);
 
@@ -1122,6 +1334,23 @@ static int init(void)
     qsort(sb_globals.checkpoints, sb_globals.n_checkpoints,
           sizeof(unsigned int), checkpoint_cmp);
   }
+
+  /* Initialize timers */
+  timers = sb_memalign(sb_globals.num_threads * sizeof(sb_timer_t),
+                       CK_MD_CACHELINE);
+  timers_copy = sb_memalign(sb_globals.num_threads * sizeof(sb_timer_t),
+                            CK_MD_CACHELINE);
+  if (timers == NULL || timers_copy == NULL)
+  {
+    log_text(LOG_FATAL, "Memory allocation failure");
+    return 1;
+  }
+
+  for (unsigned i = 0; i < sb_globals.num_threads; i++)
+    sb_timer_init(&timers[i]);
+
+  if (sb_globals.n_checkpoints > 0)
+    pthread_mutex_init(&timers_mutex, NULL);
 
   return 0;
 }
@@ -1287,7 +1516,13 @@ int main(int argc, char *argv[])
 
   sb_thread_done();
 
-  exit(0);
+  free(timers);
+  free(timers_copy);
+
+  if (sb_globals.n_checkpoints > 0)
+    pthread_mutex_destroy(&timers_mutex);
+
+  return EXIT_SUCCESS;
 }
 
 /* Print a description of available command line options for the current test */

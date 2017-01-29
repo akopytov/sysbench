@@ -27,22 +27,22 @@
   
   Threads started!
   
-  
-  General statistics:
-      total time:                      *s (glob)
-      total number of events:              2
-      total time taken by event execution: *s (glob)
-  
   Latency histogram (values are in milliseconds)
          value  ------------- distribution ------------- count
      * |\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\* 1 (glob)
      * |\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\* 1 (glob)
    
-  Latency statistics:
-           min:                      *ms (glob)
-           avg:                      *ms (glob)
-           max:                      *ms (glob)
-           approx.  95th percentile: *ms (glob)
+  
+  General statistics:
+      total time:                      *s (glob)
+      total number of events:              2
+  
+  Latency (ms):
+           min: *.* (glob)
+           avg: *.* (glob)
+           max: *.* (glob)
+           95th percentile: *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           1.0000/0.00
