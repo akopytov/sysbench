@@ -354,7 +354,7 @@ void memory_report_intermediate(sb_stat_t *stat)
   SB_THREAD_MUTEX_LOCK();
 
   log_timestamp(LOG_NOTICE, stat->time_total,
-                "%4.2f MiB/sec,", (double)(total_bytes - last_bytes) /
+                "%4.2f MiB/sec", (double)(total_bytes - last_bytes) /
                 megabyte / stat->time_interval);
   last_bytes = total_bytes;
 

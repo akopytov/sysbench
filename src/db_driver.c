@@ -462,7 +462,7 @@ db_result_t *db_execute(db_stmt_t *stmt)
 
   sb_counter_inc(con->thread_id, rs->counter);
 
- if (SB_LIKELY(con->error == DB_ERROR_NONE))
+  if (SB_LIKELY(con->error == DB_ERROR_NONE))
   {
     if (rs->counter == SB_CNT_READ)
     {
