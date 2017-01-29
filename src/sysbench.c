@@ -273,7 +273,7 @@ void sb_report_cumulative(sb_stat_t *stat)
   log_text(LOG_NOTICE, "General statistics:");
   log_text(LOG_NOTICE, "    total time:                          %.4fs",
            stat->time_total);
-  log_text(LOG_NOTICE, "    total number of events:              %llu",
+  log_text(LOG_NOTICE, "    total number of events:              %" PRIu64,
            stat->events);
 
   log_text(LOG_NOTICE, "");
