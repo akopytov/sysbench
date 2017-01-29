@@ -90,9 +90,6 @@ typedef struct {
   sb_list_item_t     listitem;
 } event_queue_elem_t;
 
-/* Mutex to protect report_interval */
-static pthread_mutex_t    report_interval_mutex;
-
 /* General options */
 sb_arg_t general_args[] =
 {
@@ -744,10 +741,8 @@ static void *report_thread_proc(void *arg)
       sb_globals.report_interval may be set to 0 by the master thread
       to silence report at the end of the test
     */
-    pthread_mutex_lock(&report_interval_mutex);
-    if (sb_globals.report_interval > 0)
+    if (ck_pr_load_uint(&sb_globals.report_interval) > 0)
       current_test->ops.print_stats(SB_REPORT_INTERMEDIATE);
-    pthread_mutex_unlock(&report_interval_mutex);
 
     curr_ns = sb_timer_value(&sb_exec_timer);
     do
@@ -870,8 +865,6 @@ static int run_test(sb_test_t *test)
 
   sb_globals.num_running = 0;
 
-  pthread_mutex_init(&report_interval_mutex, NULL);
-
   /* Calculate the required number of threads for the start barrier */
   barrier_threads = 1 + sb_globals.num_threads +
     (sb_globals.report_interval > 0) +
@@ -957,9 +950,7 @@ static int run_test(sb_test_t *test)
   sb_timer_stop(&sb_checkpoint_timer2);
 
   /* Silence periodic reports if they were on */
-  pthread_mutex_lock(&report_interval_mutex);
-  sb_globals.report_interval = 0;
-  pthread_mutex_unlock(&report_interval_mutex);
+  ck_pr_store_uint(&sb_globals.report_interval, 0);
 
 #ifdef HAVE_ALARM
   alarm(0);
@@ -987,8 +978,6 @@ static int run_test(sb_test_t *test)
     if (sb_thread_cancel(report_thread) || sb_thread_join(report_thread, NULL))
       log_errno(LOG_FATAL, "Terminating the reporting thread failed.");
   }
-
-  pthread_mutex_destroy(&report_interval_mutex);
 
   if (eventgen_thread_created)
   {
