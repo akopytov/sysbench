@@ -870,6 +870,9 @@ static void *eventgen_thread_proc(void *arg)
 
   (void)arg; /* unused */
 
+  /* Initialize thread-local RNG state */
+  sb_rand_thread_init();
+
   SB_LIST_INIT(&event_queue);
   i = 0;
 
@@ -943,6 +946,9 @@ static void *report_thread_proc(void *arg)
 
   (void)arg; /* unused */
 
+  /* Initialize thread-local RNG state */
+  sb_rand_thread_init();
+
   log_text(LOG_DEBUG, "Reporting thread started");
 
   /* Wait for other threads to initialize */
@@ -981,6 +987,9 @@ static void *checkpoints_thread_proc(void *arg)
   unsigned int             i;
 
   (void)arg; /* unused */
+
+  /* Initialize thread-local RNG state */
+  sb_rand_thread_init();
 
   log_text(LOG_DEBUG, "Checkpoints report thread started");
 
