@@ -58,4 +58,91 @@ end
 
 sysbench.hooks = {
    -- sql_error = <func>,
+   -- report_intermediate = <func>,
+   -- report_cumulative = <func>
 }
+
+-- Report statistics in the CSV format. Add the following to your
+-- script to replace the default human-readable reports
+--
+-- sysbench.hooks.report_intermediate = sysbench.report_csv
+function sysbench.report_csv(stat)
+   local seconds = stat.time_interval
+   print(string.format("%.0f,%u,%4.2f," ..
+                          "%4.2f,%4.2f,%4.2f,%4.2f," ..
+                          "%4.2f,%4.2f," ..
+                          "%4.2f",
+                       stat.time_total,
+                       stat.threads_running,
+                       stat.events / seconds,
+                       (stat.reads + stat.writes + stat.other) / seconds,
+                       stat.reads / seconds,
+                       stat.writes / seconds,
+                       stat.other / seconds,
+                       stat.latency_pct * 1000,
+                       stat.errors / seconds,
+                       stat.reconnects / seconds
+   ))
+end
+
+-- Report statistics in the CSV format. Add the following to your
+-- script to replace the default human-readable reports
+--
+-- sysbench.hooks.report_intermediate = sysbench.report_json
+function sysbench.report_json(stat)
+   local seconds = stat.time_interval
+   print(string.format([[
+{
+  "time": %4.0f,
+  "threads": %u,
+  "tps": %4.2f,
+  "qps": {
+    "total": %4.2f,
+    "reads": %4.2f,
+    "writes": %4.2f,
+    "other": %4.2f,
+  },
+  "latency": %4.2f,
+  "errors": %4.2f,
+  "reconnects": %4.2f
+},]],
+            stat.time_total,
+            stat.threads_running,
+            stat.events / seconds,
+            (stat.reads + stat.writes + stat.other) / seconds,
+            stat.reads / seconds,
+            stat.writes / seconds,
+            stat.other / seconds,
+            stat.latency_pct * 1000,
+            stat.errors / seconds,
+            stat.reconnects / seconds
+   ))
+end
+
+-- Report statistics in the default human-readable format. You can use it if you
+-- want to augment default reports with your own statistics. Call it from your
+-- own report hook, e.g.:
+--
+-- function sysbench.hooks.report_intermediate(stat)
+--   print("my stat: ", val)
+--   sysbench.report_default(stat)
+-- end
+function sysbench.report_default(stat)
+   local seconds = stat.time_interval
+   print(string.format("[%4.0fs] threads: %u tps: %4.2f " ..
+                          "qps: %4.2f (r/w/o: %4.2f/%4.2f/%4.2f) " ..
+                          "latency (ms,%u%%): %4.2f errors/s %4.2f " ..
+                          "reconnects/s: %4.2f",
+                       stat.time_total,
+                       stat.threads_running,
+                       stat.events / seconds,
+                       (stat.reads + stat.writes + stat.other) / seconds,
+                       stat.reads / seconds,
+                       stat.writes / seconds,
+                       stat.other / seconds,
+                       sysbench.opt.percentile,
+                       stat.latency_pct * 1000,
+                       stat.errors / seconds,
+                       stat.reconnects / seconds
+   ))
+end

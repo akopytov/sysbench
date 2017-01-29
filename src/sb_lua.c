@@ -54,6 +54,8 @@
 #define THREAD_RUN_FUNC "thread_run"
 #define INIT_FUNC "init"
 #define DONE_FUNC "done"
+#define REPORT_INTERMEDIATE_HOOK "report_intermediate"
+#define REPORT_CUMULATIVE_HOOK "report_cumulative"
 
 /* Interpreter context */
 
@@ -108,7 +110,9 @@ static sb_test_t sbtest CK_CC_CACHELINE;
 static TLS sb_lua_ctxt_t *tls_lua_ctxt CK_CC_CACHELINE;
 
 /* Database driver */
-static TLS db_driver_t *db_driver;
+static TLS db_driver_t *db_driver CK_CC_CACHELINE;
+
+static TLS lua_State *sb_tls_lua_state CK_CC_CACHELINE;
 
 /* List of pre-loaded internal scripts */
 static internal_script_t internal_scripts[] = {
@@ -172,6 +176,10 @@ static int sb_lua_db_free_results(lua_State *);
 static unsigned int sb_lua_table_size(lua_State *, int);
 
 static int read_option_defs(lua_State *L);
+static bool sb_lua_hook_defined(lua_State *, const char *);
+static bool sb_lua_hook_push(lua_State *, const char *);
+static void sb_lua_report_intermediate(sb_stat_t *);
+static void sb_lua_report_cumulative(sb_stat_t *);
 
 static void call_error(lua_State *L, const char *name)
 {
@@ -204,17 +212,13 @@ static void xfree(const void *ptr)
 
 /* Export command line options */
 
-static int export_options(lua_State *L)
+static int do_export_options(lua_State *L, bool global)
 {
   sb_list_item_t *pos;
   option_t       *opt;
   char           *tmp;
 
-  /*
-    Export options to the 'sysbench.opt' table, if the script declares supported
-    options with sysbench.option_defs, or to the global namespace otherwise
-  */
-  if (sbtest.args != NULL)
+  if (!global)
   {
     lua_getglobal(L, "sysbench");
     lua_pushliteral(L, "opt");
@@ -230,7 +234,7 @@ static int export_options(lua_State *L)
       which case name collisions with user-defined functions and variables might
       occur. For example, the --help option might redefine the help() function.
     */
-    if (sbtest.args == NULL)
+    if (global)
     {
       lua_getglobal(L, opt->name);
       if (lua_isfunction(L, -1))
@@ -288,14 +292,31 @@ static int export_options(lua_State *L)
     }
 
     /* set var = value */
-    if (sbtest.args != NULL)
-      lua_settable(L, -3);
-    else
+    if (global)
       lua_setglobal(L, opt->name);
+    else
+      lua_settable(L, -3);
   }
 
-  if (sbtest.args != NULL)
+  if (!global)
     lua_settable(L, -3); /* set sysbench.opt */
+
+  return 0;
+}
+
+/*
+  Export options to the 'sysbench.opt' table. If the script does not declare
+  supported options with sysbench.option_defs also export to the global
+  namespace for compatibility with the legacy API.
+*/
+
+static int export_options(lua_State *L)
+{
+  if (do_export_options(L, false))
+    return 1;
+
+  if (sbtest.args == NULL && do_export_options(L, true))
+    return 1;
 
   return 0;
 }
@@ -339,6 +360,12 @@ sb_test_t *sb_load_lua(const char *testname)
 
   if (func_available(gstate, THREAD_RUN_FUNC))
     sbtest.ops.thread_run = &sb_lua_op_thread_run;
+
+  if (sb_lua_hook_defined(gstate, REPORT_INTERMEDIATE_HOOK))
+    sbtest.ops.report_intermediate = sb_lua_report_intermediate;
+
+  if (sb_lua_hook_defined(gstate, REPORT_CUMULATIVE_HOOK))
+    sbtest.ops.report_cumulative = sb_lua_report_cumulative;
 
   /* Allocate per-thread interpreters array */
   states = (lua_State **)calloc(sb_globals.num_threads, sizeof(lua_State *));
@@ -1251,7 +1278,7 @@ unsigned int sb_lua_table_size(lua_State *L, int index)
 
 /* Check if a specified hook exists */
 
-bool sb_lua_hook_defined(lua_State *L, const char *name)
+static bool sb_lua_hook_defined(lua_State *L, const char *name)
 {
   if (L == NULL)
     return false;
@@ -1265,6 +1292,29 @@ bool sb_lua_hook_defined(lua_State *L, const char *name)
   lua_pop(L, 3);
 
   return rc;
+}
+
+/* Push a specified hook on stack */
+
+static bool sb_lua_hook_push(lua_State *L, const char *name)
+{
+  if (L == NULL)
+    return false;
+
+  lua_getglobal(L, "sysbench");
+  lua_getfield(L, -1, "hooks");
+  lua_getfield(L, -1, name);
+
+  if (!lua_isfunction(L, -1))
+  {
+    lua_pop(L, 3);
+    return false;
+  }
+
+  lua_remove(L, -2); /* hooks */
+  lua_remove(L, -2); /* sysbench */
+
+  return true;
 }
 
 /* Check if a specified custom command exists */
@@ -1417,3 +1467,73 @@ int sb_lua_call_custom_command(const char *name)
 
   return call_custom_command(gstate);
 }
+
+#define stat_to_number(name) sb_lua_var_number(L, #name, stat->name)
+
+static void stat_to_lua_table(lua_State *L, sb_stat_t *stat)
+{
+  lua_newtable(L);
+  stat_to_number(threads_running);
+  stat_to_number(time_interval);
+  stat_to_number(time_total);
+  stat_to_number(latency_pct);
+  stat_to_number(events);
+  stat_to_number(reads);
+  stat_to_number(writes);
+  stat_to_number(other);
+  stat_to_number(errors);
+  stat_to_number(reconnects);
+}
+
+/* Call sysbench.hooks.report_intermediate */
+
+static void sb_lua_report_intermediate(sb_stat_t *stat)
+{
+  if (sb_tls_lua_state == NULL)
+  {
+    sb_tls_lua_state = sb_lua_new_state();
+    export_options(sb_tls_lua_state);
+  }
+
+  lua_State * const L = sb_tls_lua_state;
+
+  if (!sb_lua_hook_push(L, REPORT_INTERMEDIATE_HOOK))
+    return;
+
+  stat_to_lua_table(L, stat);
+
+  if (lua_pcall(L, 1, 0, 0))
+  {
+    call_error(L, REPORT_INTERMEDIATE_HOOK);
+  }
+}
+
+/* Call sysbench.hooks.report_cumulative */
+
+static void sb_lua_report_cumulative(sb_stat_t *stat)
+{
+  if (sb_tls_lua_state == NULL)
+  {
+    sb_tls_lua_state = sb_lua_new_state();
+    export_options(sb_tls_lua_state);
+  }
+
+  lua_State * const L = sb_tls_lua_state;
+
+  if (!sb_lua_hook_push(L, REPORT_CUMULATIVE_HOOK))
+    return;
+
+  stat_to_lua_table(L, stat);
+
+  /* The following stats are only available for cumulative reports */
+  stat_to_number(latency_min);
+  stat_to_number(latency_max);
+  stat_to_number(latency_avg);
+  stat_to_number(latency_sum);
+
+  if (lua_pcall(L, 1, 0, 0))
+  {
+    call_error(L, REPORT_CUMULATIVE_HOOK);
+  }
+}
+#undef stat_to_number
