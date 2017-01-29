@@ -51,13 +51,6 @@
 /* Global variables */
 db_globals_t db_globals CK_CC_CACHELINE;
 
-/* per-thread stats */
-db_stats_t *thread_stats CK_CC_CACHELINE;
-
-/* Used in intermediate reports */
-static db_stats_t last_stats;
-
-/* Static variables */
 static sb_list_t        drivers;          /* list of available DB drivers */
 
 static uint8_t stats_enabled;
@@ -68,8 +61,6 @@ static pthread_once_t db_global_once = PTHREAD_ONCE_INIT;
 /* Timers used in debug mode */
 static sb_timer_t *exec_timers;
 static sb_timer_t *fetch_timers;
-
-pthread_mutex_t print_stats_mutex;
 
 /* Static functions */
 
@@ -93,29 +84,6 @@ static sb_arg_t db_args[] =
 
   SB_OPT_END
 };
-
-static inline uint64_t db_stat_val(db_stats_t stats, db_stat_type_t type)
-{
-  return ck_pr_load_64(&stats[type]);
-}
-
-static inline void db_stat_merge(db_stats_t dst, db_stats_t src)
-{
-  for (size_t i = 0; i < DB_STAT_MAX; i++)
-    ck_pr_add_64(&dst[i], db_stat_val(src, i));
-}
-
-static inline void db_stat_copy(db_stats_t dst, db_stats_t src)
-{
-  for (size_t i = 0; i < DB_STAT_MAX; i++)
-    ck_pr_store_64(&dst[i], db_stat_val(src, i));
-}
-
-static inline uint64_t db_stat_diff(db_stats_t a, db_stats_t b,
-                                    db_stat_type_t type)
-{
-  return db_stat_val(a, type) - db_stat_val(b, type);
-}
 
 /* Register available database drivers and command line arguments */
 
@@ -210,17 +178,6 @@ static bool check_print_stats(void)
   return rc;
 }
 
-/* Initialize per-thread stats */
-
-int db_thread_stat_init(void)
-{
-  thread_stats = sb_memalign(sb_globals.num_threads * sizeof(db_stats_t),
-                             CK_MD_CACHELINE);
-
-  return thread_stats == NULL;
-}
-
-
 static void db_init(void)
 {
   if (SB_LIST_IS_EMPTY(&drivers))
@@ -231,8 +188,6 @@ static void db_init(void)
 
   if (db_parse_arguments())
     return;
-
-  pthread_mutex_init(&print_stats_mutex, NULL);
 
   /* Initialize timers if in debug mode */
   if (db_globals.debug)
@@ -505,11 +460,11 @@ db_result_t *db_execute(db_stmt_t *stmt)
 
   con->error = con->driver->ops.execute(stmt, rs);
 
-  db_thread_stat_inc(con->thread_id, rs->stat_type);
+  sb_counter_inc(con->thread_id, rs->counter);
 
  if (SB_LIKELY(con->error == DB_ERROR_NONE))
   {
-    if (rs->stat_type == DB_STAT_READ)
+    if (rs->counter == SB_CNT_READ)
     {
       con->state = DB_CONN_RESULT_SET;
       return rs;
@@ -592,11 +547,11 @@ db_result_t *db_query(db_conn_t *con, const char *query, size_t len)
 
   con->error = con->driver->ops.query(con, query, len, rs);
 
-  db_thread_stat_inc(con->thread_id, rs->stat_type);
+  sb_counter_inc(con->thread_id, rs->counter);
 
   if (SB_LIKELY(con->error == DB_ERROR_NONE))
   {
-    if (rs->stat_type == DB_STAT_READ)
+    if (rs->counter == SB_CNT_READ)
     {
       con->state = DB_CONN_RESULT_SET;
       return rs;
@@ -719,11 +674,6 @@ void db_done(void)
 
     exec_timers = fetch_timers = NULL;
   }
-
-  free(thread_stats);
-  thread_stats = NULL;
-
-  pthread_mutex_destroy(&print_stats_mutex);
 
   SB_LIST_FOR_EACH(pos, &drivers)
   {
@@ -983,88 +933,75 @@ int db_bulk_insert_done(db_conn_t *con)
   return 0;
 }
 
-/* Print database-specific test stats */
-
-void db_print_stats(sb_stat_t type)
+static void db_print_stats_intermediate(void)
 {
-  double        seconds;
-  unsigned int  i;
-  sb_timer_t    exec_timer;
-  sb_timer_t    fetch_timer;
-  db_stats_t    stats;
-
-  SB_COMPILE_TIME_ASSERT(sizeof(db_stats_t) % CK_MD_CACHELINE == 0);
+  sb_counters_t cnt;
 
   /* Don't print stats if no drivers are used */
   if (!check_print_stats())
     return;
 
-  /*
-     Prevent interval and checkpoint reporting threads from using and updating
-     thread stats concurrently.
-  */
-  pthread_mutex_lock(&print_stats_mutex);
+  const double percentile_val =
+    sb_histogram_get_pct_intermediate(&sb_latency_histogram,
+                                      sb_globals.percentile);
+  sb_counters_agg_intermediate(cnt);
 
-  /* Summarize per-thread counters */
-  memset(&stats, 0, sizeof(db_stats_t));
-  for (i = 0; i < sb_globals.num_threads; i++)
-    db_stat_merge(stats, thread_stats[i]);
+  const double seconds = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
 
-  if (type == SB_STAT_INTERMEDIATE)
+  const uint64_t events     = cnt[SB_CNT_EVENT];
+  const uint64_t reads      = cnt[SB_CNT_READ];
+  const uint64_t writes     = cnt[SB_CNT_WRITE];
+  const uint64_t others     = cnt[SB_CNT_OTHER];
+  const uint64_t errors     = cnt[SB_CNT_ERROR];
+  const uint64_t reconnects = cnt[SB_CNT_RECONNECT];
+
+  log_timestamp(LOG_NOTICE, NS2SEC(sb_timer_value(&sb_exec_timer)),
+                "threads: %d tps: %4.2f "
+                "qps: %4.2f (r/w/o: %4.2f/%4.2f/%4.2f) "
+                "latency: %4.2fms (%u%%) errors/s: %4.2f "
+                "reconnects/s: %4.2f",
+                sb_globals.num_running,
+                events / seconds,
+                (reads + writes + others) / seconds,
+                reads / seconds,
+                writes / seconds,
+                others / seconds,
+                percentile_val,
+                sb_globals.percentile,
+                errors / seconds,
+                reconnects / seconds);
+
+  if (sb_globals.tx_rate > 0)
   {
-    seconds = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
-
-    const double percentile_val =
-      sb_histogram_get_pct_intermediate(&sb_latency_histogram,
-                                        sb_globals.percentile);
-    const uint64_t reads = db_stat_diff(stats, last_stats, DB_STAT_READ);
-    const uint64_t writes = db_stat_diff(stats, last_stats, DB_STAT_WRITE);
-    const uint64_t others = db_stat_diff(stats, last_stats, DB_STAT_OTHER);
-    const uint64_t errors = db_stat_diff(stats, last_stats, DB_STAT_ERROR);
-    const uint64_t reconnects = db_stat_diff(stats, last_stats,
-                                            DB_STAT_RECONNECT);
-
-    log_timestamp(LOG_NOTICE, NS2SEC(sb_timer_value(&sb_exec_timer)),
-                  "threads: %d tps: %4.2f "
-                  "qps: %4.2f (r/w/o: %4.2f/%4.2f/%4.2f) "
-                  "latency: %4.2fms (%u%%) errors/s: %4.2f "
-                  "reconnects/s: %4.2f",
-                  sb_globals.num_running,
-                  db_stat_diff(stats, last_stats, DB_STAT_TRX) / seconds,
-                  (reads + writes + others) / seconds,
-                  reads / seconds,
-                  writes / seconds,
-                  others / seconds,
-                  percentile_val,
-                  sb_globals.percentile,
-                  errors / seconds,
-                  reconnects / seconds);
-    if (sb_globals.tx_rate > 0)
-    {
-      pthread_mutex_lock(&event_queue_mutex);
-
-      log_timestamp(LOG_NOTICE, seconds,
-                    "queue length: %d, concurrency: %d",
-                    sb_globals.event_queue_length, sb_globals.concurrency);
-
-      pthread_mutex_unlock(&event_queue_mutex);
-    }
-
-    db_stat_copy(last_stats, stats);
-
-    goto end;
+    pthread_mutex_lock(&event_queue_mutex);
+    log_timestamp(LOG_NOTICE, seconds,
+                  "queue length: %d, concurrency: %d",
+                  sb_globals.event_queue_length, sb_globals.concurrency);
+    pthread_mutex_unlock(&event_queue_mutex);
   }
-  else if (type != SB_STAT_CUMULATIVE)
-    goto end;
+}
 
-  seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
 
-  const uint64_t reads = db_stat_val(stats, DB_STAT_READ);
-  const uint64_t writes = db_stat_val(stats, DB_STAT_WRITE);
-  const uint64_t others = db_stat_val(stats, DB_STAT_OTHER);
-  const uint64_t transactions = db_stat_val(stats, DB_STAT_TRX);
-  const uint64_t errors = db_stat_val(stats, DB_STAT_ERROR);
-  const uint64_t reconnects = db_stat_val(stats, DB_STAT_RECONNECT);
+static void db_print_stats_cumulative(void)
+{
+  sb_counters_t cnt;
+  sb_timer_t    exec_timer;
+  sb_timer_t    fetch_timer;
+
+  /* Don't print stats if no drivers are used */
+  if (!check_print_stats())
+    return;
+
+  sb_counters_agg_cumulative(cnt);
+
+  const double seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
+
+  const uint64_t events     = cnt[SB_CNT_EVENT];
+  const uint64_t reads      = cnt[SB_CNT_READ];
+  const uint64_t writes     = cnt[SB_CNT_WRITE];
+  const uint64_t others     = cnt[SB_CNT_OTHER];
+  const uint64_t errors     = cnt[SB_CNT_ERROR];
+  const uint64_t reconnects = cnt[SB_CNT_RECONNECT];
 
   log_text(LOG_NOTICE, "OLTP test statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
@@ -1077,7 +1014,7 @@ void db_print_stats(sb_stat_t type)
   log_text(LOG_NOTICE, "        total:                           %" PRIu64,
            reads + writes + others);
   log_text(LOG_NOTICE, "    transactions:                        %-6" PRIu64
-           " (%.2f per sec.)", transactions, transactions / seconds);
+           " (%.2f per sec.)", events, events / seconds);
   log_text(LOG_NOTICE, "    queries:                             %-6" PRIu64
            " (%.2f per sec.)", reads + writes + others,
            (reads + writes + others) / seconds);
@@ -1091,7 +1028,7 @@ void db_print_stats(sb_stat_t type)
     sb_timer_init(&exec_timer);
     sb_timer_init(&fetch_timer);
 
-    for (i = 0; i < sb_globals.num_threads; i++)
+    for (unsigned i = 0; i < sb_globals.num_threads; i++)
     {
       exec_timer = sb_timer_merge(&exec_timer, exec_timers + i);
       fetch_timer = sb_timer_merge(&fetch_timer, fetch_timers + i);
@@ -1118,20 +1055,23 @@ void db_print_stats(sb_stat_t type)
     log_text(LOG_DEBUG, "  total:                                %.4fs",
              NS2SEC(sb_timer_sum(&fetch_timer)));
   }
+}
 
-  db_reset_stats();
 
-end:
-  pthread_mutex_unlock(&print_stats_mutex);
+/* Print database-specific test stats */
+
+void db_print_stats(sb_report_t type)
+{
+  if (type == SB_REPORT_INTERMEDIATE)
+    db_print_stats_intermediate();
+  else
+    db_print_stats_cumulative();
 }
 
 
 static void db_reset_stats(void)
 {
   unsigned int i;
-
-  memset(thread_stats, 0, sb_globals.num_threads * sizeof(db_stats_t));
-  memset(last_stats, 0, sizeof(db_stats_t));
 
   /*
     So that intermediate stats are calculated from the current moment

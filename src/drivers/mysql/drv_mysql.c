@@ -529,8 +529,8 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
     }
 
     stmt->query = strdup(query);
-    stmt->stat_type = (mysql_stmt_field_count(mystmt) > 0) ?
-      DB_STAT_READ : DB_STAT_WRITE;
+    stmt->counter = (mysql_stmt_field_count(mystmt) > 0) ?
+      SB_CNT_READ : SB_CNT_WRITE;
 
     return 0;
   }
@@ -697,7 +697,7 @@ static int mysql_drv_reconnect(db_conn_t *sb_con)
 
 
 static db_error_t check_error(db_conn_t *sb_con, const char *func,
-                              const char *query, db_stat_type_t *type)
+                              const char *query, sb_counter_type_t *counter)
 {
   sb_list_item_t *pos;
   unsigned int   tmp;
@@ -737,7 +737,7 @@ static db_error_t check_error(db_conn_t *sb_con, const char *func,
       case CR_TCP_CONNECTION:
       case CR_SERVER_LOST_EXTENDED:
 
-        *type = DB_STAT_RECONNECT;
+        *counter = SB_CNT_RECONNECT;
 
         return mysql_drv_reconnect(sb_con);
 
@@ -746,7 +746,7 @@ static db_error_t check_error(db_conn_t *sb_con, const char *func,
         break;
       }
 
-      *type = DB_STAT_ERROR;
+      *counter = SB_CNT_ERROR;
 
       return DB_ERROR_IGNORABLE;
     }
@@ -759,7 +759,7 @@ static db_error_t check_error(db_conn_t *sb_con, const char *func,
     log_text(LOG_FATAL, "%s returned error %u (%s)",
              func, error, sb_con->sql_errmsg);
 
-  *type = DB_STAT_ERROR;
+  *counter = SB_CNT_ERROR;
 
   return DB_ERROR_FATAL;
 }
@@ -793,15 +793,15 @@ db_error_t mysql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
 
     if (err)
       return check_error(con, "mysql_stmt_execute()", stmt->query,
-                         &rs->stat_type);
+                         &rs->counter);
 
-    if (stmt->stat_type != DB_STAT_READ)
+    if (stmt->counter != SB_CNT_READ)
     {
       rs->nrows = (uint32_t) mysql_stmt_affected_rows(stmt->ptr);
       DEBUG("mysql_stmt_affected_rows(%p) = %u", stmt->ptr,
             (unsigned) rs->nrows);
 
-      rs->stat_type = (rs->nrows > 0) ? DB_STAT_WRITE : DB_STAT_OTHER;
+      rs->counter = (rs->nrows > 0) ? SB_CNT_WRITE : SB_CNT_OTHER;
 
       return DB_ERROR_NONE;
     }
@@ -811,10 +811,10 @@ db_error_t mysql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
     if (err)
     {
       return check_error(con, "mysql_stmt_store_result()", NULL,
-                         &rs->stat_type);
+                         &rs->counter);
     }
 
-    rs->stat_type = stmt->stat_type;
+    rs->counter = stmt->counter;
     rs->nrows = (uint32_t) mysql_stmt_num_rows(stmt->ptr);
     DEBUG("mysql_stmt_num_rows(%p) = %u", rs->statement->ptr,
           (unsigned) (rs->nrows));
@@ -885,7 +885,7 @@ db_error_t mysql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
   DEBUG("mysql_real_query(%p, \"%s\", %zd) = %d", con, query, len, err);
 
   if (SB_UNLIKELY(err != 0))
-    return check_error(sb_conn, "mysql_drv_query()", query, &rs->stat_type);
+    return check_error(sb_conn, "mysql_drv_query()", query, &rs->counter);
 
   /* Store results and get query type */
   MYSQL_RES *res = mysql_store_result(con);
@@ -899,19 +899,19 @@ db_error_t mysql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
       uint32_t nrows = (uint32_t) mysql_affected_rows(con);
       if (nrows > 0)
       {
-        rs->stat_type = DB_STAT_WRITE;
+        rs->counter = SB_CNT_WRITE;
         rs->nrows = nrows;
       }
       else
-        rs->stat_type = DB_STAT_OTHER;
+        rs->counter = SB_CNT_OTHER;
 
       return DB_ERROR_NONE;
     }
 
-    return check_error(sb_conn, "mysql_store_result()", NULL, &rs->stat_type);
+    return check_error(sb_conn, "mysql_store_result()", NULL, &rs->counter);
   }
 
-  rs->stat_type = DB_STAT_READ;
+  rs->counter = SB_CNT_READ;
   rs->ptr = (void *)res;
 
   rs->nrows = mysql_num_rows(res);

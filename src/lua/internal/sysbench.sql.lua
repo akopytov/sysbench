@@ -60,14 +60,14 @@ typedef struct
 
 typedef enum
 {
-  DB_STAT_OTHER,
-  DB_STAT_READ,
-  DB_STAT_WRITE,
-  DB_STAT_TRX,
-  DB_STAT_ERROR,
-  DB_STAT_RECONNECT,
-  DB_STAT_MAX
-} sql_stat_type;
+  SB_CNT_OTHER,
+  SB_CNT_READ,
+  SB_CNT_WRITE,
+  SB_CNT_TRX,
+  SB_CNT_ERROR,
+  SB_CNT_RECONNECT,
+  SB_CNT_MAX
+} sb_counter_type;
 
 typedef struct
 {
@@ -91,7 +91,7 @@ typedef struct
 
 typedef struct
 {
-  sql_stat_type  stat_type;     /* Statistical counter type */
+  sb_counter_type   counter;     /* Statistical counter type */
   uint32_t       nrows;         /* Number of affected rows */
   uint32_t       nfields;       /* Number of fields */
   sql_statement  *statement;    /* Pointer to prepared statement (if used) */

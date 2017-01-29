@@ -252,7 +252,7 @@ static int file_execute_event(sb_event_t *, int);
 static int file_thread_done(int);
 #endif
 static int file_done(void);
-static void file_print_stats(sb_stat_t);
+static void file_print_stats(sb_report_t);
 
 static sb_test_t fileio_test =
 {
@@ -836,7 +836,7 @@ void file_print_mode(void)
 /* Print test statistics */
 
 
-void file_print_stats(sb_stat_t type)
+void file_print_stats(sb_report_t type)
 {
   double seconds;
   unsigned long long diff_read;
@@ -844,7 +844,7 @@ void file_print_stats(sb_stat_t type)
   unsigned long long diff_other_ops;
 
   switch (type) {
-  case SB_STAT_INTERMEDIATE:
+  case SB_REPORT_INTERMEDIATE:
     {
       SB_THREAD_MUTEX_LOCK();
 
@@ -876,7 +876,7 @@ void file_print_stats(sb_stat_t type)
       break;
     }
 
-  case SB_STAT_CUMULATIVE:
+  case SB_REPORT_CUMULATIVE:
     seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
 
     log_text(LOG_NOTICE, "\n"

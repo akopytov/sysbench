@@ -487,7 +487,7 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
   case PGRES_TUPLES_OK:
     rs->nrows = PQntuples(pgres);
     rs->nfields = PQnfields(pgres);
-    rs->stat_type = DB_STAT_READ;
+    rs->counter = SB_CNT_READ;
 
     rc = DB_ERROR_NONE;
 
@@ -495,14 +495,14 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
 
   case PGRES_COMMAND_OK:
     rs->nrows = strtoul(PQcmdTuples(pgres), NULL, 10);;
-    rs->stat_type = (rs->nrows > 0) ? DB_STAT_WRITE : DB_STAT_OTHER;
+    rs->counter = (rs->nrows > 0) ? SB_CNT_WRITE : SB_CNT_OTHER;
     rc = DB_ERROR_NONE;
 
     break;
 
   case PGRES_FATAL_ERROR:
     rs->nrows = 0;
-    rs->stat_type = DB_STAT_ERROR;
+    rs->counter = SB_CNT_ERROR;
 
     con->sql_state = PQresultErrorField(pgres, PG_DIAG_SQLSTATE);
     con->sql_errmsg = PQresultErrorField(pgres, PG_DIAG_MESSAGE_PRIMARY);
@@ -528,7 +528,7 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
 
   default:
     rs->nrows = 0;
-    rs->stat_type = DB_STAT_ERROR;
+    rs->counter = SB_CNT_ERROR;
     rc = DB_ERROR_FATAL;
   }
 

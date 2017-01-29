@@ -133,7 +133,7 @@ static int sb_lua_op_done(void);
 static int sb_lua_op_thread_init(int);
 static int sb_lua_op_thread_run(int);
 static int sb_lua_op_thread_done(int);
-static void sb_lua_op_print_stats(sb_stat_t type);
+static void sb_lua_op_print_stats(sb_report_t type);
 
 static sb_operations_t lua_ops = {
    .init = sb_lua_op_init,
@@ -449,7 +449,7 @@ int sb_lua_op_thread_done(int thread_id)
   return rc;
 }
 
-void sb_lua_op_print_stats(sb_stat_t type)
+void sb_lua_op_print_stats(sb_report_t type)
 {
   db_print_stats(type);
 }

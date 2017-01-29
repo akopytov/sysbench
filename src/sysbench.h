@@ -86,9 +86,9 @@ typedef struct
 
 typedef enum
 {
-  SB_STAT_INTERMEDIATE,
-  SB_STAT_CUMULATIVE
-} sb_stat_t;
+  SB_REPORT_INTERMEDIATE,
+  SB_REPORT_CUMULATIVE
+} sb_report_t;
 
 /* Commands */
 
@@ -104,7 +104,7 @@ typedef int sb_op_thread_run(int);
 typedef void sb_op_print_mode(void);
 typedef sb_event_t sb_op_next_event(int);
 typedef int sb_op_execute_event(sb_event_t *, int);
-typedef void sb_op_print_stats(sb_stat_t);
+typedef void sb_op_print_stats(sb_report_t);
 typedef int sb_op_thread_done(int);
 typedef int sb_op_cleanup(void);
 typedef int sb_op_done(void);

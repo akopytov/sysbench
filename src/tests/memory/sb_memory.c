@@ -58,7 +58,7 @@ static int memory_init(void);
 static void memory_print_mode(void);
 static sb_event_t memory_next_event(int);
 static int memory_execute_event(sb_event_t *, int);
-static void memory_print_stats(sb_stat_t type);
+static void memory_print_stats(sb_report_t type);
 
 static sb_test_t memory_test =
 {
@@ -340,13 +340,13 @@ void memory_print_mode(void)
 }
 
 
-void memory_print_stats(sb_stat_t type)
+void memory_print_stats(sb_report_t type)
 {
   double       seconds;
   const double megabyte = 1024.0 * 1024.0;
 
   switch (type) {
-  case SB_STAT_INTERMEDIATE:
+  case SB_REPORT_INTERMEDIATE:
     SB_THREAD_MUTEX_LOCK();
     seconds = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
 
@@ -358,7 +358,7 @@ void memory_print_stats(sb_stat_t type)
 
     break;
 
-  case SB_STAT_CUMULATIVE:
+  case SB_REPORT_CUMULATIVE:
     seconds = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer1));
 
     log_text(LOG_NOTICE, "Operations performed: %d (%8.2f ops/sec)\n",

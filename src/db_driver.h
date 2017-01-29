@@ -26,8 +26,7 @@
 #include "sysbench.h"
 #include "sb_list.h"
 #include "sb_histogram.h"
-#include "sb_util.h"
-#include "ck_pr.h"
+#include "sb_counter.h"
 
 /* Prepared statements usage modes */
 
@@ -174,18 +173,6 @@ typedef struct
   pthread_mutex_t mutex;
 } db_driver_t;
 
-/* Query type for statistics */
-
-typedef enum {
-  DB_STAT_OTHER,
-  DB_STAT_READ,
-  DB_STAT_WRITE,
-  DB_STAT_TRX,
-  DB_STAT_ERROR,
-  DB_STAT_RECONNECT,
-  DB_STAT_MAX
-} db_stat_type_t;
-
 /* Row value definition */
 
 typedef struct {
@@ -205,7 +192,7 @@ typedef struct db_row
 
 typedef struct db_result
 {
-  db_stat_type_t stat_type;     /* Statistical counter type */
+  sb_counter_type_t counter;     /* Statistical counter type */
   uint32_t       nrows;         /* Number of affected rows */
   uint32_t       nfields;       /* Number of fields */
   struct db_stmt *statement;    /* Pointer to prepared statement (if used) */
@@ -267,20 +254,11 @@ typedef struct db_stmt
   db_bind_t       *bound_res;      /* Array of bound results for emulated PS */ 
   db_bind_t       *bound_res_len;  /* Length of the bound_res array */
   char            emulated;        /* Should this statement be emulated? */
-  db_stat_type_t  stat_type;       /* Query type */
+  sb_counter_type_t  counter;       /* Query type */
   void            *ptr;            /* Pointer to driver-specific data structure */
 } db_stmt_t;
 
-/*
-  sizeof(db_stats_t) must be multiple of CK_MD_CACHELINE to avoid cache
-  line sharing.
-*/
-typedef uint64_t
-db_stats_t[SB_ALIGN(DB_STAT_MAX * sizeof(uint64_t), CK_MD_CACHELINE) /
-           sizeof(uint64_t)];
-
 extern db_globals_t db_globals;
-extern db_stats_t *thread_stats;
 
 /* Database abstraction layer calls */
 
@@ -332,17 +310,7 @@ int db_bulk_insert_next(db_conn_t *, const char *, size_t);
 int db_bulk_insert_done(db_conn_t *);
 
 /* Print database-specific test stats */
-void db_print_stats(sb_stat_t type);
-
-/* Initialize per-thread stats */
-int db_thread_stat_init(void);
-
-/* Increment a given stat counter for a connection */
-static inline void db_thread_stat_inc(int id, db_stat_type_t type)
-{
-  ck_pr_inc_64(&thread_stats[id][type]);
-}
-
+void db_print_stats(sb_report_t type);
 
 /* DB drivers registrars */
 

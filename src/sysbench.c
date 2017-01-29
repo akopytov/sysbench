@@ -186,7 +186,7 @@ static void sigalrm_forced_shutdown_handler(int sig)
            "The --max-time limit has expired, forcing shutdown...");
 
   if (current_test && current_test->ops.print_stats)
-    current_test->ops.print_stats(SB_STAT_CUMULATIVE);
+    current_test->ops.print_stats(SB_REPORT_CUMULATIVE);
 
   log_done();
 
@@ -548,7 +548,7 @@ void sb_event_stop(int thread_id)
   if (sb_globals.percentile > 0)
     sb_histogram_update(&sb_latency_histogram, NS2MS(value));
 
-  db_thread_stat_inc(thread_id, DB_STAT_TRX);
+  sb_counter_inc(thread_id, SB_CNT_EVENT);
 
   if (sb_globals.tx_rate > 0)
   {
@@ -746,7 +746,7 @@ static void *report_thread_proc(void *arg)
     */
     pthread_mutex_lock(&report_interval_mutex);
     if (sb_globals.report_interval > 0)
-      current_test->ops.print_stats(SB_STAT_INTERMEDIATE);
+      current_test->ops.print_stats(SB_REPORT_INTERMEDIATE);
     pthread_mutex_unlock(&report_interval_mutex);
 
     curr_ns = sb_timer_value(&sb_exec_timer);
@@ -800,7 +800,7 @@ static void *checkpoints_thread_proc(void *arg)
     SB_THREAD_MUTEX_LOCK();
     log_timestamp(LOG_NOTICE, NS2SEC(sb_timer_value(&sb_exec_timer)),
                   "Checkpoint report:");
-    current_test->ops.print_stats(SB_STAT_CUMULATIVE);
+    current_test->ops.print_stats(SB_REPORT_CUMULATIVE);
     print_global_stats();
     SB_THREAD_MUTEX_UNLOCK();
   }
@@ -973,7 +973,7 @@ static int run_test(sb_test_t *test)
   
   /* print test-specific stats */
   if (test->ops.print_stats != NULL && !sb_globals.error)
-    test->ops.print_stats(SB_STAT_CUMULATIVE);
+    test->ops.print_stats(SB_REPORT_CUMULATIVE);
 
   pthread_mutex_destroy(&sb_globals.exec_mutex);
 
@@ -1173,7 +1173,7 @@ int main(int argc, char *argv[])
   }
   
   /* Initialize global variables and logger */
-  if (init() || log_init() || db_thread_stat_init())
+  if (init() || log_init() || sb_counters_init())
     return EXIT_FAILURE;
 
   print_header();
@@ -1287,6 +1287,8 @@ int main(int argc, char *argv[])
   }
 
   db_done();
+
+  sb_counters_done();
 
   log_done();
 
