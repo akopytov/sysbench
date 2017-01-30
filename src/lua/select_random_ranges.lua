@@ -56,6 +56,10 @@ function thread_init()
    thread_id = sysbench.tid % sysbench.opt.num_threads
 end
 
+function thread_done()
+   stmt:close()
+end
+
 function event()
    -- To prevent overlapping of our range queries we need to partition the whole
    -- table into num_threads segments and then make each thread work with its

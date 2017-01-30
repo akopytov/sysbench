@@ -351,6 +351,15 @@ function thread_init()
    prepare_statements()
 end
 
+function thread_done()
+   -- Close prepared statements
+   for t = 1, sysbench.opt.tables do
+      for k, s in pairs(stmt[t]) do
+         stmt[t][k]:close()
+      end
+   end
+end
+
 function cleanup()
    local drv = sysbench.sql.driver()
    local con = drv:connect()
