@@ -2,6 +2,9 @@
 #
 # Travis CI configuration
 
+dist: trusty
+sudo: false
+
 language: c
 
 os:
