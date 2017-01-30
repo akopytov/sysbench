@@ -40,6 +40,7 @@ end
 
 function thread_done(thread_9d)
    con:bulk_insert_done()
+   con:disconnect()
 end
 
 function cleanup()
