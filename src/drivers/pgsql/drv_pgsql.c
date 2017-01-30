@@ -263,7 +263,7 @@ int pgsql_drv_disconnect(db_conn_t *sb_conn)
 {
   PGconn *con = (PGconn *)sb_conn->ptr;
 
-  /* These might be allocation in pgsql_check_status() */
+  /* These might be allocated in pgsql_check_status() */
   xfree(sb_conn->sql_state);
   xfree(sb_conn->sql_errmsg);
 
