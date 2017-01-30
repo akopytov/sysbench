@@ -27,7 +27,6 @@ addons:
     - libpq-dev
     - libaio-dev
     - clang-3.6
-    - gcc-6
 
 services:
   - mysql
@@ -60,9 +59,6 @@ before_install:
       if [ "${CC}" = "clang" ]
       then
         CC=clang-3.6
-      elif [ "${CC}" = "gcc" ]
-      then
-        CC=gcc-6
       fi
       ;;
     esac
