@@ -691,7 +691,7 @@ bool sb_more_events(int thread_id)
   /* If we are in tx_rate mode, we take events from queue */
   if (sb_globals.tx_rate > 0)
   {
-    void *ptr;
+    void *ptr = NULL;
 
     while (!ck_ring_dequeue_spmc(&queue_ring, queue_ring_buffer, &ptr) &&
            !ck_pr_load_int(&queue_is_full))
@@ -725,7 +725,7 @@ sb_event_t sb_next_event(sb_test_t *test, int thread_id)
   /* If we are in tx_rate mode, we take events from queue */
   if (sb_globals.tx_rate > 0)
   {
-    void *ptr;
+    void *ptr = NULL;
 
     while (!ck_ring_dequeue_spmc(&queue_ring, queue_ring_buffer, &ptr) &&
            !ck_pr_load_int(&queue_is_full))
