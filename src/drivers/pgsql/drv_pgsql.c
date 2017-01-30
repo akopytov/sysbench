@@ -33,6 +33,8 @@
 #include "db_driver.h"
 #include "sb_rand.h"
 
+#define xfree(ptr) ({ if (ptr) free((void *)ptr); ptr = NULL; })
+
 /* Maximum length of text representation of bind parameters */
 #define MAX_PARAM_LENGTH 256UL
 
@@ -255,17 +257,19 @@ int pgsql_drv_connect(db_conn_t *sb_conn)
   return 0;
 }
 
-
 /* Disconnect from database */
-
 
 int pgsql_drv_disconnect(db_conn_t *sb_conn)
 {
   PGconn *con = (PGconn *)sb_conn->ptr;
 
+  /* These might be allocation in pgsql_check_status() */
+  xfree(sb_conn->sql_state);
+  xfree(sb_conn->sql_errmsg);
+
   if (con != NULL)
     PQfinish(con);
-  
+
   return 0;
 }
 
@@ -360,12 +364,15 @@ int pgsql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
     {
       log_text(LOG_FATAL, "PQprepare() failed: %s", PQerrorMessage(con));
 
+      PQclear(pgres);
+
       free(stmt->query);
       free(pgstmt->name);
       free(pgstmt);
 
       return 1;
     }
+    PQclear(pgres);
     pgstmt->prepared = 1;
   }
 
@@ -504,13 +511,23 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
     rs->nrows = 0;
     rs->counter = SB_CNT_ERROR;
 
-    con->sql_state = PQresultErrorField(pgres, PG_DIAG_SQLSTATE);
-    con->sql_errmsg = PQresultErrorField(pgres, PG_DIAG_MESSAGE_PRIMARY);
+    /*
+      Duplicate strings here, because PostgreSQL will deallocate them on
+      PQclear() call below. They will be deallocated either on subsequent calls
+      to pgsql_check_status() or in pgsql_drv_disconnect().
+    */
+    xfree(con->sql_state);
+    xfree(con->sql_errmsg);
+
+    con->sql_state = strdup(PQresultErrorField(pgres, PG_DIAG_SQLSTATE));
+    con->sql_errmsg = strdup(PQresultErrorField(pgres, PG_DIAG_MESSAGE_PRIMARY));
 
     if (!strcmp(con->sql_state, "40P01") /* deadlock_detected */ ||
         !strcmp(con->sql_state, "23505") /* unique violation */)
     {
-      PQexec(pgcon, "ROLLBACK");
+      PGresult *tmp;
+      tmp = PQexec(pgcon, "ROLLBACK");
+      PQclear(tmp);
       rc = DB_ERROR_IGNORABLE;
     }
     else
@@ -523,6 +540,8 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
 
       rc =  DB_ERROR_FATAL;
     }
+
+    PQclear(pgres);
 
     break;
 
@@ -748,7 +767,9 @@ int pgsql_drv_close(db_stmt_t *stmt)
         free(pgstmt->pvalues[i]);
     free(pgstmt->pvalues);
   }
-  
+
+  xfree(stmt->ptr);
+
   return 0;
 }
 
