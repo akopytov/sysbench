@@ -105,6 +105,9 @@ typedef struct {
   uint64_t other;               /* Number of other operations */
   uint64_t errors;              /* Number of ignored errors */
   uint64_t reconnects;          /* Number of reconnects to server */
+
+  uint64_t queue_length;        /* Event queue length (tx_rate-only) */
+  uint64_t concurrency;         /* Number of in-flight events (tx_rate-only) */
 } sb_stat_t;
 
 /* Commands */
@@ -192,13 +195,11 @@ typedef struct
   unsigned char   debug;        /* debug flag */
   unsigned int    timeout;      /* forced shutdown timeout */
   unsigned char   validate;     /* validation flag */
-  unsigned char   verbosity;    /* log verbosity */
-  int             event_queue_length; /* length of request queue when tx-rate is
-                                         used */
-  int             concurrency;  /* number of concurrent requests when tx-rate is
-                                used */
-  /* 1 when forced shutdown is in progress, 0 otherwise */
-  int             force_shutdown; /* whether we must force test shutdown */
+  unsigned char   verbosity CK_CC_CACHELINE;    /* log verbosity */
+  int             concurrency CK_CC_CACHELINE;  /* number of concurrent requests
+                                                when tx-rate is used */
+  int             force_shutdown CK_CC_CACHELINE; /* whether we must force test
+                                                  shutdown */
   int             forced_shutdown_in_progress;
   uint64_t        nevents CK_CC_CACHELINE; /* event counter */
 } sb_globals_t;

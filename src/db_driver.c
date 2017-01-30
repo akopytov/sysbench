@@ -956,11 +956,9 @@ void db_report_intermediate(sb_stat_t *stat)
 
   if (sb_globals.tx_rate > 0)
   {
-    pthread_mutex_lock(&event_queue_mutex);
-    log_timestamp(LOG_NOTICE, seconds,
-                  "queue length: %d, concurrency: %d",
-                  sb_globals.event_queue_length, sb_globals.concurrency);
-    pthread_mutex_unlock(&event_queue_mutex);
+    log_timestamp(LOG_NOTICE, stat->time_total,
+                  "queue length: %" PRIu64", concurrency: %" PRIu64,
+                  stat->queue_length, stat->concurrency);
   }
 }
 

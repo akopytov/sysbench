@@ -1514,6 +1514,12 @@ static void sb_lua_report_intermediate(sb_stat_t *stat)
 
   stat_to_lua_table(L, stat);
 
+  /*
+    The following is only available for intermediate reports with tx_rate > 0
+  */
+  stat_to_number(queue_length);
+  stat_to_number(concurrency);
+
   if (lua_pcall(L, 1, 0, 0))
   {
     call_error(L, REPORT_INTERMEDIATE_HOOK);
