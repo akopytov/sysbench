@@ -779,6 +779,10 @@ db_error_t mysql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
   if (args.dry_run)
     return DB_ERROR_NONE;
 
+  con->sql_errno = 0;
+  con->sql_state = NULL;
+  con->sql_errmsg = NULL;
+
   if (!stmt->emulated)
   {
     if (stmt->ptr == NULL)
@@ -877,6 +881,10 @@ db_error_t mysql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
 
   if (args.dry_run)
     return DB_ERROR_NONE;
+
+  sb_conn->sql_errno = 0;
+  sb_conn->sql_state = NULL;
+  sb_conn->sql_errmsg = NULL;
 
   db_mysql_con = (db_mysql_conn_t *)sb_conn->ptr;
   con = db_mysql_con->mysql;

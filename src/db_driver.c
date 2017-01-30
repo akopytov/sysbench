@@ -442,9 +442,6 @@ db_result_t *db_execute(db_stmt_t *stmt)
   db_result_t     *rs = &con->rs;
   int             rc;
 
-  con->sql_errno = 0;
-  con->sql_state = NULL;
-
   if (con->state == DB_CONN_INVALID)
   {
     log_text(LOG_ALERT, "attempt to use an already closed connection");
@@ -528,9 +525,6 @@ db_result_t *db_query(db_conn_t *con, const char *query, size_t len)
 {
   db_result_t *rs = &con->rs;
   int         rc;
-
-  con->sql_errno = 0;
-  con->sql_state = NULL;
 
   if (con->state == DB_CONN_INVALID)
   {

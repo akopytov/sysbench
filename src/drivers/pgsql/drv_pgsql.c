@@ -580,6 +580,10 @@ db_error_t pgsql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
   db_error_t      rc;
   unsigned long   len;
 
+  con->sql_errno = 0;
+  xfree(con->sql_state);
+  xfree(con->sql_errmsg);
+
   if (!stmt->emulated)
   {
     pgstmt = stmt->ptr;
@@ -676,6 +680,10 @@ db_error_t pgsql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
   db_error_t     rc;
 
   (void)len; /* unused */
+
+  sb_conn->sql_errno = 0;
+  xfree(sb_conn->sql_state);
+  xfree(sb_conn->sql_errmsg);
 
   pgres = PQexec(pgcon, query);
   rc = pgsql_check_status(sb_conn, pgres, "PQexec", query, rs);
