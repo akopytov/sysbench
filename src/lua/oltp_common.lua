@@ -364,6 +364,7 @@ function thread_done()
    if (stmt.commit ~= nil) then
       stmt.commit:close()
    end
+   con:close()
 end
 
 function cleanup()

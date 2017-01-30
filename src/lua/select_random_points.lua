@@ -55,6 +55,7 @@ end
 
 function thread_done()
    stmt:close()
+   con:close()
 end
 
 function event()
