@@ -505,6 +505,12 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
     rs->counter = (rs->nrows > 0) ? SB_CNT_WRITE : SB_CNT_OTHER;
     rc = DB_ERROR_NONE;
 
+    /*
+      Since we are not returning a result set, the SQL layer will never call
+      pgsql_drv_free_results(). So we must call PQclear() here.
+    */
+    PQclear(pgres);
+
     break;
 
   case PGRES_FATAL_ERROR:
@@ -611,7 +617,7 @@ db_error_t pgsql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
 
     rc = pgsql_check_status(con, pgres, "PQexecPrepared", NULL, rs);
 
-    rs->ptr = (void *) pgres;
+    rs->ptr = (rs->counter == SB_CNT_READ) ? (void *) pgres : NULL;
 
     return rc;
   }
@@ -672,7 +678,7 @@ db_error_t pgsql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
   pgres = PQexec(pgcon, query);
   rc = pgsql_check_status(sb_conn, pgres, "PQexec", query, rs);
 
-  rs->ptr = pgres;
+  rs->ptr = (rs->counter == SB_CNT_READ) ? (void *) pgres : NULL;
 
   return rc;
 }
