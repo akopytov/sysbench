@@ -26,6 +26,8 @@ addons:
     - libmysqlclient-dev
     - libpq-dev
     - libaio-dev
+    - clang-3.6
+    - gcc-6
 
 services:
   - mysql
@@ -53,6 +55,15 @@ before_install:
       pg_ctl -wD /usr/local/var/postgres start
       echo "Creating user postgres"
       createuser -s postgres
+      ;;
+    linux)
+      if [ "${CC}" = "clang" ]
+      then
+        CC=clang-3.6
+      elif [ "${CC}" = "gcc" ]
+      then
+        CC=gcc-6
+      fi
       ;;
     esac
 
