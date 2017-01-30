@@ -16,5 +16,5 @@
 
 # Run a test that does not support checkpoint reports
 
-  $ sysbench cpu --report-checkpoints=1 --max-time=1 run | grep 'Checkpoint report'
+  $ sysbench cpu --report-checkpoints=1 --max-time=2 run | grep 'Checkpoint report'
   [   1s] Checkpoint report:

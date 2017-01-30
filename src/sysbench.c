@@ -1382,6 +1382,7 @@ static int init(void)
 int main(int argc, char *argv[])
 {
   sb_test_t *test = NULL;
+  int rc;
 
   /* Initialize options library */
   sb_options_init();
@@ -1473,20 +1474,22 @@ int main(int argc, char *argv[])
 
   if (sb_lua_loaded() && sb_lua_custom_command_defined(sb_globals.cmdname))
   {
-    return sb_lua_call_custom_command(sb_globals.cmdname);
+    rc =  sb_lua_call_custom_command(sb_globals.cmdname);
   }
   else if (!strcmp(sb_globals.cmdname, "help"))
   {
     if (test->builtin_cmds.help != NULL)
     {
       test->builtin_cmds.help();
-      return EXIT_SUCCESS;
+      rc = EXIT_SUCCESS;
+      goto end;
     }
     else if (test->args != NULL)
     {
       printf("%s options:\n", test->sname);
       sb_print_test_options();
-      return EXIT_SUCCESS;
+      rc = EXIT_SUCCESS;
+      goto end;
     }
 
     /* We don't know want to print as help text, let the user know */
@@ -1500,10 +1503,11 @@ int main(int argc, char *argv[])
     {
       fprintf(stderr, "'%s' test does not implement the 'prepare' command.\n",
               test->sname);
-      return EXIT_FAILURE;
+      rc = EXIT_FAILURE;
+      goto end;
     }
 
-    return test->builtin_cmds.prepare();
+    rc = test->builtin_cmds.prepare();
   }
   else if (!strcmp(sb_globals.cmdname, "cleanup"))
   {
@@ -1511,22 +1515,23 @@ int main(int argc, char *argv[])
     {
       fprintf(stderr, "'%s' test does not implement the 'cleanup' command.\n",
               test->sname);
-      return EXIT_FAILURE;
+      rc = EXIT_FAILURE;
+      goto end;
     }
 
-    return test->builtin_cmds.cleanup();
+    rc = test->builtin_cmds.cleanup();
   }
   else if (!strcmp(sb_globals.cmdname, "run"))
   {
-    if (run_test(test))
-      return EXIT_FAILURE;
+    rc = run_test(test) ? EXIT_FAILURE : EXIT_SUCCESS;
   }
   else
   {
     fprintf(stderr, "Unknown command: %s", sb_globals.cmdname);
-    return EXIT_FAILURE;
+    rc = EXIT_FAILURE;
   }
 
+end:
   if (sb_lua_loaded())
     sb_lua_done();
 
@@ -1548,7 +1553,7 @@ int main(int argc, char *argv[])
   if (sb_globals.n_checkpoints > 0)
     pthread_mutex_destroy(&timers_mutex);
 
-  return EXIT_SUCCESS;
+  return rc;
 }
 
 /* Print a description of available command line options for the current test */
