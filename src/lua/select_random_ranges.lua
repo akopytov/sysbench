@@ -58,6 +58,7 @@ end
 
 function thread_done()
    stmt:close()
+   con:disconnect()
 end
 
 function event()
