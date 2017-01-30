@@ -1513,6 +1513,8 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
+  sb_lua_done();
+
   db_done();
 
   sb_counters_done();

@@ -27,6 +27,8 @@
 
 sb_test_t *sb_load_lua(const char *testname);
 
+void sb_lua_done(void);
+
 int sb_lua_hook_call(lua_State *L, const char *name);
 
 bool sb_lua_custom_command_defined(const char *name);

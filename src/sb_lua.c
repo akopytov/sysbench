@@ -57,6 +57,8 @@
 #define REPORT_INTERMEDIATE_HOOK "report_intermediate"
 #define REPORT_CUMULATIVE_HOOK "report_cumulative"
 
+#define xfree(ptr) ({ if ((ptr) != NULL) free((void *) ptr); ptr = NULL; })
+
 /* Interpreter context */
 
 typedef struct {
@@ -202,12 +204,6 @@ static bool func_available(lua_State *L, const char *func)
   lua_pop(L, 1);
 
   return rc;
-}
-
-static void xfree(const void *ptr)
-{
-  if (ptr != NULL)
-    free((void *) ptr);
 }
 
 /* Export command line options */
@@ -376,14 +372,35 @@ sb_test_t *sb_load_lua(const char *testname)
 
  error:
 
-  sb_lua_close_state(gstate);
-  xfree(states);
-
-  xfree(sbtest.sname);
-  xfree(sbtest.lname);
+  sb_lua_done();
 
   return NULL;
 }
+
+
+void sb_lua_done(void)
+{
+  sb_lua_close_state(gstate);
+  gstate = NULL;
+
+  xfree(states);
+
+  if (sbtest.args != NULL)
+  {
+    for (size_t i = 0; sbtest.args[i].name != NULL; i++)
+    {
+      xfree(sbtest.args[i].name);
+      xfree(sbtest.args[i].desc);
+      xfree(sbtest.args[i].value);
+    }
+
+    xfree(sbtest.args);
+  }
+
+  xfree(sbtest.sname);
+  xfree(sbtest.lname);
+}
+
 
 /* Initialize Lua script */
 
@@ -477,8 +494,6 @@ int sb_lua_op_thread_done(int thread_id)
 
 int sb_lua_op_done(void)
 {
-  xfree(states);
-
   lua_getglobal(gstate, DONE_FUNC);
   if (!lua_isnil(gstate, -1))
   {
@@ -489,22 +504,7 @@ int sb_lua_op_done(void)
     }
   }
 
-  sb_lua_close_state(gstate);
-
-  if (sbtest.args != NULL)
-  {
-    for (size_t i = 0; sbtest.args[i].name != NULL; i++)
-    {
-      xfree(sbtest.args[i].name);
-      xfree(sbtest.args[i].desc);
-      xfree(sbtest.args[i].value);
-    }
-
-    free(sbtest.args);
-  }
-
-  xfree(sbtest.sname);
-  xfree(sbtest.lname);
+  sb_lua_done();
 
   return 0;
 }
