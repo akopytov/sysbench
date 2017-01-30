@@ -435,13 +435,15 @@ int pgsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
   /* Do prepare */
   pgres = PQprepare(con, pgstmt->name, stmt->query, pgstmt->nparams,
                     pgstmt->ptypes);
-      
+
   if (PQresultStatus(pgres) != PGRES_COMMAND_OK)
   {
     log_text(LOG_FATAL, "PQprepare() failed: %s", PQerrorMessage(con));
     return 1;
   }
-    
+
+  PQclear(pgres);
+
   pgstmt->pvalues = (char **)calloc(len, sizeof(char *));
   if (pgstmt->pvalues == NULL)
     return 1;
