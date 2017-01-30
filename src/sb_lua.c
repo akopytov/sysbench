@@ -779,6 +779,8 @@ int sb_lua_close_state(lua_State *state)
     db_driver = NULL;
   }
 
+  xfree(tls_lua_ctxt);
+
   return 0;
 }
 
