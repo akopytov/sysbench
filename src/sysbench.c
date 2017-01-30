@@ -949,6 +949,11 @@ static void *report_thread_proc(void *arg)
   /* Initialize thread-local RNG state */
   sb_rand_thread_init();
 
+  if (sb_lua_loaded() && sb_lua_report_thread_init())
+  {
+    return NULL;
+  }
+
   log_text(LOG_DEBUG, "Reporting thread started");
 
   /* Wait for other threads to initialize */
@@ -959,6 +964,7 @@ static void *report_thread_proc(void *arg)
 
   pause_ns = interval_ns;
   prev_ns = sb_timer_value(&sb_exec_timer) + interval_ns;
+
   for (;;)
   {
     usleep(pause_ns / 1000);
@@ -991,6 +997,11 @@ static void *checkpoints_thread_proc(void *arg)
   /* Initialize thread-local RNG state */
   sb_rand_thread_init();
 
+  if (sb_lua_loaded() && sb_lua_report_thread_init())
+  {
+    return NULL;
+  }
+
   log_text(LOG_DEBUG, "Checkpoints report thread started");
 
   /* Wait for other threads to initialize */
@@ -1014,6 +1025,9 @@ static void *checkpoints_thread_proc(void *arg)
 
     report_cumulative();
   }
+
+  if (sb_lua_loaded())
+    sb_lua_report_thread_done();
 
   return NULL;
 }
@@ -1457,7 +1471,7 @@ int main(int argc, char *argv[])
   if (parse_test_arguments(test, argc, argv))
     return EXIT_FAILURE;
 
-  if (sb_lua_custom_command_defined(sb_globals.cmdname))
+  if (sb_lua_loaded() && sb_lua_custom_command_defined(sb_globals.cmdname))
   {
     return sb_lua_call_custom_command(sb_globals.cmdname);
   }
@@ -1513,7 +1527,8 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
-  sb_lua_done();
+  if (sb_lua_loaded())
+    sb_lua_done();
 
   db_done();
 

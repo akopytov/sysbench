@@ -63,6 +63,8 @@
 
 typedef struct {
   db_conn_t *con;      /* Database connection */
+  db_driver_t *driver;
+  lua_State *L;
 } sb_lua_ctxt_t;
 
 typedef struct {
@@ -109,12 +111,7 @@ static lua_State **states CK_CC_CACHELINE;
 
 static sb_test_t sbtest CK_CC_CACHELINE;
 
-static TLS sb_lua_ctxt_t *tls_lua_ctxt CK_CC_CACHELINE;
-
-/* Database driver */
-static TLS db_driver_t *db_driver CK_CC_CACHELINE;
-
-static TLS lua_State *sb_tls_lua_state CK_CC_CACHELINE;
+static TLS sb_lua_ctxt_t tls_lua_ctxt CK_CC_CACHELINE;
 
 /* List of pre-loaded internal scripts */
 static internal_script_t internal_scripts[] = {
@@ -675,7 +672,7 @@ static int read_option_defs(lua_State *L)
 
 /* Allocate and initialize new interpreter state */
 
-static lua_State *sb_lua_new_state()
+static lua_State *sb_lua_new_state(void)
 {
   lua_State      *L;
 
@@ -759,9 +756,7 @@ static lua_State *sb_lua_new_state()
   }
 
   /* Create new L context */
-  tls_lua_ctxt = calloc(1, sizeof(sb_lua_ctxt_t));
-  if (tls_lua_ctxt == NULL)
-    return NULL;
+  tls_lua_ctxt.L = L;
 
   return L;
 }
@@ -770,16 +765,23 @@ static lua_State *sb_lua_new_state()
 
 int sb_lua_close_state(lua_State *state)
 {
+  sb_lua_ctxt_t * const ctxt = &tls_lua_ctxt;
+
   if (state != NULL)
     lua_close(state);
 
-  if (db_driver != NULL)
+  if (ctxt != NULL)
   {
-    db_destroy(db_driver);
-    db_driver = NULL;
+    sb_lua_db_disconnect(state);
+
+    if (ctxt->driver != NULL)
+    {
+      db_destroy(ctxt->driver);
+      ctxt->driver = NULL;
+    }
   }
 
-  xfree(tls_lua_ctxt);
+  ctxt->L = NULL;
 
   return 0;
 }
@@ -827,14 +829,16 @@ int sb_lua_cmd_help(void)
 
 int sb_lua_db_connect(lua_State *L)
 {
-  db_driver = db_create(NULL);
-  if (db_driver == NULL)
+  sb_lua_ctxt_t * const ctxt = &tls_lua_ctxt;
+
+  ctxt->driver = db_create(NULL);
+  if (ctxt->driver == NULL)
     luaL_error(L, "DB initialization failed");
-  lua_pushstring(L, db_driver->sname);
+  lua_pushstring(L, ctxt->driver->sname);
   lua_setglobal(L, "db_driver");
 
-  tls_lua_ctxt->con = db_connection_create(db_driver);
-  if (tls_lua_ctxt->con == NULL)
+  ctxt->con = db_connection_create(ctxt->driver);
+  if (ctxt->con == NULL)
     luaL_error(L, "Failed to connect to the database");
 
   return 0;
@@ -844,13 +848,13 @@ int sb_lua_db_disconnect(lua_State *L)
 {
   (void) L; /* unused */
 
-  if (tls_lua_ctxt->con)
+  if (tls_lua_ctxt.con)
   {
-    db_connection_close(tls_lua_ctxt->con);
-    db_connection_free(tls_lua_ctxt->con);
-  }
+    db_connection_close(tls_lua_ctxt.con);
+    db_connection_free(tls_lua_ctxt.con);
 
-  tls_lua_ctxt->con = NULL;
+    tls_lua_ctxt.con = NULL;
+  }
 
   return 0;
 }
@@ -878,10 +882,10 @@ int sb_lua_db_query(lua_State *L)
   db_result_t       *rs;
   size_t            len;
 
-  if (tls_lua_ctxt->con == NULL)
+  if (tls_lua_ctxt.con == NULL)
     sb_lua_db_connect(L);
 
-  db_conn_t * const con = tls_lua_ctxt->con;
+  db_conn_t * const con = tls_lua_ctxt.con;
 
   query = luaL_checklstring(L, 1, &len);
   rs = db_query(con, query, len);
@@ -899,11 +903,11 @@ int sb_lua_db_bulk_insert_init(lua_State *L)
   const char *query;
   size_t len;
 
-  if (tls_lua_ctxt->con == NULL)
+  if (tls_lua_ctxt.con == NULL)
     sb_lua_db_connect(L);
 
   query = luaL_checklstring(L, 1, &len);
-  if (db_bulk_insert_init(tls_lua_ctxt->con, query, len))
+  if (db_bulk_insert_init(tls_lua_ctxt.con, query, len))
     luaL_error(L, "db_bulk_insert_init() failed");
 
   return 0;
@@ -914,10 +918,10 @@ int sb_lua_db_bulk_insert_next(lua_State *L)
   const char *query;
   size_t len;
 
-  check_connection(L, tls_lua_ctxt);
+  check_connection(L, &tls_lua_ctxt);
 
   query = luaL_checklstring(L, 1, &len);
-  if (db_bulk_insert_next(tls_lua_ctxt->con, query, len))
+  if (db_bulk_insert_next(tls_lua_ctxt.con, query, len))
     luaL_error(L, "db_bulk_insert_next() failed");
 
   return 0;
@@ -925,9 +929,9 @@ int sb_lua_db_bulk_insert_next(lua_State *L)
 
 int sb_lua_db_bulk_insert_done(lua_State *L)
 {
-  check_connection(L, tls_lua_ctxt);
+  check_connection(L, &tls_lua_ctxt);
 
-  db_bulk_insert_done(tls_lua_ctxt->con);
+  db_bulk_insert_done(tls_lua_ctxt.con);
 
   return 0;
 }
@@ -938,7 +942,7 @@ int sb_lua_db_prepare(lua_State *L)
   const char       *query;
   size_t           len;
 
-  if (tls_lua_ctxt->con == NULL)
+  if (tls_lua_ctxt.con == NULL)
     sb_lua_db_connect(L);
 
   query = luaL_checklstring(L, 1, &len);
@@ -948,7 +952,7 @@ int sb_lua_db_prepare(lua_State *L)
   lua_setmetatable(L, -2);
   memset(stmt, 0, sizeof(sb_lua_db_stmt_t));
 
-  stmt->ptr = db_prepare(tls_lua_ctxt->con, query, len);
+  stmt->ptr = db_prepare(tls_lua_ctxt.con, query, len);
   if (stmt->ptr == NULL)
     luaL_error(L, "db_prepare() failed");
 
@@ -964,7 +968,7 @@ int sb_lua_db_bind_param(lua_State *L)
   db_bind_t        *binds;
   char             needs_rebind = 0; 
 
-  check_connection(L, tls_lua_ctxt);
+  check_connection(L, &tls_lua_ctxt);
 
   stmt = (sb_lua_db_stmt_t *)luaL_checkudata(L, 1, "sysbench.stmt");
   luaL_argcheck(L, stmt != NULL, 1, "prepared statement expected");
@@ -1036,7 +1040,7 @@ int sb_lua_db_bind_result(lua_State *L)
   db_bind_t        *binds;
   char             needs_rebind = 0; 
 
-  check_connection(L, tls_lua_ctxt);
+  check_connection(L, &tls_lua_ctxt);
 
   stmt = (sb_lua_db_stmt_t *)luaL_checkudata(L, 1, "sysbench.stmt");
   luaL_argcheck(L, stmt != NULL, 1, "prepared statement expected");
@@ -1112,7 +1116,7 @@ int sb_lua_db_execute(lua_State *L)
   const char       *str;
   sb_lua_bind_t    *param;
 
-  check_connection(L, tls_lua_ctxt);
+  check_connection(L, &tls_lua_ctxt);
 
   stmt = (sb_lua_db_stmt_t *)luaL_checkudata(L, 1, "sysbench.stmt");
   luaL_argcheck(L, stmt != NULL, 1, "prepared statement expected");
@@ -1190,7 +1194,7 @@ int sb_lua_db_execute(lua_State *L)
   }
 
   ptr = db_execute(stmt->ptr);
-  if (ptr == NULL && tls_lua_ctxt->con->error == DB_ERROR_IGNORABLE)
+  if (ptr == NULL && tls_lua_ctxt.con->error == DB_ERROR_IGNORABLE)
   {
     stmt->rs = NULL;
     throw_restart_event(L);
@@ -1212,7 +1216,7 @@ int sb_lua_db_close(lua_State *L)
   sb_lua_db_stmt_t *stmt;
   unsigned int     i;
 
-  check_connection(L, tls_lua_ctxt);
+  check_connection(L, &tls_lua_ctxt);
 
   stmt = (sb_lua_db_stmt_t *)luaL_checkudata(L, 1, "sysbench.stmt");
   luaL_argcheck(L, stmt != NULL, 1, "prepared statement expected");
@@ -1237,7 +1241,7 @@ int sb_lua_db_store_results(lua_State *L)
 {
   sb_lua_db_rs_t   *rs;
 
-  check_connection(L, tls_lua_ctxt);
+  check_connection(L, &tls_lua_ctxt);
 
   rs = (sb_lua_db_rs_t *)luaL_checkudata(L, 1, "sysbench.rs");
   luaL_argcheck(L, rs != NULL, 1, "result set expected");
@@ -1251,7 +1255,7 @@ int sb_lua_db_free_results(lua_State *L)
 {
   sb_lua_db_rs_t   *rs;
 
-  check_connection(L, tls_lua_ctxt);
+  check_connection(L, &tls_lua_ctxt);
 
   rs = (sb_lua_db_rs_t *)luaL_checkudata(L, 1, "sysbench.rs");
   luaL_argcheck(L, rs != NULL, 1, "result set expected");
@@ -1319,14 +1323,17 @@ static bool sb_lua_hook_push(lua_State *L, const char *name)
   return true;
 }
 
+
+bool sb_lua_loaded(void)
+{
+  return gstate != NULL;
+}
+
 /* Check if a specified custom command exists */
 
 bool sb_lua_custom_command_defined(const char *name)
 {
   lua_State * const L = gstate;
-
-  if (L == NULL)
-    return false;
 
   lua_getglobal(L, "sysbench");
   lua_getfield(L, -1, "cmdline");
@@ -1491,13 +1498,7 @@ static void stat_to_lua_table(lua_State *L, sb_stat_t *stat)
 
 static void sb_lua_report_intermediate(sb_stat_t *stat)
 {
-  if (sb_tls_lua_state == NULL)
-  {
-    sb_tls_lua_state = sb_lua_new_state();
-    export_options(sb_tls_lua_state);
-  }
-
-  lua_State * const L = sb_tls_lua_state;
+  lua_State * const L = tls_lua_ctxt.L;
 
   if (!sb_lua_hook_push(L, REPORT_INTERMEDIATE_HOOK))
     return;
@@ -1514,13 +1515,16 @@ static void sb_lua_report_intermediate(sb_stat_t *stat)
 
 static void sb_lua_report_cumulative(sb_stat_t *stat)
 {
-  if (sb_tls_lua_state == NULL)
-  {
-    sb_tls_lua_state = sb_lua_new_state();
-    export_options(sb_tls_lua_state);
-  }
+  lua_State * const L = tls_lua_ctxt.L;
 
-  lua_State * const L = sb_tls_lua_state;
+  /*
+    This may be called either from a separate checkpoint thread (in which case
+    options are exported by sb_lua_report_thread_init(), or from the master
+    thread on benchmark exit. In the latter case, options must be exported, as
+    we don't normally do that for the global Lua state.
+  */
+  if (L == gstate)
+    export_options(L);
 
   if (!sb_lua_hook_push(L, REPORT_CUMULATIVE_HOOK))
     return;
@@ -1538,4 +1542,22 @@ static void sb_lua_report_cumulative(sb_stat_t *stat)
     call_error(L, REPORT_CUMULATIVE_HOOK);
   }
 }
+
 #undef stat_to_number
+
+
+int sb_lua_report_thread_init(void)
+{
+  if (tls_lua_ctxt.L == NULL)
+  {
+    sb_lua_new_state();
+    export_options(tls_lua_ctxt.L);
+  }
+
+  return 0;
+}
+
+void sb_lua_report_thread_done(void)
+{
+  sb_lua_close_state(tls_lua_ctxt.L);
+}

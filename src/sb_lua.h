@@ -34,3 +34,9 @@ int sb_lua_hook_call(lua_State *L, const char *name);
 bool sb_lua_custom_command_defined(const char *name);
 
 int sb_lua_call_custom_command(const char *name);
+
+int sb_lua_report_thread_init(void);
+
+void sb_lua_report_thread_done(void);
+
+bool sb_lua_loaded(void);
