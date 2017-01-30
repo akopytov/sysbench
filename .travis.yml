@@ -3,7 +3,7 @@
 # Travis CI configuration
 
 dist: trusty
-sudo: false
+sudo: required
 
 language: c
 
