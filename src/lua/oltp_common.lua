@@ -358,6 +358,12 @@ function thread_done()
          stmt[t][k]:close()
       end
    end
+   if (stmt.begin ~= nil) then
+      stmt.begin:close()
+   end
+   if (stmt.commit ~= nil) then
+      stmt.commit:close()
+   end
 end
 
 function cleanup()
