@@ -283,16 +283,34 @@ Command line options tests
   [1]
 
   $ cat >cmdline.lua <<EOF
-  > function prepare()
+  > function print_cmd()
   >   for k, v in pairs(sysbench.cmdline.argv) do
   >     print(string.format("argv[%u] = %s", k, v))
   >   end
-  >   print("sysbench.cmdline.command = " .. sysbench.cmdline.command)
+  >   print(string.format("sysbench.cmdline.command = %s", sysbench.cmdline.command))
   > end
+  > function prepare()
+  >  print_cmd()
+  > end
+  > print_cmd()
   > EOF
+  $ sysbench --opt1 --opt2=val cmdline.lua
+  sysbench * (glob)
+  
+  argv[0] = sysbench
+  argv[1] = --opt1
+  argv[2] = --opt2=val
+  argv[3] = cmdline.lua
+  sysbench.cmdline.command = nil
   $ sysbench --opt1 --opt2=val cmdline.lua prepare
   sysbench * (glob)
   
+  argv[0] = sysbench
+  argv[1] = --opt1
+  argv[2] = --opt2=val
+  argv[3] = cmdline.lua
+  argv[4] = prepare
+  sysbench.cmdline.command = prepare
   argv[0] = sysbench
   argv[1] = --opt1
   argv[2] = --opt2=val

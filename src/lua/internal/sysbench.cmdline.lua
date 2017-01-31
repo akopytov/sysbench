@@ -20,8 +20,6 @@
 
 ffi = require("ffi")
 
-sysbench.cmdline = {}
-
 ffi.cdef[[
 /* The following has been copied from sb_option.h */
 

@@ -311,33 +311,6 @@ static int export_options(lua_State *L)
   if (sbtest.args == NULL && do_export_options(L, true))
     return 1;
 
-  /* Export command line arguments as sysbench.cmdline.argv */
-
-  lua_getglobal(L, "sysbench");
-  lua_getfield(L, -1, "cmdline");
-
-  lua_pushliteral(L, "argv");
-  lua_createtable(L, sb_globals.argc, 0);
-
-  for (int i = 0; i < sb_globals.argc; i++)
-  {
-    lua_pushstring(L, sb_globals.argv[i]);
-    lua_rawseti(L, -2, i);
-  }
-
-  lua_settable(L, -3);
-
-  /* Export command name as sysbench.cmdline.command */
-
-  if (sb_globals.cmdname)
-  {
-    lua_pushliteral(L, "command");
-    lua_pushstring(L, sb_globals.cmdname);
-    lua_settable(L, -3);
-  }
-
-  lua_pop(L, 2);
-
   return 0;
 }
 
@@ -755,12 +728,32 @@ static lua_State *sb_lua_new_state(void)
   sb_lua_var_string(L, "version_string",
                     PACKAGE_NAME " " PACKAGE_VERSION SB_GIT_SHA);
 
-  lua_pushliteral(L, "test");
+  lua_pushliteral(L, "cmdline");
   lua_newtable(L);
 
-  sb_lua_var_string(L, "path", sbtest.lname);
+  lua_pushliteral(L, "argv");
+  lua_createtable(L, sb_globals.argc, 0);
 
-  lua_settable(L, -3); /* sysbench.test */
+  for (int i = 0; i < sb_globals.argc; i++)
+  {
+    lua_pushstring(L, sb_globals.argv[i]);
+    lua_rawseti(L, -2, i);
+  }
+
+  lua_settable(L, -3); /* sysbench.cmdline.argv */
+
+  /* Export command name as sysbench.cmdline.command */
+  if (sb_globals.cmdname)
+  {
+    lua_pushliteral(L, "command");
+    lua_pushstring(L, sb_globals.cmdname);
+    lua_settable(L, -3);
+  }
+
+  /* Export script path as sysbench.cmdline.script_path */
+  sb_lua_var_string(L, "script_path", sbtest.lname);
+
+  lua_settable(L, -3); /* sysbench.cmdline */
 
   lua_setglobal(L, "sysbench");
 
