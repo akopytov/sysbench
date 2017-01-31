@@ -19,9 +19,14 @@
 -- -----------------------------------------------------------------------------
 
 function init()
-      assert(event ~= nil,
-             "this script is meant to be included by other OLTP scripts and " ..
-                "should not be called directly.")
+   assert(event ~= nil,
+          "this script is meant to be included by other OLTP scripts and " ..
+             "should not be called directly.")
+end
+
+if sysbench.cmdline.command == nil then
+   error("Command is required. Supported commands: prepare, prewarm, run, " ..
+            "cleanup, help")
 end
 
 -- Command line options
