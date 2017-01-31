@@ -75,7 +75,7 @@ Basic Lua API tests
 
   $ cat >$CRAMTMP/api_basic.lua <<EOF
   > function event()
-  >   for k,v in pairs(sysbench.test) do
+  >   for k,v in pairs(sysbench.cmdline.script_path) do
   >     print(k .. " = " .. v)
   >   end
   > end
