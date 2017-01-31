@@ -44,6 +44,7 @@
 #include "lua/internal/sysbench.compat.lua.h"
 #include "lua/internal/sysbench.rand.lua.h"
 #include "lua/internal/sysbench.sql.lua.h"
+#include "lua/internal/sysbench.histogram.lua.h"
 
 #define EVENT_FUNC "event"
 #define PREPARE_FUNC "prepare"
@@ -120,6 +121,8 @@ static internal_script_t internal_scripts[] = {
   {"sysbench.compat.lua", sysbench_compat_lua, &sysbench_compat_lua_len},
   {"sysbench.cmdline.lua", sysbench_cmdline_lua, &sysbench_cmdline_lua_len},
   {"sysbench.sql.lua", sysbench_sql_lua, &sysbench_sql_lua_len},
+  {"sysbench.histogram.lua", sysbench_histogram_lua,
+   &sysbench_histogram_lua_len},
   {NULL, NULL, 0}
 };
 

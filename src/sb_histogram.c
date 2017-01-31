@@ -340,3 +340,34 @@ void sb_histogram_done(sb_histogram_t *h)
   free(h->cumulative_array);
   free(h->interm_slots);
 }
+
+/*
+  Allocate a new histogram and initialize it with sb_histogram_init().
+*/
+
+sb_histogram_t *sb_histogram_new(size_t size, double range_min,
+                                 double range_max)
+{
+  sb_histogram_t *h;
+
+  if ((h = malloc(sizeof(*h))) == NULL)
+    return NULL;
+
+  if (sb_histogram_init(h, size, range_min, range_max))
+  {
+    free(h);
+    return NULL;
+  }
+
+  return h;
+}
+
+/*
+  Deallocate a histogram allocated with sb_histogram_new().
+*/
+
+void sb_histogram_delete(sb_histogram_t *h)
+{
+  sb_histogram_done(h);
+  free(h);
+}

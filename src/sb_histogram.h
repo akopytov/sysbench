@@ -67,6 +67,17 @@ typedef struct {
 extern sb_histogram_t sb_latency_histogram;
 
 /*
+  Allocate a new histogram and initialize it with sb_histogram_init().
+*/
+sb_histogram_t *sb_histogram_new(size_t size, double range_min,
+                                 double range_max);
+
+/*
+  Deallocate a histogram allocated with sb_histogram_new().
+*/
+void sb_histogram_delete(sb_histogram_t *h);
+
+/*
   Initialize a new histogram object with a given array size and value bounds.
 */
 int sb_histogram_init(sb_histogram_t *h, size_t size,

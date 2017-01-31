@@ -80,3 +80,4 @@ src/lua/internal/sysbench.sql.lua.h
 tests/t/*.err
 /src/lua/internal/sysbench.cmdline.lua.h
 /src/lua/internal/sysbench.compat.lua.h
+/src/lua/internal/sysbench.histogram.lua.h
