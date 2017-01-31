@@ -75,13 +75,11 @@ Basic Lua API tests
 
   $ cat >$CRAMTMP/api_basic.lua <<EOF
   > function event()
-  >   for k,v in pairs(sysbench.cmdline.script_path) do
-  >     print(k .. " = " .. v)
-  >   end
+  >     print(string.format("sysbench.cmdline.script_path = %s", sysbench.cmdline.script_path))
   > end
   > EOF
   $ sysbench $SB_ARGS --max-requests=1 run
-  path = */api_basic.lua (glob)
+  sysbench.cmdline.script_path = */api_basic.lua (glob)
 
 ########################################################################
 Error handling
