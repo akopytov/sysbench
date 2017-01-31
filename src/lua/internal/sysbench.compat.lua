@@ -20,7 +20,7 @@
 
 thread_id = sysbench.tid
 
-test = sysbench.cmdline.scrip_path
+test = sysbench.cmdline.script_path
 
 function sb_rnd()
    -- Keep lower 32 bits from sysbench.rand.uniform_uint64() and convert them to
