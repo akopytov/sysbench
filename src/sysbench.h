@@ -178,6 +178,8 @@ typedef struct sb_test
 typedef struct
 {
   int             error CK_CC_CACHELINE;        /* global error flag */
+  int             argc;         /* command line arguments count */
+  char            **argv;      /* command line arguments */
   unsigned int    tx_rate;      /* target transaction rate */
   uint64_t        max_requests; /* maximum number of requests */
   uint64_t        max_time_ns;  /* total execution time limit */

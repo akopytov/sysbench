@@ -1382,6 +1382,10 @@ int main(int argc, char *argv[])
   sb_test_t *test = NULL;
   int rc;
 
+  sb_globals.argc = argc;
+  sb_globals.argv = malloc(argc * sizeof(char *));
+  memcpy(sb_globals.argv, argv, argc * sizeof(char *));
+
   /* Initialize options library */
   sb_options_init();
 
@@ -1547,6 +1551,8 @@ end:
 
   free(timers);
   free(timers_copy);
+
+  free(sb_globals.argv);
 
   if (sb_globals.n_checkpoints > 0)
     pthread_mutex_destroy(&timers_mutex);

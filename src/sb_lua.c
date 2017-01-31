@@ -311,6 +311,33 @@ static int export_options(lua_State *L)
   if (sbtest.args == NULL && do_export_options(L, true))
     return 1;
 
+  /* Export command line arguments as sysbench.cmdline.argv */
+
+  lua_getglobal(L, "sysbench");
+  lua_getfield(L, -1, "cmdline");
+
+  lua_pushliteral(L, "argv");
+  lua_createtable(L, sb_globals.argc, 0);
+
+  for (int i = 0; i < sb_globals.argc; i++)
+  {
+    lua_pushstring(L, sb_globals.argv[i]);
+    lua_rawseti(L, -2, i);
+  }
+
+  lua_settable(L, -3);
+
+  /* Export command name as sysbench.cmdline.command */
+
+  if (sb_globals.cmdname)
+  {
+    lua_pushliteral(L, "command");
+    lua_pushstring(L, sb_globals.cmdname);
+    lua_settable(L, -3);
+  }
+
+  lua_pop(L, 2);
+
   return 0;
 }
 

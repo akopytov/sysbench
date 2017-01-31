@@ -281,3 +281,21 @@ Command line options tests
   
   Unknown command: cmd3 (no-eol)
   [1]
+
+  $ cat >cmdline.lua <<EOF
+  > function prepare()
+  >   for k, v in pairs(sysbench.cmdline.argv) do
+  >     print(string.format("argv[%u] = %s", k, v))
+  >   end
+  >   print("sysbench.cmdline.command = " .. sysbench.cmdline.command)
+  > end
+  > EOF
+  $ sysbench --opt1 --opt2=val cmdline.lua prepare
+  sysbench * (glob)
+  
+  argv[0] = sysbench
+  argv[1] = --opt1
+  argv[2] = --opt2=val
+  argv[3] = cmdline.lua
+  argv[4] = prepare
+  sysbench.cmdline.command = prepare
