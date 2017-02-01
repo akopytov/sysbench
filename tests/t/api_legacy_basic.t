@@ -7,7 +7,7 @@ Legacy basic Lua API tests
   >   exit 80
   > fi
 
-  $ SB_ARGS="--verbosity=0 --max-requests=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS $CRAMTMP/api_legacy_basic.lua"
+  $ SB_ARGS="--verbosity=0 --max-requests=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS --test=$CRAMTMP/api_legacy_basic.lua"
 
   $ cat >$CRAMTMP/api_legacy_basic.lua <<EOF
   > function prepare(thread_id)
@@ -41,18 +41,22 @@ Legacy basic Lua API tests
   > EOF
 
   $ sysbench $SB_ARGS prepare
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   tid:(nil) prepare()
 
   $ sysbench $SB_ARGS run
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   tid:0 thread_init()
   tid:0 event()
   tid:0 event()
   tid:0 thread_done()
 
   $ sysbench $SB_ARGS cleanup
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   tid:(nil) cleanup()
 
   $ sysbench $SB_ARGS help
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   tid:0 help()
 
   $ cat >$CRAMTMP/api_legacy_basic.lua <<EOF
@@ -61,4 +65,5 @@ Legacy basic Lua API tests
   > end
   > EOF
   $ sysbench $SB_ARGS prepare
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   */api_legacy_basic.lua (glob)

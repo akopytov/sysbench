@@ -7,7 +7,7 @@ Legacy SQL Lua API tests
   >   exit 80
   > fi
 
-  $ SB_ARGS="--verbosity=1 --max-requests=1 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS $CRAMTMP/api_legacy_sql.lua"
+  $ SB_ARGS="--verbosity=1 --max-requests=1 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS --test=$CRAMTMP/api_legacy_sql.lua"
   $ cat >$CRAMTMP/api_legacy_sql.lua <<EOF
   > function event(thread_id)
   >   db_query("CREATE TABLE t(a INT)")
@@ -40,6 +40,7 @@ Legacy SQL Lua API tests
   $ mysql -uroot sbtest -Nse "DROP TABLE IF EXISTS t"
 
   $ sysbench $SB_ARGS run
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   DB_ERROR_NONE = [0-9] (re)
   DB_ERROR_RESTART_TRANSACTION = [0-9] (re)
   DB_ERROR_FAILED = [0-9] (re)
@@ -67,6 +68,7 @@ Legacy SQL Lua API tests
 
   $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-table-engine=myisam $SBTEST_MYSQL_ARGS"
   $ . $SBTEST_INCDIR/script_oltp_legacy_common.sh
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sysbench *.* * (glob)
   
   Creating table 'sbtest1'...
@@ -174,6 +176,7 @@ Legacy SQL Lua API tests
     KEY `k_8` (`k`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sysbench *.* * (glob)
   
   Running the test with following options:
@@ -211,6 +214,7 @@ Legacy SQL Lua API tests
       events (avg/stddev):           */* (glob)
       execution time (avg/stddev):   */* (glob)
   
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sysbench *.* * (glob)
   
   Dropping table 'sbtest1'...
@@ -229,6 +233,7 @@ Legacy SQL Lua API tests
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest6' doesn't exist
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest7' doesn't exist
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest8' doesn't exist
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sysbench * (glob)
   
   Creating table 'sbtest1'...
@@ -242,12 +247,14 @@ Legacy SQL Lua API tests
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sysbench * (glob)
   
   Dropping table 'sbtest1'...
 
   $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-table-engine=innodb $SBTEST_MYSQL_ARGS"
   $ . $SBTEST_INCDIR/script_oltp_legacy_common.sh
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sysbench *.* * (glob)
   
   Creating table 'sbtest1'...
@@ -355,6 +362,7 @@ Legacy SQL Lua API tests
     KEY `k_8` (`k`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sysbench *.* * (glob)
   
   Running the test with following options:
@@ -392,6 +400,7 @@ Legacy SQL Lua API tests
       events (avg/stddev):           */* (glob)
       execution time (avg/stddev):   */* (glob)
   
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sysbench *.* * (glob)
   
   Dropping table 'sbtest1'...
@@ -410,6 +419,7 @@ Legacy SQL Lua API tests
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest6' doesn't exist
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest7' doesn't exist
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest8' doesn't exist
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sysbench * (glob)
   
   Creating table 'sbtest1'...
@@ -423,6 +433,7 @@ Legacy SQL Lua API tests
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sysbench * (glob)
   
   Dropping table 'sbtest1'...

@@ -16,7 +16,8 @@ Legacy PRNG Lua API tests
   > end
   > EOF
 
-  $ sysbench $SB_ARGS $CRAMTMP/api_legacy_rand.lua run
+  $ sysbench $SB_ARGS --test=$CRAMTMP/api_legacy_rand.lua run
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   sb_rand\(0, 9\) = [0-9]{1} (re)
   sb_rand_uniq\(0, 4294967295\) = [0-9]{1,10} (re)
   sb_rnd\(\) = [0-9]+ (re)
@@ -39,6 +40,7 @@ issue #96: sb_rand_uniq(1, oltp_table_size) generate duplicate value
   > end
   > EOF
 
-  $ sysbench $SB_ARGS --max-requests=100000 $CRAMTMP/api_rand_uniq.lua run |
+  $ sysbench $SB_ARGS --max-requests=100000 --test=$CRAMTMP/api_rand_uniq.lua run |
   >   sort -n | uniq | wc -l | sed -e 's/ //g'
+  WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
   100000

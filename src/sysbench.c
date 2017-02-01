@@ -554,8 +554,16 @@ static int parse_general_arguments(int argc, char *argv[])
 
       return 1;
     }
-
-    if (!parse_option(argv[i]+2, false))
+    else if (!strncmp(argv[i] + 2, "test=", 5))
+    {
+      /* Support the deprecated --test for compatibility reasons */
+      fprintf(stderr,
+              "WARNING: the --test option is deprecated. You can pass a "
+              "script name or path on the command line without any options.\n");
+      parse_option(argv[i] + 2, true);
+      testname = sb_get_value_string("test");
+    }
+    else if (!parse_option(argv[i]+2, false))
     {
       /* An option from general_args. Exclude it from future processing */
       argv[i] = NULL;
