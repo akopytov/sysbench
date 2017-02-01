@@ -179,13 +179,13 @@ int memory_init(void)
   }
   else
   {
-    buffers = (int **)malloc(sb_globals.num_threads * sizeof(char *));
+    buffers = (int **)malloc(sb_globals.threads * sizeof(char *));
     if (buffers == NULL)
     {
       log_text(LOG_FATAL, "Failed to allocate buffers array!");
       return 1;
     }
-    for (i = 0; i < sb_globals.num_threads; i++)
+    for (i = 0; i < sb_globals.threads; i++)
     {
 #ifdef HAVE_LARGE_PAGES
       if (memory_hugetlb)

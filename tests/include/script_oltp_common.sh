@@ -31,7 +31,7 @@ db_show_table sbtest9 || true # Error on non-existing table
 
 sysbench $ARGS prewarm || true # MySQL only
 
-sysbench $ARGS --events=100 --num-threads=2 run
+sysbench $ARGS --events=100 --threads=2 run
 
 sysbench $ARGS cleanup
 

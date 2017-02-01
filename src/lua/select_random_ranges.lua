@@ -51,9 +51,9 @@ function thread_init()
 
    stmt:bind_param(unpack(params))
 
-   rlen = sysbench.opt.table_size / sysbench.opt.num_threads
+   rlen = sysbench.opt.table_size / sysbench.opt.threads
 
-   thread_id = sysbench.tid % sysbench.opt.num_threads
+   thread_id = sysbench.tid % sysbench.opt.threads
 end
 
 function thread_done()
@@ -63,7 +63,7 @@ end
 
 function event()
    -- To prevent overlapping of our range queries we need to partition the whole
-   -- table into num_threads segments and then make each thread work with its
+   -- table into 'threads' segments and then make each thread work with its
    -- own segment.
    for i = 1, sysbench.opt.number_of_ranges*2, 2 do
       local rmin = rlen * thread_id

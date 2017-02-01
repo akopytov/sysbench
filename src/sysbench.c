@@ -88,7 +88,7 @@
 /* General options */
 sb_arg_t general_args[] =
 {
-  SB_OPT("num-threads", "number of threads to use", "1", INT),
+  SB_OPT("threads", "number of threads to use", "1", INT),
   SB_OPT("events", "limit for total number of events", "0", INT),
   SB_OPT("time", "limit for total execution time in seconds", "10", INT),
   SB_OPT("forced-shutdown",
@@ -112,6 +112,7 @@ sb_arg_t general_args[] =
   SB_OPT("tx-rate", "deprecated alias for --rate", "0", INT),
   SB_OPT("max-requests", "deprecated alias for --events", "0", INT),
   SB_OPT("max-time", "deprecated alias for --time", "0", INT),
+  SB_OPT("num-threads", "deprecated alias for --threads", "1", INT),
 
   SB_OPT_END
 };
@@ -189,7 +190,7 @@ static void report_get_common_stat(sb_stat_t *stat, sb_counters_t cnt)
 {
   memset(stat, 0, sizeof(sb_stat_t));
 
-  stat->threads_running = sb_globals.num_running;
+  stat->threads_running = sb_globals.threads_running;
 
   stat->events     = cnt[SB_CNT_EVENT];
   stat->reads      = cnt[SB_CNT_READ];
@@ -241,7 +242,7 @@ static void report_intermediate(void)
 
 void sb_report_cumulative(sb_stat_t *stat)
 {
-  const unsigned int nthreads = sb_globals.num_threads;
+  const unsigned int nthreads = sb_globals.threads;
 
   if (sb_globals.forced_shutdown_in_progress)
   {
@@ -366,7 +367,7 @@ static void report_cumulative(void)
   sb_timer_t t;
   sb_timer_init(&t);
 
-  const unsigned nthreads = sb_globals.num_threads;
+  const unsigned nthreads = sb_globals.threads;
 
   /* Create a temporary copy of timers and reset them */
   if (sb_globals.n_checkpoints > 0)
@@ -614,7 +615,7 @@ static int parse_test_arguments(sb_test_t *test, int argc, char *argv[])
 void print_run_mode(sb_test_t *test)
 {
   log_text(LOG_NOTICE, "Running the test with following options:");
-  log_text(LOG_NOTICE, "Number of threads: %d", sb_globals.num_threads);
+  log_text(LOG_NOTICE, "Number of threads: %d", sb_globals.threads);
 
   if (sb_globals.tx_rate > 0)
   {
@@ -1054,7 +1055,7 @@ static int threads_started_callback(void *arg)
   if (sb_globals.error)
     return 1;
 
-  sb_globals.num_running = sb_globals.num_threads;
+  sb_globals.threads_running = sb_globals.threads;
 
   sb_timer_start(&sb_exec_timer);
   sb_timer_copy(&sb_intermediate_timer, &sb_exec_timer);
@@ -1099,10 +1100,10 @@ static int run_test(sb_test_t *test)
 
   queue_is_full = 0;
 
-  sb_globals.num_running = 0;
+  sb_globals.threads_running = 0;
 
   /* Calculate the required number of threads for the start barrier */
-  barrier_threads = 1 + sb_globals.num_threads +
+  barrier_threads = 1 + sb_globals.threads +
     (sb_globals.report_interval > 0) +
     (sb_globals.tx_rate > 0) +
     (sb_globals.n_checkpoints > 0);
@@ -1275,10 +1276,16 @@ static int init(void)
   value_t           *val;
   long              res;
 
-  sb_globals.num_threads = sb_get_value_int("num-threads");
-  if (sb_globals.num_threads <= 0)
+  sb_globals.threads = sb_get_value_int("num-threads");
+  if (sb_globals.threads > 1)
+    log_text(LOG_WARNING, "--num-threads is deprecated, use --threads instead");
+  else
+    sb_globals.threads = sb_get_value_int("threads");
+
+  if (sb_globals.threads <= 0)
   {
-    log_text(LOG_FATAL, "Invalid value for --num-threads: %d.\n", sb_globals.num_threads);
+    log_text(LOG_FATAL, "Invalid value for --threads: %d.\n",
+             sb_globals.threads);
     return 1;
   }
   sb_globals.max_events = sb_get_value_int("max-requests");
@@ -1385,9 +1392,9 @@ static int init(void)
   }
 
   /* Initialize timers */
-  timers = sb_memalign(sb_globals.num_threads * sizeof(sb_timer_t),
+  timers = sb_memalign(sb_globals.threads * sizeof(sb_timer_t),
                        CK_MD_CACHELINE);
-  timers_copy = sb_memalign(sb_globals.num_threads * sizeof(sb_timer_t),
+  timers_copy = sb_memalign(sb_globals.threads * sizeof(sb_timer_t),
                             CK_MD_CACHELINE);
   if (timers == NULL || timers_copy == NULL)
   {
@@ -1395,7 +1402,7 @@ static int init(void)
     return 1;
   }
 
-  for (unsigned i = 0; i < sb_globals.num_threads; i++)
+  for (unsigned i = 0; i < sb_globals.threads; i++)
     sb_timer_init(&timers[i]);
 
   if (sb_globals.n_checkpoints > 0)

@@ -2,7 +2,7 @@
 Legacy PRNG Lua API tests
 ########################################################################
 
-  $ SB_ARGS="--verbosity=0 --max-requests=1 --num-threads=1"
+  $ SB_ARGS="--verbosity=0 --max-requests=1"
 
   $ cat >$CRAMTMP/api_legacy_rand.lua <<EOF
   > function event()

@@ -15,7 +15,7 @@
   >   end
   > end
   > EOF
-  $ sysbench --histogram $CRAMTMP/histogram.lua --events=2 --num-threads=2 run
+  $ sysbench --histogram $CRAMTMP/histogram.lua --events=2 --threads=2 run
   sysbench * (glob)
   
   Running the test with following options:

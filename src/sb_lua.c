@@ -364,7 +364,7 @@ sb_test_t *sb_load_lua(const char *testname)
     sbtest.ops.report_cumulative = sb_lua_report_cumulative;
 
   /* Allocate per-thread interpreters array */
-  states = (lua_State **)calloc(sb_globals.num_threads, sizeof(lua_State *));
+  states = (lua_State **)calloc(sb_globals.threads, sizeof(lua_State *));
   if (states == NULL)
     goto error;
 
@@ -1496,7 +1496,7 @@ int sb_lua_call_custom_command(const char *name)
 {
   sb_lua_custom_command = name;
 
-  if (sb_lua_custom_command_parallel(name) && sb_globals.num_threads > 1)
+  if (sb_lua_custom_command_parallel(name) && sb_globals.threads > 1)
   {
     int err;
 

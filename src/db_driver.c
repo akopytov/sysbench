@@ -192,9 +192,9 @@ static void db_init(void)
   /* Initialize timers if in debug mode */
   if (db_globals.debug)
   {
-    exec_timers = (sb_timer_t *) malloc(sb_globals.num_threads *
+    exec_timers = (sb_timer_t *) malloc(sb_globals.threads *
                                         sizeof(sb_timer_t));
-    fetch_timers = (sb_timer_t *) malloc(sb_globals.num_threads *
+    fetch_timers = (sb_timer_t *) malloc(sb_globals.threads *
                                          sizeof(sb_timer_t));
   }
 
@@ -1003,7 +1003,7 @@ void db_report_cumulative(sb_stat_t *stat)
     sb_timer_init(&exec_timer);
     sb_timer_init(&fetch_timer);
 
-    for (unsigned i = 0; i < sb_globals.num_threads; i++)
+    for (unsigned i = 0; i < sb_globals.threads; i++)
     {
       exec_timer = sb_timer_merge(&exec_timer, exec_timers + i);
       fetch_timer = sb_timer_merge(&fetch_timer, fetch_timers + i);
@@ -1048,7 +1048,7 @@ static void db_reset_stats(void)
 
   if (db_globals.debug)
   {
-    for (i = 0; i < sb_globals.num_threads; i++)
+    for (i = 0; i < sb_globals.threads; i++)
     {
       sb_timer_init(exec_timers + i);
       sb_timer_init(fetch_timers + i);

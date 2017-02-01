@@ -12,7 +12,7 @@ separately.
   Commands implemented by most tests: prepare run cleanup help
   
   General options:
-    --num-threads=N                 number of threads to use [1]
+    --threads=N                     number of threads to use [1]
     --events=N                      limit for total number of events [0]
     --time=N                        limit for total execution time in seconds [10]
     --forced-shutdown=STRING        number of seconds to wait after the --time limit before forcing shutdown, or 'off' to disable [off]
@@ -28,6 +28,7 @@ separately.
     --tx-rate=N                     deprecated alias for --rate [0]
     --max-requests=N                deprecated alias for --events [0]
     --max-time=N                    deprecated alias for --time [0]
+    --num-threads=N                 deprecated alias for --threads [1]
   
   Pseudo-Random Numbers Generator options:
     --rand-type=STRING random numbers distribution {uniform,gaussian,special,pareto} [special]

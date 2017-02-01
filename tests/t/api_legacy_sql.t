@@ -7,7 +7,7 @@ Legacy SQL Lua API tests
   >   exit 80
   > fi
 
-  $ SB_ARGS="--verbosity=1 --max-requests=1 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS --test=$CRAMTMP/api_legacy_sql.lua"
+  $ SB_ARGS="--verbosity=1 --max-requests=1 --db-driver=mysql $SBTEST_MYSQL_ARGS --test=$CRAMTMP/api_legacy_sql.lua"
   $ cat >$CRAMTMP/api_legacy_sql.lua <<EOF
   > function event(thread_id)
   >   db_query("CREATE TABLE t(a INT)")
@@ -178,6 +178,7 @@ Legacy SQL Lua API tests
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
   WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+  WARNING: --num-threads is deprecated, use --threads instead
   WARNING: --max-requests is deprecated, use --events instead
   sysbench *.* * (glob)
   
@@ -365,6 +366,7 @@ Legacy SQL Lua API tests
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
   WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+  WARNING: --num-threads is deprecated, use --threads instead
   WARNING: --max-requests is deprecated, use --events instead
   sysbench *.* * (glob)
   

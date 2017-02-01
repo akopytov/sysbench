@@ -1,7 +1,7 @@
 ########################################################################
 cpu benchmark tests
 ########################################################################
-  $ args="cpu --cpu-max-prime=1000 --events=100 --num-threads=2"
+  $ args="cpu --cpu-max-prime=1000 --events=100 --threads=2"
   $ sysbench $args help
   sysbench *.* * (glob)
   

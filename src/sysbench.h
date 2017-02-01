@@ -186,9 +186,9 @@ typedef struct
   pthread_mutex_t exec_mutex CK_CC_CACHELINE;   /* execution mutex */
   const char      *testname;    /* test name or script path to execute */
   const char      *cmdname;     /* command passed from command line */
-  unsigned int    num_threads CK_CC_CACHELINE;  /* number of threads to use */
-  unsigned int    num_running;  /* number of threads currently active */
-  unsigned int    report_interval; /* intermediate reports interval */
+  unsigned int    threads CK_CC_CACHELINE;  /* number of threads to use */
+  unsigned int    threads_running;  /* number of threads currently active */
+  unsigned int    report_interval;  /* intermediate reports interval */
   unsigned int    percentile;   /* percentile rank for latency stats */
   unsigned int    histogram;    /* show histogram in latency stats */
   /* array of report checkpoints */

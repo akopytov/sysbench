@@ -2,7 +2,7 @@
 PRNG Lua API tests
 ########################################################################
 
-  $ SB_ARGS="--verbosity=0 --events=1 --num-threads=1"
+  $ SB_ARGS="--verbosity=0 --events=1"
 
   $ cat >$CRAMTMP/api_rand.lua <<EOF
   > function event()

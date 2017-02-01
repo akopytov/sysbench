@@ -256,11 +256,11 @@ Command line options tests
   > }
   > EOF
 
-  $ sysbench --num-threads=2 cmdline.lua cmd1
+  $ sysbench --threads=2 cmdline.lua cmd1
   sysbench * (glob)
   
   cmd1, sysbench.tid = 0
-  $ sysbench --num-threads=2 cmdline.lua cmd2
+  $ sysbench --threads=2 cmdline.lua cmd2
   sysbench * (glob)
   
   Initializing worker threads...
@@ -268,7 +268,7 @@ Command line options tests
   cmd2, sysbench.tid = [01] (re)
   cmd2, sysbench.tid = [01] (re)
 
-  $ sysbench --num-threads=2 cmdline.lua prepare
+  $ sysbench --threads=2 cmdline.lua prepare
   sysbench * (glob)
   
   Initializing worker threads...
@@ -276,7 +276,7 @@ Command line options tests
   prepare_func, sysbench.tid = [01] (re)
   prepare_func, sysbench.tid = [01] (re)
 
-  $ sysbench --num-threads=2 cmdline.lua cmd3
+  $ sysbench --threads=2 cmdline.lua cmd3
   sysbench * (glob)
   
   Unknown command: cmd3 (no-eol)

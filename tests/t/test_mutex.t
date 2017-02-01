@@ -1,7 +1,7 @@
 ########################################################################
 mutex benchmark tests
 ########################################################################
-  $ args="mutex --events=10 --num-threads=2"
+  $ args="mutex --events=10 --threads=2"
   $ sysbench $args help
   sysbench *.* * (glob)
   

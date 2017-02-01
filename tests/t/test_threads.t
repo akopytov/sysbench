@@ -2,7 +2,7 @@
 threads benchmark tests
 ########################################################################
 
-  $ args="threads --events=100 --num-threads=2"
+  $ args="threads --events=100 --threads=2"
   $ sysbench $args help
   sysbench *.* * (glob)
   

@@ -7,7 +7,7 @@ Legacy basic Lua API tests
   >   exit 80
   > fi
 
-  $ SB_ARGS="--verbosity=0 --max-requests=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS --test=$CRAMTMP/api_legacy_basic.lua"
+  $ SB_ARGS="--verbosity=0 --max-requests=2 --db-driver=mysql $SBTEST_MYSQL_ARGS --test=$CRAMTMP/api_legacy_basic.lua"
 
   $ cat >$CRAMTMP/api_legacy_basic.lua <<EOF
   > function prepare(thread_id)

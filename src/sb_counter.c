@@ -34,10 +34,10 @@ int sb_counters_init(void)
 {
   SB_COMPILE_TIME_ASSERT(sizeof(sb_counters_t) % CK_MD_CACHELINE == 0);
 
-  sb_counters = sb_memalign(sb_globals.num_threads * sizeof(sb_counters_t),
-                             CK_MD_CACHELINE);
+  sb_counters = sb_memalign(sb_globals.threads * sizeof(sb_counters_t),
+                            CK_MD_CACHELINE);
 
-  memset(sb_counters, 0, sb_globals.num_threads * sizeof(sb_counters_t));
+  memset(sb_counters, 0, sb_globals.threads * sizeof(sb_counters_t));
 
   return sb_counters == NULL;
 }
@@ -54,7 +54,7 @@ void sb_counters_done(void)
 static void sb_counters_merge(sb_counters_t dst)
 {
   for (size_t t = 0; t < SB_CNT_MAX; t++)
-    for (size_t i = 0; i < sb_globals.num_threads; i++)
+    for (size_t i = 0; i < sb_globals.threads; i++)
       dst[t] += sb_counter_val(i, t);
 }
 

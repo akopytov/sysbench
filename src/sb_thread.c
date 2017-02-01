@@ -65,10 +65,10 @@ int sb_thread_init(void)
 
 #ifdef HAVE_THR_SETCONCURRENCY
   /* Set thread concurrency (required on Solaris) */
-  thr_setconcurrency(sb_globals.num_threads);
+  thr_setconcurrency(sb_globals.threads);
 #endif
 
-  threads = malloc(sb_globals.num_threads * sizeof(sb_thread_ctxt_t));
+  threads = malloc(sb_globals.threads * sizeof(sb_thread_ctxt_t));
   if (threads == NULL)
   {
     log_text(LOG_FATAL, "Memory allocation failure.\n");
@@ -106,13 +106,13 @@ int sb_thread_create_workers(void *(*worker_routine)(void*))
 
   log_text(LOG_NOTICE, "Initializing worker threads...\n");
 
-  for(i = 0; i < sb_globals.num_threads; i++)
+  for(i = 0; i < sb_globals.threads; i++)
   {
     threads[i].id = i;
   }
 
 
-  for(i = 0; i < sb_globals.num_threads; i++)
+  for(i = 0; i < sb_globals.threads; i++)
   {
     int err;
 
@@ -130,14 +130,14 @@ int sb_thread_create_workers(void *(*worker_routine)(void*))
 
 int sb_thread_join_workers(void)
 {
-  for(unsigned i = 0; i < sb_globals.num_threads; i++)
+  for(unsigned i = 0; i < sb_globals.threads; i++)
   {
     int err;
 
     if((err = sb_thread_join(threads[i].thread, NULL)) != 0)
       log_errno(LOG_FATAL, "sb_thread_join() for thread #%d failed.", i);
 
-    ck_pr_dec_uint(&sb_globals.num_running);
+    ck_pr_dec_uint(&sb_globals.threads_running);
   }
 
   return EXIT_SUCCESS;

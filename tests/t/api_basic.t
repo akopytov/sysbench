@@ -2,7 +2,7 @@
 Basic Lua API tests
 ########################################################################
 
-  $ SB_ARGS="--verbosity=0 --events=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS $CRAMTMP/api_basic.lua"
+  $ SB_ARGS="--verbosity=0 --events=2 --db-driver=mysql $SBTEST_MYSQL_ARGS $CRAMTMP/api_basic.lua"
 
   $ cat >$CRAMTMP/api_basic.lua <<EOF
   > function init(thread_id)

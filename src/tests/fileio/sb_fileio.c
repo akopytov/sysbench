@@ -410,7 +410,7 @@ int file_done(void)
     return 1;
 #endif
 
-  for (i = 0; i < sb_globals.num_threads; i++)
+  for (i = 0; i < sb_globals.threads; i++)
   {
     if (per_thread[i].buffer != NULL)
       sb_free_memaligned(per_thread[i].buffer);
@@ -631,7 +631,7 @@ retry:
        For the multi-threaded validation test we have to make sure the block is
        not being used by another thread
     */
-    for (i = 0; i < sb_globals.num_threads; i++)
+    for (i = 0; i < sb_globals.threads; i++)
     {
       if (i != (unsigned) thread_id && per_thread[i].buffer_file_id == file_req->file_id &&
           per_thread[i].buffer_pos == file_req->pos)
@@ -1190,9 +1190,9 @@ int file_async_init(void)
     return 1;
   }
 
-  aio_ctxts = (sb_aio_context_t *)calloc(sb_globals.num_threads,
+  aio_ctxts = (sb_aio_context_t *)calloc(sb_globals.threads,
                                          sizeof(sb_aio_context_t));
-  for (i = 0; i < sb_globals.num_threads; i++)
+  for (i = 0; i < sb_globals.threads; i++)
   {
     if (io_queue_init(file_async_backlog, &aio_ctxts[i].io_ctxt))
     {
@@ -1223,7 +1223,7 @@ int file_async_done(void)
   if (file_io_mode != FILE_IO_MODE_ASYNC)
     return 0;
 
-  for (i = 0; i < sb_globals.num_threads; i++)
+  for (i = 0; i < sb_globals.threads; i++)
   {
     io_queue_release(aio_ctxts[i].io_ctxt);
     free(aio_ctxts[i].events);
@@ -1909,8 +1909,8 @@ int parse_arguments(void)
     return 1;
   }
 
-  per_thread = malloc(sizeof(*per_thread) * sb_globals.num_threads);
-  for (i = 0; i < sb_globals.num_threads; i++)
+  per_thread = malloc(sizeof(*per_thread) * sb_globals.threads);
+  for (i = 0; i < sb_globals.threads; i++)
   {
     per_thread[i].buffer = sb_memalign(file_max_request_size, sb_getpagesize());
     if (per_thread[i].buffer == NULL)

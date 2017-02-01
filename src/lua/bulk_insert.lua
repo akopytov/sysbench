@@ -1,6 +1,6 @@
 #!/usr/bin/env sysbench
 -- -------------------------------------------------------------------------- --
--- Bulk insert benchmark: do multi-row INSERTs concurrently in --num-threads
+-- Bulk insert benchmark: do multi-row INSERTs concurrently in --threads
 -- threads with each thread inserting into its own table. The number of INSERTs
 -- executed by each thread is controlled by either --time or --events.
 -- -------------------------------------------------------------------------- --
@@ -18,7 +18,7 @@ function prepare()
    local drv = sysbench.sql.driver()
    local con = drv:connect()
 
-   for i = 1, num_threads do
+   for i = 1, sysbench.opt.threads do
       print("Creating table 'sbtest" .. i .. "'...")
       con:query(string.format([[
         CREATE TABLE IF NOT EXISTS sbtest%d (
@@ -49,7 +49,7 @@ function cleanup()
    local drv = sysbench.sql.driver()
    local con = drv:connect()
 
-   for i = 1, num_threads do
+   for i = 1, sysbench.opt.threads do
       print("Dropping table 'sbtest" .. i .. "'...")
       con:query("DROP TABLE IF EXISTS sbtest" .. i )
    end

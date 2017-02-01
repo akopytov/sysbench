@@ -27,7 +27,7 @@ do
         db_show_table sbtest${i} || true # Error on non-existing table
     done
 
-    sysbench $ARGS --max-requests=100 --num-threads=1 run
+    sysbench $ARGS --max-requests=100 run
 
     sysbench $ARGS cleanup
 

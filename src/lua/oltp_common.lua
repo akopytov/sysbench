@@ -77,19 +77,19 @@ sysbench.option_defs = {
 }
 
 -- Prepare the dataset. This command support parallel execution, i.e. will
--- benefit from executing with --num-threads > 1 as long as --tables > 1
+-- benefit from executing with --threads > 1 as long as --tables > 1
 function cmd_prepare()
    local drv = sysbench.sql.driver()
    local con = drv:connect()
 
-   for i = sysbench.tid % sysbench.opt.num_threads + 1, sysbench.opt.tables,
-   sysbench.opt.num_threads do
+   for i = sysbench.tid % sysbench.opt.threads + 1, sysbench.opt.tables,
+   sysbench.opt.threads do
      create_table(drv, con, i)
    end
 end
 
 -- Preload the dataset into the server cache. This command support parallel
--- execution, i.e. will benefit from executing with --num-threads > 1 as long as
+-- execution, i.e. will benefit from executing with --threads > 1 as long as
 -- --tables > 1
 --
 -- PS. Currently, this command is only meaningful for MySQL/InnoDB benchmarks
@@ -103,8 +103,8 @@ function cmd_prewarm()
    con:query("SET tmp_table_size=2*1024*1024*1024")
    con:query("SET max_heap_table_size=2*1024*1024*1024")
 
-   for i = sysbench.tid % sysbench.opt.num_threads + 1, sysbench.opt.tables,
-   sysbench.opt.num_threads do
+   for i = sysbench.tid % sysbench.opt.threads + 1, sysbench.opt.tables,
+   sysbench.opt.threads do
       local t = "sbtest" .. i
       print("Prewarming table " .. t)
       con:query("ANALYZE TABLE sbtest" .. i)
