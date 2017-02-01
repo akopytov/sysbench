@@ -95,7 +95,8 @@ sb_arg_t general_args[] =
          "number of seconds to wait after --max-time before forcing shutdown, "
          "or 'off' to disable", "off", STRING),
   SB_OPT("thread-stack-size", "size of stack per thread", "64K", SIZE),
-  SB_OPT("tx-rate", "target transaction rate (tps)", "0", INT),
+  SB_OPT("tx-rate", "deprecated alias for --rate", "0", INT),
+  SB_OPT("rate", "average transactions rate. 0 for unlimited rate", "0", INT),
   SB_OPT("report-interval", "periodically report intermediate statistics with "
          "a specified interval in seconds. 0 disables intermediate reports",
          "0", INT),
@@ -1333,6 +1334,11 @@ static int init(void)
   }
 
   sb_globals.tx_rate = sb_get_value_int("tx-rate");
+  if (sb_globals.tx_rate > 0)
+    log_text(LOG_WARNING, "--tx-rate is deprecated, use --rate");
+  else
+    sb_globals.tx_rate = sb_get_value_int("rate");
+
   sb_globals.report_interval = sb_get_value_int("report-interval");
 
   sb_globals.n_checkpoints = 0;
