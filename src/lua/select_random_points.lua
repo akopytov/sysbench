@@ -9,7 +9,7 @@
 require("oltp_common")
 
 -- Add random_points to the list of standard OLTP options
-sysbench.option_defs.random_points =
+sysbench.cmdline.options.random_points =
    {"Number of random points in the IN() clause in generated SELECTs", 10}
 
 -- Override standard prepare/cleanup OLTP functions, as this benchmark does not

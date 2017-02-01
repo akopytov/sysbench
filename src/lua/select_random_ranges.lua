@@ -9,9 +9,9 @@
 require("oltp_common")
 
 -- Add --number-of-ranges and --delta to the list of standard OLTP options
-sysbench.option_defs.number_of_ranges =
+sysbench.cmdline.options.number_of_ranges =
    {"Number of random BETWEEN ranges per SELECT", 10}
-sysbench.option_defs.delta =
+sysbench.cmdline.options.delta =
    {"Size of BETWEEN ranges", 5}
 
 -- Override standard prepare/cleanup OLTP functions, as this benchmark does not

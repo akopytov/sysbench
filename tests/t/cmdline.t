@@ -92,7 +92,7 @@ Command line options tests
 ########################################################################
 
   $ cat >cmdline.lua <<EOF
-  > sysbench.option_defs = {
+  > sysbench.cmdline.options = {
   >   str_opt1 = {"str_opt1 description"},
   >   str_opt2 = {"str_opt2 description", "opt2"},
   >   str_opt3 = {"str_opt3 description", "opt3", sysbench.cmdline.ARG_STRING},
@@ -200,7 +200,7 @@ Command line options tests
   [1]
 
   $ cat >cmdline.lua <<EOF
-  > sysbench.option_defs = {
+  > sysbench.cmdline.options = {
   >   {}, 
   > }
   > 
@@ -210,7 +210,7 @@ Command line options tests
   $ sysbench cmdline.lua help
   sysbench * (glob)
   
-  FATAL: `sysbench.cmdline.read_option_defs' function failed: [string "sysbench.cmdline.lua"]:*: wrong table structure in sysbench.option_defs (glob)
+  FATAL: `sysbench.cmdline.read_cmdline_options' function failed: [string "sysbench.cmdline.lua"]:*: wrong table structure in sysbench.cmdline.options (glob)
   Script execution failed (no-eol)
   [1]
 

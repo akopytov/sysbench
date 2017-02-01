@@ -177,7 +177,7 @@ static int sb_lua_db_free_results(lua_State *);
 
 static unsigned int sb_lua_table_size(lua_State *, int);
 
-static int read_option_defs(lua_State *L);
+static int read_cmdline_options(lua_State *L);
 static bool sb_lua_hook_defined(lua_State *, const char *);
 static bool sb_lua_hook_push(lua_State *, const char *);
 static void sb_lua_report_intermediate(sb_stat_t *);
@@ -301,9 +301,9 @@ static int do_export_options(lua_State *L, bool global)
 }
 
 /*
-  Export options to the 'sysbench.opt' table. If the script does not declare
-  supported options with sysbench.option_defs also export to the global
-  namespace for compatibility with the legacy API.
+  Export option values to the 'sysbench.opt' table. If the script does not
+  declare supported options with sysbench.cmdline.options also export to the
+  global namespace for compatibility with the legacy API.
 */
 
 static int export_options(lua_State *L)
@@ -338,7 +338,7 @@ sb_test_t *sb_load_lua(const char *testname)
   if (gstate == NULL)
     goto error;
 
-  if (read_option_defs(gstate))
+  if (read_cmdline_options(gstate))
     goto error;
 
   /* Test commands */
@@ -640,20 +640,20 @@ int sb_lua_set_test_args(sb_arg_t *args, size_t len)
 
 /*
   Parse command line options definitions, if present in the script as a
-  'sysbench.option_defs' table. If there was a parsing error, return 1. Return 0
-  on success.
+  sysbench.cmdline.options table. If there was a parsing error, return 1. Return
+  0 on success.
 */
 
-static int read_option_defs(lua_State *L)
+static int read_cmdline_options(lua_State *L)
 {
   lua_getglobal(L, "sysbench");
   lua_getfield(L, -1, "cmdline");
-  lua_getfield(L, -1, "read_option_defs");
+  lua_getfield(L, -1, "read_cmdline_options");
 
   if (!lua_isfunction(L, -1))
   {
     log_text(LOG_WARNING,
-             "Cannot find the sysbench.cmdline.read_option_defs() function");
+             "Cannot find sysbench.cmdline.read_cmdline_options()");
     lua_pop(L, 3);
 
     return 1;
@@ -661,7 +661,7 @@ static int read_option_defs(lua_State *L)
 
   if (lua_pcall(L, 0, 1, 0) != 0)
   {
-    call_error(L, "sysbench.cmdline.read_option_defs");
+    call_error(L, "sysbench.cmdline.read_cmdline_options");
     lua_pop(L, 2);
     return 1;
   }

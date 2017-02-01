@@ -73,28 +73,30 @@ local arg_types = {
 }
 
 -- Parse command line options definitions, if present in the script as a
--- 'sysbench.option_defs' table. If no such table exists, or if there a parsing
--- error, return false. Return true on success.
-function sysbench.cmdline.read_option_defs()
-   if sysbench.option_defs == nil then
+-- 'sysbench.cmdline.options' table. If no such table exists, or if there a
+-- parsing error, return false. Return true on success. After parsing the
+-- command line arguments, option values are available as the sysbench.opt
+-- table.
+function sysbench.cmdline.read_cmdline_options()
+   if sysbench.cmdline.options == nil then
       return true
    end
 
-   local t = type(sysbench.option_defs)
-   assert(t == "table", "wrong type for sysbench.option_defs: " .. t)
+   local t = type(sysbench.cmdline.options)
+   assert(t == "table", "wrong type for sysbench.cmdline.options: " .. t)
 
    local i = 0
-   for name, def in pairs(sysbench.option_defs) do
+   for name, def in pairs(sysbench.cmdline.options) do
       i = i+1
    end
 
    local args = ffi.new('sb_arg_t[?]', i)
    i = 0
 
-   for name, def in pairs(sysbench.option_defs) do
+   for name, def in pairs(sysbench.cmdline.options) do
       -- name
       assert(type(name) == "string" and type(def) == "table",
-             "wrong table structure in sysbench.option_defs")
+             "wrong table structure in sysbench.cmdline.options")
       args[i].name = name
 
       -- description
@@ -171,7 +173,8 @@ void sb_print_test_options(void);
 ]]
 
 -- ----------------------------------------------------------------------
--- Print descriptions of command line options, if defined by option_defs
+-- Print descriptions of command line options, if defined by
+-- sysbench.cmdline.options
 -- ----------------------------------------------------------------------
 function sysbench.cmdline.print_test_options()
    ffi.C.sb_print_test_options()

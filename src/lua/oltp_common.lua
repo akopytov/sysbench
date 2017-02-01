@@ -30,7 +30,7 @@ if sysbench.cmdline.command == nil then
 end
 
 -- Command line options
-sysbench.option_defs = {
+sysbench.cmdline.options = {
    table_size =
       {"Number of rows per table", 10000},
    range_size =
