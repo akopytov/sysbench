@@ -13,4 +13,4 @@
 # Run a test that does not support intermediate reports
 
   $ sysbench cpu --report-interval=1 --time=2 run | grep '\[ 1s \]'
-  [ 1s ] thds: 1 eps: * latency (ms,95%): * (glob)
+  [ 1s ] thds: 1 eps: * lat (ms,95%): * (glob)
