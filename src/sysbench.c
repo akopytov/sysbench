@@ -1430,7 +1430,7 @@ int main(int argc, char *argv[])
 
   print_header();
 
-  if (sb_globals.testname != NULL)
+  if (sb_globals.testname != NULL && strcmp(sb_globals.testname, "-"))
   {
     /* Is it a built-in test name? */
     test = find_test(sb_globals.testname);
@@ -1468,6 +1468,8 @@ int main(int argc, char *argv[])
   }
   else
   {
+    sb_globals.testname = NULL;
+
     if (SB_ISATTY())
       log_text(LOG_NOTICE, "Reading the script from the standard input:\n");
 

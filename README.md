@@ -61,8 +61,9 @@ The general command line syntax for sysbench is:
   `memory`, `cpu`, etc.), or a name of one of the bundled Lua scripts
   (e.g. `oltp_read_only`), or a *path* to a custom Lua script. If no
   test name is specified on the command line (and thus, there is no
-  *command* too, as in that case it would be parsed as a *testname*),
-  then sysbench expects a Lua script to execute on its standard input.
+  *command* too, as in that case it would be parsed as a *testname*), or
+  the test name is a dash ("`-`"), then sysbench expects a Lua script to
+  execute on its standard input.
 
 - *command* is an optional argument that will be passed by sysbench to
   the built-in test or script specified with *testname*. *command*

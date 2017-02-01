@@ -85,7 +85,7 @@
   
   Threads fairness:
       events (avg/stddev):           1.0000/0.00
-      execution time (avg/stddev):   0.0000/0.00
+      execution time (avg/stddev):   *.*/0.00 (glob)
   
 ########################################################################
 Command line options tests
@@ -317,3 +317,20 @@ Command line options tests
   argv[3] = cmdline.lua
   argv[4] = prepare
   sysbench.cmdline.command = prepare
+
+  $ sysbench - <<EOF
+  > print("hello")
+  > EOF
+  sysbench * (glob)
+  
+  hello
+
+  $ sysbench - prepare <<EOF
+  > function prepare()
+  >   print("prepare")
+  > end
+  > print("global")
+  > EOF
+  sysbench * (glob)
+  
+  global
