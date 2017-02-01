@@ -345,8 +345,8 @@ int file_init(void)
   clear_stats();
 
   /* Use our own limit on the number of events */
-  max_events = sb_globals.max_requests;
-  sb_globals.max_requests = 0;
+  max_events = sb_globals.max_events;
+  sb_globals.max_events = 0;
 
   return 0;
 }

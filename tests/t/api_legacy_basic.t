@@ -42,10 +42,12 @@ Legacy basic Lua API tests
 
   $ sysbench $SB_ARGS prepare
   WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+  WARNING: --max-requests is deprecated, use --events instead
   tid:(nil) prepare()
 
   $ sysbench $SB_ARGS run
   WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+  WARNING: --max-requests is deprecated, use --events instead
   tid:0 thread_init()
   tid:0 event()
   tid:0 event()
@@ -53,10 +55,12 @@ Legacy basic Lua API tests
 
   $ sysbench $SB_ARGS cleanup
   WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+  WARNING: --max-requests is deprecated, use --events instead
   tid:(nil) cleanup()
 
   $ sysbench $SB_ARGS help
   WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+  WARNING: --max-requests is deprecated, use --events instead
   tid:0 help()
 
   $ cat >$CRAMTMP/api_legacy_basic.lua <<EOF
@@ -66,4 +70,5 @@ Legacy basic Lua API tests
   > EOF
   $ sysbench $SB_ARGS prepare
   WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+  WARNING: --max-requests is deprecated, use --events instead
   */api_legacy_basic.lua (glob)

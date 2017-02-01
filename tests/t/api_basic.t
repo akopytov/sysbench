@@ -2,7 +2,7 @@
 Basic Lua API tests
 ########################################################################
 
-  $ SB_ARGS="--verbosity=0 --max-requests=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS $CRAMTMP/api_basic.lua"
+  $ SB_ARGS="--verbosity=0 --events=2 --num-threads=1 --db-driver=mysql $SBTEST_MYSQL_ARGS $CRAMTMP/api_basic.lua"
 
   $ cat >$CRAMTMP/api_basic.lua <<EOF
   > function init(thread_id)
@@ -67,7 +67,7 @@ Basic Lua API tests
   > end
   > EOF
 
-  $ sysbench $SB_ARGS --max-requests=1 run |
+  $ sysbench $SB_ARGS --events=1 run |
   > sed -e "s/$SBTEST_VERSION_STRING/VERSION_STRING/" \
   >     -e "s/$SBTEST_VERSION/VERSION/"
   VERSION
@@ -78,7 +78,7 @@ Basic Lua API tests
   >     print(string.format("sysbench.cmdline.script_path = %s", sysbench.cmdline.script_path))
   > end
   > EOF
-  $ sysbench $SB_ARGS --max-requests=1 run
+  $ sysbench $SB_ARGS --events=1 run
   sysbench.cmdline.script_path = */api_basic.lua (glob)
 
 ########################################################################

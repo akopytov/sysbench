@@ -34,7 +34,7 @@ fileio benchmark tests
   $ sysbench $fileio_args run | grep FATAL
   FATAL: Missing required argument: --file-test-mode
 
-  $ sysbench $fileio_args --max-requests=150 --file-test-mode=rndrw run
+  $ sysbench $fileio_args --events=150 --file-test-mode=rndrw run
   sysbench *.* * (glob)
   
   Running the test with following options:
@@ -81,7 +81,7 @@ fileio benchmark tests
       events (avg/stddev):           158.0000/0.00
       execution time (avg/stddev):   *.*/0.00 (glob)
   
-  $ sysbench $fileio_args --max-requests=150 --file-test-mode=rndrd run
+  $ sysbench $fileio_args --events=150 --file-test-mode=rndrd run
   sysbench *.* * (glob)
   
   Running the test with following options:
@@ -129,7 +129,7 @@ fileio benchmark tests
       execution time (avg/stddev):   *.*/0.00 (glob)
   
 
-  $ sysbench $fileio_args --max-requests=150 --file-test-mode=seqrd run
+  $ sysbench $fileio_args --events=150 --file-test-mode=seqrd run
   sysbench *.* * (glob)
   
   Running the test with following options:
@@ -175,7 +175,7 @@ fileio benchmark tests
       execution time (avg/stddev):   *.*/0.00 (glob)
   
 
-  $ sysbench $fileio_args --max-requests=150 --file-test-mode=rndwr run
+  $ sysbench $fileio_args --events=150 --file-test-mode=rndwr run
   sysbench *.* * (glob)
   
   Running the test with following options:
@@ -223,7 +223,7 @@ fileio benchmark tests
       execution time (avg/stddev):   *.*/0.00 (glob)
   
 
-  $ sysbench $fileio_args --max-requests=150 --file-test-mode=foo run
+  $ sysbench $fileio_args --events=150 --file-test-mode=foo run
   sysbench *.* * (glob)
   
   FATAL: Invalid IO operations mode: foo.

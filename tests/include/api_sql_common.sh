@@ -10,7 +10,7 @@
 
 set -eu
 
-SB_ARGS="--verbosity=1 --max-requests=1 --num-threads=1 $DB_DRIVER_ARGS $CRAMTMP/api_sql.lua"
+SB_ARGS="--verbosity=1 --events=1 --num-threads=1 $DB_DRIVER_ARGS $CRAMTMP/api_sql.lua"
 cat >$CRAMTMP/api_sql.lua <<EOF
 function thread_init()
   drv = sysbench.sql.driver()

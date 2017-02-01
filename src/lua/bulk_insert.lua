@@ -2,7 +2,7 @@
 -- -------------------------------------------------------------------------- --
 -- Bulk insert benchmark: do multi-row INSERTs concurrently in --num-threads
 -- threads with each thread inserting into its own table. The number of INSERTs
--- executed by each thread is controlled by either --max-time or --max-requests.
+-- executed by each thread is controlled by either --time or --events.
 -- -------------------------------------------------------------------------- --
 
 cursize=0

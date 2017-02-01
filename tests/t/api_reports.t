@@ -3,7 +3,7 @@ Tests for custom report hooks
 ########################################################################
 
 # Trigger one intermediate and one cumulative report
-  $ SB_ARGS="api_reports.lua --max-time=3 --report-interval=2 --verbosity=1"
+  $ SB_ARGS="api_reports.lua --time=3 --report-interval=2 --verbosity=1"
 
 ########################################################################
 # Default human-readable format via a custom hook

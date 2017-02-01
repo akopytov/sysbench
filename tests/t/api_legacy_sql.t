@@ -41,6 +41,7 @@ Legacy SQL Lua API tests
 
   $ sysbench $SB_ARGS run
   WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+  WARNING: --max-requests is deprecated, use --events instead
   DB_ERROR_NONE = [0-9] (re)
   DB_ERROR_RESTART_TRANSACTION = [0-9] (re)
   DB_ERROR_FAILED = [0-9] (re)
@@ -177,6 +178,7 @@ Legacy SQL Lua API tests
   ) ENGINE=MyISAM AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
   WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+  WARNING: --max-requests is deprecated, use --events instead
   sysbench *.* * (glob)
   
   Running the test with following options:
@@ -363,6 +365,7 @@ Legacy SQL Lua API tests
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* MAX_ROWS=1000000 (glob)
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
   WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+  WARNING: --max-requests is deprecated, use --events instead
   sysbench *.* * (glob)
   
   Running the test with following options:

@@ -238,6 +238,30 @@ void log_msg(log_msg_t *msg)
   }
 }
 
+static const char *get_msg_prefix(log_msg_priority_t priority)
+{
+  const char * prefix;
+
+  switch (priority) {
+    case LOG_FATAL:
+      prefix = "FATAL: ";
+      break;
+    case LOG_ALERT:
+      prefix = "ALERT: ";
+      break;
+    case LOG_WARNING:
+      prefix = "WARNING: ";
+      break;
+    case LOG_DEBUG:
+      prefix = "DEBUG: ";
+      break;
+    default:
+      prefix = "";
+      break;
+  }
+
+  return prefix;
+}
 
 /* printf-like wrapper to log text messages */
 
@@ -268,11 +292,11 @@ void log_text(log_msg_priority_t priority, const char *fmt, ...)
   */
   if (!initialized)
   {
-    printf("%s", buf);
-    
+    printf("%s%s", get_msg_prefix(priority), buf);
+
     return;
   }
-  
+
   msg.type = LOG_MSG_TYPE_TEXT;
   msg.data = (void *)&text_msg;
   text_msg.priority = priority;
@@ -320,7 +344,7 @@ void log_timestamp(log_msg_priority_t priority, double seconds,
   */
   if (!initialized)
   {
-    printf("%s", buf);
+    printf("%s%s", get_msg_prefix(priority), buf);
 
     return;
   }
@@ -420,7 +444,6 @@ int text_handler_init(void)
 
 int text_handler_process(log_msg_t *msg)
 {
-  char *prefix;
   log_msg_text_t *text_msg = (log_msg_text_t *)msg->data;
 
   if (text_msg->priority > sb_globals.verbosity)
@@ -447,26 +470,8 @@ int text_handler_process(log_msg_t *msg)
     pthread_mutex_unlock(&text_mutex);
   }
 
-  switch (text_msg->priority) {
-    case LOG_FATAL:
-      prefix = "FATAL: ";
-      break;
-    case LOG_ALERT:
-      prefix = "ALERT: ";
-      break;
-    case LOG_WARNING:
-      prefix = "WARNING: ";
-      break;
-    case LOG_DEBUG:
-      prefix = "DEBUG: ";
-      break;
-    default:
-      prefix = "";
-      break;
-  }
-  
-  printf("%s%s", prefix, text_msg->text);
-  
+  printf("%s%s", get_msg_prefix(text_msg->priority), text_msg->text);
+
   return 0;
 }
 

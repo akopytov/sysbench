@@ -13,11 +13,10 @@ separately.
   
   General options:
     --num-threads=N                 number of threads to use [1]
-    --max-requests=N                limit for total number of requests [10000]
-    --max-time=N                    limit for total execution time in seconds [0]
-    --forced-shutdown=STRING        number of seconds to wait after --max-time before forcing shutdown, or 'off' to disable [off]
+    --events=N                      limit for total number of events [0]
+    --time=N                        limit for total execution time in seconds [10]
+    --forced-shutdown=STRING        number of seconds to wait after the --time limit before forcing shutdown, or 'off' to disable [off]
     --thread-stack-size=SIZE        size of stack per thread [64K]
-    --tx-rate=N                     deprecated alias for --rate [0]
     --rate=N                        average transactions rate. 0 for unlimited rate [0]
     --report-interval=N             periodically report intermediate statistics with a specified interval in seconds. 0 disables intermediate reports [0]
     --report-checkpoints=[LIST,...] dump full statistics and reset all counters at specified points in time. The argument is a list of comma-separated values representing the amount of time in seconds elapsed from start of test when report checkpoint(s) must be performed. Report checkpoints are off by default. []
@@ -26,6 +25,9 @@ separately.
     --help[=on|off]                 print help and exit [off]
     --version[=on|off]              print version and exit [off]
     --config-file=FILENAME          File containing command line options
+    --tx-rate=N                     deprecated alias for --rate [0]
+    --max-requests=N                deprecated alias for --events [0]
+    --max-time=N                    deprecated alias for --time [0]
   
   Pseudo-Random Numbers Generator options:
     --rand-type=STRING random numbers distribution {uniform,gaussian,special,pareto} [special]

@@ -51,12 +51,12 @@
   >   print('event function')
   > end
   > EOF
-  $ sysbench --max-requests=1 $CRAMTMP/cmdline.lua
+  $ sysbench --events=1 $CRAMTMP/cmdline.lua
   sysbench * (glob)
   
   script body
 
-  $ sysbench --max-requests=1 $CRAMTMP/cmdline.lua run
+  $ sysbench --events=1 $CRAMTMP/cmdline.lua run
   sysbench * (glob)
   
   script body

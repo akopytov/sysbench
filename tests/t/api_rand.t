@@ -2,7 +2,7 @@
 PRNG Lua API tests
 ########################################################################
 
-  $ SB_ARGS="--verbosity=0 --max-requests=1 --num-threads=1"
+  $ SB_ARGS="--verbosity=0 --events=1 --num-threads=1"
 
   $ cat >$CRAMTMP/api_rand.lua <<EOF
   > function event()
@@ -39,6 +39,6 @@ issue #96: sb_rand_uniq(1, oltp_table_size) generate duplicate value
   > end
   > EOF
 
-  $ sysbench $SB_ARGS --max-requests=100000 $CRAMTMP/api_rand_uniq.lua run |
+  $ sysbench $SB_ARGS --events=100000 $CRAMTMP/api_rand_uniq.lua run |
   >   sort -n | uniq | wc -l | sed -e 's/ //g'
   100000

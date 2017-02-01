@@ -204,7 +204,7 @@ int memory_init(void)
   }
 
   /* Use our own limit on the number of events */
-  sb_globals.max_requests = 0;
+  sb_globals.max_events = 0;
 
   return 0;
 }

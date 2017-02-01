@@ -89,13 +89,12 @@
 sb_arg_t general_args[] =
 {
   SB_OPT("num-threads", "number of threads to use", "1", INT),
-  SB_OPT("max-requests", "limit for total number of requests", "10000", INT),
-  SB_OPT("max-time", "limit for total execution time in seconds", "0", INT),
+  SB_OPT("events", "limit for total number of events", "0", INT),
+  SB_OPT("time", "limit for total execution time in seconds", "10", INT),
   SB_OPT("forced-shutdown",
-         "number of seconds to wait after --max-time before forcing shutdown, "
-         "or 'off' to disable", "off", STRING),
+         "number of seconds to wait after the --time limit before forcing "
+         "shutdown, or 'off' to disable", "off", STRING),
   SB_OPT("thread-stack-size", "size of stack per thread", "64K", SIZE),
-  SB_OPT("tx-rate", "deprecated alias for --rate", "0", INT),
   SB_OPT("rate", "average transactions rate. 0 for unlimited rate", "0", INT),
   SB_OPT("report-interval", "periodically report intermediate statistics with "
          "a specified interval in seconds. 0 disables intermediate reports",
@@ -110,6 +109,9 @@ sb_arg_t general_args[] =
   SB_OPT("help", "print help and exit", "off", BOOL),
   SB_OPT("version", "print version and exit", "off", BOOL),
   SB_OPT("config-file", "File containing command line options", NULL, FILE),
+  SB_OPT("tx-rate", "deprecated alias for --rate", "0", INT),
+  SB_OPT("max-requests", "deprecated alias for --events", "0", INT),
+  SB_OPT("max-time", "deprecated alias for --time", "0", INT),
 
   SB_OPT_END
 };
@@ -693,8 +695,8 @@ bool sb_more_events(int thread_id)
   }
 
   /* Check if we have a limit on the number of events */
-  if (sb_globals.max_requests > 0 &&
-      ck_pr_faa_64(&sb_globals.nevents, 1) >= sb_globals.max_requests)
+  if (sb_globals.max_events > 0 &&
+      ck_pr_faa_64(&sb_globals.nevents, 1) >= sb_globals.max_events)
     return false;
 
   /* If we are in tx_rate mode, we take events from queue */
@@ -1279,11 +1281,23 @@ static int init(void)
     log_text(LOG_FATAL, "Invalid value for --num-threads: %d.\n", sb_globals.num_threads);
     return 1;
   }
-  sb_globals.max_requests = sb_get_value_int("max-requests");
-  sb_globals.max_time_ns = SEC2NS(sb_get_value_int("max-time"));
+  sb_globals.max_events = sb_get_value_int("max-requests");
+  if (sb_globals.max_events > 0)
+    log_text(LOG_WARNING, "--max-requests is deprecated, use --events instead");
+  else
+    sb_globals.max_events = sb_get_value_int("events");
 
-  if (!sb_globals.max_requests && !sb_globals.max_time_ns)
-    log_text(LOG_WARNING, "WARNING: Both max-requests and max-time are 0, running endless test");
+  int max_time = sb_get_value_int("max-time");
+  if (max_time > 0)
+    log_text(LOG_WARNING, "--max-time is deprecated, use --time instead");
+  else
+    max_time = sb_get_value_int("time");
+
+  sb_globals.max_time_ns = SEC2NS(max_time);
+
+  if (!sb_globals.max_events && !sb_globals.max_time_ns)
+    log_text(LOG_WARNING, "Both event and time limits are disabled, "
+             "running an endless test");
 
   if (sb_globals.max_time_ns > 0)
   {
@@ -1335,7 +1349,7 @@ static int init(void)
 
   sb_globals.tx_rate = sb_get_value_int("tx-rate");
   if (sb_globals.tx_rate > 0)
-    log_text(LOG_WARNING, "--tx-rate is deprecated, use --rate");
+    log_text(LOG_WARNING, "--tx-rate is deprecated, use --rate instead");
   else
     sb_globals.tx_rate = sb_get_value_int("rate");
 

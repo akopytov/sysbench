@@ -15,7 +15,7 @@ end
 EOF
 
 sysbench test.lua \
-         --max-requests=10 \
+         --events=10 \
          --num-threads=2 \
          $DB_DRIVER_ARGS \
          run

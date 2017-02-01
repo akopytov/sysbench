@@ -23,7 +23,7 @@ do
     db_show_table sbtest${i} || true # Error on non-existing table
 done
 
-sysbench $ARGS --max-requests=100 --verbosity=3 run
+sysbench $ARGS --events=100 --verbosity=3 run
 
 sysbench $ARGS cleanup
 
