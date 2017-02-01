@@ -129,10 +129,9 @@ end
 -- end
 function sysbench.report_default(stat)
    local seconds = stat.time_interval
-   print(string.format("[%4.0fs] threads: %u tps: %4.2f " ..
-                          "qps: %4.2f (r/w/o: %4.2f/%4.2f/%4.2f) " ..
-                          "latency (ms,%u%%): %4.2f errors/s %4.2f " ..
-                          "reconnects/s: %4.2f",
+   print(string.format("[ %.0fs ] thds: %u tps: %4.2f qps: %4.2f " ..
+                          "(r/w/o: %4.2f/%4.2f/%4.2f) lat (ms,%u%%): %4.2f " ..
+                          "err/s %4.2f reconn/s: %4.2f",
                        stat.time_total,
                        stat.threads_running,
                        stat.events / seconds,

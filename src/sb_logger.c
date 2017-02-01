@@ -325,7 +325,7 @@ void log_timestamp(log_msg_priority_t priority, double seconds,
   maxlen = TEXT_BUFFER_SIZE;
   clen = 0;
 
-  n = snprintf(buf, maxlen, "[%4.0fs] ", seconds);
+  n = snprintf(buf, maxlen, "[ %.0fs ] ", seconds);
   clen += n;
   maxlen -= n;
 

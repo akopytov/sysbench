@@ -178,7 +178,7 @@ static void sigalrm_thread_init_timeout_handler(int sig)
 void sb_report_intermediate(sb_stat_t *stat)
 {
   log_timestamp(LOG_NOTICE, stat->time_total,
-                "threads: %" PRIu32 " events/s: %4.2f latency (ms,%u%%): %4.2f",
+                "thds: %" PRIu32 " eps: %4.2f lat (ms,%u%%): %4.2f",
                 stat->threads_running,
                 stat->events / stat->time_interval,
                 sb_globals.percentile,

@@ -21,8 +21,8 @@ Tests for custom report hooks
   > EOF
 
   $ sysbench $SB_ARGS run
-  [   2s] threads: 1 tps: *.* qps: 0.00 (r/w/o: 0.00/0.00/0.00) latency (ms,95%): 1.* errors/s 0.00 reconnects/s: 0.00 (glob)
-  [   3s] threads: 0 tps: *.* qps: 0.00 (r/w/o: 0.00/0.00/0.00) latency (ms,95%): 1.* errors/s 0.00 reconnects/s: 0.00 (glob)
+  [ 2s ] thds: 1 tps: *.* qps: 0.00 (r/w/o: 0.00/0.00/0.00) lat (ms,95%): 1.* err/s 0.00 reconn/s: 0.00 (glob)
+  [ 3s ] thds: 0 tps: *.* qps: 0.00 (r/w/o: 0.00/0.00/0.00) lat (ms,95%): 1.* err/s 0.00 reconn/s: 0.00 (glob)
 
 ########################################################################
 # CSV format via a custom hook

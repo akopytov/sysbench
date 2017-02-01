@@ -939,10 +939,10 @@ void db_report_intermediate(sb_stat_t *stat)
   const double seconds = stat->time_interval;
 
   log_timestamp(LOG_NOTICE, stat->time_total,
-                "threads: %u tps: %4.2f "
+                "thds: %u tps: %4.2f "
                 "qps: %4.2f (r/w/o: %4.2f/%4.2f/%4.2f) "
-                "latency (ms,%u%%): %4.2f errors/s: %4.2f "
-                "reconnects/s: %4.2f",
+                "lat (ms,%u%%): %4.2f err/s: %4.2f "
+                "reconn/s: %4.2f",
                 stat->threads_running,
                 stat->events / seconds,
                 (stat->reads + stat->writes + stat->other) / seconds,
