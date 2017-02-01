@@ -231,7 +231,8 @@ db_driver_t *db_create(const char *name)
       log_text(LOG_INFO, "No DB drivers specified, using %s", drv->sname);
     else
     {
-      log_text(LOG_FATAL, "no database driver specified");
+      log_text(LOG_FATAL, "Multiple DB drivers are available. "
+               "Use --db-driver=name to specify which one to use");
       goto err;
     }
   }
