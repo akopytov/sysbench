@@ -130,6 +130,7 @@ int db_destroy(sql_driver *drv);
 
 sql_connection *db_connection_create(sql_driver * drv);
 int db_connection_close(sql_connection *con);
+int db_connection_reconnect(sql_connection *con);
 void db_connection_free(sql_connection *con);
 
 int db_bulk_insert_init(sql_connection *, const char *, size_t);
@@ -213,6 +214,10 @@ local connection_methods = {}
 
 function connection_methods.disconnect(self)
    return assert(ffi.C.db_connection_close(self) == 0)
+end
+
+function connection_methods.reconnect(self)
+   return assert(ffi.C.db_connection_reconnect(self) == 0)
 end
 
 function connection_methods.check_error(self, rs, query)

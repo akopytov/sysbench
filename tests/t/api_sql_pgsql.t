@@ -61,6 +61,11 @@ SQL Lua API + PostgreSQL tests
   4
   301 400 0123456789 0123456789
   --
+  1
+  ALERT: reconnect is not supported by the current driver
+  2
+  --
+  reconnects = 0
   FATAL: Connection to database failed: could not translate host name "non-existing" to address: * (glob)
   
   connection creation failed

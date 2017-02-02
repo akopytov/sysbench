@@ -125,6 +125,7 @@ typedef int drv_op_init(void);
 typedef int drv_op_thread_init(int);
 typedef int drv_op_describe(drv_caps_t *);
 typedef int drv_op_connect(struct db_conn *);
+typedef int drv_op_reconnect(struct db_conn *);
 typedef int drv_op_disconnect(struct db_conn *);
 typedef int drv_op_prepare(struct db_stmt *, const char *, size_t);
 typedef int drv_op_bind_param(struct db_stmt *, db_bind_t *, size_t);
@@ -146,6 +147,7 @@ typedef struct
   drv_op_describe        *describe;       /* describe database capabilities */
   drv_op_connect         *connect;        /* connect to database */
   drv_op_disconnect      *disconnect;     /* disconnect from database */
+  drv_op_reconnect       *reconnect;      /* reconnect with the same parameters */
   drv_op_prepare         *prepare;        /* prepare statement */
   drv_op_bind_param      *bind_param;     /* bind params for prepared statement */
   drv_op_bind_result     *bind_result;    /* bind results for prepared statement */
@@ -275,6 +277,8 @@ int db_describe(db_driver_t *, drv_caps_t *);
 db_conn_t *db_connection_create(db_driver_t *);
 
 int db_connection_close(db_conn_t *);
+
+int db_connection_reconnect(db_conn_t *con);
 
 void db_connection_free(db_conn_t *con);
 

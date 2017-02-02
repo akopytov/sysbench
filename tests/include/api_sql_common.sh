@@ -113,6 +113,24 @@ end
 EOF
 sysbench $SB_ARGS run
 
+# Reconnect
+cat >$CRAMTMP/api_sql.lua <<EOF
+function sysbench.hooks.report_cumulative(stat)
+  print("reconnects = " .. stat.reconnects)
+end
+function thread_init()
+  drv = sysbench.sql.driver()
+  con = drv:connect()
+end
+function event()
+  print(con:query_row("SELECT 1"))
+  con:reconnect()
+  print(con:query_row("SELECT 2"))
+  print('--')
+end
+EOF
+sysbench $SB_ARGS run
+
 # Failed connection handling
 
 cat >$CRAMTMP/api_sql.lua <<EOF

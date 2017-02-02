@@ -59,6 +59,10 @@ SQL Lua API + MySQL tests
   4
   301 400 0123456789 0123456789
   --
+  1
+  2
+  --
+  reconnects = 1
   FATAL: unable to connect to MySQL server on host 'non-existing', port 3306, aborting...
   FATAL: error 2005: Unknown MySQL server host 'non-existing' (0)
   connection creation failed

@@ -159,6 +159,7 @@ static int mysql_drv_init(void);
 static int mysql_drv_thread_init(int);
 static int mysql_drv_describe(drv_caps_t *);
 static int mysql_drv_connect(db_conn_t *);
+static int mysql_drv_reconnect(db_conn_t *);
 static int mysql_drv_disconnect(db_conn_t *);
 static int mysql_drv_prepare(db_stmt_t *, const char *, size_t);
 static int mysql_drv_bind_param(db_stmt_t *, db_bind_t *, size_t);
@@ -186,6 +187,7 @@ static db_driver_t mysql_driver =
     .describe = mysql_drv_describe,
     .connect = mysql_drv_connect,
     .disconnect = mysql_drv_disconnect,
+    .reconnect = mysql_drv_reconnect,
     .prepare = mysql_drv_prepare,
     .bind_param = mysql_drv_bind_param,
     .bind_result = mysql_drv_bind_result,

@@ -345,7 +345,7 @@ int db_connection_close(db_conn_t *con)
     log_text(LOG_ALERT, "attempt to close an already closed connection");
     return 0;
   }
-  else if(con->state == DB_CONN_RESULT_SET)
+  else if (con->state == DB_CONN_RESULT_SET)
   {
     db_free_results_int(con);
   }
@@ -357,9 +357,49 @@ int db_connection_close(db_conn_t *con)
   return rc;
 }
 
+/* Reconnect with the same connection parameters */
+
+int db_connection_reconnect(db_conn_t *con)
+{
+  int         rc;
+  db_driver_t *drv = con->driver;
+
+  if (drv->ops.reconnect == NULL)
+  {
+    log_text(LOG_ALERT, "reconnect is not supported by the current driver");
+    return 0;
+  }
+
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to close an already closed connection");
+    return 0;
+  }
+  else if (con->state == DB_CONN_RESULT_SET)
+  {
+    db_free_results_int(con);
+  }
+
+  rc = drv->ops.reconnect(con);
+
+  if (rc == DB_ERROR_FATAL)
+  {
+    con->state = DB_CONN_INVALID;
+    sb_counter_inc(con->thread_id, SB_CNT_ERROR);
+  }
+  else
+  {
+    con->state = DB_CONN_READY;
+    sb_counter_inc(con->thread_id, SB_CNT_RECONNECT);
+
+    /* Clear DB_ERROR_IGNORABLE */
+    rc = DB_ERROR_NONE;
+  }
+
+  return rc;
+}
 
 /* Disconnect and release memory allocated by a connection object */
-
 
 void db_connection_free(db_conn_t *con)
 {
