@@ -232,4 +232,10 @@ void sb_report_intermediate(sb_stat_t *stat);
 /* Default cumulative reports handler */
 void sb_report_cumulative(sb_stat_t *stat);
 
+/*
+  Allocate an array of objects of the specified size for all threads, both
+  worker and background ones.
+*/
+void *sb_alloc_per_thread_array(size_t size);
+
 #endif

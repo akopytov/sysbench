@@ -34,10 +34,7 @@ int sb_counters_init(void)
 {
   SB_COMPILE_TIME_ASSERT(sizeof(sb_counters_t) % CK_MD_CACHELINE == 0);
 
-  sb_counters = sb_memalign(sb_globals.threads * sizeof(sb_counters_t),
-                            CK_MD_CACHELINE);
-
-  memset(sb_counters, 0, sb_globals.threads * sizeof(sb_counters_t));
+  sb_counters = sb_alloc_per_thread_array(sizeof(sb_counters_t));
 
   return sb_counters == NULL;
 }

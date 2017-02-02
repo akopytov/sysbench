@@ -192,10 +192,8 @@ static void db_init(void)
   /* Initialize timers if in debug mode */
   if (db_globals.debug)
   {
-    exec_timers = (sb_timer_t *) malloc(sb_globals.threads *
-                                        sizeof(sb_timer_t));
-    fetch_timers = (sb_timer_t *) malloc(sb_globals.threads *
-                                         sizeof(sb_timer_t));
+    exec_timers = sb_alloc_per_thread_array(sizeof(sb_timer_t));
+    fetch_timers = sb_alloc_per_thread_array(sizeof(sb_timer_t));
   }
 
   db_reset_stats();
