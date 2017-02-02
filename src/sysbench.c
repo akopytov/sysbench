@@ -1636,8 +1636,11 @@ void *sb_alloc_per_thread_array(size_t size)
     threads. Currently we assign the same single thread ID for all background
     threads, so they also share the same single slot in each allocated array.
   */
-  void *ptr = sb_memalign((sb_globals.threads + 1) * size, CK_MD_CACHELINE);
-  memset(ptr, 0, size);
+  const size_t bsize = (sb_globals.threads + 1) * size;
+
+  void *ptr = sb_memalign(bsize, CK_MD_CACHELINE);
+
+  memset(ptr, 0, bsize);
 
   return ptr;
 }
