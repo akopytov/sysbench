@@ -1577,7 +1577,7 @@ int main(int argc, char *argv[])
   }
   else
   {
-    fprintf(stderr, "Unknown command: %s", sb_globals.cmdname);
+    fprintf(stderr, "Unknown command: %s\n", sb_globals.cmdname);
     rc = EXIT_FAILURE;
   }
 

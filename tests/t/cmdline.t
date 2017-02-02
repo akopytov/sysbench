@@ -279,7 +279,7 @@ Command line options tests
   $ sysbench --threads=2 cmdline.lua cmd3
   sysbench * (glob)
   
-  Unknown command: cmd3 (no-eol)
+  Unknown command: cmd3
   [1]
 
   $ cat >cmdline.lua <<EOF
