@@ -1,3 +1,19 @@
+2017-02-04  Aleksei Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.0
+	* too much time and too many changes since the previous formal
+	release, so briefly:
+	* Lua scripts instead of hard-coded C tests for database
+	("oltp") benchmarks + ability to create custom workloads
+	* much better single-threaded performance
+	* much better scalability
+	* improvements and cleanups in command line syntax and options
+	* latency histograms in cumulative statistic reports
+	* report hooks to print statistics in custom formats
+	(CSV/JSON/XML/etc.)
+	* Dropped Windows support
+	* Dropped support for Oracle, Drizzle and libattachsql drivers
+
 2006-10-10  Alexey Kopytov <alexeyk@mysql.com>
 
 	* Removed the debugging code in OLTP test which got into 0.4.7 by mistake
