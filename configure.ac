@@ -330,13 +330,6 @@ AC_CHECK_SIZEOF(size_t)
 AC_FUNC_MMAP
 AC_FUNC_STRERROR_R
 
-AC_CHECK_DECL([clock_gettime], 
-    AC_DEFINE([HAVE_CLOCK_GETTIME], 1, [Define if you have clock_gettime() declared in <time.h>]),,
-    [
-#define _XOPEN_SOURCE 500
-#include <time.h>
-    ]
-)
 AC_SEARCH_LIBS([clock_gettime], [rt]) 
 
 save_CFLAGS="$CFLAGS"
@@ -346,6 +339,7 @@ LIBS="$PTHREAD_LIBS $LIBS"
 
 AC_CHECK_FUNCS([ \
 alarm \
+clock_gettime \
 directio \
 fdatasync \
 gettimeofday \
