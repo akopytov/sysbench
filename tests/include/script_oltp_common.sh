@@ -8,6 +8,7 @@
 #
 #   DB_DRIVER_ARGS -- extra driver-specific arguments to pass to sysbench
 #   OLTP_SCRIPT_PATH -- path to the script file to execute
+#   SB_EXTRA_ARGS -- optional variable to specify extra sysbench arguments
 #
 #   db_show_table() -- called with a single argument to dump a specified table
 #                      schema
@@ -15,7 +16,9 @@
 
 set -eu
 
-ARGS="${OLTP_SCRIPT_PATH} $DB_DRIVER_ARGS --tables=8"
+SB_EXTRA_ARGS=${SB_EXTRA_ARGS:-}
+
+ARGS="${OLTP_SCRIPT_PATH} ${DB_DRIVER_ARGS} ${SB_EXTRA_ARGS} --tables=8"
 
 sysbench $ARGS prepare
 
@@ -31,7 +34,7 @@ db_show_table sbtest9 || true # Error on non-existing table
 
 sysbench $ARGS prewarm || true # MySQL only
 
-sysbench $ARGS --events=100 --threads=2 run
+sysbench --events=100 --threads=2 $ARGS run
 
 sysbench $ARGS cleanup
 
@@ -45,9 +48,9 @@ db_show_table sbtest7 || true # Error on non-existing table
 db_show_table sbtest8 || true # Error on non-existing table
 
 # Test --create-secondary=off
-ARGS="${OLTP_SCRIPT_PATH} $DB_DRIVER_ARGS --tables=1"
+ARGS="${OLTP_SCRIPT_PATH} ${DB_DRIVER_ARGS} ${SB_EXTRA_ARGS} --tables=1"
 
-sysbench $ARGS --create-secondary=off prepare
+sysbench --create-secondary=off $ARGS prepare
 
 db_show_table sbtest1
 

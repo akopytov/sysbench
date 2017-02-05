@@ -4,6 +4,9 @@ oltp_read_write.lua + PostgreSQL tests
 
   $ . $SBTEST_INCDIR/pgsql_common.sh
   $ OLTP_SCRIPT_PATH=${SBTEST_SCRIPTDIR}/oltp_read_write.lua
+# Override --threads to run read/write tests with a single thread for
+# deterministic results
+  $ SB_EXTRA_ARGS="--threads=1"
   $ . $SBTEST_INCDIR/script_oltp_common.sh
   sysbench *.* * (glob)
   
@@ -126,7 +129,7 @@ oltp_read_write.lua + PostgreSQL tests
   sysbench *.* * (glob)
   
   Running the test with following options:
-  Number of threads: 2
+  Number of threads: 1
   Initializing random number generator from current time
   
   
