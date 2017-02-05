@@ -1,3 +1,9 @@
+2017-02-05  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.1
+	* fix clock_gettime runtime failure built with macOS 10.11 and
+	Xcode 8.x
+	
 2017-02-04  Aleksei Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.0
