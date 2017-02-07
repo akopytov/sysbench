@@ -1,5 +1,5 @@
 name: sysbench
-version: 1.0.0
+version: @PACKAGE_VERSION@
 summary: Cross-platform and multi-threaded benchmark tool
 description: |
  sysbench is a modular, cross-platform and multi-threaded benchmark tool for

@@ -557,6 +557,7 @@ src/lua/Makefile
 src/lua/internal/Makefile
 tests/Makefile
 tests/include/config.sh
+snap/snapcraft.yaml
 ])
 AC_OUTPUT
 
