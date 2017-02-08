@@ -76,7 +76,7 @@ sysbench.cmdline.options = {
           "delete_inserts is set to 0"}
 }
 
--- Prepare the dataset. This command support parallel execution, i.e. will
+-- Prepare the dataset. This command supports parallel execution, i.e. will
 -- benefit from executing with --threads > 1 as long as --tables > 1
 function cmd_prepare()
    local drv = sysbench.sql.driver()
@@ -88,7 +88,7 @@ function cmd_prepare()
    end
 end
 
--- Preload the dataset into the server cache. This command support parallel
+-- Preload the dataset into the server cache. This command supports parallel
 -- execution, i.e. will benefit from executing with --threads > 1 as long as
 -- --tables > 1
 --
