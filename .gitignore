@@ -85,3 +85,4 @@ parts
 prime
 stage
 *.snap
+/snap/snapcraft.yaml
