@@ -30,7 +30,7 @@ Current features allow to test the following system parameters:
 Installation
 ------------
 
-	./autogen.sh
+	autoreconf -vi
 	./configure
 	make
 	make install
