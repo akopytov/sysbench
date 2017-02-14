@@ -124,7 +124,7 @@ end
 -- for 'warmup'
 sysbench.cmdline.commands = {
    prepare = {cmd_prepare, sysbench.cmdline.PARALLEL_COMMAND},
-   warmup = {cmd_warmup, sysbench.cmdline.PARALLEL_COMMAND}
+   warmup = {cmd_warmup, sysbench.cmdline.PARALLEL_COMMAND},
    prewarm = {cmd_warmup, sysbench.cmdline.PARALLEL_COMMAND}
 }
 
