@@ -125,7 +125,7 @@ oltp_read_write.lua + PostgreSQL tests
   Did not find any relation named "sbtest9".
   sysbench *.* * (glob)
   
-  FATAL: *: prewarm is currently MySQL only (glob)
+  FATAL: *: warmup is currently MySQL only (glob)
   sysbench *.* * (glob)
   
   Running the test with following options:
