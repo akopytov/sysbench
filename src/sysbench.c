@@ -147,9 +147,6 @@ static int eventgen_thread_created;
 /* per-thread timers for response time stats */
 static sb_timer_t *timers;
 
-/* Mutex protecting timers. */
-static pthread_mutex_t timers_mutex;
-
 /* Temporary copy of timers for checkpoint reports */
 static sb_timer_t *timers_copy;
 
@@ -230,7 +227,7 @@ static void report_intermediate(void)
     MS2SEC(sb_histogram_get_pct_intermediate(&sb_latency_histogram,
                                              sb_globals.percentile));
 
-  stat.time_interval = NS2SEC(sb_timer_checkpoint(&sb_intermediate_timer));
+  stat.time_interval = NS2SEC(sb_timer_current(&sb_intermediate_timer));
 
   if (sb_globals.tx_rate > 0)
   {
@@ -375,16 +372,9 @@ static void report_cumulative(void)
 
   const unsigned nthreads = sb_globals.threads;
 
-  /* Create a temporary copy of timers and reset them */
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_lock(&timers_mutex);
-
-  memcpy(timers_copy, timers, nthreads * sizeof(sb_timer_t));
+  /* Atomically reset each timer after copying into its timers_copy slot */
   for (i = 0; i < nthreads; i++)
-    sb_timer_reset(&timers[i]);
-
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_unlock(&timers_mutex);
+    sb_timer_checkpoint(&timers[i], &timers_copy[i]);
 
   /* Aggregate temporary timers copy */
   for(i = 0; i < nthreads; i++)
@@ -396,7 +386,7 @@ static void report_cumulative(void)
   stat.latency_avg = NS2SEC(sb_timer_avg(&t));
   stat.latency_sum = NS2SEC(sb_timer_sum(&t));
 
-  stat.time_interval = NS2SEC(sb_timer_checkpoint(&sb_checkpoint_timer));
+  stat.time_interval = NS2SEC(sb_timer_current(&sb_checkpoint_timer));
 
   if (current_test && current_test->ops.report_cumulative)
     current_test->ops.report_cumulative(&stat);
@@ -773,15 +763,7 @@ sb_event_t sb_next_event(sb_test_t *test, int thread_id)
 
 void sb_event_start(int thread_id)
 {
-  sb_timer_t     *timer = &timers[thread_id];
-
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_lock(&timers_mutex);
-
-  sb_timer_start(timer);
-
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_unlock(&timers_mutex);
+  sb_timer_start(&timers[thread_id]);
 }
 
 
@@ -790,13 +772,7 @@ void sb_event_stop(int thread_id)
   sb_timer_t     *timer = &timers[thread_id];
   long long      value;
 
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_lock(&timers_mutex);
-
   value = sb_timer_stop(timer);
-
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_unlock(&timers_mutex);
 
   if (sb_globals.percentile > 0)
     sb_histogram_update(&sb_latency_histogram, NS2MS(value));
@@ -1416,9 +1392,6 @@ static int init(void)
   for (unsigned i = 0; i < sb_globals.threads; i++)
     sb_timer_init(&timers[i]);
 
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_init(&timers_mutex, NULL);
-
   return 0;
 }
 
@@ -1601,9 +1574,6 @@ end:
   free(timers_copy);
 
   free(sb_globals.argv);
-
-  if (sb_globals.n_checkpoints > 0)
-    pthread_mutex_destroy(&timers_mutex);
 
   return rc;
 }

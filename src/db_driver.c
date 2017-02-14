@@ -1083,7 +1083,7 @@ static void db_reset_stats(void)
     So that intermediate stats are calculated from the current moment
     rather than from the previous intermediate report
   */
-  sb_timer_checkpoint(&sb_intermediate_timer);
+  sb_timer_current(&sb_intermediate_timer);
 
   if (db_globals.debug)
   {

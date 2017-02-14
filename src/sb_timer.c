@@ -42,6 +42,9 @@ void sb_timer_init(sb_timer_t *t)
 
   memset(&t->time_start, 0, sizeof(struct timespec));
   memset(&t->time_end, 0, sizeof(struct timespec));
+
+  ck_spinlock_init(&t->lock);
+
   sb_timer_reset(t);
 }
 
@@ -61,6 +64,8 @@ void sb_timer_reset(sb_timer_t *t)
 void sb_timer_copy(sb_timer_t *to, sb_timer_t *from)
 {
   memcpy(to, from, sizeof(sb_timer_t));
+
+  ck_spinlock_init(&to->lock);
 }
 
 /* check whether the timer is running */
@@ -71,12 +76,12 @@ bool sb_timer_running(sb_timer_t *t)
 }
 
 /*
-  get time elapsed since the previous call to sb_timer_checkpoint() for the
+  get time elapsed since the previous call to sb_timer_current() for the
   specified timer without stopping it.  The first call returns time elapsed
   since the timer was started.
 */
 
-uint64_t sb_timer_checkpoint(sb_timer_t *t)
+uint64_t sb_timer_current(sb_timer_t *t)
 {
   struct timespec tmp;
   uint64_t        res;
@@ -86,6 +91,23 @@ uint64_t sb_timer_checkpoint(sb_timer_t *t)
   t->time_start = tmp;
 
   return res;
+}
+
+/*
+  Atomically reset a given timer after copying its state into the timer pointed
+  to by 'old'.
+*/
+
+void sb_timer_checkpoint(sb_timer_t *t, sb_timer_t *old)
+{
+  ck_spinlock_lock(&t->lock);
+
+  memcpy(old, t, sizeof(*old));
+  ck_spinlock_init(&old->lock);
+
+  sb_timer_reset(t);
+
+  ck_spinlock_unlock(&t->lock);
 }
 
 /* get average time per event */
