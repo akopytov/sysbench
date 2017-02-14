@@ -42,6 +42,7 @@
 #include <stdbool.h>
 
 #include "sb_util.h"
+#include "ck_spinlock.h"
 
 /* Convert nanoseconds to seconds and vice versa */
 #define NS2SEC(nsec) ((nsec)/1000000000.)
@@ -87,7 +88,10 @@ typedef struct
   uint64_t        max_time;
   uint64_t        sum_time;
 
-  char pad[SB_CACHELINE_PAD(sizeof(struct timespec)*2 + sizeof(uint64_t)*5)];
+  ck_spinlock_t   lock;
+
+  char pad[SB_CACHELINE_PAD(sizeof(struct timespec)*2 + sizeof(uint64_t)*5 +
+                            sizeof(ck_spinlock_t))];
 } sb_timer_t;
 
 
@@ -105,12 +109,18 @@ bool sb_timer_running(sb_timer_t *t);
 /* start timer */
 static inline void sb_timer_start(sb_timer_t *t)
 {
+  ck_spinlock_lock(&t->lock);
+
   SB_GETTIME(&t->time_start);
+
+  ck_spinlock_unlock(&t->lock);
 }
 
 /* stop timer */
 static inline uint64_t sb_timer_stop(sb_timer_t *t)
 {
+  ck_spinlock_lock(&t->lock);
+
   SB_GETTIME(&t->time_end);
 
   uint64_t elapsed = TIMESPEC_DIFF(t->time_end, t->time_start) + t->queue_time;
@@ -122,6 +132,8 @@ static inline uint64_t sb_timer_stop(sb_timer_t *t)
     t->min_time = elapsed;
   if (SB_UNLIKELY(elapsed > t->max_time))
     t->max_time = elapsed;
+
+  ck_spinlock_unlock(&t->lock);
 
   return elapsed;
 }
@@ -146,7 +158,13 @@ void sb_timer_copy(sb_timer_t *to, sb_timer_t *from);
   specified timer without stopping it.  The first call returns time elapsed
   since the timer was started.
 */
-uint64_t sb_timer_checkpoint(sb_timer_t *t);
+uint64_t sb_timer_current(sb_timer_t *t);
+
+/*
+  Atomically reset a given timer after copying its state into the timer pointed
+  to by 'old'.
+*/
+void sb_timer_checkpoint(sb_timer_t *t, sb_timer_t *old);
 
 /* get average time per event */
 uint64_t sb_timer_avg(sb_timer_t *);
