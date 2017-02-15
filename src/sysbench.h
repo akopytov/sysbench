@@ -203,6 +203,7 @@ typedef struct
   int             force_shutdown CK_CC_CACHELINE; /* whether we must force test
                                                   shutdown */
   int             forced_shutdown_in_progress;
+  int             warmup_time;  /* warmup time */
   uint64_t        nevents CK_CC_CACHELINE; /* event counter */
 } sb_globals_t;
 

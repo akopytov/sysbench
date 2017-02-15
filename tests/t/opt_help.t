@@ -15,6 +15,7 @@ separately.
     --threads=N                     number of threads to use [1]
     --events=N                      limit for total number of events [0]
     --time=N                        limit for total execution time in seconds [10]
+    --warmup-time=N                 execute events for this many seconds with statistics disabled before the actual benchmark run with statistics enabled [0]
     --forced-shutdown=STRING        number of seconds to wait after the --time limit before forcing shutdown, or 'off' to disable [off]
     --thread-stack-size=SIZE        size of stack per thread [64K]
     --rate=N                        average transactions rate. 0 for unlimited rate [0]
