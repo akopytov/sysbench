@@ -205,9 +205,6 @@ AC_CHECK_DECLS(O_SYNC, ,
 )
 
 
-# Checks for programs.
-AX_CHECK_DOCBOOK
-
 # Checks for libraries.
 
 ACX_PTHREAD
@@ -535,9 +532,6 @@ AC_SUBST([SB_GIT_SHA])
 
 AC_CONFIG_FILES([
 Makefile
-doc/xsl/Makefile
-doc/xsl/catalog.xml
-doc/Makefile
 third_party/luajit/Makefile
 third_party/concurrency_kit/Makefile
 src/Makefile
