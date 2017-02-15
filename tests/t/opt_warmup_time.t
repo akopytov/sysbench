@@ -9,9 +9,9 @@
   > ]]
   > function event()
   >   if (sysbench.tid == 0) then
-  >     ffi.C.usleep(1000000)
-  >   else
   >     ffi.C.usleep(2000000)
+  >   else
+  >     ffi.C.usleep(3000000)
   >   end
   > end
   > EOF
@@ -26,7 +26,7 @@
   
   Running the test with following options:
   Number of threads: 2
-  Warmup time: 1
+  Warmup time: 1s
   Initializing random number generator from current time
   
   
@@ -38,8 +38,8 @@
   
   
   General statistics:
-      total time:                          1.*s (glob)
-      total number of events:              3
+      total time:                          2.*s (glob)
+      total number of events:              2
   
   Latency (ms):
            min: * (glob)
@@ -57,7 +57,7 @@
   
   Running the test with following options:
   Number of threads: 2
-  Warmup time: 1
+  Warmup time: 1s
   Initializing random number generator from current time
   
   
@@ -69,7 +69,7 @@
   
   
   General statistics:
-      total time:                          1.*s (glob)
+      total time:                          3.*s (glob)
       total number of events:              3
   
   Latency (ms):
