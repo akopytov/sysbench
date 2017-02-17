@@ -1,3 +1,10 @@
+2017-02-17  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.2
+	* improved scalability for --report-checkpoints mode
+	* fix builds on CentoOS 6 and autoconf 2.63
+	* support for Snap (http://snapcraft.io) packages
+
 2017-02-05  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.1
