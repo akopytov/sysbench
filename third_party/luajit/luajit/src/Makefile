@@ -7,7 +7,7 @@
 # Also works with MinGW and Cygwin on Windows.
 # Please check msvcbuild.bat for building with MSVC on Windows.
 #
-# Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
+# Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
 ##############################################################################
 
 MAJVER=  2
@@ -109,6 +109,9 @@ XCFLAGS=
 # default mode. Please see LJ_ARCH_NUMMODE in lj_arch.h for details.
 #XCFLAGS+= -DLUAJIT_NUMMODE=1
 #XCFLAGS+= -DLUAJIT_NUMMODE=2
+#
+# Enable GC64 mode for x64.
+#XCFLAGS+= -DLUAJIT_ENABLE_GC64
 #
 ##############################################################################
 

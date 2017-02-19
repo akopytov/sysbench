@@ -1,6 +1,6 @@
 /*
 ** MIPS IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Register allocator extensions --------------------------------------- */

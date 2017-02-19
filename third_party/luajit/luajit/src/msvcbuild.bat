@@ -1,5 +1,5 @@
 @rem Script to build LuaJIT with MSVC.
-@rem Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
+@rem Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
 @rem
 @rem Either open a "Visual Studio .NET Command Prompt"
 @rem (Note that the Express Edition does not contain an x64 compiler)
@@ -20,6 +20,7 @@
 @set LJLIB=lib /nologo /nodefaultlib
 @set DASMDIR=..\dynasm
 @set DASM=%DASMDIR%\dynasm.lua
+@set DASC=vm_x86.dasc
 @set LJDLLNAME=lua51.dll
 @set LJLIBNAME=lua51.lib
 @set ALL_LIB=lib_base.c lib_math.c lib_bit.c lib_string.c lib_table.c lib_io.c lib_os.c lib_package.c lib_debug.c lib_jit.c lib_ffi.c
@@ -39,7 +40,12 @@ if exist minilua.exe.manifest^
 @set LJARCH=x86
 @set LJCOMPILE=%LJCOMPILE% /arch:SSE2
 :X64
-minilua %DASM% -LN %DASMFLAGS% -o host\buildvm_arch.h vm_x86.dasc
+@if "%1" neq "gc64" goto :NOGC64
+@shift
+@set DASC=vm_x64.dasc
+@set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_GC64
+:NOGC64
+minilua %DASM% -LN %DASMFLAGS% -o host\buildvm_arch.h %DASC%
 @if errorlevel 1 goto :BAD
 
 %LJCOMPILE% /I "." /I %DASMDIR% host\buildvm*.c
