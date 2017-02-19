@@ -4,7 +4,7 @@
 <title>Installation</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 <meta name="Author" content="Mike Pall">
-<meta name="Copyright" content="Copyright (C) 2005-2016, Mike Pall">
+<meta name="Copyright" content="Copyright (C) 2005-2017, Mike Pall">
 <meta name="Language" content="en">
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
@@ -174,6 +174,14 @@ MSVC or WinSDK.</li>
 <p>
 Please read the instructions given in these files, before changing
 any settings.
+</p>
+<p>
+LuaJIT on x64 currently uses 32 bit GC objects by default.
+<tt>LJ_GC64</tt> mode may be explicitly enabled:
+add <tt>XCFLAGS=-DLUAJIT_ENABLE_GC64</tt> to the make command or run
+<tt>msvcbuild gc64</tt> for MSVC/WinSDK. Please check the note
+about the <a href="extensions.html#string_dump">bytecode format</a>
+differences, too.
 </p>
 
 <h2 id="posix">POSIX Systems (Linux, OSX, *BSD etc.)</h2>
@@ -584,14 +592,11 @@ intend to load Lua/C modules at runtime.
 </li>
 <li>
 If you're building a 64 bit application on OSX which links directly or
-indirectly against LuaJIT, you need to link your main executable
-with these flags:
+indirectly against LuaJIT which is not built for <tt>LJ_GC64</tt> mode,
+you need to link your main executable with these flags:
 <pre class="code">
 -pagezero_size 10000 -image_base 100000000
 </pre>
-Also, it's recommended to <tt>rebase</tt> all (self-compiled) shared libraries
-which are loaded at runtime on OSX/x64 (e.g. C extension modules for Lua).
-See: <tt>man rebase</tt>
 </li>
 </ul>
 <p>Additional hints for initializing LuaJIT using the C API functions:</p>
@@ -677,7 +682,7 @@ to me (the upstream) and not you (the package maintainer), anyway.
 </div>
 <div id="foot">
 <hr class="hide">
-Copyright &copy; 2005-2016 Mike Pall
+Copyright &copy; 2005-2017 Mike Pall
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

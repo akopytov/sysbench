@@ -1,6 +1,6 @@
 /*
 ** Base and coroutine library.
-** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2011 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -23,6 +23,7 @@
 #include "lj_tab.h"
 #include "lj_meta.h"
 #include "lj_state.h"
+#include "lj_frame.h"
 #if LJ_HASFFI
 #include "lj_ctype.h"
 #include "lj_cconv.h"
@@ -555,6 +556,12 @@ LJLIB_CF(coroutine_running)
     setnilV(L->top++);
   return 1;
 #endif
+}
+
+LJLIB_CF(coroutine_isyieldable)
+{
+  setboolV(L->top++, cframe_canyield(L->cframe));
+  return 1;
 }
 
 LJLIB_CF(coroutine_create)

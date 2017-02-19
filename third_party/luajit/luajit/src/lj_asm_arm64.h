@@ -1,6 +1,6 @@
 /*
 ** ARM64 IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Contributed by Djordje Kovacevic and Stefan Pejic from RT-RK.com.
 ** Sponsored by Cisco Systems, Inc.
@@ -176,7 +176,7 @@ static Reg asm_fuseahuref(ASMState *as, IRRef ref, int32_t *ofsp, RegSet allow,
 	  }
 	} else {
 	  Reg base = ra_alloc1(as, ir->op1, allow);
-	  *ofsp = FUSE_REG|ra_alloc1(as, ir->op2, rset_exclude(RSET_GPR, base));
+	  *ofsp = FUSE_REG|ra_alloc1(as, ir->op2, rset_exclude(allow, base));
 	  return base;
 	}
       }
