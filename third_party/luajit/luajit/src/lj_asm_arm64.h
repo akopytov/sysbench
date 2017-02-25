@@ -643,6 +643,31 @@ static void asm_strto(ASMState *as, IRIns *ir)
 
 /* -- Memory references --------------------------------------------------- */
 
+/* Store tagged value for ref at base+ofs. */
+static void asm_tvstore64(ASMState *as, Reg base, int32_t ofs, IRRef ref)
+{
+  RegSet allow = rset_exclude(RSET_GPR, base);
+  IRIns *ir = IR(ref);
+  lua_assert(irt_ispri(ir->t) || irt_isaddr(ir->t) || irt_isinteger(ir->t));
+  if (irref_isk(ref)) {
+    TValue k;
+    lj_ir_kvalue(as->J->L, &k, ir);
+    emit_lso(as, A64I_STRx, ra_allock(as, k.u64, allow), base, ofs);
+  } else {
+    Reg src = ra_alloc1(as, ref, allow);
+    rset_clear(allow, src);
+    if (irt_isinteger(ir->t)) {
+      Reg type = ra_allock(as, (int64_t)irt_toitype(ir->t) << 47, allow);
+      emit_lso(as, A64I_STRx, RID_TMP, base, ofs);
+      emit_dnm(as, A64I_ADDx | A64F_EX(A64EX_UXTW), RID_TMP, type, src);
+    } else {
+      Reg type = ra_allock(as, (int32_t)irt_toitype(ir->t), allow);
+      emit_lso(as, A64I_STRx, RID_TMP, base, ofs);
+      emit_dnm(as, A64I_ADDx | A64F_SH(A64SH_LSL, 47), RID_TMP, src, type);
+    }
+  }
+}
+
 /* Get pointer to TValue. */
 static void asm_tvptr(ASMState *as, Reg dest, IRRef ref)
 {
@@ -657,30 +682,7 @@ static void asm_tvptr(ASMState *as, Reg dest, IRRef ref)
     }
   } else {
     /* Otherwise use g->tmptv to hold the TValue. */
-    RegSet allow = rset_exclude(RSET_GPR, dest);
-    Reg src;
-    if (irref_isk(ref)) {
-      TValue k;
-      lj_ir_kvalue(as->J->L, &k, ir);
-      src = ra_allock(as, k.u64, allow);
-      emit_lso(as, A64I_STRx, src, dest, 0);
-    } else {
-      Reg type;
-      if (irt_ispri(ir->t)) {
-	src = ra_allock(as, ~((int64_t)~irt_toitype(ir->t) << 47), allow);
-	emit_lso(as, A64I_STRx, src, dest, 0);
-      } else if (irt_isint(ir->t)) {
-	src = ra_alloc1(as, ref, allow);
-	type = ra_allock(as, (int64_t)irt_toitype(ir->t) << 47, allow);
-	emit_lso(as, A64I_STRx, RID_TMP, dest, 0);
-	emit_dnm(as, A64I_ADDx | A64F_EX(A64EX_UXTW), RID_TMP, type, src);
-      } else {
-	src = ra_alloc1(as, ref, allow);
-	type = ra_allock(as, (int32_t)irt_toitype(ir->t), allow);
-	emit_lso(as, A64I_STRx, RID_TMP, dest, 0);
-	emit_dnm(as, A64I_ADDx | A64F_SH(A64SH_LSL, 47), RID_TMP, src, type);
-      }
-    }
+    asm_tvstore64(as, dest, 0, ref);
     ra_allockreg(as, i64ptr(&J2G(as->J)->tmptv), dest);
   }
 }
@@ -1796,31 +1798,7 @@ static void asm_stack_restore(ASMState *as, SnapShot *snap)
       Reg src = ra_alloc1(as, ref, RSET_FPR);
       emit_lso(as, A64I_STRd, (src & 31), RID_BASE, ofs);
     } else {
-      RegSet allow = rset_exclude(RSET_GPR, RID_BASE);
-      lua_assert(irt_ispri(ir->t) || irt_isaddr(ir->t) || irt_isinteger(ir->t));
-      if (!irref_isk(ref)) {
-	Reg type, src;
-	if (irt_is64(ir->t)) {
-	  type = ra_allock(as, (int32_t)irt_toitype(ir->t), allow);
-	  src = ra_alloc1(as, ref, rset_exclude(allow, type));
-	  emit_lso(as, A64I_STRx, RID_TMP, RID_BASE, ofs);
-	  emit_dnm(as, A64I_ADDx | A64F_SH(A64SH_LSL, 47), RID_TMP, src, type);
-	} else if (irt_isinteger(ir->t)) {
-	  type = ra_allock(as, (int64_t)LJ_TISNUM << 47, allow);
-	  src = ra_alloc1(as, ref, rset_exclude(allow, type));
-	  emit_lso(as, A64I_STRx, RID_TMP, RID_BASE, ofs);
-	  emit_dnm(as, A64I_ADDx | A64F_EX(A64EX_UXTW), RID_TMP, type, src);
-	} else {
-	  type = ra_allock(as, ~((int64_t)~irt_toitype(ir->t) << 47), allow);
-	  emit_lso(as, A64I_STRx, type, RID_BASE, ofs);
-	}
-      } else {
-	TValue k;
-	lj_ir_kvalue(as->J->L, &k, ir);
-	emit_lso(as, A64I_STRx,
-		 ra_allock(as, tvisnil(&k) ? -1 : (int64_t)k.u64, allow),
-		 RID_BASE, ofs);
-      }
+      asm_tvstore64(as, RID_BASE, ofs, ref);
     }
     checkmclim(as);
   }

@@ -723,8 +723,9 @@ static void snap_restoredata(GCtrace *T, ExitState *ex,
 #else
 	if (LJ_BE && sz == 4) src++;
 #endif
-      }
+      } else
 #endif
+      if (LJ_64 && LJ_BE && sz == 4) src++;
     }
   }
   lua_assert(sz == 1 || sz == 2 || sz == 4 || sz == 8);

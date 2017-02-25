@@ -436,7 +436,8 @@ static void split_ir(jit_State *J)
 	nir->o = IR_CONV;  /* Pass through loword. */
 	nir->op2 = (IRT_INT << 5) | IRT_INT;
 	hi = split_emit(J, IRT(ir->o == IR_NEG ? IR_BXOR : IR_BAND, IRT_SOFTFP),
-			hisubst[ir->op1], hisubst[ir->op2]);
+	       hisubst[ir->op1],
+	       lj_ir_kint(J, (int32_t)(0x7fffffffu + (ir->o == IR_NEG))));
 	break;
       case IR_SLOAD:
 	if ((nir->op2 & IRSLOAD_CONVERT)) {  /* Convert from int to number. */

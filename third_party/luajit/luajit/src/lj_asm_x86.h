@@ -1065,7 +1065,8 @@ static void asm_tvptr(ASMState *as, Reg dest, IRRef ref)
 	emit_u32(as, irt_toitype(ir->t) << 15);
 	emit_rmro(as, XO_ARITHi, XOg_OR, dest, 4);
       } else {
-	emit_movmroi(as, dest, 4, (irt_toitype(ir->t) << 15) | 0x7fff);
+	/* Currently, no caller passes integers that might end up here. */
+	emit_movmroi(as, dest, 4, (irt_toitype(ir->t) << 15));
       }
       emit_movtomro(as, REX_64IR(ir, src), dest, 0);
     }
