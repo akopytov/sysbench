@@ -173,8 +173,6 @@ LJFOLD(ADD KNUM KNUM)
 LJFOLD(SUB KNUM KNUM)
 LJFOLD(MUL KNUM KNUM)
 LJFOLD(DIV KNUM KNUM)
-LJFOLD(NEG KNUM KNUM)
-LJFOLD(ABS KNUM KNUM)
 LJFOLD(ATAN2 KNUM KNUM)
 LJFOLD(LDEXP KNUM KNUM)
 LJFOLD(MIN KNUM KNUM)
@@ -184,6 +182,15 @@ LJFOLDF(kfold_numarith)
   lua_Number a = knumleft;
   lua_Number b = knumright;
   lua_Number y = lj_vm_foldarith(a, b, fins->o - IR_ADD);
+  return lj_ir_knum(J, y);
+}
+
+LJFOLD(NEG KNUM FLOAD)
+LJFOLD(ABS KNUM FLOAD)
+LJFOLDF(kfold_numabsneg)
+{
+  lua_Number a = knumleft;
+  lua_Number y = lj_vm_foldarith(a, a, fins->o - IR_ADD);
   return lj_ir_knum(J, y);
 }
 
@@ -916,13 +923,13 @@ LJFOLDF(shortcut_round)
   return NEXTFOLD;
 }
 
-LJFOLD(ABS ABS KNUM)
+LJFOLD(ABS ABS FLOAD)
 LJFOLDF(shortcut_left)
 {
   return LEFTFOLD;  /* f(g(x)) ==> g(x) */
 }
 
-LJFOLD(ABS NEG KNUM)
+LJFOLD(ABS NEG FLOAD)
 LJFOLDF(shortcut_dropleft)
 {
   PHIBARRIER(fleft);

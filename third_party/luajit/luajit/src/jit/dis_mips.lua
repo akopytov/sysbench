@@ -34,15 +34,17 @@ local map_special = {
   "jrS",	"jalrD1S",	"movzDST",	"movnDST",
   "syscallY",	"breakY",	false,		"sync",
   "mfhiD",	"mthiS",	"mfloD",	"mtloS",
-  false,	false,		false,		false,
+  "dsllvDST",	false,		"dsrlvDST",	"dsravDST",
   "multST",	"multuST",	"divST",	"divuST",
-  false,	false,		false,		false,
+  "dmultST",	"dmultuST",	"ddivST",	"ddivuST",
   "addDST",	"addu|moveDST0", "subDST",	"subu|neguDS0T",
   "andDST",	"or|moveDST0",	"xorDST",	"nor|notDST0",
   false,	false,		"sltDST",	"sltuDST",
-  false,	false,		false,		false,
+  "daddDST",	"dadduDST",	"dsubDST",	"dsubuDST",
   "tgeSTZ",	"tgeuSTZ",	"tltSTZ",	"tltuSTZ",
-  "teqSTZ",	false,		"tneSTZ",
+  "teqSTZ",	false,		"tneSTZ",	false,
+  "dsllDTA",	false,		"dsrlDTA",	"dsraDTA",
+  "dsll32DTA",	false,		"dsrl32DTA",	"dsra32DTA",
 }
 
 local map_special2 = {
@@ -60,11 +62,17 @@ local map_bshfl = {
   [24] = "sehDT",
 }
 
+local map_dbshfl = {
+  shift = 6, mask = 31,
+  [2] = "dsbhDT",
+  [5] = "dshdDT",
+}
+
 local map_special3 = {
   shift = 0, mask = 63,
-  [0] = "extTSAK", [4] = "insTSAL",
-  [32] = map_bshfl,
-  [59] = "rdhwrTD",
+  [0]  = "extTSAK", [1]  = "dextmTSAP", [3]  = "dextTSAK",
+  [4]  = "insTSAL", [6]  = "dinsuTSEQ", [7]  = "dinsTSAL",
+  [32] = map_bshfl, [36] = map_dbshfl,  [59] = "rdhwrTD",
 }
 
 local map_regimm = {
@@ -178,8 +186,8 @@ local map_cop1bc = {
 
 local map_cop1 = {
   shift = 21, mask = 31,
-  [0] = "mfc1TG", false,	"cfc1TG",	"mfhc1TG",
-  "mtc1TG",	false,		"ctc1TG",	"mthc1TG",
+  [0] = "mfc1TG", "dmfc1TG",	"cfc1TG",	"mfhc1TG",
+  "mtc1TG",	"dmtc1TG",	"ctc1TG",	"mthc1TG",
   map_cop1bc,	false,		false,		false,
   false,	false,		false,		false,
   map_cop1s,	map_cop1d,	false,		false,
@@ -213,16 +221,16 @@ local map_pri = {
   "andiTSU",	"ori|liTS0U",	"xoriTSU",	"luiTU",
   map_cop0,	map_cop1,	false,		map_cop1x,
   "beql|beqzlST0B",	"bnel|bnezlST0B",	"blezlSB",	"bgtzlSB",
-  false,	false,		false,		false,
+  "daddiTSI",	"daddiuTSI",	false,		false,
   map_special2,	"jalxJ",	false,		map_special3,
   "lbTSO",	"lhTSO",	"lwlTSO",	"lwTSO",
   "lbuTSO",	"lhuTSO",	"lwrTSO",	false,
   "sbTSO",	"shTSO",	"swlTSO",	"swTSO",
   false,	false,		"swrTSO",	"cacheNSO",
   "llTSO",	"lwc1HSO",	"lwc2TSO",	"prefNSO",
-  false,	"ldc1HSO",	"ldc2TSO",	false,
+  false,	"ldc1HSO",	"ldc2TSO",	"ldTSO",
   "scTSO",	"swc1HSO",	"swc2TSO",	false,
-  false,	"sdc1HSO",	"sdc2TSO",	false,
+  false,	"sdc1HSO",	"sdc2TSO",	"sdTSO",
 }
 
 ------------------------------------------------------------------------------
@@ -306,6 +314,8 @@ local function disass_ins(ctx)
       x = "f"..band(rshift(op, 21), 31)
     elseif p == "A" then
       x = band(rshift(op, 6), 31)
+    elseif p == "E" then
+      x = band(rshift(op, 6), 31) + 32
     elseif p == "M" then
       x = band(rshift(op, 11), 31)
     elseif p == "N" then
@@ -315,8 +325,12 @@ local function disass_ins(ctx)
       if x == 0 then x = nil end
     elseif p == "K" then
       x = band(rshift(op, 11), 31) + 1
+    elseif p == "P" then
+      x = band(rshift(op, 11), 31) + 33
     elseif p == "L" then
       x = band(rshift(op, 11), 31) - last + 1
+    elseif p == "Q" then
+      x = band(rshift(op, 11), 31) - last + 33
     elseif p == "I" then
       x = arshift(lshift(op, 16), 16)
     elseif p == "U" then
@@ -330,11 +344,12 @@ local function disass_ins(ctx)
     elseif p == "B" then
       x = ctx.addr + ctx.pos + arshift(lshift(op, 16), 16)*4 + 4
       ctx.rel = x
-      x = "0x"..tohex(x)
+      x = format("0x%08x", x)
     elseif p == "J" then
-      x = band(ctx.addr + ctx.pos, 0xf0000000) + band(op, 0x03ffffff)*4
+      local a = ctx.addr + ctx.pos
+      x = a - band(a, 0x0fffffff) + band(op, 0x03ffffff)*4
       ctx.rel = x
-      x = "0x"..tohex(x)
+      x = format("0x%08x", x)
     elseif p == "V" then
       x = band(rshift(op, 8), 7)
       if x == 0 then x = nil end

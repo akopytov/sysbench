@@ -129,19 +129,24 @@ sysbench.cmdline.commands = {
 }
 
 
--- Generate strings of random digits with 11-digit groups separated by dashes
+-- Template strings of random digits with 11-digit groups separated by dashes
+
+-- 10 groups, 119 characters
+local c_value_template = "###########-###########-###########-" ..
+   "###########-###########-###########-" ..
+   "###########-###########-###########-" ..
+   "###########"
+
+-- 5 groups, 59 characters
+local pad_value_template = "###########-###########-###########-" ..
+   "###########-###########"
+
 function get_c_value()
-   -- 10 groups, 119 characters
-   return sysbench.rand.string("###########-###########-###########-" ..
-                               "###########-###########-###########-" ..
-                               "###########-###########-###########-" ..
-                               "###########")
+   return sysbench.rand.string(c_value_template)
 end
 
 function get_pad_value()
-   -- 5 groups, 59 characters
-   return sysbench.rand.string("###########-###########-###########-" ..
-                               "###########-###########")
+   return sysbench.rand.string(pad_value_template)
 end
 
 function create_table(drv, con, table_num)
@@ -454,7 +459,7 @@ function execute_non_index_updates()
    local tnum = get_table_num()
 
    for i = 1, sysbench.opt.non_index_updates do
-      param[tnum].non_index_updates[1]:set(get_c_value())
+      param[tnum].non_index_updates[1]:set_rand_str(c_value_template)
       param[tnum].non_index_updates[2]:set(get_id())
 
       stmt[tnum].non_index_updates:execute()
@@ -472,8 +477,8 @@ function execute_delete_inserts()
 
       param[tnum].inserts[1]:set(id)
       param[tnum].inserts[2]:set(k)
-      param[tnum].inserts[3]:set(get_c_value())
-      param[tnum].inserts[4]:set(get_pad_value())
+      param[tnum].inserts[3]:set_rand_str(c_value_template)
+      param[tnum].inserts[4]:set_rand_str(pad_value_template)
 
       stmt[tnum].deletes:execute()
       stmt[tnum].inserts:execute()

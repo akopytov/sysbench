@@ -97,6 +97,7 @@ typedef unsigned int uintptr_t;
 #define u32ptr(p)	((uint32_t)(intptr_t)(void *)(p))
 #define i64ptr(p)	((int64_t)(intptr_t)(void *)(p))
 #define u64ptr(p)	((uint64_t)(intptr_t)(void *)(p))
+#define igcptr(p)	(LJ_GC64 ? i64ptr(p) : i32ptr(p))
 
 #define checki8(x)	((x) == (int32_t)(int8_t)(x))
 #define checku8(x)	((x) == (int32_t)(uint8_t)(x))
@@ -105,14 +106,8 @@ typedef unsigned int uintptr_t;
 #define checki32(x)	((x) == (int32_t)(x))
 #define checku32(x)	((x) == (uint32_t)(x))
 #define checkptr32(x)	((uintptr_t)(x) == (uint32_t)(uintptr_t)(x))
-#define checkptr47(x)	(((uint64_t)(x) >> 47) == 0)
-#if LJ_GC64
-#define checkptrGC(x)	(checkptr47((x)))
-#elif LJ_64
-#define checkptrGC(x)	(checkptr32((x)))
-#else
-#define checkptrGC(x)	1
-#endif
+#define checkptr47(x)	(((uint64_t)(uintptr_t)(x) >> 47) == 0)
+#define checkptrGC(x)	(LJ_GC64 ? checkptr47((x)) : LJ_64 ? checkptr32((x)) :1)
 
 /* Every half-decent C compiler transforms this into a rotate instruction. */
 #define lj_rol(x, n)	(((x)<<(n)) | ((x)>>(-(int)(n)&(8*sizeof(x)-1))))

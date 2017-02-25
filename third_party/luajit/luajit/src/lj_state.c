@@ -225,6 +225,24 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud)
     return NULL;
   }
   L->status = 0;
+  G2J(g)->prngstate = rand();
+#if LJ_TARGET_MIPS
+  /* Use the middle of the 256MB-aligned region. */
+  uintptr_t target = ((uintptr_t)(void *)lj_vm_exit_handler &
+                     ~(uintptr_t)0x0fffffffu) + 0x08000000u;
+#else
+  uintptr_t target = (uintptr_t)(void *)lj_vm_exit_handler & ~(uintptr_t)0xffff;
+#endif
+  uintptr_t range = (1u << LJ_TARGET_JUMPRANGE) - (1u << 21);
+  uintptr_t allocbase;
+  if (LJ_PRNG_BITS(G2J(g), 1)) {
+    allocbase = (target - range > target) ? 0 : target - range;
+  } else {
+    allocbase = target;
+  }
+  G2J(g)->target = target;
+  G2J(g)->range = range;
+  G2J(g)->allocbase = allocbase;
   return L;
 }
 
