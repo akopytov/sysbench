@@ -50,6 +50,8 @@
 # define DLEXT ".so"
 #elif defined(__MACH__)
 # define DLEXT ".dylib"
+#elif defined(__sun)
+# define DLEXT ".so"
 #else
 # error Cannot detect the dynamic library suffix for this platform
 #endif
