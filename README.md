@@ -1,3 +1,4 @@
+[![Latest Release][release-badge]][release-url]
 [![Build Status][travis-badge]][travis-url]
 [![Coverage Status][coveralls-badge]][coveralls-url]
 [![License][license-badge]][license-url]
@@ -119,3 +120,5 @@ Note that numerical values for all *size* options (like `--thread-stack-size` in
 [travis-url]: https://travis-ci.org/akopytov/sysbench?branch=master
 [license-badge]: https://img.shields.io/badge/license-GPLv2-blue.svg
 [license-url]: COPYING
+[release-badge]: https://img.shields.io/github/release/akopytov/sysbench.svg
+[release-url]: https://github.com/akopytov/sysbench/releases/latest
