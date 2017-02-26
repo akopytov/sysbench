@@ -113,9 +113,9 @@ The table below lists the supported common options, their descriptions and defau
 
 Note that numerical values for all *size* options (like `--thread-stack-size` in this table) may be specified by appending the corresponding multiplicative suffix (K for kilobytes, M for megabytes, G for gigabytes and T for terabytes).
 
-[coveralls-badge]: https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=1.0
-[coveralls-url]: https://coveralls.io/github/akopytov/sysbench?branch=1.0
-[travis-badge]: https://travis-ci.org/akopytov/sysbench.svg?branch=1.0
-[travis-url]: https://travis-ci.org/akopytov/sysbench?branch=1.0
+[coveralls-badge]: https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=master
+[coveralls-url]: https://coveralls.io/github/akopytov/sysbench?branch=master
+[travis-badge]: https://travis-ci.org/akopytov/sysbench.svg?branch=master
+[travis-url]: https://travis-ci.org/akopytov/sysbench?branch=master
 [license-badge]: https://img.shields.io/badge/license-GPLv2-blue.svg
 [license-url]: COPYING
