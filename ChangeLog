@@ -1,3 +1,11 @@
+2017-02-26  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.3
+	* LuaJIT scalability improvements for non-x86 architectures
+	* performance optimizations in oltp_read_write.lua to avoid Lua
+	string management
+	* fixed Illumos builds (thanks to Dillon Amburgey)
+
 2017-02-17  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.2
