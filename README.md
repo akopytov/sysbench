@@ -1,8 +1,8 @@
-[![Coverage Status](https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=master)](https://coveralls.io/github/akopytov/sysbench?branch=master)
-[![Build Status](https://travis-ci.org/akopytov/sysbench.svg?branch=master)](https://travis-ci.org/akopytov/sysbench?branch=master)
+[![Build Status][travis-badge]][travis-url]
+[![Coverage Status][coveralls-badge]][coveralls-url]
+[![License][license-badge]][license-url]
 
-About
-=====
+# About
 
 sysbench is a modular, cross-platform and multi-threaded benchmark tool
 for evaluating OS parameters that are important for a system running a
@@ -12,8 +12,7 @@ The idea of this benchmark suite is to quickly get an impression about
 system performance without setting up complex database benchmarks or
 even without installing a database at all.
 
-Features
---------
+## Features
 
 Current features allow to test the following system parameters:
 
@@ -27,8 +26,7 @@ Current features allow to test the following system parameters:
 
 -   database server performance
 
-Installation
-------------
+## Installation
 
 	./autogen.sh
 	./configure
@@ -46,12 +44,9 @@ See [README-WIN.txt](README-WIN.txt) for instructions on Windows builds.
 See [README-Oracle.md](README-Oracle.md) for instructions on building
 with Oracle client libraries.
 
+# Usage
 
-Usage
-=====
-
-General syntax
---------------
+## General syntax
 
 The general command line syntax for sysbench is:
 
@@ -97,8 +92,7 @@ The general command line syntax for sysbench is:
 You can use `sysbench --help` to display the general command line syntax
 and options.
 
-General command line options
-----------------------------
+## General command line options
 
 The table below lists the supported common options, their descriptions and default values:
 
@@ -118,3 +112,10 @@ The table below lists the supported common options, their descriptions and defau
 | `--percentile`        | sysbench measures execution times for all processed requests to display statistical information like minimal, average and maximum execution time. For most benchmarks it is also useful to know a request execution time value matching some percentile (e.g. 95% percentile means we should drop 5% of the most long requests and choose the maximal value from the remaining ones). This option allows to specify a percentile rank of query execution times to count | 95              |
 
 Note that numerical values for all *size* options (like `--thread-stack-size` in this table) may be specified by appending the corresponding multiplicative suffix (K for kilobytes, M for megabytes, G for gigabytes and T for terabytes).
+
+[coveralls-badge]: https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=1.0
+[coveralls-url]: https://coveralls.io/github/akopytov/sysbench?branch=1.0
+[travis-badge]: https://travis-ci.org/akopytov/sysbench.svg?branch=1.0
+[travis-url]: https://travis-ci.org/akopytov/sysbench?branch=1.0
+[license-badge]: https://img.shields.io/badge/license-GPLv2-blue.svg
+[license-url]: COPYING
