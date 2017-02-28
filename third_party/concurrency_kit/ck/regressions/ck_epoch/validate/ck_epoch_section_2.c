@@ -101,8 +101,12 @@ read_thread(void *unused CK_CC_UNUSED)
 			}
 
 			while ((ck_pr_load_uint(&epoch.epoch) & 1) ==
-			    section[0].bucket)
+			    section[0].bucket) {
+				if (ck_pr_load_uint(&leave) == 1)
+					break;
+
 				ck_pr_stall();
+			}
 		}
 
 		ck_epoch_begin(record, &section[1]);

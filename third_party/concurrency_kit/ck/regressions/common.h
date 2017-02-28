@@ -442,6 +442,11 @@ rdtsc(void)
 	} while (snapshot != high);
 
 	return (((uint64_t)high << 32) | low);
+#elif defined(__aarch64__)
+	uint64_t r;
+
+	__asm __volatile__ ("mrs %0, cntvct_el0" : "=r" (r) : : "memory");
+	return r;
 #else
 	return 0;
 #endif

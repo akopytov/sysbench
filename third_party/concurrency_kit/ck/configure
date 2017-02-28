@@ -34,7 +34,7 @@ WANT_PIC=yes
 
 P_PWD=`pwd`
 MAINTAINER='sbahra@repnop.org'
-VERSION=${VERSION:-'0.5.2'}
+VERSION=${VERSION:-'0.6.0'}
 VERSION_MAJOR='0'
 BUILD="$PWD/build/ck.build"
 PREFIX=${PREFIX:-"/usr/local"}
