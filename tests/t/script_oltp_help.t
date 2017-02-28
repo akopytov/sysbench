@@ -8,7 +8,7 @@ OLTP usage information test
   oltp_read_write.lua options:
     --distinct_ranges=N           Number of SELECT DISTINCT queries per transaction [1]
     --sum_ranges=N                Number of SELECT SUM() queries per transaction [1]
-    --skip_trx[=on|off]           Don't start explicit transactions and execute all queries as in the AUTOCOMMIT mode [off]
+    --skip_trx[=on|off]           Don't start explicit transactions and execute all queries in the AUTOCOMMIT mode [off]
     --secondary[=on|off]          Use a secondary index in place of the PRIMARY KEY [off]
     --create_secondary[=on|off]   Create a secondary index in addition to the PRIMARY KEY [on]
     --index_updates=N             Number of UPDATE index queries per transaction [1]

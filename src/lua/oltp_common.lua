@@ -60,7 +60,7 @@ sysbench.cmdline.options = {
        "or its alternatives in other DBMS. When disabled, use " ..
        "client-generated IDs", true},
    skip_trx =
-      {"Don't start explicit transactions and execute all queries as " ..
+      {"Don't start explicit transactions and execute all queries " ..
           "in the AUTOCOMMIT mode", false},
    secondary =
       {"Use a secondary index in place of the PRIMARY KEY", false},
