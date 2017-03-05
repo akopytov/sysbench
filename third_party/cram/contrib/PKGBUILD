@@ -1,0 +1,17 @@
+# Maintainer: Andrey Vlasovskikh <andrey.vlasovskikh@gmail.com>
+
+pkgname=cram
+pkgver=0.7
+pkgrel=1
+pkgdesc="Functional tests for command line applications"
+arch=(any)
+url="https://bitheap.org/cram/"
+license=('GPL')
+depends=('python')
+source=("https://pypi.python.org/packages/source/c/cram/cram-$pkgver.tar.gz")
+md5sums=('2ea37ada5190526b9bcaac5e4099221c')
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    python setup.py install --root="$pkgdir/" --optimize=1
+}

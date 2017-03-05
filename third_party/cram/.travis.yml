@@ -1,0 +1,67 @@
+language: python
+
+matrix:
+  allow_failures:
+    - python: nightly
+      env: TESTOPTS=--shell=dash
+    - python: pypy
+      env: TESTOPTS=--shell=dash
+    - python: pypy3
+      env: TESTOPTS=--shell=dash
+  include:
+    - python: "3.5"
+      env: TESTOPTS=--shell=dash
+    - python: "3.5"
+      env: TESTOPTS=--shell=bash
+    - python: "3.5"
+      env: TESTOPTS=--shell=zsh
+      addons:
+        apt:
+          packages:
+            - zsh
+    - python: "3.4"
+      env: TESTOPTS=--shell=dash
+    - python: "3.3"
+      env: TESTOPTS=--shell=dash
+    - python: "3.2"
+      env: TESTOPTS=--shell=dash
+    - python: "2.7"
+      env: TESTOPTS=--shell=dash
+    - python: "2.6"
+      env: TESTOPTS=--shell=dash
+    - env: PYTHON=2.5 TESTOPTS=--shell=dash
+      addons:
+        apt:
+          sources:
+            - deadsnakes
+          packages:
+            - python2.5
+    - env: PYTHON=2.4 TESTOPTS=--shell=dash
+      addons:
+        apt:
+          sources:
+            - deadsnakes
+          packages:
+            - python2.4
+    - python: nightly
+      env: TESTOPTS=--shell=dash
+    - python: pypy
+      env: TESTOPTS=--shell=dash
+    - python: pypy3
+      env: TESTOPTS=--shell=dash
+  fast_finish: true
+
+install: |
+  if [ -z "$PYTHON" ]
+  then
+    [ "$TRAVIS_PYTHON_VERSION" = "3.2" ] && pip install coverage==3.7.1
+    pip install -r requirements.txt
+  fi
+
+script: |
+  if [ -z "$PYTHON" ]
+  then
+    make test TESTOPTS="$TESTOPTS"
+  else
+    make quicktest PYTHON="python$PYTHON"
+  fi
