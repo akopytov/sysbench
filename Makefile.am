@@ -29,7 +29,7 @@ endif
 SUBDIRS = doc $(LUAJIT_DIR) $(CK_DIR) src tests
 
 EXTRA_DIST = autogen.sh README.md README-WIN.txt README-Oracle.md ChangeLog \
-             snap/snapcraft.yaml.in
+             snap/snapcraft.yaml.in third_party/cram
 
 test:
 	cd tests && $(MAKE) test
