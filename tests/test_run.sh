@@ -31,6 +31,7 @@ do
     if [ -x "$dir/sysbench" ]
     then
         sysbench_dir="$dir"
+        break
     fi
 done
 
@@ -39,9 +40,9 @@ then
     echo "Cannot find sysbench in the following list of directories: \
 ${dirlist[@]}"
     exit 1
-else
-    PATH="${sysbench_dir}:$PATH"
 fi
+
+PATH="${sysbench_dir}:$PATH"
 
 if [ -z ${srcdir+x} ]
 then

@@ -14,6 +14,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+AM_TESTS_ENVIRONMENT = \
+	PATH="$(top_srcdir)/third_party/cram/scripts:$$PATH" \
+	PYTHONPATH="$(top_srcdir)/third_party/cram:$$PYTHONPATH"
+
 TESTS = test_run.sh
 
 test_SCRIPTS = test_run.sh
@@ -52,4 +56,6 @@ uninstall-local:
 	rm -f -r $(DESTDIR)$(testdir)
 
 test:
-	./test_run.sh
+	PATH="$(top_srcdir)/third_party/cram/scripts:$$PATH" \
+PYTHONPATH="$(top_srcdir)/third_party/cram:$$PYTHONPATH" \
+./test_run.sh
