@@ -226,6 +226,8 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud)
   }
   L->status = 0;
   G2J(g)->prngstate = rand();
+
+#ifdef LJ_TARGET_JUMPRANGE
 #if LJ_TARGET_MIPS
   /* Use the middle of the 256MB-aligned region. */
   uintptr_t target = ((uintptr_t)(void *)lj_vm_exit_handler &
@@ -243,6 +245,8 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud)
   G2J(g)->target = target;
   G2J(g)->range = range;
   G2J(g)->allocbase = allocbase;
+#endif
+
   return L;
 }
 
