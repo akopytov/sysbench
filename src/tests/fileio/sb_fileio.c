@@ -2088,7 +2088,7 @@ int file_validate_buffer(unsigned char  *buf, unsigned int len, size_t offset)
   if (offset != *(size_t *)(void *)(buf + cs_offset + FILE_CHECKSUM_LENGTH))
   {
     log_text(LOG_FATAL, "Offset mismatch in block:");
-    log_text(LOG_FATAL, "   Actual offset: %ld    Stored offset: %ld",
+    log_text(LOG_FATAL, "   Actual offset: %zu    Stored offset: %zu",
              offset, *(size_t *)(void *)(buf + cs_offset + FILE_CHECKSUM_LENGTH));
     return 1;
   }
