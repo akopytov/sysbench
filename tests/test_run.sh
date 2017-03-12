@@ -42,8 +42,6 @@ ${dirlist[@]}"
     exit 1
 fi
 
-PATH="${sysbench_dir}:$PATH"
-
 if [ -z ${srcdir+x} ]
 then
     SBTEST_INCDIR="$PWD/include"
@@ -74,6 +72,10 @@ export SBTEST_SUITEDIR="$testroot/t"
 export SBTEST_CONFIG
 export SBTEST_INCDIR
 
+# Add directories containing sysbench and cram to PATH
+export PATH="${sysbench_dir}:${SBTEST_ROOTDIR}/../third_party/cram/scripts:$PATH"
+
+export PYTHONPATH="${SBTEST_ROOTDIR}/../third_party/cram:$PYTHONPATH"
 export LUA_PATH="$SBTEST_SCRIPTDIR/?.lua"
 
 . $SBTEST_CONFIG

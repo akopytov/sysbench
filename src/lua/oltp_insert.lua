@@ -40,7 +40,8 @@ function event()
       if (sysbench.opt.auto_inc) then
          i = 0
       else
-         i = sysbench.rand.unique()
+         -- Convert a uint32_t value to SQL INT
+         i = sysbench.rand.unique() - 2147483648
       end
 
       con:query(string.format("INSERT INTO %s (id, k, c, pad) VALUES " ..

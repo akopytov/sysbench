@@ -47,11 +47,19 @@ db_show_table sbtest6 || true # Error on non-existing table
 db_show_table sbtest7 || true # Error on non-existing table
 db_show_table sbtest8 || true # Error on non-existing table
 
-# Test --create-secondary=off
+echo "# Test --create-secondary=off"
 ARGS="${OLTP_SCRIPT_PATH} ${DB_DRIVER_ARGS} ${SB_EXTRA_ARGS} --tables=1"
 
 sysbench --create-secondary=off $ARGS prepare
 
 db_show_table sbtest1
 
+sysbench $ARGS cleanup
+
+echo "# Test --auto-inc=off"
+
+ARGS="$ARGS --auto-inc=off --verbosity=1"
+
+sysbench $ARGS prepare
+sysbench $ARGS run
 sysbench $ARGS cleanup

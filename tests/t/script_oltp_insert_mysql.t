@@ -177,6 +177,7 @@ oltp_point_select.lua + MySQL tests
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest6' doesn't exist
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest7' doesn't exist
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest8' doesn't exist
+  # Test --create-secondary=off
   sysbench * (glob)
   
   Creating table 'sbtest1'...
@@ -192,4 +193,9 @@ oltp_point_select.lua + MySQL tests
   ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=* (glob)
   sysbench * (glob)
   
+  Dropping table 'sbtest1'...
+  # Test --auto-inc=off
+  Creating table 'sbtest1'...
+  Inserting 10000 records into 'sbtest1'
+  Creating a secondary index on 'sbtest1'...
   Dropping table 'sbtest1'...
