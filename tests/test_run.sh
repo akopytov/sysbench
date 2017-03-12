@@ -75,7 +75,7 @@ export SBTEST_INCDIR
 # Add directories containing sysbench and cram to PATH
 export PATH="${sysbench_dir}:${SBTEST_ROOTDIR}/../third_party/cram/scripts:$PATH"
 
-export PYTHONPATH="${SBTEST_ROOTDIR}/../third_party/cram:$PYTHONPATH"
+export PYTHONPATH="${SBTEST_ROOTDIR}/../third_party/cram:${PYTHONPATH:-}"
 export LUA_PATH="$SBTEST_SCRIPTDIR/?.lua"
 
 . $SBTEST_CONFIG
