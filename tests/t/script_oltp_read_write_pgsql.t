@@ -181,6 +181,7 @@ oltp_read_write.lua + PostgreSQL tests
   Did not find any relation named "sbtest6".
   Did not find any relation named "sbtest7".
   Did not find any relation named "sbtest8".
+  # Test --create-secondary=off
   sysbench * (glob)
   
   Creating table 'sbtest1'...
@@ -197,4 +198,9 @@ oltp_read_write.lua + PostgreSQL tests
   
   sysbench * (glob)
   
+  Dropping table 'sbtest1'...
+  # Test --auto-inc=off
+  Creating table 'sbtest1'...
+  Inserting 10000 records into 'sbtest1'
+  Creating a secondary index on 'sbtest1'...
   Dropping table 'sbtest1'...

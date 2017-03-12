@@ -56,6 +56,4 @@ uninstall-local:
 	rm -f -r $(DESTDIR)$(testdir)
 
 test:
-	PATH="$(top_srcdir)/third_party/cram/scripts:$$PATH" \
-PYTHONPATH="$(top_srcdir)/third_party/cram:$$PYTHONPATH" \
-./test_run.sh
+	./test_run.sh
