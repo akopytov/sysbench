@@ -28,7 +28,7 @@
 #endif
 
 #include "sb_util.h"
-#include "ck_pr.h"
+#include "sb_ck_pr.h"
 
 /* Statistic counter types */
 

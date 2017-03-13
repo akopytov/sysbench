@@ -38,7 +38,7 @@
 #include "sb_logger.h"
 #include "sb_rand.h"
 
-#include "ck_pr.h"
+#include "sb_ck_pr.h"
 #include "ck_cc.h"
 
 #include "sb_util.h"

@@ -33,9 +33,14 @@ if test x"$ac_cv_prog_cc_c99" = xno; then
    AC_MSG_ERROR([a C99 compiler is required to build sysbench])
 fi
 
-# Try to guess the most optimal compiler architecture flag
-AX_GCC_ARCHFLAG([no], ,
-  AC_MSG_ERROR([failed to autodetect compiler flags for this architecture. Use --with-gcc-arch=<arch> to set it explicitly]))
+# Try to guess the most optimal compiler architecture flag, unless it's already
+# been specified by the user via CFLAGS
+AS_CASE([$CFLAGS],
+  [*-march=*],,
+  [AX_GCC_ARCHFLAG([no], ,
+    AC_MSG_ERROR([failed to autodetect compiler flags for this architecture. \
+Use --with-gcc-arch=<arch> to set it explicitly]))]
+)
 
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 

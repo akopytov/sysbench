@@ -37,7 +37,7 @@
 #include "sb_rand.h"
 #include "sb_logger.h"
 #include "sysbench.h"
-#include "ck_pr.h"
+#include "sb_ck_pr.h"
 
 pthread_attr_t  sb_thread_attr;
 
