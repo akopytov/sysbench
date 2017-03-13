@@ -1262,7 +1262,6 @@ static int init(void)
   sb_list_t         *checkpoints_list;
   sb_list_item_t    *pos_val;
   value_t           *val;
-  long              res;
 
   sb_globals.threads = sb_get_value_int("num-threads");
   if (sb_globals.threads > 1)
@@ -1355,10 +1354,11 @@ static int init(void)
   SB_LIST_FOR_EACH(pos_val, checkpoints_list)
   {
     char *endptr;
+    long res;
 
     val = SB_LIST_ENTRY(pos_val, value_t, listitem);
     res = strtol(val->data, &endptr, 10);
-    if (*endptr != '\0' || res < 0 || res > UINT_MAX)
+    if (*endptr != '\0' || res < 0 || res > INT_MAX)
     {
       log_text(LOG_FATAL, "Invalid value for --report-checkpoints: '%s'",
                val->data);
