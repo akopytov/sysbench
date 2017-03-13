@@ -29,7 +29,7 @@
 #endif
 
 #include "sysbench.h"
-#include "ck_pr.h"
+#include "sb_ck_pr.h"
 
 /* How to test scheduler pthread_yield or sched_yield */
 #ifdef HAVE_PTHREAD_YIELD

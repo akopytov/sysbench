@@ -35,7 +35,7 @@
 #include "sb_rand.h"
 #include "sb_logger.h"
 
-#include "ck_pr.h"
+#include "sb_ck_pr.h"
 
 TLS sb_rng_state_t sb_rng_state CK_CC_CACHELINE;
 

@@ -23,7 +23,7 @@
 #include "sb_counter.h"
 #include "sysbench.h"
 #include "sb_util.h"
-#include "ck_pr.h"
+#include "sb_ck_pr.h"
 
 static sb_counters_t last_intermediate_counters;
 static sb_counters_t last_cumulative_counters;

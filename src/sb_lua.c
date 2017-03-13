@@ -33,7 +33,7 @@
 #include "sb_rand.h"
 #include "sb_thread.h"
 
-#include "ck_pr.h"
+#include "sb_ck_pr.h"
 
 /*
   Auto-generated headers for internal scripts. If you add a new header here,

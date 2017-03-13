@@ -40,7 +40,7 @@
 #include "db_driver.h"
 #include "sb_list.h"
 #include "sb_histogram.h"
-#include "ck_pr.h"
+#include "sb_ck_pr.h"
 
 /* Query length limit for bulk insert queries */
 #define BULK_PACKET_SIZE (512*1024)
