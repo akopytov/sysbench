@@ -125,6 +125,8 @@ char *sb_opt_to_string(option_t *);
 
 sb_list_t *sb_opt_to_list(option_t *);
 
+bool sb_opt_copy(const char *to, const char *from);
+
 sb_list_item_t *sb_options_enum_start(void);
 
 sb_list_item_t *sb_options_enum_next(sb_list_item_t *, option_t **);

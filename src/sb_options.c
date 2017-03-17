@@ -389,6 +389,19 @@ char *sb_get_value_string(const char *name)
 }
 
 
+bool sb_opt_copy(const char *to, const char *from)
+{
+  option_t *opt = find_option(&options, from);
+
+  if (opt == NULL)
+    return false;
+
+  set_option(to, sb_opt_to_string(opt), opt->type);
+
+  return true;
+}
+
+
 sb_list_t *sb_opt_to_list(option_t *opt)
 {
   return &opt->values;
