@@ -389,7 +389,7 @@ char *sb_get_value_string(const char *name)
 }
 
 
-bool sb_option_copy(const char *to, const char *from)
+bool sb_opt_copy(const char *to, const char *from)
 {
   option_t *opt = find_option(&options, from);
 

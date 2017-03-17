@@ -1267,7 +1267,7 @@ static int init(void)
   if (sb_globals.threads > 1)
   {
     log_text(LOG_WARNING, "--num-threads is deprecated, use --threads instead");
-    sb_copy_option("threads", "num-threads");
+    sb_opt_copy("threads", "num-threads");
   }
   else
     sb_globals.threads = sb_get_value_int("threads");
@@ -1282,7 +1282,7 @@ static int init(void)
   if (sb_globals.max_events > 0)
   {
     log_text(LOG_WARNING, "--max-requests is deprecated, use --events instead");
-    sb_copy_option("events", "max-requests");
+    sb_opt_copy("events", "max-requests");
   }
   else
     sb_globals.max_events = sb_get_value_int("events");
@@ -1291,7 +1291,7 @@ static int init(void)
   if (max_time > 0)
   {
     log_text(LOG_WARNING, "--max-time is deprecated, use --time instead");
-    sb_copy_option("time", "max-time");
+    sb_opt_copy("time", "max-time");
   }
   else
     max_time = sb_get_value_int("time");
@@ -1354,7 +1354,7 @@ static int init(void)
   if (sb_globals.tx_rate > 0)
   {
     log_text(LOG_WARNING, "--tx-rate is deprecated, use --rate instead");
-    sb_copy_option("rate", "tx-rate");
+    sb_opt_copy("rate", "tx-rate");
   }
   else
     sb_globals.tx_rate = sb_get_value_int("rate");
