@@ -26,6 +26,7 @@ separately.
     --help[=on|off]                 print help and exit [off]
     --version[=on|off]              print version and exit [off]
     --config-file=FILENAME          File containing command line options
+    --luajit-cmd=STRING             perform LuaJIT control command. This option is equivalent to 'luajit -j'. See LuaJIT documentation for more information
     --tx-rate=N                     deprecated alias for --rate [0]
     --max-requests=N                deprecated alias for --events [0]
     --max-time=N                    deprecated alias for --time [0]

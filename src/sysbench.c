@@ -118,6 +118,11 @@ sb_arg_t general_args[] =
   SB_OPT("help", "print help and exit", "off", BOOL),
   SB_OPT("version", "print version and exit", "off", BOOL),
   SB_OPT("config-file", "File containing command line options", NULL, FILE),
+  SB_OPT("luajit-cmd", "perform LuaJIT control command. This option is "
+         "equivalent to 'luajit -j'. See LuaJIT documentation for more "
+         "information", NULL, STRING),
+
+  /* Deprecated aliases */
   SB_OPT("tx-rate", "deprecated alias for --rate", "0", INT),
   SB_OPT("max-requests", "deprecated alias for --events", "0", INT),
   SB_OPT("max-time", "deprecated alias for --time", "0", INT),
@@ -1462,6 +1467,9 @@ static int init(void)
 
   for (unsigned i = 0; i < sb_globals.threads; i++)
     sb_timer_init(&timers[i]);
+
+  /* LuaJIT commands */
+  sb_globals.luajit_cmd = sb_get_value_string("luajit-cmd");
 
   return 0;
 }
