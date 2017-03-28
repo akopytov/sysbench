@@ -81,7 +81,7 @@ AS_IF([test "x$sb_cv_lib_ck" = "xsystem"],
 )
 
 AC_DEFINE_UNQUOTED([SB_WITH_CK], ["$sb_use_ck"],
-  [Whether system or bundled Concurrency Ki is used])
+  [Whether system or bundled Concurrency Kit is used])
 
 AM_CONDITIONAL([USE_BUNDLED_CK], [test "x$sb_use_ck" = xbundled])
 ])
