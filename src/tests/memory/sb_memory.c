@@ -290,6 +290,20 @@ sb_event_t memory_next_event(int thread_id)
   return req;
 }
 
+/*
+  Use either 32- or 64-bit primitives depending on the native word
+  size. ConcurrencyKit ensures the corresponding loads/stores are not optimized
+  away by the compiler.
+*/
+#if SIZEOF_SIZE_T == 4
+# define SIZE_T_LOAD(ptr) ck_pr_load_32((uint32_t *)(ptr))
+# define SIZE_T_STORE(ptr,val) ck_pr_store_32((uint32_t *)(ptr),(uint32_t)(val))
+#elif SIZEOF_SIZE_T == 8
+# define SIZE_T_LOAD(ptr) ck_pr_load_64((uint64_t *)(ptr))
+# define SIZE_T_STORE(ptr,val) ck_pr_store_64((uint64_t *)(ptr),(uint64_t)(val))
+#else
+# error Unsupported platform.
+#endif
 
 int event_rnd_none(sb_event_t *req, int thread_id)
 {
@@ -298,9 +312,8 @@ int event_rnd_none(sb_event_t *req, int thread_id)
 
   for (ssize_t i = 0; i < memory_block_size; i += SIZEOF_SIZE_T)
   {
-    ck_pr_barrier();
-    size_t offset = (size_t) (sb_rand_uniform_double() *
-                              (memory_block_size / SIZEOF_SIZE_T));
+    size_t offset = (volatile size_t) (sb_rand_uniform_double() *
+                                       (memory_block_size / SIZEOF_SIZE_T));
     (void) offset; /* unused */
     /* nop */
   }
@@ -316,10 +329,9 @@ int event_rnd_read(sb_event_t *req, int thread_id)
 
   for (ssize_t i = 0; i < memory_block_size; i += SIZEOF_SIZE_T)
   {
-    ck_pr_barrier();
     size_t offset = (size_t) (sb_rand_uniform_double() *
                               (memory_block_size / SIZEOF_SIZE_T));
-    size_t val = tls_buf[offset];
+    size_t val = SIZE_T_LOAD(tls_buf + offset);
     (void) val; /* unused */
   }
 
@@ -334,10 +346,9 @@ int event_rnd_write(sb_event_t *req, int thread_id)
 
   for (ssize_t i = 0; i < memory_block_size; i += SIZEOF_SIZE_T)
   {
-    ck_pr_barrier();
     size_t offset = (size_t) (sb_rand_uniform_double() *
                               (memory_block_size / SIZEOF_SIZE_T));
-    tls_buf[offset] = i;
+    SIZE_T_STORE(tls_buf + offset, i);
   }
 
   return 0;
@@ -349,7 +360,8 @@ int event_seq_none(sb_event_t *req, int thread_id)
   (void) req; /* unused */
   (void) thread_id; /* unused */
 
-  for (size_t *buf = tls_buf, *end = tls_buf_end; buf < end; buf++)
+  for (size_t *buf = tls_buf, *end = buf + memory_block_size / SIZEOF_SIZE_T;
+       buf < end; buf++)
   {
     ck_pr_barrier();
     /* nop */
@@ -364,10 +376,10 @@ int event_seq_read(sb_event_t *req, int thread_id)
   (void) req; /* unused */
   (void) thread_id; /* unused */
 
-  for (size_t *buf = tls_buf, *end = tls_buf_end; buf < end; buf++)
+  for (size_t *buf = tls_buf, *end = buf + memory_block_size / SIZEOF_SIZE_T;
+       buf < end; buf++)
   {
-    ck_pr_barrier();
-    size_t val = *buf;
+    size_t val = SIZE_T_LOAD(buf);
     (void) val; /* unused */
   }
 
@@ -380,10 +392,10 @@ int event_seq_write(sb_event_t *req, int thread_id)
   (void) req; /* unused */
   (void) thread_id; /* unused */
 
-  for (size_t *buf = tls_buf, *end = buf + memory_block_size / SIZEOF_SIZE_T; buf < end; buf++)
+  for (size_t *buf = tls_buf, *end = buf + memory_block_size / SIZEOF_SIZE_T;
+       buf < end; buf++)
   {
-    ck_pr_barrier();
-    *buf = buf - tls_buf;
+    SIZE_T_STORE(buf, end - buf);
   }
 
   return 0;
