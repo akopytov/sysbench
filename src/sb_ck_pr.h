@@ -47,15 +47,16 @@
 
 /*
   Compatibility wrappers for ConcurrencyKit functions. ConcurrencyKit does not
-  implement 64-bit atomic primitives on x86 (32-bit) natively. Newer versions
-  support the CK_USE_CC_BUILTINS define which allows resorting to compiler
-  builtins emulating 64-bit atomics on 32-bit architectures. However, one might
-  want to build with an old, distribution-provided CK version where that option
-  is not available. For those versions, define 64-bit atomics as aliases to GCC
-  builtins. A cleaner solution would be to define the corresponding sysbench
-  datastructures as 32-bit integers on i386, but the amount of extra code to
-  implement and support is not worth it. Code below has been copied with
-  modifications from gcc/ck_pr.h from the ConcurrencyKit distribution.
+  implement 64-bit atomic primitives on some 32-bit architectures (e.g. x86,
+  ARMv6) natively. Newer versions support the CK_USE_CC_BUILTINS define which
+  allows resorting to compiler builtins emulating 64-bit atomics on 32-bit
+  architectures. However, one might want to build with an old,
+  distribution-provided CK version where that option is not available. For those
+  versions, define 64-bit atomics as aliases to GCC builtins. A cleaner solution
+  would be to define the corresponding sysbench data structures as 32-bit
+  integers on those architectures, but the amount of extra code to implement and
+  support is not worth it. Code below has been copied with modifications from
+  gcc/ck_pr.h from the ConcurrencyKit distribution.
 */
 
 #ifndef SB_CK_H
@@ -63,7 +64,7 @@
 
 #include "ck_pr.h"
 
-#if defined(__i386__) && !defined(CK_F_PR_LOAD_64)
+#if !defined(CK_F_PR_LOAD_64)
 
 #ifndef __GNUC__
 #  error Unsupported platform
@@ -231,5 +232,5 @@ CK_PR_FAS_S(64, uint64_t)
 #undef CK_PR_FAS_S
 #undef CK_PR_FAS
 
-#endif /* __i386__ && !CK_F_PR_LOAD_64*/
+#endif /* !CK_F_PR_LOAD_64*/
 #endif /* SB_CK_H */
