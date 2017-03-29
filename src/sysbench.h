@@ -78,7 +78,6 @@ typedef struct
   union
   {
     sb_file_request_t    file_request;
-    sb_mem_request_t     mem_request;
     sb_threads_request_t threads_request;
     sb_mutex_request_t   mutex_request;
   } u;

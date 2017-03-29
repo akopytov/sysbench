@@ -16,7 +16,7 @@ help' only on Linux.
     --memory-hugetlb[=on|off]   allocate memory from HugeTLB pool [off]
 
   $ sysbench $args help | grep -v hugetlb
-  sysbench *.* * (glob)
+  sysbench * (glob)
   
   memory options:
     --memory-block-size=SIZE    size of memory block for test [1K]
@@ -30,7 +30,36 @@ help' only on Linux.
   
   'memory' test does not implement the 'prepare' command.
   [1]
-  $ sysbench $args run
+
+  $ sysbench $args --memory-block-size=-1 run
+  sysbench * (glob)
+  
+  FATAL: Invalid value for memory-block-size: -1
+  [1]
+
+  $ sysbench $args --memory-block-size=0 run
+  sysbench * (glob)
+  
+  FATAL: Invalid value for memory-block-size: 0
+  [1]
+
+  $ sysbench $args --memory-block-size=3 run
+  sysbench * (glob)
+  
+  FATAL: Invalid value for memory-block-size: 3
+  [1]
+
+  $ sysbench $args --memory-block-size=9 run
+  sysbench * (glob)
+  
+  FATAL: Invalid value for memory-block-size: 9
+  [1]
+
+########################################################################
+# Global reads
+########################################################################
+
+  $ sysbench $args --memory-oper=read run
   sysbench *.* * (glob)
   
   Running the test with following options:
@@ -38,11 +67,143 @@ help' only on Linux.
   Initializing random number generator from current time
   
   
+  Running memory speed test with the following options:
+    block size: 4KiB
+    total size: 1024MiB
+    operation: read
+    scope: global
+  
   Initializing worker threads...
   
   Threads started!
   
-  Operations performed: 262144 (* ops/sec) (glob)
+  Total operations: 262144 (* per second) (glob)
+  
+  1024.00 MiB transferred (* MiB/sec) (glob)
+  
+  
+  General statistics:
+      total time:                          *s (glob)
+      total number of events:              262144 (glob)
+  
+  Latency (ms):
+           min:                              *.* (glob)
+           avg:                              *.* (glob)
+           max:                              *.* (glob)
+           95th percentile:         *.* (glob)
+           sum: *.* (glob)
+  
+  Threads fairness:
+      events (avg/stddev):           */* (glob)
+      execution time (avg/stddev):   */* (glob)
+  
+########################################################################
+# Global writes
+########################################################################
+
+  $ sysbench $args --memory-oper=write run
+  sysbench *.* * (glob)
+  
+  Running the test with following options:
+  Number of threads: 2
+  Initializing random number generator from current time
+  
+  
+  Running memory speed test with the following options:
+    block size: 4KiB
+    total size: 1024MiB
+    operation: write
+    scope: global
+  
+  Initializing worker threads...
+  
+  Threads started!
+  
+  Total operations: 262144 (* per second) (glob)
+  
+  1024.00 MiB transferred (* MiB/sec) (glob)
+  
+  
+  General statistics:
+      total time:                          *s (glob)
+      total number of events:              262144 (glob)
+  
+  Latency (ms):
+           min:                              *.* (glob)
+           avg:                              *.* (glob)
+           max:                              *.* (glob)
+           95th percentile:         *.* (glob)
+           sum: *.* (glob)
+  
+  Threads fairness:
+      events (avg/stddev):           */* (glob)
+      execution time (avg/stddev):   */* (glob)
+  
+########################################################################
+# Local reads
+########################################################################
+
+  $ sysbench $args --memory-scope=local --memory-oper=read run
+  sysbench *.* * (glob)
+  
+  Running the test with following options:
+  Number of threads: 2
+  Initializing random number generator from current time
+  
+  
+  Running memory speed test with the following options:
+    block size: 4KiB
+    total size: 1024MiB
+    operation: read
+    scope: local
+  
+  Initializing worker threads...
+  
+  Threads started!
+  
+  Total operations: 262144 (* per second) (glob)
+  
+  1024.00 MiB transferred (* MiB/sec) (glob)
+  
+  
+  General statistics:
+      total time:                          *s (glob)
+      total number of events:              262144 (glob)
+  
+  Latency (ms):
+           min:                              *.* (glob)
+           avg:                              *.* (glob)
+           max:                              *.* (glob)
+           95th percentile:         *.* (glob)
+           sum: *.* (glob)
+  
+  Threads fairness:
+      events (avg/stddev):           */* (glob)
+      execution time (avg/stddev):   */* (glob)
+  
+########################################################################
+# Local writes
+########################################################################
+
+  $ sysbench $args --memory-scope=local --memory-oper=write run
+  sysbench *.* * (glob)
+  
+  Running the test with following options:
+  Number of threads: 2
+  Initializing random number generator from current time
+  
+  
+  Running memory speed test with the following options:
+    block size: 4KiB
+    total size: 1024MiB
+    operation: write
+    scope: local
+  
+  Initializing worker threads...
+  
+  Threads started!
+  
+  Total operations: 262144 (* per second) (glob)
   
   1024.00 MiB transferred (* MiB/sec) (glob)
   

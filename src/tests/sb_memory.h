@@ -36,15 +36,6 @@ typedef enum
 } sb_mem_scope_t;
 
 
-/* Memory IO request definition */
-
-typedef struct
-{
-  sb_mem_op_t    type;
-  size_t  block_size;
-  sb_mem_scope_t scope;
-} sb_mem_request_t;
-
 int register_test_memory(sb_list_t *tests);
 
 #endif
