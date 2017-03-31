@@ -1535,19 +1535,8 @@ int main(int argc, char *argv[])
 
     if (test == NULL)
     {
-      /* Is it a path? */
-      if (access(sb_globals.testname, R_OK))
-      {
-        fprintf(stderr, "Cannot find script %s: %s\n", sb_globals.testname,
-                strerror(errno));
-        return EXIT_FAILURE;
-      }
-
       if ((test = sb_load_lua(sb_globals.testname)) == NULL)
-      {
-        fprintf(stderr, "Script execution failed");
         return EXIT_FAILURE;
-      }
 
       if (sb_globals.cmdname == NULL)
       {

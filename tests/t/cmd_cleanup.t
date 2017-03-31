@@ -1,7 +1,7 @@
   $ sysbench cleanup
   sysbench * (glob)
   
-  Cannot find script cleanup: No such file or directory
+  FATAL: Cannot find benchmark 'cleanup': no such built-in test, file or module
   [1]
 
   $ cat >cmd_cleanup.lua <<EOF

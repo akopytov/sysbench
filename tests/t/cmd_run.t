@@ -1,7 +1,7 @@
   $ sysbench run
   sysbench * (glob)
   
-  Cannot find script run: No such file or directory
+  FATAL: Cannot find benchmark 'run': no such built-in test, file or module
   [1]
 
   $ cat >cmd_run.lua <<EOF

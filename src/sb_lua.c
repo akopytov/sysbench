@@ -771,22 +771,35 @@ static lua_State *sb_lua_new_state(void)
   if (load_internal_scripts(L))
     return NULL;
 
-  if (luaL_loadfile(L, sbtest.lname))
-  {
-    lua_error(L);
-    return NULL;
-  }
+  int rc;
 
-  if (lua_pcall(L, 0, 0, 0))
+  if ((rc = luaL_loadfile(L, sbtest.lname)) != 0)
   {
-    lua_error(L);
-    return NULL;
+    if (rc != LUA_ERRFILE)
+      goto loaderr;
+
+    /* Try to handle the given string as a module name */
+    lua_getglobal(L, "require");
+    lua_pushstring(L, sbtest.lname);
+    if (lua_pcall(L, 1, 0, 0))
+    {
+      log_text(LOG_FATAL, "Cannot find benchmark '%s': no such built-in test, "
+               "file or module", sbtest.lname);
+      return NULL;
+    }
   }
+  else if (lua_pcall(L, 0, 0, 0))
+    goto loaderr;
 
   /* Create new L context */
   tls_lua_ctxt.L = L;
 
   return L;
+
+loaderr:
+  lua_error(L);
+
+  return NULL;
 }
 
 /* Close interpreter state */
