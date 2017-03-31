@@ -1,7 +1,7 @@
   $ sysbench prepare
   sysbench * (glob)
   
-  Cannot find script prepare: No such file or directory
+  FATAL: Cannot find benchmark 'prepare': no such built-in test, file or module
   [1]
 
   $ cat >cmd_prepare.lua <<EOF

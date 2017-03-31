@@ -1,7 +1,7 @@
   $ sysbench help
   sysbench * (glob)
   
-  Cannot find script help: No such file or directory
+  FATAL: Cannot find benchmark 'help': no such built-in test, file or module
   [1]
 
   $ cat >cmd_help.lua <<EOF

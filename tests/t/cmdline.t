@@ -5,7 +5,7 @@
   $ sysbench foo bar
   sysbench * (glob)
   
-  Cannot find script foo: No such file or directory
+  FATAL: Cannot find benchmark 'foo': no such built-in test, file or module
   [1]
 
   $ sysbench foo bar baz
@@ -41,7 +41,7 @@
   > EOF
   sysbench * (glob)
   
-  Cannot find script run: No such file or directory
+  FATAL: Cannot find benchmark 'run': no such built-in test, file or module
   [1]
 
   $ cat >$CRAMTMP/cmdline.lua <<EOF
@@ -211,7 +211,6 @@ Command line options tests
   sysbench * (glob)
   
   FATAL: `sysbench.cmdline.read_cmdline_options' function failed: [string "sysbench.cmdline.lua"]:*: wrong table structure in sysbench.cmdline.options (glob)
-  Script execution failed (no-eol)
   [1]
 
   $ sysbench fileio --invalid-option prepare
@@ -334,3 +333,20 @@ Command line options tests
   sysbench * (glob)
   
   global
+
+# Test benchmark specification as a module
+
+  $ cat > cmdline_module.lua <<EOF
+  > print("cmdline_module loaded")
+  > function event()
+  >   print("cmdline_module event")
+  > end
+  > EOF
+
+  $ LUA_PATH="$PWD/?.lua;$LUA_PATH" sysbench cmdline_module --verbosity=0
+  cmdline_module loaded
+
+  $ LUA_PATH="$PWD/?.lua;$LUA_PATH" sysbench cmdline_module --events=1 --verbosity=0 run
+  cmdline_module loaded
+  cmdline_module loaded
+  cmdline_module event
