@@ -27,39 +27,47 @@ Current features allow to test the following system parameters:
 
 -   database server performance
 
+# Building and Installing From Source
+
 ## Build Requirements
 
 ### Debian/Ubuntu
+``` shell
     apt -y install make automake libtool pkg-config vim-common
     # For MySQL support
     apt -y install libmysqlclient-dev
     # For PostgreSQL support
     apt -y install libpq-dev
+```
 
 ### RedHat/CentOS
+``` shell
     yum -y install make automake libtool pkg-config vim-common
     # For MySQL support
     yum -y install mysql-devel
     # For PostgreSQL support
     yum -y install postgresql-devel
+```
 
 ### macOS
 
 Assuming you have Xcode (or Xcode Commane Line Tools) and Homebrew installed:
-
+``` shell
     brew install automake pkg-config
     # For MySQL support
     brew install mysql
     # For PostgreSQL support
     brew install postgresql
+```
 
-## Building and Installing From Source
-
+## Build and Install
+``` shell
     ./autogen.sh
     # Add --with-pgsql to build with PostgreSQL support
     ./configure
     make
     make install
+```
 
 The above will build sysbench with MySQL support by default. If you have
 MySQL headers and libraries in non-standard locations (and no
