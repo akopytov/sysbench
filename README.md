@@ -27,18 +27,49 @@ Current features allow to test the following system parameters:
 
 -   database server performance
 
-## Installation
+## Build Requirements
 
-	./autogen.sh
-	./configure
-	make
-	make install
+### Debian/Ubuntu
+    apt -y install make automake libtool pkg-config vim-common
+    # For MySQL support
+    apt -y install libmysqlclient-dev
+    # For PostgreSQL support
+    apt -y install libpq-dev
 
-The above will build sysbench with MySQL support by default. If you have MySQL headers and libraries in non-standard locations (and no `mysql_config` can be found in the `PATH`), you can specify them explicitly with `--with-mysql-includes` and `--with-mysql-libs` options to `./configure`.
+### RedHat/CentOS
+    yum -y install make automake libtool pkg-config vim-common
+    # For MySQL support
+    yum -y install mysql-devel
+    # For PostgreSQL support
+    yum -y install postgresql-devel
 
-To compile sysbench without MySQL support, use `--without-mysql`. In
-this case all database-related tests will not work, but other tests will
-be functional.
+### macOS
+
+Assuming you have Xcode (or Xcode Commane Line Tools) and Homebrew installed:
+
+    brew install automake pkg-config
+    # For MySQL support
+    brew install mysql
+    # For PostgreSQL support
+    brew install postgresql
+
+## Building and Installing From Source
+
+    ./autogen.sh
+    # Add --with-pgsql to build with PostgreSQL support
+    ./configure
+    make
+    make install
+
+The above will build sysbench with MySQL support by default. If you have
+MySQL headers and libraries in non-standard locations (and no
+`mysql_config` can be found in the `PATH`), you can specify them
+explicitly with `--with-mysql-includes` and `--with-mysql-libs` options
+to `./configure`.
+
+To compile sysbench without MySQL support, use `--without-mysql`. If no
+database drivers are available database-related scripts will not work,
+but other benchmarks will be functional.
 
 See [README-WIN.txt](README-WIN.txt) for instructions on Windows builds.
 
