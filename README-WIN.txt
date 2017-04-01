@@ -1,20 +1,11 @@
-How to build on Windows
+As of sysbench 1.0 support for native Windows builds was dropped. It may
+be re-introduced in later versions.
 
+Currently, the recommended way to build sysbench on Windows is using
+Windows Subsystem for Linux available in Windows 10:
+https://msdn.microsoft.com/en-us/commandline/wsl/about
 
-You need CMake (download from http://www.cmake.org/) and Visual Studio 2015 or 
-later.
+After installing WSL and getting a bash prompt, following Debian/Ubuntu
+build instructions is sufficient.
 
-1.Open Visual Studio command line prompt
-2.To build with MySQL support, you will need mysql.h header file and client 
-library libmysqld.lib
-One can get them e.g by downloading and unpacking the "zip" distribution of mysql
-
-- Append directory where libmysql.lib is located to environment variable LIB, e.g
-  set LIB=%LIB%;G:\mysql-noinstall-6.0.6-alpha-win32\mysql-6.0.6-alpha-win32\lib\opt
-
-- Append directory where mysql.h is located to environment variable INCLUDE, e.g
-  set INCLUDE=%INCLUDE%;G:\mysql-noinstall-6.0.6-alpha-win32\mysql-6.0.6-alpha-win32\include
-3.In the sysbench directory, execute cmake -G "Visual Studio 9 2008" 
-4.Open sysbench.sln in Explorer and build Relwithdebinfo target.
-  Alternatively, from the command line, issue  
-  vcbuild /useenv sysbench.sln "Relwithdebinfo|Win32"
+Alternatively, one can build and use sysbench 0.5 natively for Windows.
