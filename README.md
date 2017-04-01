@@ -27,18 +27,57 @@ Current features allow to test the following system parameters:
 
 -   database server performance
 
-## Installation
+# Building and Installing From Source
 
-	./autogen.sh
-	./configure
-	make
-	make install
+## Build Requirements
 
-The above will build sysbench with MySQL support by default. If you have MySQL headers and libraries in non-standard locations (and no `mysql_config` can be found in the `PATH`), you can specify them explicitly with `--with-mysql-includes` and `--with-mysql-libs` options to `./configure`.
+### Debian/Ubuntu
+``` shell
+    apt -y install make automake libtool pkg-config vim-common
+    # For MySQL support
+    apt -y install libmysqlclient-dev
+    # For PostgreSQL support
+    apt -y install libpq-dev
+```
 
-To compile sysbench without MySQL support, use `--without-mysql`. In
-this case all database-related tests will not work, but other tests will
-be functional.
+### RedHat/CentOS
+``` shell
+    yum -y install make automake libtool pkg-config vim-common
+    # For MySQL support
+    yum -y install mysql-devel
+    # For PostgreSQL support
+    yum -y install postgresql-devel
+```
+
+### macOS
+
+Assuming you have Xcode (or Xcode Commane Line Tools) and Homebrew installed:
+``` shell
+    brew install automake pkg-config
+    # For MySQL support
+    brew install mysql
+    # For PostgreSQL support
+    brew install postgresql
+```
+
+## Build and Install
+``` shell
+    ./autogen.sh
+    # Add --with-pgsql to build with PostgreSQL support
+    ./configure
+    make
+    make install
+```
+
+The above will build sysbench with MySQL support by default. If you have
+MySQL headers and libraries in non-standard locations (and no
+`mysql_config` can be found in the `PATH`), you can specify them
+explicitly with `--with-mysql-includes` and `--with-mysql-libs` options
+to `./configure`.
+
+To compile sysbench without MySQL support, use `--without-mysql`. If no
+database drivers are available database-related scripts will not work,
+but other benchmarks will be functional.
 
 See [README-WIN.txt](README-WIN.txt) for instructions on Windows builds.
 
