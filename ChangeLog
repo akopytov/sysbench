@@ -1,3 +1,14 @@
+2017-04-02  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.5
+	* various build-related documentation updates
+	* benchmark can now be specified by a module name on the command
+	line
+	* memory benchmark: performance and scalability improvements
+	* fix ARMv6 builds with system ConcurrencyKit
+	* fix GH-123: Table already exists error on prepare
+	* fix GH-121: make buildhost cpudetection optional
+
 2017-03-13  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.4
