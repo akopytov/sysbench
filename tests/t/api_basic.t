@@ -90,7 +90,7 @@ Error handling
   > foo
   > EOF
   $ sysbench $SB_ARGS run
-  PANIC: unprotected error in call to Lua API (*/api_basic.lua:2: '=' expected near '<eof>') (glob)
+  FATAL: */api_basic.lua:2: '=' expected near '<eof>' (glob)
   [1]
 
 # Missing event function
