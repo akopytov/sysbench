@@ -299,9 +299,23 @@ static const char *searchpath (lua_State *L, const char *name,
     const char *filename = luaL_gsub(L, lua_tostring(L, -1),
 				     LUA_PATH_MARK, name);
     lua_remove(L, -2);  /* remove path template */
+    goto check_readable; /* suppress "unused label" warning */
+check_readable:
     if (readable(filename))  /* does file exist and is readable? */
       return filename;  /* return that file name */
     lua_pushfstring(L, "\n\tno file " LUA_QS, filename);
+#if LJ_TARGET_OSX || LJ_TARGET_IOS
+    /* if *.dylib is missing, try *.so */
+    size_t len = strlen(filename);
+    if (len > 6 && strcmp(filename + len - 6, ".dylib") == 0) {
+      luaL_addvalue(&msg);  /* concatenate error msg. entry */
+      lua_pushlstring(L, filename, len - 6);
+      filename = lua_pushfstring(L, "%s.so", lua_tostring(L, -1));
+      lua_insert(L, -3); /* sink new filename below old one */
+      lua_pop(L, 2);
+      goto check_readable;
+    }
+#endif
     lua_remove(L, -2);  /* remove file name */
     luaL_addvalue(&msg);  /* concatenate error msg. entry */
   }
