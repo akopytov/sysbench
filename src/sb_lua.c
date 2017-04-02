@@ -191,6 +191,13 @@ static void call_error(lua_State *L, const char *name)
   lua_pop(L, 1);
 }
 
+static void report_error(lua_State *L)
+{
+  const char * const err = lua_tostring(L, -1);
+  log_text(LOG_FATAL, "%s", err ? err : "(not a string)");
+  lua_pop(L, 1);
+}
+
 static void check_connection(lua_State *L, sb_lua_ctxt_t *ctxt)
 {
   if (ctxt->con == NULL)
@@ -776,10 +783,15 @@ static lua_State *sb_lua_new_state(void)
     /* Try to handle the given string as a module name */
     lua_getglobal(L, "require");
     lua_pushstring(L, sbtest.lname);
-    if (lua_pcall(L, 1, 0, 0))
+    if (lua_pcall(L, 1, 1, 0))
     {
+      const char *msg = lua_tostring(L, -1);
+      if (msg && strncmp(msg, "module ", 7))
+        goto loaderr;
+
       log_text(LOG_FATAL, "Cannot find benchmark '%s': no such built-in test, "
                "file or module", sbtest.lname);
+
       return NULL;
     }
   }
@@ -792,7 +804,7 @@ static lua_State *sb_lua_new_state(void)
   return L;
 
 loaderr:
-  lua_error(L);
+  report_error(L);
 
   return NULL;
 }

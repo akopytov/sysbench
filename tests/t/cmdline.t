@@ -350,3 +350,18 @@ Command line options tests
   cmdline_module loaded
   cmdline_module loaded
   cmdline_module event
+
+# Test that errors thrown by the script itself are reported properly
+
+  $ cat >> cmdline_module.lua <<EOF
+  >   error("test error")
+  > EOF
+
+  $ LUA_PATH="$PWD/?.lua;$LUA_PATH" sysbench cmdline_module --verbosity=0
+  cmdline_module loaded
+  FATAL: */cmdline_module.lua:5: test error (glob)
+  [1]
+  $ LUA_PATH="$PWD/?.lua;$LUA_PATH" sysbench cmdline_module --events=1 --verbosity=0 run
+  cmdline_module loaded
+  FATAL: */cmdline_module.lua:5: test error (glob)
+  [1]
