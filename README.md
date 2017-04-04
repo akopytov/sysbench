@@ -43,7 +43,7 @@ build and use sysbench 0.5 natively for Windows.
 
 ### Debian/Ubuntu
 ``` shell
-    apt -y install make automake libtool pkg-config vim-common
+    apt -y install make automake libtool pkg-config libaio-dev vim-common
     # For MySQL support
     apt -y install libmysqlclient-dev
     # For PostgreSQL support
@@ -52,7 +52,7 @@ build and use sysbench 0.5 natively for Windows.
 
 ### RedHat/CentOS
 ``` shell
-    yum -y install make automake libtool pkg-config vim-common
+    yum -y install make automake libtool pkg-config libaio-devel vim-common
     # For MySQL support
     yum -y install mysql-devel
     # For PostgreSQL support
