@@ -36,3 +36,6 @@ dist-hook:
 
 test:
 	cd tests && $(MAKE) test
+
+clean-local:
+	$(MAKE) -C third_party/cram clean
