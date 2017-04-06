@@ -38,4 +38,4 @@ test:
 	cd tests && $(MAKE) test
 
 clean-local:
-	$(MAKE) -C third_party/cram clean
+	$(MAKE) -C $(top_srcdir)/third_party/cram clean
