@@ -104,7 +104,7 @@ addons:
 
 before_install:
   - >
-    if [ "x$TARGET" = "xtest" ]
+    if [ "x$TARGET" = "xtest" ];
     then
       case "${TRAVIS_OS_NAME:-linux}" in
       osx)
