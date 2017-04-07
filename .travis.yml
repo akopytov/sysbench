@@ -166,7 +166,7 @@ script:
         ;;
       esac
     else
-      git clone https://github.com/packpack/packpack.git packpack
+      git clone https://github.com/akopytov/packpack.git packpack
       packpack/packpack
     fi
 
