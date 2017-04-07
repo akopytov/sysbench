@@ -104,8 +104,7 @@ addons:
 
 before_install:
   - >
-    if [ "x$TARGET" = "xtest" ];
-    then
+    if [ "x$TARGET" = "xtest" ]; then
       case "${TRAVIS_OS_NAME:-linux}" in
       osx)
         brew install mysql
@@ -125,8 +124,7 @@ before_install:
         ;;
       linux)
         export ASAN_OPTIONS="detect_leaks=0"
-        if [ "${CC}" = "clang" ]
-        then
+        if [ "${CC}" = "clang" ]; then
           CC=clang-3.6
         fi
         ;;
@@ -149,8 +147,7 @@ before_script:
 
 script:
   - >
-    if [ -n "$TARGET" ]
-    then
+    if [ -n "$TARGET" ]; then
       case "$TARGET" in
       test)
         ./autogen.sh && ./configure --with-mysql --with-pgsql
@@ -186,8 +183,7 @@ deploy:
 
 after_success:
   - >
-    if [ "x$TARGET" = "xcoverage" ]
-    then
+    if [ "x$TARGET" = "xcoverage" ]; then
       coveralls --exclude third_party/ --gcov-options '\-lp'
     fi
 
