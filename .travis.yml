@@ -151,11 +151,12 @@ script:
       case "$TARGET" in
       test)
         ./autogen.sh && ./configure --with-mysql --with-pgsql
-        make -j2
+        make
         SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
         ;;
       distcheck)
         ./autogen.sh && ./configure --without-mysql
+        make
         make distcheck
         ;;
       coverage)
