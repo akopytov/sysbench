@@ -20,8 +20,8 @@ BuildRequires: libtool
 BuildRequires: pkgconfig
 BuildRequires: libaio-devel
 BuildRequires: vim-common
-# Tests
-BuildRequires: /usr/bin/cram
+# Use bundled cram for tests
+BuildRequires: python
 
 ExclusiveArch:  %{arm} %{ix86} x86_64 %{mips} aarch64
 
