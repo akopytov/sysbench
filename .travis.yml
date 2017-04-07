@@ -59,10 +59,6 @@ matrix:
       compiler: clang
     - env: OS=debian DIST=stretch
       compiler: clang
-    - env: TARGET=source
-      compiler: clang
-    - env: TARGET=coverage
-      compiler: clang
     - env: OS=el DIST=6
       os: osx
     - env: OS=el DIST=7
@@ -85,8 +81,14 @@ matrix:
       os: osx
     - env: OS=debian DIST=stretch
       os: osx
+    - env: TARGET=distcheck
+      compiler: clang
+    - env: TARGET=distcheck
+      os: osx
     - env: TARGET=coverage
       os: osx
+    - env: TARGET=coverage
+      compiler: clang
     - os: osx
       compiler: gcc
 
