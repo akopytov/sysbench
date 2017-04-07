@@ -180,6 +180,7 @@ deploy:
     package_glob: build/*.{rpm,deb,dsc}
     skip_cleanup: true
     on:
+      all_branches: true
       condition: -n "${OS}" && -n "${DIST}" && -n "${PACKAGECLOUD_TOKEN}"
 
 after_success:
