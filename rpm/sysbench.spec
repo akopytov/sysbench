@@ -8,7 +8,11 @@ Group:         Applications/System
 Source0:       https://github.com/akopytov/%{name}/archive/%{version}/%{name}-%{version}.tar.gz
 URL:           https://github.com/akopytov/sysbench/
 
+%if %{?el6}
+BuildRequires: mysql-devel
+%else
 BuildRequires: mariadb-devel
+%endif
 BuildRequires: postgresql-devel
 BuildRequires: make
 BuildRequires: automake
