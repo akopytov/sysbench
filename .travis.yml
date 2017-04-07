@@ -7,6 +7,8 @@ sudo: required
 
 services:
   - docker
+  - mysql
+  - postgresql
 
 language: c
 
@@ -99,10 +101,6 @@ addons:
     - libpq-dev
     - libaio-dev
     - clang-3.6
-
-services:
-  - mysql
-  - postgresql
 
 before_install:
   - >
