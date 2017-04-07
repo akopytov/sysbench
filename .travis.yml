@@ -2,6 +2,7 @@
 #
 # Travis CI configuration
 
+dist: trusty
 sudo: required
 
 services:
