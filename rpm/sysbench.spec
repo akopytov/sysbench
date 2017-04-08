@@ -70,7 +70,10 @@ make test
 
 %files
 %doc ChangeLog COPYING README.md
+%if 0%{?el6}
+%else
 %license COPYING
+%endif
 %{_bindir}/*
 %{_datadir}/%{name}
 
