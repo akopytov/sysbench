@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
-clean:
-	make clean
+%:
+	dh $@
 
 override_dh_auto_configure:
 	dh_testdir

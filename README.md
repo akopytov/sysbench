@@ -52,9 +52,9 @@ build and use sysbench 0.5 natively for Windows.
 
 ### RedHat/CentOS
 ``` shell
-    yum -y install make automake libtool pkg-config libaio-devel vim-common
+    yum -y install make automake libtool pkgconfig libaio-devel vim-common
     # For MySQL support
-    yum -y install mysql-devel
+    yum -y install mariadb-devel
     # For PostgreSQL support
     yum -y install postgresql-devel
 ```
