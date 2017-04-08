@@ -55,7 +55,11 @@ autoreconf -vif
 %configure --with-mysql \
            --with-pgsql \
 
+%if 0%{?el6}
+make -j2
+%else
 %make_build
+%endif
 
 %install
 %make_install
