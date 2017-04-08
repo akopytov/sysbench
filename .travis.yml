@@ -35,8 +35,7 @@ env:
       - OS=ubuntu DIST=yakkety
       - OS=debian DIST=wheezy
       - OS=debian DIST=jessie
-      - OS=debian DIST=stretch
-  
+
 matrix:
   exclude:
     - env: OS=el DIST=6
