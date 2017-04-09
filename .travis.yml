@@ -66,6 +66,20 @@ matrix:
       compiler: clang
     - env: OS=debian DIST=stretch
       compiler: clang
+    - env: OS=ubuntu DIST=precise ARCH=i386
+      compiler: clang
+    - env: OS=ubuntu DIST=trusty ARCH=i386
+      compiler: clang
+    - env: OS=ubuntu DIST=xenial ARCH=i386
+      compiler: clang
+    - env: OS=ubuntu DIST=yakkety ARCH=i386
+      compiler: clang
+    - env: OS=debian DIST=wheezy ARCH=i386
+      compiler: clang
+    - env: OS=debian DIST=jessie ARCH=i386
+      compiler: clang
+    - env: OS=debian DIST=stretch ARCH=i386
+      compiler: clang
     - env: OS=el DIST=6
       os: osx
     - env: OS=el DIST=7
