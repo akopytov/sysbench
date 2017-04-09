@@ -1,4 +1,4 @@
-# Copyright (C) 2016 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2016-2017 Alexey Kopytov <akopytov@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,11 +43,16 @@ AS_IF([test "x$sb_cv_lib_ck" = "xsystem"],
     CK_CFLAGS="-I\$(abs_top_builddir)/third_party/concurrency_kit/include"
     CK_LIBS="\$(abs_top_builddir)/third_party/concurrency_kit/lib/libck.a"
 
-    # Assume 128-byte cache line on AArch64 and PowerPC
     case $target_cpu in
       powerpc*|aarch64)
+        # Assume 128-byte cache line on AArch64 and PowerPC
         CPPFLAGS="${CPPFLAGS} -DCK_MD_CACHELINE=128"
         ;;
+      i686*)
+        # Force --platform=i686 for CK, otherwise its configure script
+        # autodetects target based on 'uname -m' which doesn't work for
+        # cross-compiliation
+        CK_CONFIGURE_FLAGS="--platform=i686"
     esac
     # Add --enable-lse to CK build flags, if LSE instructions are supported by
     # the target architecture
