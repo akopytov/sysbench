@@ -112,15 +112,6 @@ addons:
     - clang-3.6
 
 before_install:
-  # Upload builds corresponding to release tags to the 'sysbench'
-  # repository, push other ones to 'sysbench-prereleases'
-  - commits=$(git describe --long --always | sed -n 's/^\([0-9\.]*\)-\([0-9]*\)-\([a-z0-9]*\)/\2/p')
-  - >
-    if [ ${commits:-0} = 0 ]; then
-      PACKAGECLOUD_REPO=sysbench
-    else
-      PACKAGECLOUD_REPO=sysbench-prereleases
-    fi
   - >
     if [ "x$TARGET" = "xtest" ]; then
       case "${TRAVIS_OS_NAME:-linux}" in
@@ -160,6 +151,18 @@ install:
     esac
 
 before_script:
+  # Upload builds corresponding to release tags to the 'sysbench'
+  # repository, push other ones to 'sysbench-prereleases'
+  - commits=$(git describe --long --always | sed -n 's/^\([0-9\.]*\)-\([0-9]*\)-\([a-z0-9]*\)/\2/p')
+  - >
+    if [ ${commits:-0} = 0 ]; then
+      PACKAGECLOUD_REPO=sysbench
+    else
+      PACKAGECLOUD_REPO=sysbench-prereleases
+    fi
+  # AX_GCC_ARCH cannot be used for packaging, need generic/native
+  # instruction sets
+  - CONFIGURE_FLAGS="--without-gcc-arch"
   - mysql -u root -e 'CREATE DATABASE sbtest'
   - psql -U postgres -c 'CREATE DATABASE sbtest'
 
@@ -168,17 +171,17 @@ script:
     if [ -n "$TARGET" ]; then
       case "$TARGET" in
       test)
-        ./autogen.sh && ./configure --with-mysql --with-pgsql
+        ./autogen.sh && ./configure $CONFIGURE_FLAGS --with-mysql --with-pgsql
         make
         SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
         ;;
       distcheck)
-        ./autogen.sh && ./configure --without-mysql
+        ./autogen.sh && ./configure $CONFIGURE_FLAGS --without-mysql
         make
         make distcheck
         ;;
       coverage)
-        ./autogen.sh && ./configure --enable-coverage --enable-asan --enable-msan --with-mysql --with-pgsql
+        ./autogen.sh && ./configure $CONFIGURE_FLAGS --enable-coverage --enable-asan --enable-msan --with-mysql --with-pgsql
         make -j2
         SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
         ;;
