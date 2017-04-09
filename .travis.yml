@@ -104,8 +104,7 @@ addons:
 before_install:
   # Upload builds corresponding to release tags to the 'sysbench'
   # repository, push other ones to 'sysbench-prereleases'
-  - commits=$(git describe --long --always |
-  sed -n 's/^\([0-9\.]*\)-\([0-9]*\)-\([a-z0-9]*\)/\2/p')
+  - commits=$(git describe --long --always | sed -n 's/^\([0-9\.]*\)-\([0-9]*\)-\([a-z0-9]*\)/\2/p')
   - >
     if [ ${commits:-0} = 0 ]; then
       PACKAGECLOUD_REPO=sysbench
