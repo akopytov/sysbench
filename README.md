@@ -56,9 +56,17 @@ binaries are available.
   dnf -y install sysbench
   ```
 
+## macOS
+
+On macOS, up-to-date sysbench packages are available from Homebrew:
+```shell
+# Add --with-postgresql if you need PostgreSQL support
+brew install sysbench
+```
+
 # Building and Installing From Source
 
-It is recommended to install sysbench is using the official binary
+It is recommended to install sysbench from the official binary
 packages as described in
 [Installing from Binary Packages](#installing-from-binary-packages). Below
 are instruction for cases when you want to use sysbench on an
