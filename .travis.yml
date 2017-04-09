@@ -35,6 +35,16 @@ env:
       - OS=ubuntu DIST=yakkety
       - OS=debian DIST=wheezy
       - OS=debian DIST=jessie
+      - OS=el DIST=6 ARCH=i386
+      - OS=el DIST=7 ARCH=i386
+      - OS=fedora DIST=24 ARCH=i386
+      - OS=fedora DIST=25 ARCH=i386
+      - OS=ubuntu DIST=precise ARCH=i386
+      - OS=ubuntu DIST=trusty ARCH=i386
+      - OS=ubuntu DIST=xenial ARCH=i386
+      - OS=ubuntu DIST=yakkety ARCH=i386
+      - OS=debian DIST=wheezy ARCH=i386
+      - OS=debian DIST=jessie ARCH=i386
 
 matrix:
   exclude:
