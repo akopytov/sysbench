@@ -1,5 +1,7 @@
 [![Latest Release][release-badge]][release-url]
 [![Build Status][travis-badge]][travis-url]
+[![Debian Packages][deb-badge]][deb-url]
+[![RPM Packages][rpm-badge]][rpm-url]
 [![Coverage Status][coveralls-badge]][coveralls-url]
 [![License][license-badge]][license-url]
 
@@ -27,7 +29,61 @@ Current features allow to test the following system parameters:
 
 -   database server performance
 
+# Installing from Binary Packages
+
+## Linux
+
+The easiest way to download and install sysbench on Linux is using
+binary package repositories hosted by
+[packagecloud](https://packagecloud.io). The repositories are
+automatically updated on each sysbench release. Currently only x86_64
+binaries are available.
+
+- setup the `sysbench` repository by following instructions for your
+  distribution at <https://packagecloud.io/akopytov/sysbench/install>
+
+- install the `sysbench` package:
+  - Debian/Ubunu
+  ``` shell
+  apt -y install sysbench
+  ```
+
+  - RHEL/CentOS:
+  ``` shell
+  yum -y install sysbench
+  ```
+
+  - Fedora:
+  ``` shell
+  dnf -y install sysbench
+  ```
+
+## macOS
+
+On macOS, up-to-date sysbench packages are available from Homebrew:
+```shell
+# Add --with-postgresql if you need PostgreSQL support
+brew install sysbench
+```
+
+## Windows
+As of sysbench 1.0 support for native Windows builds was
+dropped. It may be re-introduced in later versions. Currently, the
+recommended way to obtain sysbench on Windows is using
+[Windows Subsystem for Linux available in Windows 10](https://msdn.microsoft.com/en-us/commandline/wsl/about).
+
+After installing WSL and getting into bash prompt on Windows, following
+Debian/Ubuntu installation instructions is sufficient. Alternatively, one can
+use WSL build and install sysbench from source, or use an older sysbench
+release to build a native binary.
+
 # Building and Installing From Source
+
+It is recommended to install sysbench from the official binary
+packages as described in
+[Installing from Binary Packages](#installing-from-binary-packages). Below
+are instruction for cases when you want to use sysbench on an
+architecture for which no binary packages are available.
 
 ## Build Requirements
 
@@ -50,13 +106,22 @@ build and use sysbench 0.5 natively for Windows.
     apt -y install libpq-dev
 ```
 
-### RedHat/CentOS
+### RHEL/CentOS
 ``` shell
     yum -y install make automake libtool pkgconfig libaio-devel vim-common
-    # For MySQL support
+    # For MySQL support, replace with mysql-devel on RHEL/CentOS 5
     yum -y install mariadb-devel
     # For PostgreSQL support
     yum -y install postgresql-devel
+```
+
+### Fedora
+``` shell
+    dnf -y install make automake libtool pkgconfig libaio-devel vim-common
+    # For MySQL support
+    dnf -y install mariadb-devel
+    # For PostgreSQL support
+    dnf -y install postgresql-devel
 ```
 
 ### macOS
@@ -170,3 +235,7 @@ Note that numerical values for all *size* options (like `--thread-stack-size` in
 [license-url]: COPYING
 [release-badge]: https://img.shields.io/github/release/akopytov/sysbench.svg
 [release-url]: https://github.com/akopytov/sysbench/releases/latest
+[deb-badge]: https://img.shields.io/badge/Packages-Debian-red.svg?style=flat
+[deb-url]: https://packagecloud.io/akopytov/sysbench?filter=debs
+[rpm-badge]: https://img.shields.io/badge/Packages-RPM-blue.svg?style=flat
+[rpm-url]: https://packagecloud.io/akopytov/sysbench?filter=rpms
