@@ -1,5 +1,7 @@
 [![Latest Release][release-badge]][release-url]
 [![Build Status][travis-badge]][travis-url]
+[![Debian Packages][deb-badge]][deb-url]
+[![RPM Packages][rpm-badge]][rpm-url]
 [![Coverage Status][coveralls-badge]][coveralls-url]
 [![License][license-badge]][license-url]
 
@@ -231,3 +233,7 @@ Note that numerical values for all *size* options (like `--thread-stack-size` in
 [license-url]: COPYING
 [release-badge]: https://img.shields.io/github/release/akopytov/sysbench.svg
 [release-url]: https://github.com/akopytov/sysbench/releases/latest
+[deb-badge]: https://img.shields.io/badge/Packages-Debian-red.svg?style=flat
+[deb-url]: https://packagecloud.io/akopytov/sysbench?filter=debs
+[rpm-badge]: https://img.shields.io/badge/Packages-RPM-blue.svg?style=flat
+[rpm-url]: https://packagecloud.io/akopytov/sysbench?filter=rpms
