@@ -64,6 +64,17 @@ On macOS, up-to-date sysbench packages are available from Homebrew:
 brew install sysbench
 ```
 
+### Windows
+As of sysbench 1.0 support for native Windows builds was
+dropped. It may be re-introduced in later versions. Currently, the
+recommended way to obtain sysbench on Windows is using
+[Windows Subsystem for Linux available in Windows 10](https://msdn.microsoft.com/en-us/commandline/wsl/about).
+
+After installing WSL and getting into bash prompt on Windows, following
+Debian/Ubuntu installation instructions is sufficient. Alternatively, one can
+use WSL build and install sysbench from source, or use an older sysbench
+release to build a native binary.
+
 # Building and Installing From Source
 
 It is recommended to install sysbench from the official binary
