@@ -196,6 +196,15 @@ script:
     else
       git clone https://github.com/akopytov/packpack.git packpack
       packpack/packpack
+
+      # To avoid name conflicts, deploy source packages only for
+      # "default", i.e. x86_64 architecture
+      if [[ -z "${ARCH}" ]]; then
+        PACKAGECLOUD_GLOB='build/*.{rpm,deb,dsc}'
+      else
+        # Exclude *.src.rpm and *.dsc
+        PACKAGECLOUD_GLOB='build/*{[^c].rpm,.deb}'
+      fi
     fi
 
 deploy:
@@ -205,7 +214,7 @@ deploy:
     repository: "${PACKAGECLOUD_REPO}"
     token: "${PACKAGECLOUD_TOKEN}"
     dist: "${OS}/${DIST}"
-    package_glob: build/*.{rpm,deb,dsc}
+    package_glob: "${PACKAGECLOUD_GLOB}"
     skip_cleanup: true
     on:
       all_branches: true
