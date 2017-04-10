@@ -48,11 +48,15 @@ AS_IF([test "x$sb_cv_lib_ck" = "xsystem"],
         # Assume 128-byte cache line on AArch64 and PowerPC
         CPPFLAGS="${CPPFLAGS} -DCK_MD_CACHELINE=128"
         ;;
-      i686*)
-        # Force --platform=i686 for CK, otherwise its configure script
+        # Force --platform=i*86 for CK, otherwise its configure script
         # autodetects target based on 'uname -m' which doesn't work for
         # cross-compiliation
+      i486*|i586*)
+        CK_CONFIGURE_FLAGS="--platform=i586"
+        ;;
+      i686*)
         CK_CONFIGURE_FLAGS="--platform=i686"
+        ;;
     esac
     # Add --enable-lse to CK build flags, if LSE instructions are supported by
     # the target architecture
