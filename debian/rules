@@ -6,7 +6,7 @@
 override_dh_auto_configure:
 	dh_testdir
 	autoreconf -vif
-	dh_auto_configure
+	dh_auto_configure -- --with-mysql --with-pgsql --without-gcc-arch
 
 override_dh_compress:
 	dh_compress -X.lua

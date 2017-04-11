@@ -49,8 +49,9 @@
 
 #define SAFESTR(s) ((s != NULL) ? (s) : "(null)")
 
-/* FIXME */
-db_bind_t *gresults;
+#if MYSQL_VERSION_ID >= 80001
+typedef bool my_bool;
+#endif
 
 /* MySQL driver arguments */
 
@@ -650,9 +651,6 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, size_t len)
     bind[i].length = params[i].data_len;
     bind[i].is_null = params[i].is_null;
   }
-
-  /* FIXME */
-  gresults = params;
 
   rc = mysql_stmt_bind_result(stmt->ptr, bind);
   DEBUG("mysql_stmt_bind_result(%p, %p) = %d", stmt->ptr, bind, rc);

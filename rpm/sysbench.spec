@@ -54,6 +54,7 @@ export CFLAGS="%{optflags}"
 autoreconf -vif
 %configure --with-mysql \
            --with-pgsql \
+	   --without-gcc-arch
 
 %if 0%{?el6}
 make -j2

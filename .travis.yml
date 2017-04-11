@@ -35,6 +35,12 @@ env:
       - OS=ubuntu DIST=yakkety
       - OS=debian DIST=wheezy
       - OS=debian DIST=jessie
+      - OS=ubuntu DIST=precise ARCH=i386
+      - OS=ubuntu DIST=trusty ARCH=i386
+      - OS=ubuntu DIST=xenial ARCH=i386
+      - OS=ubuntu DIST=yakkety ARCH=i386
+      - OS=debian DIST=wheezy ARCH=i386
+      - OS=debian DIST=jessie ARCH=i386
 
 matrix:
   exclude:
@@ -59,6 +65,20 @@ matrix:
     - env: OS=debian DIST=jessie
       compiler: clang
     - env: OS=debian DIST=stretch
+      compiler: clang
+    - env: OS=ubuntu DIST=precise ARCH=i386
+      compiler: clang
+    - env: OS=ubuntu DIST=trusty ARCH=i386
+      compiler: clang
+    - env: OS=ubuntu DIST=xenial ARCH=i386
+      compiler: clang
+    - env: OS=ubuntu DIST=yakkety ARCH=i386
+      compiler: clang
+    - env: OS=debian DIST=wheezy ARCH=i386
+      compiler: clang
+    - env: OS=debian DIST=jessie ARCH=i386
+      compiler: clang
+    - env: OS=debian DIST=stretch ARCH=i386
       compiler: clang
     - env: OS=el DIST=6
       os: osx
@@ -176,6 +196,15 @@ script:
     else
       git clone https://github.com/akopytov/packpack.git packpack
       packpack/packpack
+
+      # To avoid name conflicts, deploy source packages only for
+      # "default", i.e. x86_64 architecture
+      if [[ -z "${ARCH}" ]]; then
+        PACKAGECLOUD_GLOB='build/*.{rpm,deb,dsc}'
+      else
+        # Exclude *.src.rpm and *.dsc
+        PACKAGECLOUD_GLOB='build/*{[^c].rpm,.deb}'
+      fi
     fi
 
 deploy:
@@ -185,7 +214,7 @@ deploy:
     repository: "${PACKAGECLOUD_REPO}"
     token: "${PACKAGECLOUD_TOKEN}"
     dist: "${OS}/${DIST}"
-    package_glob: build/*.{rpm,deb,dsc}
+    package_glob: "${PACKAGECLOUD_GLOB}"
     skip_cleanup: true
     on:
       all_branches: true
