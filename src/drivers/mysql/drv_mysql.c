@@ -49,6 +49,10 @@
 
 #define SAFESTR(s) ((s != NULL) ? (s) : "(null)")
 
+#if MYSQL_VERSION_ID >= 80001
+typedef bool my_bool;
+#endif
+
 /* MySQL driver arguments */
 
 static sb_arg_t mysql_drv_args[] =
