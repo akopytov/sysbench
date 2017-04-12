@@ -23,6 +23,9 @@
 #          values. If not set, the script behaves as if it was sequentially
 #          called with 'x86_64' and 'i386' values
 #
+#   OS/DIST - distribution specification for packpack. When empty (the default)
+#             use all disitributions available for ARCH
+#
 #   PACKAGECLOUD_TOKEN - packagecloud.io API token
 #
 #   PACKAGECLOUD_USER - packagecloud.io user name, defaults to 'akopytov'
@@ -111,7 +114,12 @@ main()
 
     declare -a distros
 
-    if [ -z "${ARCH+x}" ]; then
+    OS=${OS:-}
+    DIST=${DIST:-}
+
+    if [ -n "${OS}" -a -n "${DIST}" ]; then
+        distros=( "${OS} ${DIST} ${ARCH:-}"
+    elif [ -z "${ARCH+x}" ]; then
         distros=("${distros_x86_64[@]}" "${distros_i386[@]}")
     else
         case "$ARCH" in
