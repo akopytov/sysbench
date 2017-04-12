@@ -172,7 +172,7 @@ main()
                       ${PACKAGECLOUD_USER}/${PACKAGECLOUD_REPO}/${OS}/${DIST} \
                       $files
 
-        packpack/packpack clean
+        OS=${PPOS} packpack/packpack clean
     done
 }
 
