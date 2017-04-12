@@ -29,7 +29,12 @@ endif
 SUBDIRS = doc $(LUAJIT_DIR) $(CK_DIR) src tests
 
 EXTRA_DIST = autogen.sh README.md README-WIN.txt README-Oracle.md ChangeLog \
-             snap/snapcraft.yaml.in third_party/cram
+             snap/snapcraft.yaml.in third_party/cram \
+             debian/changelog debian/compat debian/control debian/copyright \
+             debian/dirs debian/docs debian/install debian/rules \
+             debian/source/format \
+             rpm/sysbench.spec \
+             scripts/buildpack.sh
 
 dist-hook:
 	$(MAKE) -C $(distdir)/third_party/cram clean
