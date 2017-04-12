@@ -140,7 +140,10 @@ main()
         export DIST=${t[1]}
         export ARCH=${t[2]}
 
-        packpack/packpack
+        # Replace "el" with "centos" for packpack, as there is no "el-*" docker
+        # images for some architectures
+        local PPOS=${OS/#el/centos}
+        OS="$PPOS" packpack/packpack
 
         # To avoid name conflicts, deploy source packages only for
         # "default", i.e. x86_64 architecture
