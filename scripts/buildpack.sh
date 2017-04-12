@@ -34,11 +34,15 @@
 #                       for releases (i.e. if git HEAD corresponds to a tag),
 #                       and 'sysbench-prereleases' otherwise.
 #
+#   PACKAGECLOUD_EXTRA_ARGS - extra arguments to pass to the package_cloud
+#                             utility. Empty by default
+#
 #   PACKPACK_REPO - packpack repository to use. Defaults to packpack/packpack.
 
 set -eu
 
 PACKAGECLOUD_USER=${PACKAGECLOUD_USER:-"akopytov"}
+PACKAGECLOUD_EXTRA_ARGS=${PACKAGECLOUD_EXTRA_ARGS:-}
 PACKPACK_REPO=${PACKPACK_REPO:-packpack/packpack}
 
 distros_x86_64=(
@@ -172,7 +176,7 @@ main()
 
         echo "Pushing packages to ${PACKAGECLOUD_USER}/${PACKAGECLOUD_REPO}"
 
-        package_cloud push \
+        package_cloud push ${PACKAGECLOUD_EXTRA_ARGS} \
                       ${PACKAGECLOUD_USER}/${PACKAGECLOUD_REPO}/${OS}/${DIST} \
                       $files
 
