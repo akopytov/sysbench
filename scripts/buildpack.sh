@@ -142,6 +142,8 @@ main()
     fi
 
     export PRODUCT=sysbench
+    export CHANGELOG_NAME=sysbench
+    export CHANGELOG_EMAIL=akopytov@gmail.com
 
     for d in "${distros[@]}"; do
         echo "*** Building package for $d ***"
