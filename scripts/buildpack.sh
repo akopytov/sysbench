@@ -107,6 +107,8 @@ main()
                             sed -n 's/^\([0-9\.]*\)-\([0-9]*\)-\([a-z0-9]*\)/\2/p')
         if [ ${commits:-0} = 0 ]; then
             export PACKAGECLOUD_REPO=sysbench
+            # Use short version numbers for release builds
+            export VERSION=$(git describe)
         else
             export PACKAGECLOUD_REPO=sysbench-prereleases
         fi
