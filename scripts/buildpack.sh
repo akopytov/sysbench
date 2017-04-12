@@ -118,7 +118,7 @@ main()
     DIST=${DIST:-}
 
     if [ -n "${OS}" -a -n "${DIST}" ]; then
-        distros=( "${OS} ${DIST} ${ARCH:-}"
+        distros=( "${OS} ${DIST} ${ARCH:-x86_64}"
     elif [ -z "${ARCH+x}" ]; then
         distros=("${distros_x86_64[@]}" "${distros_i386[@]}")
     else
