@@ -10,6 +10,9 @@ services:
   - mysql
   - postgresql
 
+git:
+  depth: 100500
+
 language: c
 
 os:
