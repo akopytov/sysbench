@@ -175,16 +175,6 @@ before_script:
 
 script:
   - >
-    # To avoid name conflicts, deploy source packages only for
-    # "default", i.e. x86_64 architecture
-    if [[ -z "${ARCH}" ]]; then
-      PACKAGECLOUD_GLOB='build/*.{rpm,deb,dsc}'
-    else
-    # Exclude *.src.rpm and *.dsc
-      PACKAGECLOUD_GLOB='build/*{[^c].rpm,.deb}'
-    fi
-
-  - >
     if [ -n "$TARGET" ]; then
       case "$TARGET" in
       test)
@@ -204,6 +194,15 @@ script:
         ;;
       esac
     else
+      # To avoid name conflicts, deploy source packages only for
+      # "default", i.e. x86_64 architecture
+      if [[ -z "${ARCH}" ]]; then
+        PACKAGECLOUD_GLOB='build/*.{rpm,deb,dsc}'
+      else
+      # Exclude *.src.rpm and *.dsc
+        PACKAGECLOUD_GLOB='build/*{[^c].rpm,.deb}'
+      fi
+
       git clone https://github.com/akopytov/packpack.git packpack
       packpack/packpack
     fi
