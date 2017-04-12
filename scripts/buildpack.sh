@@ -115,8 +115,14 @@ main()
         distros=("${distros_x86_64[@]}" "${distros_i386[@]}")
     else
         case "$ARCH" in
-            x86_64|i386|aarch64)
-                distros=distros_${ARCH}
+            x86_64)
+                distros=( "${distros_x86_64[@]}" )
+                ;;
+            i386)
+                distros=( "${distros_i386[@]}" )
+                ;;
+            aarch64)
+                distros=( "${distros_aarch64[@]}" )
                 ;;
             *)
                 echo "Invalid ARCH value: $ARCH"
