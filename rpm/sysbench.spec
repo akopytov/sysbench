@@ -75,13 +75,13 @@ make test
 
 
 %changelog
-* Thu Apr 09 2017 Alexey Kopytov <akopytov@gmail.com> - 1.0.5-1
+* Sun Apr 09 2017 Alexey Kopytov <akopytov@gmail.com> - 1.0.5-1
 - Add --without-gcc-arch to configure flags
 
-* Thu Apr 08 2017 Alexey Kopytov <akopytov@gmail.com> - 1.0.5-1
+* Sat Apr 08 2017 Alexey Kopytov <akopytov@gmail.com> - 1.0.5-1
 - Workarounds for make_build and license macros which are not available on EL 6.
 
-* Thu Apr 07 2017 Alexey Kopytov <akopytov@gmail.com> - 1.0.5-1
+* Fri Apr 07 2017 Alexey Kopytov <akopytov@gmail.com> - 1.0.5-1
 - Depend on mysql-devel rather than mariadb-devel on EL 6.
 - Use bundled cram for tests, because it's not available on EL 6.
 
