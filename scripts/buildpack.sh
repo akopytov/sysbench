@@ -71,7 +71,6 @@ distros_aarch64=(
     "el 7 aarch64"
     "fedora 24 aarch64"
     "fedora 25 aarch64"
-    "ubuntu precise aarch64"
     "ubuntu trusty aarch64"
     "ubuntu xenial aarch64"
     "ubuntu yakkety aarch64"
