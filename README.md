@@ -5,29 +5,33 @@
 [![Coverage Status][coveralls-badge]][coveralls-url]
 [![License][license-badge]][license-url]
 
-# About
+# sysbench
 
-sysbench is a modular, cross-platform and multi-threaded benchmark tool
-for evaluating OS parameters that are important for a system running a
-database under intensive load.
+sysbench is a scriptable multi-threaded benchmark tool based on
+LuaJIT. It is most frequently used for database benchmarks, but can also
+be used to create arbitrarily complex workloads that do not involve a
+database server.
 
-The idea of this benchmark suite is to quickly get an impression about
-system performance without setting up complex database benchmarks or
-even without installing a database at all.
+sysbench comes with the following bundled benchmarks:
+
+- `oltp_*.lua`: a collection of OLTP-like database benchmarks
+- `fileio`: a filesystem-level benchmark
+- `cpu`: a simple CPU benchmark
+- `memory`: a memory access benchmark
+- `threads`: a thread-based scheduler benchmark
+- `mutex`: a POSIX mutex benchmark
 
 ## Features
 
-Current features allow to test the following system parameters:
-
--   file I/O performance
-
--   scheduler performance
-
--   memory allocation and transfer speed
-
--   POSIX threads implementation performance
-
--   database server performance
+- extensive statistics about rate and latency is available, including
+  latency percentiles and histograms;
+- low overhead even with thousands of concurrent threads. sysbench is
+  capable of generating and tracking hundreds of millions of events per
+  second;
+- new benchmarks can be easily created by implementing pre-defined hooks
+  in user-provided Lua scripts;
+- can be used as a general-purpose Lua interpreter as well, simply
+  replace `#!/usr/bin/lua` with `#!/usr/bin/sysbench` in your script.
 
 # Installing from Binary Packages
 
@@ -36,26 +40,30 @@ Current features allow to test the following system parameters:
 The easiest way to download and install sysbench on Linux is using
 binary package repositories hosted by
 [packagecloud](https://packagecloud.io). The repositories are
-automatically updated on each sysbench release. Currently only x86_64
-binaries are available.
+automatically updated on each sysbench release. Currently x86_64, i386
+and aarch64 binaries are available.
 
-- setup the `sysbench` repository by following instructions for your
-  distribution at <https://packagecloud.io/akopytov/sysbench/install>
+Multiple methods to download and install sysbench packages are available and
+described at <https://packagecloud.io/akopytov/sysbench/install>.
 
-- install the `sysbench` package:
-  - Debian/Ubunu
+Quick install instructions:
+
+- Debian/Ubunu
   ``` shell
-  apt -y install sysbench
+  curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.deb.sh | sudo bash
+  sudo apt -y install sysbench
   ```
 
-  - RHEL/CentOS:
+- RHEL/CentOS:
   ``` shell
-  yum -y install sysbench
+  curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.rpm.sh | sudo bash
+  sudo yum -y install sysbench
   ```
 
-  - Fedora:
+- Fedora:
   ``` shell
-  dnf -y install sysbench
+  curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.rpm.sh | sudo bash	
+  sudo dnf -y install sysbench
   ```
 
 ## macOS

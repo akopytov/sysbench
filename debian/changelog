@@ -1,3 +1,14 @@
+sysbench (1.0.6-1) unstable; urgency=low
+
+  * Add pkg-config, vim-common and python-minimal and libpq-dev to build dependencies.
+  * Fix 'clean' target in rules.
+  * Add ChangeLog and COPYING to docs.
+  * Remove tests/db/*.lua from install.
+  * Pass --without-gcc-arch to configure to not override compiler flags
+    passed by the build system
+
+ -- Alexey Kopytov <akopytov@gmail.com>  Thu, 13 Apr 2017 23:04:34 +0300
+
 sysbench (1.0-1) unstable; urgency=low
 
   * Initial release
