@@ -40,26 +40,30 @@ sysbench comes with the following bundled benchmarks:
 The easiest way to download and install sysbench on Linux is using
 binary package repositories hosted by
 [packagecloud](https://packagecloud.io). The repositories are
-automatically updated on each sysbench release. Currently only x86_64
-binaries are available.
+automatically updated on each sysbench release. Currently x86_64, i386
+and aarch64 binaries are available.
 
-- setup the `sysbench` repository by following instructions for your
-  distribution at <https://packagecloud.io/akopytov/sysbench/install>
+Multiple methods to download and install sysbench packages are available and
+described at <https://packagecloud.io/akopytov/sysbench/install>.
 
-- install the `sysbench` package:
-  - Debian/Ubunu
+Quick install instructions:
+
+- Debian/Ubunu
   ``` shell
-  apt -y install sysbench
+  curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.deb.sh | sudo bash
+  sudo apt -y install sysbench
   ```
 
-  - RHEL/CentOS:
+- RHEL/CentOS:
   ``` shell
-  yum -y install sysbench
+  curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.rpm.sh | sudo bash
+  sudo yum -y install sysbench
   ```
 
-  - Fedora:
+- Fedora:
   ``` shell
-  dnf -y install sysbench
+  curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.rpm.sh | sudo bash	
+  sudo dnf -y install sysbench
   ```
 
 ## macOS
