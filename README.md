@@ -48,7 +48,7 @@ described at <https://packagecloud.io/akopytov/sysbench/install>.
 
 Quick install instructions:
 
-- Debian/Ubunu
+- Debian/Ubuntu
   ``` shell
   curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.deb.sh | sudo bash
   sudo apt -y install sysbench
