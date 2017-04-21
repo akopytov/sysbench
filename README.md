@@ -5,6 +5,29 @@
 [![Coverage Status][coveralls-badge]][coveralls-url]
 [![License][license-badge]][license-url]
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-generate-toc again -->
+**Table of Contents**
+
+- [sysbench](#sysbench)
+    - [Features](#features)
+- [Installing from Binary Packages](#installing-from-binary-packages)
+    - [Linux](#linux)
+    - [macOS](#macos)
+    - [Windows](#windows)
+- [Building and Installing From Source](#building-and-installing-from-source)
+    - [Build Requirements](#build-requirements)
+        - [Windows](#windows)
+        - [Debian/Ubuntu](#debianubuntu)
+        - [RHEL/CentOS](#rhelcentos)
+        - [Fedora](#fedora)
+        - [macOS](#macos)
+    - [Build and Install](#build-and-install)
+- [Usage](#usage)
+    - [General syntax](#general-syntax)
+    - [General command line options](#general-command-line-options)
+
+<!-- markdown-toc end -->
+
 # sysbench
 
 sysbench is a scriptable multi-threaded benchmark tool based on
