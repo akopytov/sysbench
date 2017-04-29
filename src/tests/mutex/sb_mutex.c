@@ -29,6 +29,7 @@
 #endif
 
 #include "sysbench.h"
+#include "sb_ck_pr.h"
 
 typedef struct
 {
@@ -42,7 +43,7 @@ static sb_arg_t mutex_args[] =
 {
   SB_OPT("mutex-num", "total size of mutex array", "4096", INT),
   SB_OPT("mutex-locks", "number of mutex locks to do per thread", "50000", INT),
-  SB_OPT("mutex-loops", "number of empty loops to do inside mutex lock",
+  SB_OPT("mutex-loops", "number of empty loops to do outside mutex lock",
          "10000", INT),
 
   SB_OPT_END
@@ -153,8 +154,10 @@ int mutex_execute_event(sb_event_t *sb_req, int thread_id)
   do
   {
     current_lock = rand() % mutex_num;
+
     for (i = 0; i < mutex_req->nloops; i++)
-      c++;
+      ck_pr_barrier();
+
     pthread_mutex_lock(&thread_locks[current_lock].mutex);
     global_var++;
     pthread_mutex_unlock(&thread_locks[current_lock].mutex);
