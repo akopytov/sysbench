@@ -30,6 +30,7 @@
 
 #include "sysbench.h"
 #include "sb_ck_pr.h"
+#include "sb_rand.h"
 
 typedef struct
 {
@@ -145,7 +146,6 @@ sb_event_t mutex_next_event(int thread_id)
 int mutex_execute_event(sb_event_t *sb_req, int thread_id)
 {
   unsigned int         i;
-  unsigned int         c=0;
   unsigned int         current_lock;
   sb_mutex_request_t   *mutex_req = &sb_req->u.mutex_request;
 
@@ -153,7 +153,7 @@ int mutex_execute_event(sb_event_t *sb_req, int thread_id)
 
   do
   {
-    current_lock = rand() % mutex_num;
+    current_lock = sb_rand_uniform(0, mutex_num - 1);
 
     for (i = 0; i < mutex_req->nloops; i++)
       ck_pr_barrier();
