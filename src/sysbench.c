@@ -913,9 +913,9 @@ static void *eventgen_thread_proc(void *arg)
     }
 
     /* Enqueue a new event */
-    queue_array[i++] = sb_timer_value(&sb_exec_timer);
+    queue_array[i] = sb_timer_value(&sb_exec_timer);
     if (ck_ring_enqueue_spmc(&queue_ring, queue_ring_buffer,
-                             &queue_array[i]) == false)
+                             &queue_array[i++]) == false)
     {
       ck_pr_store_int(&queue_is_full, 1);
       log_text(LOG_FATAL,
