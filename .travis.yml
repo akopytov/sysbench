@@ -65,6 +65,8 @@ matrix:
       compiler: clang
     - env: OS=ubuntu DIST=yakkety
       compiler: clang
+    - env: OS=ubuntu DIST=zesty
+      compiler: clang
     - env: OS=debian DIST=wheezy
       compiler: clang
     - env: OS=debian DIST=jessie
@@ -78,6 +80,8 @@ matrix:
     - env: OS=ubuntu DIST=xenial ARCH=i386
       compiler: clang
     - env: OS=ubuntu DIST=yakkety ARCH=i386
+      compiler: clang
+    - env: OS=ubuntu DIST=zesty ARCH=i386
       compiler: clang
     - env: OS=debian DIST=wheezy ARCH=i386
       compiler: clang
@@ -100,6 +104,8 @@ matrix:
     - env: OS=ubuntu DIST=xenial
       os: osx
     - env: OS=ubuntu DIST=yakkety
+      os: osx
+    - env: OS=ubuntu DIST=zesty
       os: osx
     - env: OS=debian DIST=wheezy
       os: osx
