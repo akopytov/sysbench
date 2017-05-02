@@ -173,16 +173,16 @@ static void callback_mcode_init(global_State *g, uint32_t *page)
   uint32_t *p = page;
   void *target = (void *)lj_vm_ffi_callback;
   MSize slot;
-  *p++ = A64I_LDRLx | A64F_D(RID_X11) | A64F_S19(4);
-  *p++ = A64I_LDRLx | A64F_D(RID_X10) | A64F_S19(5);
-  *p++ = A64I_BR | A64F_N(RID_X11);
-  *p++ = A64I_NOP;
+  *p++ = A64I_LE(A64I_LDRLx | A64F_D(RID_X11) | A64F_S19(4));
+  *p++ = A64I_LE(A64I_LDRLx | A64F_D(RID_X10) | A64F_S19(5));
+  *p++ = A64I_LE(A64I_BR | A64F_N(RID_X11));
+  *p++ = A64I_LE(A64I_NOP);
   ((void **)p)[0] = target;
   ((void **)p)[1] = g;
   p += 4;
   for (slot = 0; slot < CALLBACK_MAX_SLOT; slot++) {
-    *p++ = A64I_MOVZw | A64F_D(RID_X9) | A64F_U16(slot);
-    *p = A64I_B | A64F_S26((page-p) & 0x03ffffffu);
+    *p++ = A64I_LE(A64I_MOVZw | A64F_D(RID_X9) | A64F_U16(slot));
+    *p = A64I_LE(A64I_B | A64F_S26((page-p) & 0x03ffffffu));
     p++;
   }
   lua_assert(p - page <= CALLBACK_MCODE_SIZE);
@@ -624,6 +624,10 @@ static void callback_conv_result(CTState *cts, lua_State *L, TValue *o)
     if (ctype_isfp(ctr->info))
       dp = (uint8_t *)&cts->cb.fpr[0];
 #endif
+#if LJ_TARGET_ARM64 && LJ_BE
+    if (ctype_isfp(ctr->info) && ctr->size == sizeof(float))
+      dp = (uint8_t *)&cts->cb.fpr[0].f[1];
+#endif
     lj_cconv_ct_tv(cts, ctr, dp, o, 0);
 #ifdef CALLBACK_HANDLE_RET
     CALLBACK_HANDLE_RET
@@ -637,7 +641,7 @@ static void callback_conv_result(CTState *cts, lua_State *L, TValue *o)
 	*(int32_t *)dp = ctr->size == 1 ? (int32_t)*(int8_t *)dp :
 					  (int32_t)*(int16_t *)dp;
     }
-#if LJ_TARGET_MIPS64
+#if LJ_TARGET_MIPS64 || (LJ_TARGET_ARM64 && LJ_BE)
     /* Always sign-extend results to 64 bits. Even a soft-fp 'float'. */
     if (ctr->size <= 4 &&
 	(LJ_ABI_SOFTFP || ctype_isinteger_or_bool(ctr->info)))

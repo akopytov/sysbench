@@ -448,14 +448,14 @@ LJFOLDF(kfold_int64comp)
 #if LJ_HASFFI
   uint64_t a = ir_k64(fleft)->u64, b = ir_k64(fright)->u64;
   switch ((IROp)fins->o) {
-  case IR_LT: return CONDFOLD(a < b);
-  case IR_GE: return CONDFOLD(a >= b);
-  case IR_LE: return CONDFOLD(a <= b);
-  case IR_GT: return CONDFOLD(a > b);
-  case IR_ULT: return CONDFOLD((uint64_t)a < (uint64_t)b);
-  case IR_UGE: return CONDFOLD((uint64_t)a >= (uint64_t)b);
-  case IR_ULE: return CONDFOLD((uint64_t)a <= (uint64_t)b);
-  case IR_UGT: return CONDFOLD((uint64_t)a > (uint64_t)b);
+  case IR_LT: return CONDFOLD((int64_t)a < (int64_t)b);
+  case IR_GE: return CONDFOLD((int64_t)a >= (int64_t)b);
+  case IR_LE: return CONDFOLD((int64_t)a <= (int64_t)b);
+  case IR_GT: return CONDFOLD((int64_t)a > (int64_t)b);
+  case IR_ULT: return CONDFOLD(a < b);
+  case IR_UGE: return CONDFOLD(a >= b);
+  case IR_ULE: return CONDFOLD(a <= b);
+  case IR_UGT: return CONDFOLD(a > b);
   default: lua_assert(0); return FAILFOLD;
   }
 #else
@@ -1686,6 +1686,47 @@ LJFOLDF(simplify_andk_shiftk)
       kfold_intop(-1, irk->i, (IROp)fleft->o) == fright->i)
     return LEFTFOLD;  /* (i o k1) & k2 ==> i, if (-1 o k1) == k2 */
   return NEXTFOLD;
+}
+
+LJFOLD(BAND BOR KINT)
+LJFOLD(BOR BAND KINT)
+LJFOLDF(simplify_andor_k)
+{
+  IRIns *irk = IR(fleft->op2);
+  PHIBARRIER(fleft);
+  if (irk->o == IR_KINT) {
+    int32_t k = kfold_intop(irk->i, fright->i, (IROp)fins->o);
+    /* (i | k1) & k2 ==> i & k2, if (k1 & k2) == 0. */
+    /* (i & k1) | k2 ==> i | k2, if (k1 | k2) == -1. */
+    if (k == (fins->o == IR_BAND ? 0 : -1)) {
+      fins->op1 = fleft->op1;
+      return RETRYFOLD;
+    }
+  }
+  return NEXTFOLD;
+}
+
+LJFOLD(BAND BOR KINT64)
+LJFOLD(BOR BAND KINT64)
+LJFOLDF(simplify_andor_k64)
+{
+#if LJ_HASFFI
+  IRIns *irk = IR(fleft->op2);
+  PHIBARRIER(fleft);
+  if (irk->o == IR_KINT64) {
+    uint64_t k = kfold_int64arith(ir_k64(irk)->u64,
+				  ir_k64(fright)->u64, (IROp)fins->o);
+    /* (i | k1) & k2 ==> i & k2, if (k1 & k2) == 0. */
+    /* (i & k1) | k2 ==> i | k2, if (k1 | k2) == -1. */
+    if (k == (fins->o == IR_BAND ? (uint64_t)0 : ~(uint64_t)0)) {
+      fins->op1 = fleft->op1;
+      return RETRYFOLD;
+    }
+  }
+  return NEXTFOLD;
+#else
+  UNUSED(J); lua_assert(0); return FAILFOLD;
+#endif
 }
 
 /* -- Reassociation ------------------------------------------------------- */

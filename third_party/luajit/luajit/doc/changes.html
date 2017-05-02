@@ -65,7 +65,7 @@ div.major { max-width: 600px; padding: 1em; margin: 1em 0 1em 0; }
 <div id="main">
 <p>
 This is a list of changes between the released versions of LuaJIT.<br>
-The current <span style="color: #0000c0;">stable version</span> is <strong>LuaJIT&nbsp;2.0.4</strong>.<br>
+The current <span style="color: #0000c0;">stable version</span> is <strong>LuaJIT&nbsp;2.0.5</strong>.<br>
 </p>
 <p>
 Please check the
@@ -74,6 +74,30 @@ to see whether newer versions are available.
 </p>
 
 <div class="major" style="background: #d0d0ff;">
+<h2 id="LuaJIT-2.1.0-beta3">LuaJIT 2.1.0-beta3 &mdash; 2017-05-01</h2>
+<ul>
+<li>Rewrite memory block allocator.</li>
+<li>Add various extension from Lua 5.2/5.3.</li>
+<li>Remove old Lua 5.0 compatibility defines.</li>
+<li>Set arg table before evaluating <tt>LUA_INIT</tt> and <tt>-e</tt> chunks.</li>
+<li>Fix FOLD rules for <tt>math.abs()</tt> and FP negation.</li>
+<li>Fix soft-float <tt>math.abs()</tt> and negation.</li>
+<li>Fix formatting of some small denormals at low precision.</li>
+<li>LJ_GC64: Add JIT compiler support.</li>
+<li>x64/LJ_GC64: Add JIT compiler backend.</li>
+<li>x86/x64: Generate BMI2 shifts and rotates, if available.</li>
+<li>Windows/x86: Add full exception interoperability.</li>
+<li>ARM64: Add big-endian support.</li>
+<li>ARM64: Add JIT compiler backend.</li>
+<li>MIPS: Fix <tt>TSETR</tt> barrier.</li>
+<li>MIPS: Support MIPS16 interlinking.</li>
+<li>MIPS soft-float: Fix code generation for <tt>HREF</tt>.</li>
+<li>MIPS64: Add MIPS64 hard-float JIT compiler backend.</li>
+<li>MIPS64: Add MIPS64 hard-float/soft-float support to interpreter.</li>
+<li>FFI: Compile bitfield loads/stores.</li>
+<li>Various fixes common with the 2.0 branch.</li>
+</ul>
+
 <h2 id="LuaJIT-2.1.0-beta2">LuaJIT 2.1.0-beta2 &mdash; 2016-03-03</h2>
 <ul>
 <li>Enable trace stitching.</li>
@@ -140,6 +164,48 @@ Please take a look at the commit history for more details.
 </div>
 
 <div class="major" style="background: #ffffd0;">
+<h2 id="LuaJIT-2.0.5">LuaJIT 2.0.5 &mdash; 2017-05-01</h2>
+<ul>
+<li>Add workaround for MSVC 2015 stdio changes.</li>
+<li>Limit mcode alloc probing, depending on the available pool size.</li>
+<li>Fix overly restrictive range calculation in mcode allocation.</li>
+<li>Fix out-of-scope goto handling in parser.</li>
+<li>Remove internal <tt>__mode = "K"</tt> and replace with safe check.</li>
+<li>Add "proto" field to <tt>jit.util.funcinfo()</tt>.</li>
+<li>Fix GC step size calculation.</li>
+<li>Initialize <tt>uv-&gt;immutable</tt> for upvalues of loaded chunks.</li>
+<li>Fix for cdata vs. non-cdata arithmetics/comparisons.</li>
+<li>Drop leftover regs in 'for' iterator assignment, too.</li>
+<li>Fix PHI remarking in SINK pass.</li>
+<li>Don't try to record outermost <tt>pcall()</tt> return to lower frame.</li>
+<li>Add guard for obscure aliasing between open upvalues and SSA slots.</li>
+<li>Remove assumption that <tt>lj_math_random_step()</tt> doesn't clobber FPRs.</li>
+<li>Fix handling of non-numeric strings in arithmetic coercions.</li>
+<li>Fix recording of <tt>select(n, ...)</tt> with off-trace varargs</li>
+<li>Fix install for cross-builds.</li>
+<li>Don't allocate unused 2nd result register in JIT compiler backend.</li>
+<li>Drop marks from replayed instructions when sinking.</li>
+<li>Fix unsinking check.</li>
+<li>Properly handle OOM in <tt>trace_save()</tt>.</li>
+<li>Limit number of arguments given to <tt>io.lines()</tt> and <tt>fp:lines()</tt>.</li>
+<li>Fix narrowing of <tt>TOBIT</tt>.</li>
+<li>OSX: Fix build with recent XCode.</li>
+<li>x86/x64: Don't spill an explicit <tt>REF_BASE</tt> in the IR.</li>
+<li>x86/x64: Fix instruction length decoder.</li>
+<li>x86/x64: Search for exit jumps with instruction length decoder.</li>
+<li>ARM: Fix <tt>BLX</tt> encoding for Thumb interworking calls.</li>
+<li>MIPS: Don't use <tt>RID_GP</tt> as a scratch register.</li>
+<li>MIPS: Fix emitted code for U32 to float conversion.</li>
+<li>MIPS: Backport workaround for compact unwind tables.</li>
+<li>MIPS: Fix cross-endian jit.bcsave.</li>
+<li>MIPS: Fix <tt>BC_ISNEXT</tt> fallback path.</li>
+<li>MIPS: Fix use of ffgccheck delay slots in interpreter.</li>
+<li>FFI: Fix FOLD rules for <tt>int64_t</tt> comparisons.</li>
+<li>FFI: Fix SPLIT pass for <tt>CONV i64.u64</tt>.</li>
+<li>FFI: Fix <tt>ipairs()</tt> recording.</li>
+<li>FFI: Don't propagate qualifiers into subtypes of complex.</li>
+</ul>
+
 <h2 id="LuaJIT-2.0.4">LuaJIT 2.0.4 &mdash; 2015-05-14</h2>
 <ul>
 <li>Fix stack check in narrowing optimization.</li>

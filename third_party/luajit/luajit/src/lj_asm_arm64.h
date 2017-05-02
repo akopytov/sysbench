@@ -56,11 +56,11 @@ static void asm_exitstub_setup(ASMState *as, ExitNo nexits)
     asm_mclimit(as);
   /* 1: str lr,[sp]; bl ->vm_exit_handler; movz w0,traceno; bl <1; bl <1; ... */
   for (i = nexits-1; (int32_t)i >= 0; i--)
-    *--mxp = A64I_BL|((-3-i)&0x03ffffffu);
-  *--mxp = A64I_MOVZw|A64F_U16(as->T->traceno);
+    *--mxp = A64I_LE(A64I_BL|((-3-i)&0x03ffffffu));
+  *--mxp = A64I_LE(A64I_MOVZw|A64F_U16(as->T->traceno));
   mxp--;
-  *mxp = A64I_BL|(((MCode *)(void *)lj_vm_exit_handler-mxp)&0x03ffffffu);
-  *--mxp = A64I_STRx|A64F_D(RID_LR)|A64F_N(RID_SP);
+  *mxp = A64I_LE(A64I_BL|(((MCode *)(void *)lj_vm_exit_handler-mxp)&0x03ffffffu));
+  *--mxp = A64I_LE(A64I_STRx|A64F_D(RID_LR)|A64F_N(RID_SP));
   as->mctop = mxp;
 }
 
@@ -286,7 +286,7 @@ static void asm_fusexref(ASMState *as, A64Ins ai, Reg rd, IRRef ref,
 	}
 	rm = ra_alloc1(as, lref, allow);
 	rn = ra_alloc1(as, rref, rset_exclude(allow, rm));
-	emit_dnm(as, (ai^A64I_LS_R), rd, rn, rm);
+	emit_dnm(as, (ai^A64I_LS_R), (rd & 31), rn, rm);
 	return;
       }
     } else if (ir->o == IR_STRREF) {
@@ -431,7 +431,7 @@ static void asm_gencall(ASMState *as, const CCallInfo *ci, IRRef *args)
 	  fpr++;
 	} else {
 	  Reg r = ra_alloc1(as, ref, RSET_FPR);
-	  emit_spstore(as, ir, r, ofs);
+	  emit_spstore(as, ir, r, ofs + ((LJ_BE && !irt_isnum(ir->t)) ? 4 : 0));
 	  ofs += 8;
 	}
       } else {
@@ -441,7 +441,7 @@ static void asm_gencall(ASMState *as, const CCallInfo *ci, IRRef *args)
 	  gpr++;
 	} else {
 	  Reg r = ra_alloc1(as, ref, RSET_GPR);
-	  emit_spstore(as, ir, r, ofs);
+	  emit_spstore(as, ir, r, ofs + ((LJ_BE && !irt_is64(ir->t)) ? 4 : 0));
 	  ofs += 8;
 	}
       }
@@ -1082,7 +1082,7 @@ static void asm_ahustore(ASMState *as, IRIns *ir)
 	src = ra_alloc1(as, ir->op2, allow);
 	rset_clear(allow, src);
 	if (irt_isinteger(ir->t))
-	  type = ra_allock(as, (int64_t)LJ_TISNUM << 47, allow);
+	  type = ra_allock(as, (uint64_t)(int32_t)LJ_TISNUM << 47, allow);
 	else
 	  type = ra_allock(as, irt_toitype(ir->t), allow);
       } else {
@@ -1179,7 +1179,8 @@ dotypecheck:
   }
   if (ra_hasreg(dest)) {
     emit_lso(as, irt_isnum(t) ? A64I_LDRd :
-	     (irt_isint(t) ? A64I_LDRw : A64I_LDRx), (dest & 31), base, ofs);
+	     (irt_isint(t) ? A64I_LDRw : A64I_LDRx), (dest & 31), base,
+	     ofs ^ ((LJ_BE && irt_isint(t) ? 4 : 0)));
   }
 }
 
@@ -1909,7 +1910,7 @@ static void asm_tail_fixup(ASMState *as, TraceNo lnk)
   /* Undo the sp adjustment in BC_JLOOP when exiting to the interpreter. */
   int32_t spadj = as->T->spadjust + (lnk ? 0 : sps_scale(SPS_FIXED));
   if (spadj == 0) {
-    *--p = A64I_NOP;
+    *--p = A64I_LE(A64I_NOP);
     as->mctop = p;
   } else {
     /* Patch stack adjustment. */
@@ -1962,6 +1963,19 @@ static void asm_setup_target(ASMState *as)
   asm_exitstub_setup(as, as->T->nsnap + (as->parent ? 1 : 0));
 }
 
+#if LJ_BE
+/* ARM64 instructions are always little-endian. Swap for ARM64BE. */
+static void asm_mcode_fixup(MCode *mcode, MSize size)
+{
+  MCode *pe = (MCode *)((char *)mcode + size);
+  while (mcode < pe) {
+    MCode ins = *mcode;
+    *mcode++ = lj_bswap(ins);
+  }
+}
+#define LJ_TARGET_MCODE_FIXUP	1
+#endif
+
 /* -- Trace patching ------------------------------------------------------ */
 
 /* Patch exit jumps of existing machine code to a new target. */
@@ -1974,29 +1988,29 @@ void lj_asm_patchexit(jit_State *J, GCtrace *T, ExitNo exitno, MCode *target)
   MCode *px = exitstub_trace_addr(T, exitno);
   for (; p < pe; p++) {
     /* Look for exitstub branch, replace with branch to target. */
-    uint32_t ins = *p;
+    MCode ins = A64I_LE(*p);
     if ((ins & 0xff000000u) == 0x54000000u &&
 	((ins ^ ((px-p)<<5)) & 0x00ffffe0u) == 0) {
       /* Patch bcc exitstub. */
-      *p = (ins & 0xff00001fu) | (((target-p)<<5) & 0x00ffffe0u);
+      *p = A64I_LE((ins & 0xff00001fu) | (((target-p)<<5) & 0x00ffffe0u));
       cend = p+1;
       if (!cstart) cstart = p;
     } else if ((ins & 0xfc000000u) == 0x14000000u &&
 	       ((ins ^ (px-p)) & 0x03ffffffu) == 0) {
       /* Patch b exitstub. */
-      *p = (ins & 0xfc000000u) | ((target-p) & 0x03ffffffu);
+      *p = A64I_LE((ins & 0xfc000000u) | ((target-p) & 0x03ffffffu));
       cend = p+1;
       if (!cstart) cstart = p;
     } else if ((ins & 0x7e000000u) == 0x34000000u &&
 	       ((ins ^ ((px-p)<<5)) & 0x00ffffe0u) == 0) {
       /* Patch cbz/cbnz exitstub. */
-      *p = (ins & 0xff00001f) | (((target-p)<<5) & 0x00ffffe0u);
+      *p = A64I_LE((ins & 0xff00001f) | (((target-p)<<5) & 0x00ffffe0u));
       cend = p+1;
       if (!cstart) cstart = p;
     } else if ((ins & 0x7e000000u) == 0x36000000u &&
 	       ((ins ^ ((px-p)<<5)) & 0x0007ffe0u) == 0) {
       /* Patch tbz/tbnz exitstub. */
-      *p = (ins & 0xfff8001fu) | (((target-p)<<5) & 0x0007ffe0u);
+      *p = A64I_LE((ins & 0xfff8001fu) | (((target-p)<<5) & 0x0007ffe0u));
       cend = p+1;
       if (!cstart) cstart = p;
     }

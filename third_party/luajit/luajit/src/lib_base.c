@@ -346,7 +346,7 @@ LJLIB_ASM_(xpcall)		LJLIB_REC(.)
 
 static int load_aux(lua_State *L, int status, int envarg)
 {
-  if (status == 0) {
+  if (status == LUA_OK) {
     if (tvistab(L->base+envarg-1)) {
       GCfunc *fn = funcV(L->top-1);
       GCtab *t = tabV(L->base+envarg-1);
@@ -419,7 +419,7 @@ LJLIB_CF(dofile)
   GCstr *fname = lj_lib_optstr(L, 1);
   setnilV(L->top);
   L->top = L->base+1;
-  if (luaL_loadfile(L, fname ? strdata(fname) : NULL) != 0)
+  if (luaL_loadfile(L, fname ? strdata(fname) : NULL) != LUA_OK)
     lua_error(L);
   lua_call(L, 0, LUA_MULTRET);
   return (int)(L->top - L->base) - 1;
@@ -537,7 +537,7 @@ LJLIB_CF(coroutine_status)
   co = threadV(L->base);
   if (co == L) s = "running";
   else if (co->status == LUA_YIELD) s = "suspended";
-  else if (co->status != 0) s = "dead";
+  else if (co->status != LUA_OK) s = "dead";
   else if (co->base > tvref(co->stack)+1+LJ_FR2) s = "normal";
   else if (co->top == co->base) s = "dead";
   else s = "suspended";
@@ -583,7 +583,7 @@ LJLIB_ASM(coroutine_yield)
 static int ffh_resume(lua_State *L, lua_State *co, int wrap)
 {
   if (co->cframe != NULL || co->status > LUA_YIELD ||
-      (co->status == 0 && co->top == co->base)) {
+      (co->status == LUA_OK && co->top == co->base)) {
     ErrMsg em = co->cframe ? LJ_ERR_CORUN : LJ_ERR_CODEAD;
     if (wrap) lj_err_caller(L, em);
     setboolV(L->base-1-LJ_FR2, 0);
