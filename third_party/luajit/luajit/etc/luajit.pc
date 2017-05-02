@@ -2,7 +2,7 @@
 majver=2
 minver=1
 relver=0
-version=${majver}.${minver}.${relver}-beta2
+version=${majver}.${minver}.${relver}-beta3
 abiver=5.1
 
 prefix=/usr/local

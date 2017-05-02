@@ -2393,6 +2393,9 @@ void lj_asm_trace(jit_State *J, GCtrace *T)
   if (!as->loopref)
     asm_tail_fixup(as, T->link);  /* Note: this may change as->mctop! */
   T->szmcode = (MSize)((char *)as->mctop - (char *)as->mcp);
+#if LJ_TARGET_MCODE_FIXUP
+  asm_mcode_fixup(T->mcode, T->szmcode);
+#endif
   lj_mcode_sync(T->mcode, origtop);
 }
 

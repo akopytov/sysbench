@@ -1791,8 +1791,9 @@ static void asm_cnew(ASMState *as, IRIns *ir)
     Reg r64 = sz == 8 ? REX_64 : 0;
     if (irref_isk(ir->op2)) {
       IRIns *irk = IR(ir->op2);
-      uint64_t k = irk->o == IR_KINT64 ? ir_k64(irk)->u64 :
-					 (uint64_t)(uint32_t)irk->i;
+      uint64_t k = (irk->o == IR_KINT64 ||
+		    (LJ_GC64 && (irk->o == IR_KPTR || irk->o == IR_KKPTR))) ?
+		   ir_k64(irk)->u64 : (uint64_t)(uint32_t)irk->i;
       if (sz == 4 || checki32((int64_t)k)) {
 	emit_i32(as, (int32_t)k);
 	emit_rmro(as, XO_MOVmi, r64, RID_RET, sizeof(GCcdata));

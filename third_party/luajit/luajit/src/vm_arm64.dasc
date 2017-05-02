@@ -151,6 +151,21 @@
 |.define FRAME_FUNC,	#-16
 |.define FRAME_PC,	#-8
 |
+|// Endian-specific defines.
+|.if ENDIAN_LE
+|.define LO,		0
+|.define OFS_RD,	2
+|.define OFS_RB,	3
+|.define OFS_RA,	1
+|.define OFS_OP,	0
+|.else
+|.define LO,		4
+|.define OFS_RD,	0
+|.define OFS_RB,	0
+|.define OFS_RA,	2
+|.define OFS_OP,	3
+|.endif
+|
 |.macro decode_RA, dst, ins; ubfx dst, ins, #8, #8; .endmacro
 |.macro decode_RB, dst, ins; ubfx dst, ins, #24, #8; .endmacro
 |.macro decode_RC, dst, ins; ubfx dst, ins, #16, #8; .endmacro
@@ -717,7 +732,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  cmp CRET1, #1
   |  bhi ->vmeta_binop
   |4:
-  |   ldrh RBw, [PC, #2]
+  |   ldrh RBw, [PC, # OFS_RD]
   |    add PC, PC, #4
   |   add RB, PC, RB, lsl #2
   |   sub RB, RB, #0x20000
@@ -1500,7 +1515,12 @@ static void build_subroutines(BuildCtx *ctx)
   |  bne ->fff_fallback
   |  checkint CARG1, ->fff_fallback
   |  mov CARG3, #1
-  |  mov CARG2, BASE			// Points to stack. Little-endian.
+  |  // Point to the char inside the integer in the stack slot.
+  |.if ENDIAN_LE
+  |  mov CARG2, BASE
+  |.else
+  |  add CARG2, BASE, #7
+  |.endif
   |->fff_newstr:
   |  // CARG2 = str, CARG3 = len.
   |   str BASE, L->base
@@ -1703,7 +1723,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  ands TMP0, PC, #FRAME_TYPE
   |   and TMP1, PC, #~FRAME_TYPEP
   |  bne >3
-  |  ldrb RAw, [PC, #-3]
+  |  ldrb RAw, [PC, #-4+OFS_RA]
   |  lsl RA, RA, #3
   |  add TMP1, RA, #16
   |3:
@@ -1838,7 +1858,7 @@ static void build_subroutines(BuildCtx *ctx)
   |->cont_stitch:			// Trace stitching.
   |.if JIT
   |  // RA = resultptr, CARG4 = meta base
-  |   ldr RB, SAVE_MULTRES
+  |   ldr RBw, SAVE_MULTRES
   |  ldr INSw, [PC, #-4]
   |    ldr TRACE:CARG3, [CARG4, #-40]	// Save previous trace.
   |   subs RB, RB, #8
@@ -1869,7 +1889,7 @@ static void build_subroutines(BuildCtx *ctx)
   |
   |  // Stitch a new trace to the previous trace.
   |  mov CARG1, #GL_J(exitno)
-  |  str RA, [GL, CARG1]
+  |  str RAw, [GL, CARG1]
   |  mov CARG1, #GL_J(L)
   |  str L, [GL, CARG1]
   |  str BASE, L->base
@@ -1927,7 +1947,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  stp d30, d31, [sp, #30*8]
   |  ldr CARG1, [sp, #64*8]	// Load original value of lr.
   |   add CARG3, sp, #64*8	// Recompute original value of sp.
-  |    mv_vmstate CARG4, EXIT
+  |    mv_vmstate CARG4w, EXIT
   |   stp xzr, CARG3, [sp, #62*8]	// Store 0/sp in RID_LR/RID_SP.
   |  sub CARG1, CARG1, lr
   |   ldr L, GL->cur_L
@@ -1935,7 +1955,10 @@ static void build_subroutines(BuildCtx *ctx)
   |   ldr BASE, GL->jit_base
   |  sub CARG1, CARG1, #2
   |   ldr CARG2w, [lr]		// Load trace number.
-  |    st_vmstate CARG4
+  |    st_vmstate CARG4w
+  |.if ENDIAN_BE
+  |   rev32 CARG2, CARG2
+  |.endif
   |   str BASE, L->base
   |  ubfx CARG2w, CARG2w, #5, #16
   |  str CARG1w, [GL, #GL_J(exitno)]
@@ -1967,16 +1990,16 @@ static void build_subroutines(BuildCtx *ctx)
   |    movz TISNUMhi, #(LJ_TISNUM>>1)&0xffff, lsl #16
   |    movn TISNIL, #0
   |  and LFUNC:CARG2, CARG2, #LJ_GCVMASK
-  |   str RC, SAVE_MULTRES
+  |   str RCw, SAVE_MULTRES
   |   str BASE, L->base
   |  ldr CARG2, LFUNC:CARG2->pc
   |   str xzr, GL->jit_base
-  |    mv_vmstate CARG4, INTERP
+  |    mv_vmstate CARG4w, INTERP
   |  ldr KBASE, [CARG2, #PC2PROTO(k)]
   |  // Modified copy of ins_next which handles function header dispatch, too.
-  |  ldrb RBw, [PC]
+  |  ldrb RBw, [PC, # OFS_OP]
   |   ldr INSw, [PC], #4
-  |    st_vmstate CARG4
+  |    st_vmstate CARG4w
   |  cmp RBw, #BC_FUNCC+2		// Fast function?
   |   add TMP1, GL, INS, uxtb #3
   |  bhs >4
@@ -2000,7 +2023,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  ands CARG2, CARG1, #FRAME_TYPE
   |  bne <2			// Trace stitching continuation?
   |  // Otherwise set KBASE for Lua function below fast function.
-  |  ldr CARG3, [CARG1, #-4]
+  |  ldr CARG3w, [CARG1, #-4]
   |  decode_RA CARG1, CARG3
   |  sub CARG2, BASE, CARG1, lsl #3
   |  ldr LFUNC:CARG3, [CARG2, #-32]
@@ -2153,7 +2176,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
   case BC_ISLT: case BC_ISGE: case BC_ISLE: case BC_ISGT:
     |  // RA = src1, RC = src2, JMP with RC = target
     |  ldr CARG1, [BASE, RA, lsl #3]
-    |    ldrh RBw, [PC, #2]
+    |    ldrh RBw, [PC, # OFS_RD]
     |   ldr CARG2, [BASE, RC, lsl #3]
     |    add PC, PC, #4
     |    add RB, PC, RB, lsl #2
@@ -2210,7 +2233,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  // RA = src1, RC = src2, JMP with RC = target
     |  ldr CARG1, [BASE, RA, lsl #3]
     |   add RC, BASE, RC, lsl #3
-    |    ldrh RBw, [PC, #2]
+    |    ldrh RBw, [PC, # OFS_RD]
     |   ldr CARG3, [RC]
     |    add PC, PC, #4
     |    add RB, PC, RB, lsl #2
@@ -2271,7 +2294,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  // RA = src, RC = str_const (~), JMP with RC = target
     |  ldr CARG1, [BASE, RA, lsl #3]
     |   mvn RC, RC
-    |    ldrh RBw, [PC, #2]
+    |    ldrh RBw, [PC, # OFS_RD]
     |   ldr CARG2, [KBASE, RC, lsl #3]
     |    add PC, PC, #4
     |   movn TMP0, #~LJ_TSTR
@@ -2299,7 +2322,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  // RA = src, RC = num_const (~), JMP with RC = target
     |  ldr CARG1, [BASE, RA, lsl #3]
     |   add RC, KBASE, RC, lsl #3
-    |    ldrh RBw, [PC, #2]
+    |    ldrh RBw, [PC, # OFS_RD]
     |   ldr CARG3, [RC]
     |    add PC, PC, #4
     |    add RB, PC, RB, lsl #2
@@ -2359,7 +2382,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     vk = op == BC_ISEQP;
     |  // RA = src, RC = primitive_type (~), JMP with RC = target
     |  ldr TMP0, [BASE, RA, lsl #3]
-    |   ldrh RBw, [PC, #2]
+    |   ldrh RBw, [PC, # OFS_RD]
     |   add PC, PC, #4
     |  add RC, RC, #1
     |   add RB, PC, RB, lsl #2
@@ -2384,7 +2407,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
 
   case BC_ISTC: case BC_ISFC: case BC_IST: case BC_ISF:
     |  // RA = dst or unused, RC = src, JMP with RC = target
-    |   ldrh RBw, [PC, #2]
+    |   ldrh RBw, [PC, # OFS_RD]
     |  ldr TMP0, [BASE, RC, lsl #3]
     |   add PC, PC, #4
     |  mov_false TMP1
@@ -2631,7 +2654,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |   str PC, SAVE_PC
     |  bl extern lj_meta_cat		// (lua_State *L, TValue *top, int left)
     |  // Returns NULL (finished) or TValue * (metamethod).
-    |  ldrb RBw, [PC, #-1]
+    |  ldrb RBw, [PC, #-4+OFS_RB]
     |   ldr BASE, L->base
     |   cbnz CRET1, ->vmeta_binop
     |  ldr TMP0, [BASE, RB, lsl #3]
@@ -3262,7 +3285,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  ins_callt
     |
     |5:  // Tailcall to a fast function with a Lua frame below.
-    |  ldrb RAw, [PC, #-3]
+    |  ldrb RAw, [PC, #-4+OFS_RA]
     |  sub CARG1, BASE, RA, lsl #3
     |  ldr LFUNC:CARG1, [CARG1, #-32]
     |  and LFUNC:CARG1, CARG1, #LJ_GCVMASK
@@ -3303,8 +3326,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |.endif
     |  add RA, BASE, RA, lsl #3
     |  ldr TAB:RB, [RA, #-16]
-    |    ldrh TMP3w, [PC, #2]
-    |  ldr CARG1w, [RA, #-8]		// Get index from control var.
+    |    ldrh TMP3w, [PC, # OFS_RD]
+    |  ldr CARG1w, [RA, #-8+LO]		// Get index from control var.
     |    add PC, PC, #4
     |    add TMP3, PC, TMP3, lsl #2
     |  and TAB:RB, RB, #LJ_GCVMASK
@@ -3323,7 +3346,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |   stp CARG1, TMP0, [RA]
     |    add CARG1, CARG1, #1
     |3:
-    |    str CARG1w, [RA, #-8]		// Update control var.
+    |    str CARG1w, [RA, #-8+LO]	// Update control var.
     |  mov PC, TMP3
     |4:
     |  ins_next
@@ -3369,8 +3392,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |5:  // Despecialize bytecode if any of the checks fail.
     |  mov TMP0, #BC_JMP
     |   mov TMP1, #BC_ITERC
-    |  strb TMP0w, [PC, #-4]
-    |   strb TMP1w, [RC]
+    |  strb TMP0w, [PC, #-4+OFS_OP]
+    |   strb TMP1w, [RC, # OFS_OP]
     |  b <1
     break;
 
@@ -3576,7 +3599,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
       |  csel PC, RC, PC, gt
     } else if (op == BC_JFORI) {
       |  mov PC, RC
-      |  ldrh RCw, [RC, #-2]
+      |  ldrh RCw, [RC, #-4+OFS_RD]
     } else if (op == BC_IFORL) {
       |  csel PC, RC, PC, le
     }
@@ -3617,7 +3640,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     if (op == BC_FORI) {
       |  csel PC, RC, PC, hi
     } else if (op == BC_JFORI) {
-      |  ldrh RCw, [RC, #-2]
+      |  ldrh RCw, [RC, #-4+OFS_RD]
       |  bls =>BC_JLOOP
     } else if (op == BC_IFORL) {
       |  csel PC, RC, PC, ls
@@ -3679,9 +3702,9 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |.if JIT
     |  // RA = base (ignored), RC = traceno
     |  ldr CARG1, [GL, #GL_J(trace)]
-    |   mov CARG2, #0  // Traces on ARM64 don't store the trace #, so use 0.
+    |   mov CARG2w, #0  // Traces on ARM64 don't store the trace #, so use 0.
     |  ldr TRACE:RC, [CARG1, RC, lsl #3]
-    |   st_vmstate CARG2
+    |   st_vmstate CARG2w
     |  ldr RA, TRACE:RC->mcode
     |   str BASE, GL->jit_base
     |   str L, GL->tmpbuf.L

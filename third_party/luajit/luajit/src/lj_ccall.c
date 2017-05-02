@@ -301,7 +301,7 @@
   unsigned int cl = ccall_classify_struct(cts, ctr); \
   if ((cl & 4)) { /* Combine float HFA from separate registers. */ \
     CTSize i = (cl >> 8) - 1; \
-    do { ((uint32_t *)dp)[i] = cc->fpr[i].u32; } while (i--); \
+    do { ((uint32_t *)dp)[i] = cc->fpr[i].lo; } while (i--); \
   } else { \
     if (cl > 1) sp = (uint8_t *)&cc->fpr[0]; \
     memcpy(dp, sp, ctr->size); \
@@ -358,6 +358,13 @@
       if (LJ_TARGET_IOS && d->size < 8) goto err_nyi; \
     } \
   }
+
+#if LJ_BE
+#define CCALL_HANDLE_RET \
+  if (ctype_isfp(ctr->info) && ctr->size == sizeof(float)) \
+    sp = (uint8_t *)&cc->fpr[0].f;
+#endif
+
 
 #elif LJ_TARGET_PPC
 /* -- PPC calling conventions --------------------------------------------- */
@@ -1033,9 +1040,16 @@ static int ccall_set_args(lua_State *L, CTState *cts, CType *ct,
 	*(int32_t *)dp = d->size == 1 ? (int32_t)*(int8_t *)dp :
 					(int32_t)*(int16_t *)dp;
     }
+#if LJ_TARGET_ARM64 && LJ_BE
+    if (isfp && d->size == sizeof(float))
+      ((float *)dp)[1] = ((float *)dp)[0];  /* Floats occupy high slot. */
+#endif
+#if LJ_TARGET_MIPS64 || (LJ_TARGET_ARM64 && LJ_BE)
+    if ((ctype_isinteger_or_bool(d->info) || ctype_isenum(d->info)
 #if LJ_TARGET_MIPS64
-    if ((ctype_isinteger_or_bool(d->info) || ctype_isenum(d->info) ||
-	 (isfp && nsp == 0)) && d->size <= 4) {
+	 || (isfp && nsp == 0)
+#endif
+	 ) && d->size <= 4) {
       *(int64_t *)dp = (int64_t)*(int32_t *)dp;  /* Sign-extend to 64 bit. */
     }
 #endif
