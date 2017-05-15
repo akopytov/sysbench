@@ -548,6 +548,27 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
 }
 
 
+static void convert_to_mysql_bind(MYSQL_BIND *mybind, db_bind_t *bind)
+{
+  mybind->buffer_type = get_mysql_bind_type(bind->type);
+  mybind->buffer = bind->buffer;
+  mybind->buffer_length = bind->max_len;
+  mybind->length = bind->data_len;
+  /*
+    Reuse the buffer passed by the caller to avoid conversions. This is only
+    valid if sizeof(char) == sizeof(mybind->is_null[0]). Depending on the
+    version of the MySQL client library, the type of MYSQL_BIND::is_null[0] can
+    be either my_bool or bool, but sizeof(bool) is not defined by the C
+    standard. We assume it to be 1 on most platforms to simplify code and Lua
+    API.
+  */
+#if SIZEOF_BOOL > 1
+# error This code assumes sizeof(bool) == 1!
+#endif
+  mybind->is_null = (my_bool *) bind->is_null;
+}
+
+
 /* Bind parameters for prepared statement */
 
 
@@ -584,13 +605,7 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
     if (bind == NULL)
       return 1;
     for (i = 0; i < len; i++)
-    {
-      bind[i].buffer_type = get_mysql_bind_type(params[i].type);
-      bind[i].buffer = params[i].buffer;
-      bind[i].buffer_length = params[i].max_len;
-      bind[i].length = params[i].data_len;
-      bind[i].is_null = params[i].is_null;
-    }
+      convert_to_mysql_bind(&bind[i], &params[i]);
 
     rc = mysql_stmt_bind_param(stmt->ptr, bind);
     DEBUG("mysql_stmt_bind_param(%p, %p) = %d", stmt->ptr, bind, rc);
@@ -644,13 +659,7 @@ int mysql_drv_bind_result(db_stmt_t *stmt, db_bind_t *params, size_t len)
   if (bind == NULL)
     return 1;
   for (i = 0; i < len; i++)
-  {
-    bind[i].buffer_type = get_mysql_bind_type(params[i].type);
-    bind[i].buffer = params[i].buffer;
-    bind[i].buffer_length = params[i].max_len;
-    bind[i].length = params[i].data_len;
-    bind[i].is_null = params[i].is_null;
-  }
+    convert_to_mysql_bind(&bind[i], &params[i]);
 
   rc = mysql_stmt_bind_result(stmt->ptr, bind);
   DEBUG("mysql_stmt_bind_result(%p, %p) = %d", stmt->ptr, bind, rc);
