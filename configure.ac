@@ -326,6 +326,10 @@ if test "$enable_largefile" = yes; then
 fi
 
 AC_CHECK_SIZEOF(size_t)
+AC_CHECK_SIZEOF(bool,,
+  [
+    #include <stdbool.h>
+  ])
 
 # Checks for library functions.
 AC_FUNC_MMAP
