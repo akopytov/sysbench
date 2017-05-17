@@ -82,9 +82,6 @@
 /* Maximum queue length for the tx-rate mode. Must be a power of 2 */
 #define MAX_QUEUE_LEN 131072
 
-/* Wait at most this number of seconds for worker threads to initialize */
-#define THREAD_INIT_TIMEOUT 30
-
 /*
   Extra thread ID assigned to background threads. This may be used as an index
   into per-thread arrays (see comment in sb_alloc_per_thread_array().
@@ -104,6 +101,7 @@ sb_arg_t general_args[] =
          "number of seconds to wait after the --time limit before forcing "
          "shutdown, or 'off' to disable", "off", STRING),
   SB_OPT("thread-stack-size", "size of stack per thread", "64K", SIZE),
+  SB_OPT("thread-init-timeout", "wait time in seconds for worker threads to initialize", "30", INT),
   SB_OPT("rate", "average transactions rate. 0 for unlimited rate", "0", INT),
   SB_OPT("report-interval", "periodically report intermediate statistics with "
          "a specified interval in seconds. 0 disables intermediate reports",
@@ -140,6 +138,9 @@ sb_test_t        *current_test;
 
 /* Barrier to ensure we start the benchmark run when all workers are ready */
 static sb_barrier_t worker_barrier;
+
+/* Wait at most this number of seconds for worker threads to initialize */
+static int thread_init_timeout;
 
 /* Barrier to signal reporting threads */
 static sb_barrier_t report_barrier;
@@ -182,7 +183,7 @@ static void sigalrm_thread_init_timeout_handler(int sig)
 
   log_text(LOG_FATAL,
            "Worker threads failed to initialize within %u seconds!",
-           THREAD_INIT_TIMEOUT);
+           thread_init_timeout);
 
   exit(2);
 }
@@ -1176,7 +1177,7 @@ static int run_test(sb_test_t *test)
   /* Exit with an error if thread initialization timeout expires */
   signal(SIGALRM, sigalrm_thread_init_timeout_handler);
 
-  alarm(THREAD_INIT_TIMEOUT);
+  alarm(thread_init_timeout);
 #endif
 
   if (sb_barrier_wait(&worker_barrier) < 0)
@@ -1321,6 +1322,8 @@ static int init(void)
   else
     sb_globals.threads = sb_get_value_int("threads");
 
+  thread_init_timeout = sb_get_value_int("thread-init-timeout");
+  
   if (sb_globals.threads <= 0)
   {
     log_text(LOG_FATAL, "Invalid value for --threads: %d.\n",
