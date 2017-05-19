@@ -18,6 +18,7 @@ separately.
     --warmup-time=N                 execute events for this many seconds with statistics disabled before the actual benchmark run with statistics enabled [0]
     --forced-shutdown=STRING        number of seconds to wait after the --time limit before forcing shutdown, or 'off' to disable [off]
     --thread-stack-size=SIZE        size of stack per thread [64K]
+    --thread-init-timeout=N         wait time in seconds for worker threads to initialize [30]
     --rate=N                        average transactions rate. 0 for unlimited rate [0]
     --report-interval=N             periodically report intermediate statistics with a specified interval in seconds. 0 disables intermediate reports [0]
     --report-checkpoints=[LIST,...] dump full statistics and reset all counters at specified points in time. The argument is a list of comma-separated values representing the amount of time in seconds elapsed from start of test when report checkpoint(s) must be performed. Report checkpoints are off by default. []
