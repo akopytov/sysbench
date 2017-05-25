@@ -158,7 +158,7 @@ build and use an older 0.5 release on Windows.
 
 ### macOS
 
-Assuming you have Xcode (or Xcode Commane Line Tools) and Homebrew installed:
+Assuming you have Xcode (or Xcode Command Line Tools) and Homebrew installed:
 ``` shell
     brew install automake pkg-config
     # For MySQL support
