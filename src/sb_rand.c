@@ -60,7 +60,7 @@ static sb_arg_t rand_args[] =
   SB_OPT("rand-seed",
          "seed for random number generator. When 0, the current time is "
          "used as a RNG seed.", "0", INT),
-  SB_OPT("rand-pareto-h", "parameter h for pareto distibution", "0.2", DOUBLE),
+  SB_OPT("rand-pareto-h", "parameter h for pareto distribution", "0.2", DOUBLE),
 
   SB_OPT_END
 };
