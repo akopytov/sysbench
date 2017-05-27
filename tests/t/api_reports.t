@@ -21,8 +21,8 @@ Tests for custom report hooks
   > EOF
 
   $ sysbench $SB_ARGS run
-  \[ 2s \] thds: 1 tps: [0-9]*\.[0-9]* qps: 0\.00 \(r\/w\/o: 0\.00\/0\.00\/0\.00\) lat \(ms,95%\): [1-9][0-9]*\.[0-9]* err\/s 0\.00 reconn\/s: 0\.00 (re)
-  \[ 3s \] thds: 0 tps: [0-9]*\.[0-9]* qps: 0\.00 \(r\/w\/o: 0\.00\/0\.00\/0\.00\) lat \(ms,95%\): [1-9][0-9]*\.[0-9]* err\/s 0\.00 reconn\/s: 0\.00 (re)
+  [ 2s ] thds: 1 tps: *.* qps: 0.00 (r/w/o: 0.00/0.00/0.00) lat (ms,95%): 1.* err/s 0.00 reconn/s: 0.00 (glob)
+  [ 3s ] thds: 0 tps: *.* qps: 0.00 (r/w/o: 0.00/0.00/0.00) lat (ms,95%): 1.* err/s 0.00 reconn/s: 0.00 (glob)
 
 ########################################################################
 # CSV format via a custom hook
@@ -40,8 +40,8 @@ Tests for custom report hooks
   > EOF
 
   $ sysbench $SB_ARGS run
-  2,1,[0-9]*\.[0-9]*,0\.00,0\.00,0\.00,0\.00,[1-9][0-9]*\.[0-9]*,0\.00,0\.00 (re)
-  3,0,[0-9]*\.[0-9]*,0\.00,0\.00,0\.00,0\.00,[1-9][0-9]*\.[0-9]*,0\.00,0\.00 (re)
+  2,1,*.*,0.00,0.00,0.00,0.00,1.*,0.00,0.00 (glob)
+  3,0,*.*,0.00,0.00,0.00,0.00,1.*,0.00,0.00 (glob)
 
 ########################################################################
 # JSON format via a custom hook
@@ -69,7 +69,7 @@ Tests for custom report hooks
       "writes": 0.00,
       "other": 0.00,
     },
-    "latency": [1-9][0-9]*\.[0-9]*, (re)
+    "latency": 1.*, (glob)
     "errors": 0.00,
     "reconnects": 0.00
   },
@@ -83,7 +83,7 @@ Tests for custom report hooks
       "writes": 0.00,
       "other": 0.00,
     },
-    "latency": [1-9][0-9]*\.[0-9]*, (re)
+    "latency": 1.*, (glob)
     "errors": 0.00,
     "reconnects": 0.00
   },
