@@ -376,6 +376,7 @@ int file_prepare(void)
     if (!VALID_FILE(files[i]))
     {
       log_errno(LOG_FATAL, "Cannot open file '%s'", file_name);
+      log_text(LOG_WARNING, "Did you forget to run the prepare step?");
       return 1; 
     }
   }
