@@ -233,3 +233,8 @@ fileio benchmark tests
   
   Removing test files...
   $ ls
+
+  $ sysbench $fileio_args --file-test-mode=rndrw --verbosity=2 run
+  FATAL: Cannot open file 'test_file.0' errno = 2 (No such file or directory)
+  WARNING: Did you forget to run the prepare step?
+  [1]
