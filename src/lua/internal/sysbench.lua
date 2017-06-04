@@ -100,7 +100,7 @@ function sysbench.report_json(stat)
     "total": %4.2f,
     "reads": %4.2f,
     "writes": %4.2f,
-    "other": %4.2f,
+    "other": %4.2f
   },
   "latency": %4.2f,
   "errors": %4.2f,
