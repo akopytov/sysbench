@@ -67,7 +67,7 @@ Tests for custom report hooks
       "total": 0.00,
       "reads": 0.00,
       "writes": 0.00,
-      "other": 0.00,
+      "other": 0.00
     },
     "latency": [1-9][0-9]*\.[0-9]*, (re)
     "errors": 0.00,
@@ -81,7 +81,7 @@ Tests for custom report hooks
       "total": 0.00,
       "reads": 0.00,
       "writes": 0.00,
-      "other": 0.00,
+      "other": 0.00
     },
     "latency": [1-9][0-9]*\.[0-9]*, (re)
     "errors": 0.00,
