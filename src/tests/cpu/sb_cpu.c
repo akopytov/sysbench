@@ -27,6 +27,8 @@
 # include <math.h>
 #endif
 
+#include <inttypes.h>
+
 #include "sysbench.h"
 
 /* CPU test arguments */
@@ -42,6 +44,7 @@ static int cpu_init(void);
 static void cpu_print_mode(void);
 static sb_event_t cpu_next_event(int thread_id);
 static int cpu_execute_event(sb_event_t *, int);
+static void cpu_report_cumulative(sb_stat_t *);
 static int cpu_done(void);
 
 static sb_test_t cpu_test =
@@ -53,6 +56,7 @@ static sb_test_t cpu_test =
     .print_mode = cpu_print_mode,
     .next_event = cpu_next_event,
     .execute_event = cpu_execute_event,
+    .report_cumulative = cpu_report_cumulative,
     .done = cpu_done
   },
   .args = cpu_args
@@ -123,6 +127,18 @@ void cpu_print_mode(void)
   log_text(LOG_INFO, "Doing CPU performance benchmark\n");  
   log_text(LOG_NOTICE, "Prime numbers limit: %d\n", max_prime);
 }
+
+/* Print cumulative stats. */
+
+void cpu_report_cumulative(sb_stat_t *stat)
+{
+  log_text(LOG_NOTICE, "CPU speed:");
+  log_text(LOG_NOTICE, "    events per second: %8.2f",
+           stat->events / stat->time_interval);
+
+  sb_report_cumulative(stat);
+}
+
 
 int cpu_done(void)
 {
