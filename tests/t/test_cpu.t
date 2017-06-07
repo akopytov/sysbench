@@ -27,6 +27,8 @@ cpu benchmark tests
   
   Threads started!
   
+  CPU speed:
+      events per second: *.* (glob)
   
   General statistics:
       total time:                          *s (glob)

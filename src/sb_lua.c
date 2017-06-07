@@ -885,11 +885,13 @@ int sb_lua_db_connect(lua_State *L)
   sb_lua_ctxt_t * const ctxt = &tls_lua_ctxt;
 
   ctxt->driver = db_create(NULL);
-  if (ctxt->driver == NULL) {
+  if (ctxt->driver == NULL)
+  {
     luaL_error(L, "DB initialization failed");
-    lua_pushstring(L, ctxt->driver->sname);
-    lua_setglobal(L, "db_driver");
   }
+
+  lua_pushstring(L, ctxt->driver->sname);
+  lua_setglobal(L, "db_driver");
 
   if (ctxt->con != NULL)
     return 0;
