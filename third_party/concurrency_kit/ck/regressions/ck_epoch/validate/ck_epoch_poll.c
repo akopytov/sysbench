@@ -89,7 +89,7 @@ read_thread(void *unused CK_CC_UNUSED)
 	ck_epoch_record_t record CK_CC_CACHELINE;
 	ck_stack_entry_t *cursor, *n;
 
-	ck_epoch_register(&stack_epoch, &record);
+	ck_epoch_register(&stack_epoch, &record, NULL);
 
 	if (aff_iterate(&a)) {
 		perror("ERROR: failed to affine thread");
@@ -141,7 +141,7 @@ write_thread(void *unused CK_CC_UNUSED)
 	ck_epoch_record_t record;
 	ck_stack_entry_t *s;
 
-	ck_epoch_register(&stack_epoch, &record);
+	ck_epoch_register(&stack_epoch, &record, NULL);
 
 	if (aff_iterate(&a)) {
 		perror("ERROR: failed to affine thread");
@@ -191,7 +191,7 @@ write_thread(void *unused CK_CC_UNUSED)
 	ck_epoch_barrier(&record);
 
 	if (tid == 0) {
-		fprintf(stderr, "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b[W] Peak: %u (%2.2f%%)\n    Reclamations: %lu\n\n",
+		fprintf(stderr, "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b[W] Peak: %u (%2.2f%%)\n    Reclamations: %u\n\n",
 			record.n_peak,
 			(double)record.n_peak / ((double)PAIRS_S * ITERATE_S) * 100,
 			record.n_dispatch);

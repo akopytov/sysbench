@@ -81,7 +81,7 @@ thread(void *unused CK_CC_UNUSED)
 	unsigned long smr = 0;
 	unsigned int i;
 
-	ck_epoch_register(&stack_epoch, &record);
+	ck_epoch_register(&stack_epoch, &record, NULL);
 
 	if (aff_iterate(&a)) {
 		perror("ERROR: failed to affine thread");
@@ -118,7 +118,7 @@ thread(void *unused CK_CC_UNUSED)
 	while (ck_pr_load_uint(&e_barrier) < n_threads);
 
 	fprintf(stderr, "Deferrals: %lu (%2.2f)\n", smr, (double)smr / PAIRS);
-	fprintf(stderr, "Peak: %u (%2.2f%%), %u pending\nReclamations: %lu\n\n",
+	fprintf(stderr, "Peak: %u (%2.2f%%), %u pending\nReclamations: %u\n\n",
 			record.n_peak,
 			(double)record.n_peak / PAIRS * 100,
 			record.n_pending,
