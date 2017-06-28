@@ -7,8 +7,8 @@ sysbench.cmdline.options = {
     -- the default values for built-in options are currently ignored, see 
     -- https://github.com/akopytov/sysbench/issues/151
     ["cpu-max-prime"] = {"CPU maximum prime", 10000},
-    ["threads"] = {"Number of threads", 2},
-    ["histogram"] = {"Show histogram", "on"},
+    ["threads"] = {"Number of threads", 1},
+    ["histogram"] = {"Show histogram", "off"},
     ["report-interval"] = {"Report interval", 1}
 }
 
