@@ -13,16 +13,17 @@ sysbench.cmdline.options = {
 }
 
 function event()
-    n = 0
+    local n = 0
     for c = 3, sysbench.opt.cpu_max_prime do
-        t = math.sqrt(c)
-        l = 2
+        local t = math.sqrt(c)
+        local isprime = true
         for l = 2, t do
             if c % l == 0 then
+                isprime = false
                 break
             end
         end
-        if l > t then
+        if isprime then
             n = n + 1
         end
     end
