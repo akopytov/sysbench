@@ -16,22 +16,49 @@ function event()
     n = 0
     for c = 3, sysbench.opt.cpu_max_prime do
         t = math.sqrt(c)
-        l = 2
         for l = 2, t do
             if c % l == 0 then
                 break
             end
         end
-        if l > t then
+        if l and l > t then
             n = n + 1
         end
     end
 end
 
-function sysbench.hooks.report_intermediate(stat)
+function sysbench.hooks.report_cumulative(stat)
     local seconds = stat.time_interval
-    print(string.format("%.0f;%u;%4.2f",
-        stat.time_total, 
-        stat.threads_running,
-        stat.events / seconds))
+    print(string.format([[
+{
+    "errors": %4.0f,
+    "events": %4.0f,
+    "latency_avg": %4.10f,
+    "latency_max": %4.10f,
+    "latency_min": %4.10f,
+    "latency_pct": %4.10f,
+    "latency_sum": %4.10f,
+    "other": %4.0f,
+    "reads": %4.0f,
+    "reconnects": %4.0f,
+    "threads_running": %4.0f,
+    "time_interval": %4.10f,
+    "time_total": %4.10f,
+    "writes": %4.0f
+}
+]], 
+    stat.errors, 
+    stat.events, 
+    stat.latency_avg, 
+    stat.latency_max, 
+    stat.latency_min, 
+    stat.latency_pct, 
+    stat.latency_sum, 
+    stat.other, 
+    stat.reads, 
+    stat.reconnects, 
+    stat.threads_running, 
+    stat.time_interval, 
+    stat.time_total, 
+    stat.writes))
 end
