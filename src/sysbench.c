@@ -198,6 +198,10 @@ void sb_report_intermediate(sb_stat_t *stat)
                 stat->events / stat->time_interval,
                 sb_globals.percentile,
                 SEC2MS(stat->latency_pct));
+  if (sb_globals.tx_rate > 0)
+    log_timestamp(LOG_NOTICE, stat->time_total,
+                  "queue length: %" PRIu64 " concurrency: %" PRIu64,
+                  stat->queue_length, stat->concurrency);
 }
 
 
