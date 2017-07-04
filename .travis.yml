@@ -39,7 +39,6 @@ env:
       - OS=ubuntu DIST=zesty
       - OS=debian DIST=wheezy
       - OS=debian DIST=jessie
-      - OS=debian DIST=stretch
       - OS=ubuntu DIST=precise ARCH=i386
       - OS=ubuntu DIST=trusty ARCH=i386
       - OS=ubuntu DIST=xenial ARCH=i386
@@ -47,7 +46,6 @@ env:
       - OS=ubuntu DIST=zesty ARCH=i386
       - OS=debian DIST=wheezy ARCH=i386
       - OS=debian DIST=jessie ARCH=i386
-      - OS=debian DIST=stretch ARCH=i386
 
 matrix:
   exclude:
