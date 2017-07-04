@@ -1,3 +1,16 @@
+2017-07-04  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.8
+	* fixed api_report test for slow machines (thanks to @jcfp)
+	* fileio: suggest to run prepare step on missing files (thanks
+	to Heinrich Schuchardt)
+	* JSON reports: removed an erroneous trailing comma (GH-139)
+	* added events per second to the CPU benchmark report (GH-140)
+	* fixed db_connect() in legacy SQL API to use the default value
+	for --db-driver (GH-146)
+	* removed busy-wait in the bounded event generation mode
+	(--rate) to avoid CPU hogging
+
 2017-05-15  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.7
