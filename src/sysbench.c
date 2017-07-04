@@ -703,7 +703,7 @@ bool sb_more_events(int thread_id)
 
     while (!ck_ring_dequeue_spmc(&queue_ring, queue_ring_buffer, &ptr) &&
            !ck_pr_load_int(&queue_is_full))
-      ck_pr_stall();
+      usleep(500000.0 * sb_globals.threads / sb_globals.tx_rate);
 
     if (ck_pr_load_int(&queue_is_full))
     {
@@ -719,45 +719,6 @@ bool sb_more_events(int thread_id)
   }
 
   return true;
-}
-
-/*
-   Get the next event, or return an 'empty' event with type = SB_REQ_TYPE_NULL,
-   if there are no more events to execute.
-*/
-
-sb_event_t sb_next_event(sb_test_t *test, int thread_id)
-{
-  uint64_t            queue_start_time = 0;
-
-  /* If we are in tx_rate mode, we take events from queue */
-  if (sb_globals.tx_rate > 0)
-  {
-    void *ptr = NULL;
-
-    while (!ck_ring_dequeue_spmc(&queue_ring, queue_ring_buffer, &ptr) &&
-           !ck_pr_load_int(&queue_is_full))
-      ck_pr_stall();
-
-    if (ck_pr_load_int(&queue_is_full))
-    {
-      log_text(LOG_FATAL, "Event queue is full. Terminating the worker thread");
-
-      sb_event_t          event;
-      event.type = SB_REQ_TYPE_NULL;
-
-      return event;
-    }
-
-    queue_start_time = ((uint64_t *) ptr)[0];
-
-    ck_pr_inc_int(&sb_globals.concurrency);
-
-    timers[thread_id].queue_time = sb_timer_value(&sb_exec_timer) -
-      queue_start_time;
-  }
-
-  return test->ops.next_event(thread_id);
 }
 
 
@@ -796,7 +757,7 @@ static int thread_run(sb_test_t *test, int thread_id)
 
   while (sb_more_events(thread_id) && rc == 0)
   {
-    event = sb_next_event(test, thread_id);
+    event = test->ops.next_event(thread_id);
     if (event.type == SB_REQ_TYPE_NULL)
       break;
 
