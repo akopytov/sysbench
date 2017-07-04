@@ -39,6 +39,7 @@ env:
       - OS=ubuntu DIST=zesty
       - OS=debian DIST=wheezy
       - OS=debian DIST=jessie
+      - OS=debian DIST=stretch
       - OS=ubuntu DIST=precise ARCH=i386
       - OS=ubuntu DIST=trusty ARCH=i386
       - OS=ubuntu DIST=xenial ARCH=i386
