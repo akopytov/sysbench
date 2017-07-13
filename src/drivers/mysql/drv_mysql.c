@@ -35,6 +35,7 @@
 #include <stdio.h>
 
 #include <mysql.h>
+#include <mysql_version.h>
 #include <mysqld_error.h>
 #include <errmsg.h>
 
