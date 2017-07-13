@@ -1,0 +1,2 @@
+CFLAGS+=-mips64 
+LDFLAGS+=-mips64
