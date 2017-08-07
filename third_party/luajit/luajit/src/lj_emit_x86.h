@@ -392,6 +392,7 @@ static void emit_loadk64(ASMState *as, Reg r, IRIns *ir)
       ir->i = (int32_t)(as->mctop - as->mcbot);
       as->mcbot += 8;
       as->mclim = as->mcbot + MCLIM_REDZONE;
+      lj_mcode_commitbot(as->J, as->mcbot);
     }
     emit_rmro(as, xo, r64, RID_RIP, (int32_t)mcpofs(as, as->mctop - ir->i));
 #else

@@ -147,7 +147,7 @@ set_init(void)
 #endif
 
 	ck_epoch_init(&epoch_hs);
-	ck_epoch_register(&epoch_hs, &epoch_wr);
+	ck_epoch_register(&epoch_hs, &epoch_wr, NULL);
 	common_srand48((long int)time(NULL));
 	if (ck_hs_init(&hs, mode, hs_hash, hs_compare, &my_allocator, 65536, common_lrand48()) == false) {
 		perror("ck_hs_init");
@@ -234,7 +234,7 @@ reader(void *unused)
 		perror("WARNING: Failed to affine thread");
 
 	s = j = a = 0;
-	ck_epoch_register(&epoch_hs, &epoch_record);
+	ck_epoch_register(&epoch_hs, &epoch_record, NULL);
 	for (;;) {
 		j++;
 		ck_epoch_begin(&epoch_record, NULL);
@@ -454,8 +454,8 @@ main(int argc, char *argv[])
 	ck_epoch_record_t epoch_temporary = epoch_wr;
 	ck_epoch_synchronize(&epoch_wr);
 
-	fprintf(stderr, " '- Summary: %u pending, %u peak, %lu reclamations -> "
-	    "%u pending, %u peak, %lu reclamations\n\n",
+	fprintf(stderr, " '- Summary: %u pending, %u peak, %u reclamations -> "
+	    "%u pending, %u peak, %u reclamations\n\n",
 	    epoch_temporary.n_pending, epoch_temporary.n_peak, epoch_temporary.n_dispatch,
 	    epoch_wr.n_pending, epoch_wr.n_peak, epoch_wr.n_dispatch);
 
@@ -593,8 +593,8 @@ main(int argc, char *argv[])
 	epoch_temporary = epoch_wr;
 	ck_epoch_synchronize(&epoch_wr);
 
-	fprintf(stderr, " '- Summary: %u pending, %u peak, %lu reclamations -> "
-	    "%u pending, %u peak, %lu reclamations\n\n",
+	fprintf(stderr, " '- Summary: %u pending, %u peak, %u reclamations -> "
+	    "%u pending, %u peak, %u reclamations\n\n",
 	    epoch_temporary.n_pending, epoch_temporary.n_peak, epoch_temporary.n_dispatch,
 	    epoch_wr.n_pending, epoch_wr.n_peak, epoch_wr.n_dispatch);
 	return 0;

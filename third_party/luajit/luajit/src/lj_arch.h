@@ -74,7 +74,7 @@
        defined(__NetBSD__) || defined(__OpenBSD__) || \
        defined(__DragonFly__)) && !defined(__ORBIS__)
 #define LUAJIT_OS	LUAJIT_OS_BSD
-#elif (defined(__sun__) && defined(__svr4__))
+#elif (defined(__sun__) && defined(__svr4__)) || defined(__HAIKU__)
 #define LUAJIT_OS	LUAJIT_OS_POSIX
 #elif defined(__CYGWIN__)
 #define LJ_TARGET_CYGWIN	1
@@ -215,9 +215,14 @@
 
 #elif LUAJIT_TARGET == LUAJIT_ARCH_ARM64
 
-#define LJ_ARCH_NAME		"arm64"
 #define LJ_ARCH_BITS		64
+#if defined(__AARCH64EB__)
+#define LJ_ARCH_NAME		"arm64be"
+#define LJ_ARCH_ENDIAN		LUAJIT_BE
+#else
+#define LJ_ARCH_NAME		"arm64"
 #define LJ_ARCH_ENDIAN		LUAJIT_LE
+#endif
 #define LJ_TARGET_ARM64		1
 #define LJ_TARGET_EHRETREG	0
 #define LJ_TARGET_JUMPRANGE	27	/* +-2^27 = +-128MB */
@@ -377,7 +382,7 @@
 #endif
 #elif LJ_TARGET_ARM64
 #if __clang__
-#if (__clang_major__ < 3) || ((__clang_major__ == 3) && __clang_minor__ < 5)
+#if ((__clang_major__ < 3) || ((__clang_major__ == 3) && __clang_minor__ < 5)) && !defined(__NX_TOOLCHAIN_MAJOR__)
 #error "Need at least Clang 3.5 or newer"
 #endif
 #else
@@ -409,9 +414,6 @@
 #error "Only ARM EABI or iOS 3.0+ ABI is supported"
 #endif
 #elif LJ_TARGET_ARM64
-#if defined(__AARCH64EB__)
-#error "No support for big-endian ARM64"
-#endif
 #if defined(_ILP32)
 #error "No support for ILP32 model on ARM64"
 #endif

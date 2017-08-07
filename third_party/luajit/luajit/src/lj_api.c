@@ -112,6 +112,13 @@ LUA_API void lua_xmove(lua_State *from, lua_State *to, int n)
   from->top = f;
 }
 
+LUA_API const lua_Number *lua_version(lua_State *L)
+{
+  static const lua_Number version = LUA_VERSION_NUM;
+  UNUSED(L);
+  return &version;
+}
+
 /* -- Stack manipulation -------------------------------------------------- */
 
 LUA_API int lua_gettop(lua_State *L)
@@ -152,28 +159,38 @@ LUA_API void lua_insert(lua_State *L, int idx)
   copyTV(L, p, L->top);
 }
 
-LUA_API void lua_replace(lua_State *L, int idx)
+static void copy_slot(lua_State *L, TValue *f, int idx)
 {
-  api_checknelems(L, 1);
   if (idx == LUA_GLOBALSINDEX) {
-    api_check(L, tvistab(L->top-1));
+    api_check(L, tvistab(f));
     /* NOBARRIER: A thread (i.e. L) is never black. */
-    setgcref(L->env, obj2gco(tabV(L->top-1)));
+    setgcref(L->env, obj2gco(tabV(f)));
   } else if (idx == LUA_ENVIRONINDEX) {
     GCfunc *fn = curr_func(L);
     if (fn->c.gct != ~LJ_TFUNC)
       lj_err_msg(L, LJ_ERR_NOENV);
-    api_check(L, tvistab(L->top-1));
-    setgcref(fn->c.env, obj2gco(tabV(L->top-1)));
-    lj_gc_barrier(L, fn, L->top-1);
+    api_check(L, tvistab(f));
+    setgcref(fn->c.env, obj2gco(tabV(f)));
+    lj_gc_barrier(L, fn, f);
   } else {
     TValue *o = index2adr(L, idx);
     api_checkvalidindex(L, o);
-    copyTV(L, o, L->top-1);
+    copyTV(L, o, f);
     if (idx < LUA_GLOBALSINDEX)  /* Need a barrier for upvalues. */
-      lj_gc_barrier(L, curr_func(L), L->top-1);
+      lj_gc_barrier(L, curr_func(L), f);
   }
+}
+
+LUA_API void lua_replace(lua_State *L, int idx)
+{
+  api_checknelems(L, 1);
+  copy_slot(L, L->top - 1, idx);
   L->top--;
+}
+
+LUA_API void lua_copy(lua_State *L, int fromidx, int toidx)
+{
+  copy_slot(L, index2adr(L, fromidx), toidx);
 }
 
 LUA_API void lua_pushvalue(lua_State *L, int idx)
@@ -325,6 +342,22 @@ LUA_API lua_Number lua_tonumber(lua_State *L, int idx)
     return 0;
 }
 
+LUA_API lua_Number lua_tonumberx(lua_State *L, int idx, int *ok)
+{
+  cTValue *o = index2adr(L, idx);
+  TValue tmp;
+  if (LJ_LIKELY(tvisnumber(o))) {
+    if (ok) *ok = 1;
+    return numberVnum(o);
+  } else if (tvisstr(o) && lj_strscan_num(strV(o), &tmp)) {
+    if (ok) *ok = 1;
+    return numV(&tmp);
+  } else {
+    if (ok) *ok = 0;
+    return 0;
+  }
+}
+
 LUALIB_API lua_Number luaL_checknumber(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
@@ -362,9 +395,38 @@ LUA_API lua_Integer lua_tointeger(lua_State *L, int idx)
     if (!(tvisstr(o) && lj_strscan_number(strV(o), &tmp)))
       return 0;
     if (tvisint(&tmp))
-      return (lua_Integer)intV(&tmp);
+      return intV(&tmp);
     n = numV(&tmp);
   }
+#if LJ_64
+  return (lua_Integer)n;
+#else
+  return lj_num2int(n);
+#endif
+}
+
+LUA_API lua_Integer lua_tointegerx(lua_State *L, int idx, int *ok)
+{
+  cTValue *o = index2adr(L, idx);
+  TValue tmp;
+  lua_Number n;
+  if (LJ_LIKELY(tvisint(o))) {
+    if (ok) *ok = 1;
+    return intV(o);
+  } else if (LJ_LIKELY(tvisnum(o))) {
+    n = numV(o);
+  } else {
+    if (!(tvisstr(o) && lj_strscan_number(strV(o), &tmp))) {
+      if (ok) *ok = 0;
+      return 0;
+    }
+    if (tvisint(&tmp)) {
+      if (ok) *ok = 1;
+      return intV(&tmp);
+    }
+    n = numV(&tmp);
+  }
+  if (ok) *ok = 1;
 #if LJ_64
   return (lua_Integer)n;
 #else
@@ -858,7 +920,7 @@ LUA_API void lua_upvaluejoin(lua_State *L, int idx1, int n1, int idx2, int n2)
   lj_gc_objbarrier(L, fn1, gcref(fn1->l.uvptr[n1]));
 }
 
-LUALIB_API void *luaL_checkudata(lua_State *L, int idx, const char *tname)
+LUALIB_API void *luaL_testudata(lua_State *L, int idx, const char *tname)
 {
   cTValue *o = index2adr(L, idx);
   if (tvisudata(o)) {
@@ -867,8 +929,14 @@ LUALIB_API void *luaL_checkudata(lua_State *L, int idx, const char *tname)
     if (tv && tvistab(tv) && tabV(tv) == tabref(ud->metatable))
       return uddata(ud);
   }
-  lj_err_argtype(L, idx, tname);
-  return NULL;  /* unreachable */
+  return NULL;  /* value is not a userdata with a metatable */
+}
+
+LUALIB_API void *luaL_checkudata(lua_State *L, int idx, const char *tname)
+{
+  void *p = luaL_testudata(L, idx, tname);
+  if (!p) lj_err_argtype(L, idx, tname);
+  return p;
 }
 
 /* -- Object setters ------------------------------------------------------ */
@@ -977,6 +1045,12 @@ LUA_API int lua_setmetatable(lua_State *L, int idx)
   return 1;
 }
 
+LUALIB_API void luaL_setmetatable(lua_State *L, const char *tname)
+{
+  lua_getfield(L, LUA_REGISTRYINDEX, tname);
+  lua_setmetatable(L, -2);
+}
+
 LUA_API int lua_setfenv(lua_State *L, int idx)
 {
   cTValue *o = index2adr(L, idx);
@@ -1032,7 +1106,7 @@ static TValue *api_call_base(lua_State *L, int nargs)
 
 LUA_API void lua_call(lua_State *L, int nargs, int nresults)
 {
-  api_check(L, L->status == 0 || L->status == LUA_ERRERR);
+  api_check(L, L->status == LUA_OK || L->status == LUA_ERRERR);
   api_checknelems(L, nargs+1);
   lj_vm_call(L, api_call_base(L, nargs), nresults+1);
 }
@@ -1043,7 +1117,7 @@ LUA_API int lua_pcall(lua_State *L, int nargs, int nresults, int errfunc)
   uint8_t oldh = hook_save(g);
   ptrdiff_t ef;
   int status;
-  api_check(L, L->status == 0 || L->status == LUA_ERRERR);
+  api_check(L, L->status == LUA_OK || L->status == LUA_ERRERR);
   api_checknelems(L, nargs+1);
   if (errfunc == 0) {
     ef = 0;
@@ -1075,7 +1149,7 @@ LUA_API int lua_cpcall(lua_State *L, lua_CFunction func, void *ud)
   global_State *g = G(L);
   uint8_t oldh = hook_save(g);
   int status;
-  api_check(L, L->status == 0 || L->status == LUA_ERRERR);
+  api_check(L, L->status == LUA_OK || L->status == LUA_ERRERR);
   status = lj_vm_cpcall(L, func, ud, cpcall);
   if (status) hook_restore(g, oldh);
   return status;
@@ -1095,6 +1169,11 @@ LUALIB_API int luaL_callmeta(lua_State *L, int idx, const char *field)
 }
 
 /* -- Coroutine yield and resume ------------------------------------------ */
+
+LUA_API int lua_isyieldable(lua_State *L)
+{
+  return cframe_canyield(L->cframe);
+}
 
 LUA_API int lua_yield(lua_State *L, int nresults)
 {
@@ -1140,7 +1219,7 @@ LUA_API int lua_resume(lua_State *L, int nargs)
 {
   if (L->cframe == NULL && L->status <= LUA_YIELD)
     return lj_vm_resume(L,
-      L->status == 0 ? api_call_base(L, nargs) : L->top - nargs,
+      L->status == LUA_OK ? api_call_base(L, nargs) : L->top - nargs,
       0, 0);
   L->top = L->base;
   setstrV(L, L->top, lj_err_str(L, LJ_ERR_COSUSP));

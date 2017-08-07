@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.63)
-AC_INIT([sysbench],[1.0.8],[https://github.com/akopytov/sysbench/issues],
+AC_INIT([sysbench],[1.1.0],[https://github.com/akopytov/sysbench/issues],
         [sysbench], [https://github.com/akopytov/sysbench])
 AC_CONFIG_AUX_DIR([config])
 # Setting CFLAGS here prevents AC_CANONICAL_TARGET from injecting them
@@ -208,9 +208,6 @@ AC_CHECK_DECLS(O_SYNC, ,
    ]
 )
 
-
-# Checks for programs.
-AX_CHECK_DOCBOOK
 
 # Checks for libraries.
 
@@ -543,9 +540,6 @@ AC_SUBST([SB_GIT_SHA])
 
 AC_CONFIG_FILES([
 Makefile
-doc/xsl/Makefile
-doc/xsl/catalog.xml
-doc/Makefile
 third_party/luajit/Makefile
 third_party/concurrency_kit/Makefile
 src/Makefile

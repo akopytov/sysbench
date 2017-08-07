@@ -37,6 +37,7 @@ static void
 cb(ck_epoch_entry_t *p)
 {
 
+	/* Test that we can reregister the callback. */
 	if (counter == 0)
 		ck_epoch_call(&record[1], p, cb);
 
@@ -50,15 +51,22 @@ int
 main(void)
 {
 	ck_epoch_entry_t entry;
+	ck_epoch_entry_t another;
 
-	ck_epoch_register(&epoch, &record[0]);
-	ck_epoch_register(&epoch, &record[1]);
+	ck_epoch_register(&epoch, &record[0], NULL);
+	ck_epoch_register(&epoch, &record[1], NULL);
 
 	ck_epoch_call(&record[1], &entry, cb);
 	ck_epoch_barrier(&record[1]);
 	ck_epoch_barrier(&record[1]);
-	if (counter != 2)
-		ck_error("Expected counter value 2, read %u.\n", counter);
+
+	/* Make sure that strict works. */
+	ck_epoch_call_strict(&record[1], &entry, cb);
+	ck_epoch_call_strict(&record[1], &another, cb);
+	ck_epoch_barrier(&record[1]);
+
+	if (counter != 4)
+		ck_error("Expected counter value 4, read %u.\n", counter);
 
 	return 0;
 }

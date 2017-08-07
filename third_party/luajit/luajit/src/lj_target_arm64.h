@@ -107,7 +107,7 @@ typedef struct {
 /* Return the address of a per-trace exit stub. */
 static LJ_AINLINE uint32_t *exitstub_trace_addr_(uint32_t *p, uint32_t exitno)
 {
-  while (*p == 0xd503201f) p++;  /* Skip A64I_NOP. */
+  while (*p == (LJ_LE ? 0xd503201f : 0x1f2003d5)) p++;  /* Skip A64I_NOP. */
   return p + 3 + exitno;
 }
 /* Avoid dependence on lj_jit.h if only including lj_target.h. */
@@ -115,6 +115,13 @@ static LJ_AINLINE uint32_t *exitstub_trace_addr_(uint32_t *p, uint32_t exitno)
   exitstub_trace_addr_((MCode *)((char *)(T)->mcode + (T)->szmcode), (exitno))
 
 /* -- Instructions -------------------------------------------------------- */
+
+/* ARM64 instructions are always little-endian. Swap for ARM64BE. */
+#if LJ_BE
+#define A64I_LE(x)	(lj_bswap(x))
+#else
+#define A64I_LE(x)	(x)
+#endif
 
 /* Instruction fields. */
 #define A64F_D(r)	(r)

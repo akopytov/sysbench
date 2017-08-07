@@ -107,8 +107,22 @@ LUALIB_API const char *luaL_findtable(lua_State *L, int idx,
 static int libsize(const luaL_Reg *l)
 {
   int size = 0;
-  for (; l->name; l++) size++;
+  for (; l && l->name; l++) size++;
   return size;
+}
+
+LUALIB_API void luaL_pushmodule(lua_State *L, const char *modname, int sizehint)
+{
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 16);
+  lua_getfield(L, -1, modname);
+  if (!lua_istable(L, -1)) {
+    lua_pop(L, 1);
+    if (luaL_findtable(L, LUA_GLOBALSINDEX, modname, sizehint) != NULL)
+      lj_err_callerv(L, LJ_ERR_BADMODN, modname);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -3, modname);  /* _LOADED[modname] = new table. */
+  }
+  lua_remove(L, -2);  /* Remove _LOADED table. */
 }
 
 LUALIB_API void luaL_openlib(lua_State *L, const char *libname,
@@ -116,35 +130,32 @@ LUALIB_API void luaL_openlib(lua_State *L, const char *libname,
 {
   lj_lib_checkfpu(L);
   if (libname) {
-    int size = libsize(l);
-    /* check whether lib already exists */
-    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 16);
-    lua_getfield(L, -1, libname);  /* get _LOADED[libname] */
-    if (!lua_istable(L, -1)) {  /* not found? */
-      lua_pop(L, 1);  /* remove previous result */
-      /* try global variable (and create one if it does not exist) */
-      if (luaL_findtable(L, LUA_GLOBALSINDEX, libname, size) != NULL)
-	lj_err_callerv(L, LJ_ERR_BADMODN, libname);
-      lua_pushvalue(L, -1);
-      lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
-    }
-    lua_remove(L, -2);  /* remove _LOADED table */
-    lua_insert(L, -(nup+1));  /* move library table to below upvalues */
+    luaL_pushmodule(L, libname, libsize(l));
+    lua_insert(L, -(nup + 1));  /* Move module table below upvalues. */
   }
-  for (; l->name; l++) {
-    int i;
-    for (i = 0; i < nup; i++)  /* copy upvalues to the top */
-      lua_pushvalue(L, -nup);
-    lua_pushcclosure(L, l->func, nup);
-    lua_setfield(L, -(nup+2), l->name);
-  }
-  lua_pop(L, nup);  /* remove upvalues */
+  if (l)
+    luaL_setfuncs(L, l, nup);
+  else
+    lua_pop(L, nup);  /* Remove upvalues. */
 }
 
 LUALIB_API void luaL_register(lua_State *L, const char *libname,
 			      const luaL_Reg *l)
 {
   luaL_openlib(L, libname, l, 0);
+}
+
+LUALIB_API void luaL_setfuncs(lua_State *L, const luaL_Reg *l, int nup)
+{
+  luaL_checkstack(L, nup, "too many upvalues");
+  for (; l->name; l++) {
+    int i;
+    for (i = 0; i < nup; i++)  /* Copy upvalues to the top. */
+      lua_pushvalue(L, -nup);
+    lua_pushcclosure(L, l->func, nup);
+    lua_setfield(L, -(nup + 2), l->name);
+  }
+  lua_pop(L, nup);  /* Remove upvalues. */
 }
 
 LUALIB_API const char *luaL_gsub(lua_State *L, const char *s,

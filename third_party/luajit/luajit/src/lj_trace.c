@@ -894,7 +894,7 @@ int LJ_FASTCALL lj_trace_exit(jit_State *J, void *exptr)
   ERRNO_RESTORE
   switch (bc_op(*pc)) {
   case BC_CALLM: case BC_CALLMT:
-    return (int)((BCReg)(L->top - L->base) - bc_a(*pc) - bc_c(*pc) + LJ_FR2);
+    return (int)((BCReg)(L->top - L->base) - bc_a(*pc) - bc_c(*pc) - LJ_FR2);
   case BC_RETM:
     return (int)((BCReg)(L->top - L->base) + 1 - bc_a(*pc) - bc_d(*pc));
   case BC_TSETM:

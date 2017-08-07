@@ -204,10 +204,7 @@ static void mcode_protect(jit_State *J, int prot)
 
 /* -- MCode area allocation ----------------------------------------------- */
 
-#if LJ_TARGET_X64
-#define mcode_validptr(p)	((p) && (uintptr_t)(p) < (uintptr_t)1<<47)
-#elif LJ_TARGET_ARM64 || LJ_TARGET_MIPS64
-/* We have no clue about the valid VA range. It could be 39 - 52 bits. */
+#if LJ_64
 #define mcode_validptr(p)	(p)
 #else
 #define mcode_validptr(p)	((p) && (uintptr_t)(p) < 0xffff0000)
@@ -223,9 +220,7 @@ static void *mcode_alloc(jit_State *J, size_t sz)
   ** First try a contiguous area below the last one. */
   uintptr_t hint = J->mcarea ? (uintptr_t)J->mcarea - sz : 0;
   int i;
-  /* Do at most LJ_TARGET_JUMPRANGE iterations as a heuristic to try harder for
-  ** bigger allocation pools (i.e. higher LJ_TARGET_JUMPRANGE values), but don't
-  ** waste CPU cycles for smaller pools that can be easily exhausted. */
+  /* Limit probing iterations, depending on the available pool size. */
   for (i = 0; i < LJ_TARGET_JUMPRANGE; i++) {
     if (mcode_validptr(hint)) {
       void *p = mcode_alloc_at(J, hint, sz, MCPROT_GEN);
@@ -236,9 +231,9 @@ static void *mcode_alloc(jit_State *J, size_t sz)
 	return p;
       if (p) mcode_free(J, p, sz);  /* Free badly placed area. */
     }
-    /* Next try probing pseudo-random addresses. */
+    /* Next try probing 64K-aligned pseudo-random addresses. */
     do {
-      hint = LJ_PRNG_BITS(J, LJ_TARGET_JUMPRANGE-16) << 16;  /* 64K aligned. */
+      hint = LJ_PRNG_BITS(J, LJ_TARGET_JUMPRANGE-16) << 16;
     } while (!(hint + sz < J->range));
     hint = J->allocbase + hint;
   }

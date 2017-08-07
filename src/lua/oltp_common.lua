@@ -25,7 +25,7 @@ function init()
 end
 
 if sysbench.cmdline.command == nil then
-   error("Command is required. Supported commands: prepare, prewarm, run, " ..
+   error("Command is required. Supported commands: prepare, warmup, run, " ..
             "cleanup, help")
 end
 
@@ -93,11 +93,11 @@ end
 -- --tables > 1
 --
 -- PS. Currently, this command is only meaningful for MySQL/InnoDB benchmarks
-function cmd_prewarm()
+function cmd_warmup()
    local drv = sysbench.sql.driver()
    local con = drv:connect()
 
-   assert(drv:name() == "mysql", "prewarm is currently MySQL only")
+   assert(drv:name() == "mysql", "warmup is currently MySQL only")
 
    -- Do not create on disk tables for subsequent queries
    con:query("SET tmp_table_size=2*1024*1024*1024")
@@ -106,7 +106,7 @@ function cmd_prewarm()
    for i = sysbench.tid % sysbench.opt.threads + 1, sysbench.opt.tables,
    sysbench.opt.threads do
       local t = "sbtest" .. i
-      print("Prewarming table " .. t)
+      print("Preloading table " .. t)
       con:query("ANALYZE TABLE sbtest" .. i)
       con:query(string.format(
                    "SELECT AVG(id) FROM " ..
@@ -120,10 +120,12 @@ function cmd_prewarm()
    end
 end
 
--- Implement parallel prepare and prewarm commands
+-- Implement parallel prepare and warmup commands, define 'prewarm' as an alias
+-- for 'warmup'
 sysbench.cmdline.commands = {
    prepare = {cmd_prepare, sysbench.cmdline.PARALLEL_COMMAND},
-   prewarm = {cmd_prewarm, sysbench.cmdline.PARALLEL_COMMAND}
+   warmup = {cmd_warmup, sysbench.cmdline.PARALLEL_COMMAND},
+   prewarm = {cmd_warmup, sysbench.cmdline.PARALLEL_COMMAND}
 }
 
 

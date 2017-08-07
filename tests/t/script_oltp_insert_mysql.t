@@ -114,14 +114,14 @@ oltp_point_select.lua + MySQL tests
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
   sysbench * (glob)
   
-  Prewarming table sbtest1
-  Prewarming table sbtest2
-  Prewarming table sbtest3
-  Prewarming table sbtest4
-  Prewarming table sbtest5
-  Prewarming table sbtest6
-  Prewarming table sbtest7
-  Prewarming table sbtest8
+  Preloading table sbtest1
+  Preloading table sbtest2
+  Preloading table sbtest3
+  Preloading table sbtest4
+  Preloading table sbtest5
+  Preloading table sbtest6
+  Preloading table sbtest7
+  Preloading table sbtest8
   sysbench *.* * (glob)
   
   Running the test with following options:

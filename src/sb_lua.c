@@ -183,6 +183,8 @@ static bool sb_lua_hook_push(lua_State *, const char *);
 static void sb_lua_report_intermediate(sb_stat_t *);
 static void sb_lua_report_cumulative(sb_stat_t *);
 
+static int sb_lua_do_jitcmd(lua_State *L, const char *cmd);
+
 static void call_error(lua_State *L, const char *name)
 {
   const char * const err = lua_tostring(L, -1);
@@ -689,6 +691,9 @@ static lua_State *sb_lua_new_state(void)
   L = luaL_newstate();
 
   luaL_openlibs(L);
+
+  if (sb_globals.luajit_cmd && sb_lua_do_jitcmd(L, sb_globals.luajit_cmd))
+    return NULL;
 
   sb_lua_set_paths(L);
 
@@ -1625,4 +1630,90 @@ int sb_lua_report_thread_init(void)
 void sb_lua_report_thread_done(void)
 {
   sb_lua_close_state(tls_lua_ctxt.L);
+}
+
+/*
+  Perform a LuaJIT engine control command. This is taken with modifications from
+  luajit.c
+*/
+
+int sb_lua_do_jitcmd(lua_State *L, const char *cmd)
+{
+  const char *opt = strchr(cmd, '=');
+
+  lua_pushlstring(L, cmd, opt ? (size_t) (opt - cmd) : strlen(cmd));
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  lua_getfield(L, -1, "jit");  /* Get jit.* module table. */
+  lua_remove(L, -2);
+  lua_pushvalue(L, -2);
+  lua_gettable(L, -2);  /* Lookup library function. */
+
+  if (!lua_isfunction(L, -1))
+  {
+    lua_pop(L, 2);  /* Drop non-function and jit.* table, keep module name. */
+
+    /* Load add-on module. */
+    lua_getglobal(L, "require");
+    lua_pushliteral(L, "jit.");
+    lua_pushvalue(L, -3);
+    lua_concat(L, 2);
+
+    if (lua_pcall(L, 1, 1, 0))
+    {
+      const char *msg = lua_tostring(L, -1);
+      if (msg && !strncmp(msg, "module ", 7))
+        goto nomodule;
+      call_error(L, "require");
+      return 1;
+    }
+
+    lua_getfield(L, -1, "start");
+    if (lua_isnil(L, -1)) {
+  nomodule:
+      log_text(LOG_FATAL,
+               "unknown luaJIT command or jit.* modules not installed");
+      return 1;
+    }
+    lua_remove(L, -2);  /* Drop module table. */
+  }
+  else
+  {
+    lua_remove(L, -2);  /* Drop jit.* table. */
+  }
+  lua_remove(L, -2);  /* Drop module name. */
+
+  int narg = 0;
+
+  if (opt && *++opt)
+  {
+    for (;;)
+    {
+      /* Split arguments. */
+      const char *p = strchr(opt, ',');
+      narg++;
+
+      if (!p)
+        break;
+
+      if (p == opt)
+        lua_pushnil(L);
+      else
+        lua_pushlstring(L, opt, (size_t) (p - opt));
+
+      opt = p + 1;
+    }
+
+    if (*opt)
+      lua_pushstring(L, opt);
+    else
+      lua_pushnil(L);
+  }
+
+  if (lua_pcall(L, narg, 0, 0))
+  {
+    call_error(L, "lua_pcall");
+    return 1;
+  }
+
+  return 0;
 }

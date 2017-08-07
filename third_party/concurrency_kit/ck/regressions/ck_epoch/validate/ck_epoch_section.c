@@ -46,8 +46,8 @@ setup_test(void)
 {
 
 	ck_epoch_init(&epc);
-	ck_epoch_register(&epc, &record);
-	ck_epoch_register(&epc, &record2);
+	ck_epoch_register(&epc, &record, NULL);
+	ck_epoch_register(&epc, &record2, NULL);
 	cleanup_calls = 0;
 
 	return;
@@ -88,7 +88,8 @@ test_simple_read_section(void)
 	ck_epoch_begin(&record, &section);
 	ck_epoch_call(&record, &entry, cleanup);
 	assert(cleanup_calls == 0);
-	ck_epoch_end(&record, &section);
+	if (ck_epoch_end(&record, &section) == false)
+		ck_error("expected no more sections");
 	ck_epoch_barrier(&record);
 	assert(cleanup_calls == 1);
 
@@ -157,7 +158,7 @@ reader_work(void *arg)
 	ck_epoch_section_t section;
 	struct obj *o;
 
-	ck_epoch_register(&epc, &local_record);
+	ck_epoch_register(&epc, &local_record, NULL);
 
 	o = (struct obj *)arg;
 

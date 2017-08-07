@@ -1221,13 +1221,12 @@ The following operations are currently not compiled and may exhibit
 suboptimal performance, especially when used in inner loops:
 </p>
 <ul>
-<li>Bitfield accesses and initializations.</li>
 <li>Vector operations.</li>
 <li>Table initializers.</li>
 <li>Initialization of nested <tt>struct</tt>/<tt>union</tt> types.</li>
 <li>Non-default initialization of VLA/VLS or large C&nbsp;types
 (&gt; 128&nbsp;bytes or &gt; 16 array elements.</li>
-<li>Conversions from lightuserdata to <tt>void&nbsp;*</tt>.</li>
+<li>Bitfield initializations.</li>
 <li>Pointer differences for element sizes that are not a power of
 two.</li>
 <li>Calls to C&nbsp;functions with aggregates passed or returned by

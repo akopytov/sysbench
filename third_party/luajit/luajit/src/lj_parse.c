@@ -1282,12 +1282,14 @@ static void fscope_end(FuncState *fs)
       MSize idx = gola_new(ls, NAME_BREAK, VSTACK_LABEL, fs->pc);
       ls->vtop = idx;  /* Drop break label immediately. */
       gola_resolve(ls, bl, idx);
+    } else {  /* Need the fixup step to propagate the breaks. */
+      gola_fixup(ls, bl);
       return;
-    }  /* else: need the fixup step to propagate the breaks. */
-  } else if (!(bl->flags & FSCOPE_GOLA)) {
-    return;
+    }
   }
-  gola_fixup(ls, bl);
+  if ((bl->flags & FSCOPE_GOLA)) {
+    gola_fixup(ls, bl);
+  }
 }
 
 /* Mark scope as having an upvalue. */

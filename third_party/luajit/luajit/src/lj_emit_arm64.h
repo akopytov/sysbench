@@ -140,7 +140,7 @@ static void emit_lso(ASMState *as, A64Ins ai, Reg rd, Reg rn, int64_t ofs)
     } else {
       goto nopair;
     }
-    if (ofsm >= (-64<<sc) && ofsm <= (63<<sc)) {
+    if (ofsm >= (int)((unsigned int)-64<<sc) && ofsm <= (63<<sc)) {
       *as->mcp = aip | A64F_N(rn) | ((ofsm >> sc) << 15) |
 	(ai ^ ((ai == A64I_LDRx || ai == A64I_STRx) ? 0x50000000 : 0x90000000));
       return;
