@@ -569,14 +569,15 @@ else
 	GZIP_SUFFIX=".gz"
 fi
 
-printf "Finding suitable compiler........"
-if test ! -x "${CC}"; then
+printf "Finding suitable compiler........${CC:-cc}"
+if test -z "${CC}"; then
 	CC=`pathsearch "${CC:-cc}"`
 	if test -z "$CC" -o ! -x "$CC"; then
 		CC=`pathsearch "${CC:-gcc}"`
 	fi
 fi
 assert "$CC" "not found"
+printf "Found suitable compiler........${CC}"
 
 cat << EOF > .1.c
 #include <stdio.h>
