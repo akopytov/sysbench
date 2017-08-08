@@ -25,7 +25,7 @@ $(builddir)/lib/libluajit-5.1.a:
 	mkdir tmp
 	tar -C $(srcdir) -cf - luajit | tar -xf - -C tmp/
 	chmod -R u+w tmp
-	$(MAKE) -C tmp/luajit \
+	CC="$(CC)" LDFLAGS="$(LDFLAGS)" $(MAKE) -C tmp/luajit \
                 PREFIX=$(abs_top_builddir)/third_party/luajit \
                 INSTALL_INC=$(abs_top_builddir)/third_party/luajit/inc \
                 install
