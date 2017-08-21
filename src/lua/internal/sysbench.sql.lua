@@ -56,7 +56,7 @@ typedef struct
   sql_value       *values;     /* Array of column values */
 } sql_row;
 
-/* Query type for statistics */
+/* Statistic counter types */
 
 typedef enum
 {
@@ -66,6 +66,8 @@ typedef enum
   SB_CNT_TRX,
   SB_CNT_ERROR,
   SB_CNT_RECONNECT,
+  SB_CNT_BYTES_READ,
+  SB_CNT_BYTES_WRITTEN,
   SB_CNT_MAX
 } sb_counter_type;
 

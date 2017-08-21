@@ -211,12 +211,14 @@ static void report_get_common_stat(sb_stat_t *stat, sb_counters_t cnt)
 
   stat->threads_running = sb_globals.threads_running;
 
-  stat->events     = cnt[SB_CNT_EVENT];
-  stat->reads      = cnt[SB_CNT_READ];
-  stat->writes     = cnt[SB_CNT_WRITE];
-  stat->other      = cnt[SB_CNT_OTHER];
-  stat->errors     = cnt[SB_CNT_ERROR];
-  stat->reconnects = cnt[SB_CNT_RECONNECT];
+  stat->events =        cnt[SB_CNT_EVENT];
+  stat->reads =         cnt[SB_CNT_READ];
+  stat->writes =        cnt[SB_CNT_WRITE];
+  stat->other =         cnt[SB_CNT_OTHER];
+  stat->errors =        cnt[SB_CNT_ERROR];
+  stat->reconnects =    cnt[SB_CNT_RECONNECT];
+  stat->bytes_read =    cnt[SB_CNT_BYTES_READ];
+  stat->bytes_written = cnt[SB_CNT_BYTES_WRITTEN];
 
   stat->time_total = NS2SEC(sb_timer_value(&sb_exec_timer)) -
     sb_globals.warmup_time;

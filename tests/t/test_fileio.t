@@ -64,7 +64,7 @@ fileio benchmark tests
   
   Throughput:
       read, MiB/s:                  *.* (glob)
-      written, MiB/s:               *.* (glob)
+      write, MiB/s:                 *.* (glob)
   
   General statistics:
       total time:                          *.*s (glob)
@@ -111,7 +111,7 @@ fileio benchmark tests
   
   Throughput:
       read, MiB/s:                  *.* (glob)
-      written, MiB/s:               0.00
+      write, MiB/s:                 0.00
   
   General statistics:
       total time:                          *.*s (glob)
@@ -157,7 +157,7 @@ fileio benchmark tests
   
   Throughput:
       read, MiB/s:                  *.* (glob)
-      written, MiB/s:               0.00
+      write, MiB/s:                 0.00
   
   General statistics:
       total time:                          *.*s (glob)
@@ -205,7 +205,7 @@ fileio benchmark tests
   
   Throughput:
       read, MiB/s:                  0.00
-      written, MiB/s:               *.* (glob)
+      write, MiB/s:                 *.* (glob)
   
   General statistics:
       total time:                          *.*s (glob)

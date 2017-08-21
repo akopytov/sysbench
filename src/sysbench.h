@@ -105,6 +105,9 @@ typedef struct {
   uint64_t errors;              /* Number of ignored errors */
   uint64_t reconnects;          /* Number of reconnects to server */
 
+  uint64_t bytes_read;          /* Bytes read */
+  uint64_t bytes_written;       /* Bytes written */
+
   uint64_t queue_length;        /* Event queue length (tx_rate-only) */
   uint64_t concurrency;         /* Number of in-flight events (tx_rate-only) */
 } sb_stat_t;

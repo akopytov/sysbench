@@ -63,6 +63,7 @@
 #include "sb_histogram.h"
 #include "sb_rand.h"
 #include "sb_util.h"
+#include "sb_counter.h"
 
 /* Lengths of the checksum and the offset fields in a block */
 #define FILE_CHECKSUM_LENGTH sizeof(int)
@@ -161,7 +162,7 @@ static int               file_fsync_freq;
 static int               file_fsync_all;
 static int               file_fsync_end;
 static file_fsync_mode_t file_fsync_mode;
-static float             file_rw_ratio;
+static double            file_rw_ratio;
 static int               file_merged_requests;
 static long long         file_max_request_size;
 static file_io_mode_t    file_io_mode;
@@ -176,15 +177,7 @@ static unsigned int    fsynced_file;  /* file number to be fsynced (periodic) */
 static unsigned int    fsynced_file2; /* fsyncing in the end */
 
 static int is_dirty;               /* any writes after last fsync series ? */
-static int read_ops;
-static int write_ops;
-static int other_ops;
-static int last_other_ops;
 static unsigned int req_performed; /* number of requests done */
-static unsigned long long bytes_read;
-static unsigned long long last_bytes_read;
-static unsigned long long bytes_written;
-static unsigned long long last_bytes_written;
 
 static const double megabyte = 1024.0 * 1024.0;
 
@@ -285,7 +278,6 @@ static sb_test_t fileio_test =
 static int create_files(void);
 static int remove_files(void);
 static int parse_arguments(void);
-static void clear_stats(void);
 static void init_vars(void);
 static sb_event_t file_get_seq_request(void);
 static sb_event_t file_get_rnd_request(int thread_id);
@@ -342,7 +334,6 @@ int file_init(void)
 #endif
 
   init_vars();
-  clear_stats();
 
   /* Use our own limit on the number of events */
   max_events = sb_globals.max_events;
@@ -551,19 +542,15 @@ sb_event_t file_get_rnd_request(int thread_id)
   unsigned int         i;
 
   sb_req.type = SB_REQ_TYPE_FILE;
-  SB_THREAD_MUTEX_LOCK(); 
-  
-  /*
-    Convert mode for combined tests. Locking to get consistent values
-    We have to use "real" values for mixed test  
-  */
-  if (test_mode==MODE_RND_RW)
+
+  if (test_mode == MODE_RND_RW)
   {
-    if ((double)(read_ops + 1) / (write_ops + 1) < file_rw_ratio)
-      mode=MODE_RND_READ;
-    else
-      mode=MODE_RND_WRITE;
+    mode = (sb_counter_val(thread_id, SB_CNT_READ) + 1.0) /
+        (sb_counter_val(thread_id, SB_CNT_WRITE) + 1.0) < file_rw_ratio ?
+      MODE_RND_READ : MODE_RND_WRITE;
   }
+
+  SB_THREAD_MUTEX_LOCK();
 
   /* fsync all files (if requested by user) as soon as we are done */
   if (max_events > 0 && req_performed >= max_events)
@@ -709,18 +696,14 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
           return 1;
         }
 
-        SB_THREAD_MUTEX_LOCK();
-        other_ops++;
-        SB_THREAD_MUTEX_UNLOCK();
+        sb_counter_inc(thread_id, SB_CNT_OTHER);
       }
 
       /* In async mode stats will me updated on AIO requests completion */
       if (file_io_mode != FILE_IO_MODE_ASYNC)
       {
-        SB_THREAD_MUTEX_LOCK();
-        write_ops++;
-        bytes_written += file_req->size;
-        SB_THREAD_MUTEX_UNLOCK();
+        sb_counter_inc(thread_id, SB_CNT_WRITE);
+        sb_counter_add(thread_id, SB_CNT_BYTES_WRITTEN, file_req->size);
       }
 
       break;
@@ -747,10 +730,8 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
       /* In async mode stats will me updated on AIO requests completion */
       if(file_io_mode != FILE_IO_MODE_ASYNC)
       {
-        SB_THREAD_MUTEX_LOCK();
-        read_ops++;
-        bytes_read += file_req->size;
-        SB_THREAD_MUTEX_UNLOCK();
+        sb_counter_inc(thread_id, SB_CNT_READ);
+        sb_counter_add(thread_id, SB_CNT_BYTES_READ, file_req->size);
       }
 
       break;
@@ -767,13 +748,9 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
 
       /* In async mode stats will me updated on AIO requests completion */
       if(file_io_mode != FILE_IO_MODE_ASYNC)
-      {
-        SB_THREAD_MUTEX_LOCK();
-        other_ops++;
-        SB_THREAD_MUTEX_UNLOCK();
-      }
+        sb_counter_inc(thread_id, SB_CNT_OTHER);
 
-      break;         
+      break;
     default:
       log_text(LOG_FATAL, "Execute of UNKNOWN file request type called (%d)!, "
                "aborting", file_req->operation);
@@ -835,68 +812,42 @@ void file_print_mode(void)
   log_text(LOG_NOTICE, "Doing %s test", get_test_mode_str(test_mode));
 }
 
-/*
-  Print intermediate test statistics.
-
-  TODO: remove the mutex, use sb_stat_t and sb_counter_t.
-*/
+/* Print intermediate test statistics. */
 
 void file_report_intermediate(sb_stat_t *stat)
 {
-  unsigned long long diff_read;
-  unsigned long long diff_written;
-  unsigned long long diff_other_ops;
-
-  SB_THREAD_MUTEX_LOCK();
-
-  diff_read = bytes_read - last_bytes_read;
-  diff_written = bytes_written - last_bytes_written;
-  diff_other_ops = other_ops - last_other_ops;
-
-  last_bytes_read = bytes_read;
-  last_bytes_written = bytes_written;
-  last_other_ops = other_ops;
-
-  SB_THREAD_MUTEX_UNLOCK();
+  const double seconds = stat->time_interval;
 
   log_timestamp(LOG_NOTICE, stat->time_total,
                 "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "
                 "latency (ms,%u%%): %4.3f",
-                diff_read / megabyte / stat->time_interval,
-                diff_written / megabyte / stat->time_interval,
-                diff_other_ops / stat->time_interval,
+                stat->bytes_read / megabyte / seconds,
+                stat->bytes_written / megabyte / seconds,
+                stat->other / seconds,
                 sb_globals.percentile,
                 SEC2MS(stat->latency_pct));
 }
 
-/*
-  Print cumulative test statistics.
-
-  TODO: remove the mutex, use sb_stat_t and sb_counter_t.
-*/
+/* Print cumulative test statistics. */
 
 void file_report_cumulative(sb_stat_t *stat)
 {
   const double seconds = stat->time_interval;
 
-  SB_THREAD_MUTEX_LOCK();
-
   log_text(LOG_NOTICE, "\n"
-           "File operations:\n"
+           "File operations:"
+           "\n"
            "    reads/s:                      %4.2f\n"
            "    writes/s:                     %4.2f\n"
            "    fsyncs/s:                     %4.2f\n"
            "\n"
-           "Throughput:\n"
+           "Throughput:"
+           "\n"
            "    read, MiB/s:                  %4.2f\n"
-           "    written, MiB/s:               %4.2f",
-           read_ops / seconds, write_ops / seconds, other_ops / seconds,
-           bytes_read / megabyte / seconds,
-           bytes_written / megabyte / seconds);
-
-  clear_stats();
-
-  SB_THREAD_MUTEX_UNLOCK();
+           "    write, MiB/s:                 %4.2f",
+           stat->reads / seconds, stat->writes / seconds, stat->other / seconds,
+           stat->bytes_read / megabyte / seconds,
+           stat->bytes_written / megabyte / seconds);
 
   sb_report_cumulative(stat);
 }
@@ -1160,19 +1111,6 @@ void init_vars(void)
   }
 }
 
-void clear_stats(void)
-{
-  read_ops = 0;
-  write_ops = 0;
-  other_ops = 0;
-  last_other_ops = 0;
-  bytes_read = 0;
-  last_bytes_read = 0;
-  bytes_written = 0;
-  last_bytes_written = 0;
-}
-
-
 #ifdef HAVE_LIBAIO
 /* Allocate async contexts pool */
 
@@ -1327,9 +1265,7 @@ int file_wait(int thread_id, long nreq)
           return 1;
         }
 
-        SB_THREAD_MUTEX_LOCK();
-        other_ops++;
-        SB_THREAD_MUTEX_UNLOCK();
+        sb_counter_inc(thread_id, SB_CNT_OTHER);
 
         break;
 
@@ -1340,10 +1276,8 @@ int file_wait(int thread_id, long nreq)
           return 1;
         }
 
-        SB_THREAD_MUTEX_LOCK();
-        read_ops++;
-        bytes_read += oper->len;
-        SB_THREAD_MUTEX_UNLOCK();
+        sb_counter_inc(thread_id, SB_CNT_READ);
+        sb_counter_add(thread_id, SB_CNT_BYTES_READ, oper->len);
 
         break;
 
@@ -1354,10 +1288,8 @@ int file_wait(int thread_id, long nreq)
           return 1;
         }
 
-        SB_THREAD_MUTEX_LOCK();
-        write_ops++;
-        bytes_written += oper->len;
-        SB_THREAD_MUTEX_UNLOCK();
+        sb_counter_inc(thread_id, SB_CNT_WRITE);
+        sb_counter_add(thread_id, SB_CNT_BYTES_READ, oper->len);
 
         break;
 
