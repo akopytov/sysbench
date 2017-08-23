@@ -69,8 +69,8 @@
   
   
   General statistics:
-      total time:                          3.*s (glob)
-      total number of events:              3
+      total time:                          5.*s (glob)
+      total number of events:              5
   
   Latency (ms):
            min: * (glob)
