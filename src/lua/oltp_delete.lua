@@ -22,9 +22,13 @@
 require("oltp_common")
 
 function prepare_statements()
-   prepare_delete_inserts()
+   prepare_for_each_table("deletes")
 end
 
 function event()
-   execute_delete_inserts()
+   local tnum = sysbench.rand.uniform(1, sysbench.opt.tables)
+   local id = sysbench.rand.default(1, sysbench.opt.table_size)
+
+   param[tnum].deletes[1]:set(id)
+   stmt[tnum].deletes:execute()
 end

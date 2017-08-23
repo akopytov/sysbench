@@ -1,9 +1,9 @@
 ########################################################################
-oltp_insert.lua + MySQL tests
+oltp_delete.lua + MySQL tests 
 ########################################################################
 
   $ . $SBTEST_INCDIR/mysql_common.sh
-  $ OLTP_SCRIPT_PATH=${SBTEST_SCRIPTDIR}/oltp_insert.lua
+  $ OLTP_SCRIPT_PATH=${SBTEST_SCRIPTDIR}/oltp_delete.lua
   $ . $SBTEST_INCDIR/script_oltp_common.sh
   sysbench *.* * (glob)
   
@@ -114,14 +114,14 @@ oltp_insert.lua + MySQL tests
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest9' doesn't exist
   sysbench * (glob)
   
-  Preloading table sbtest1
-  Preloading table sbtest2
-  Preloading table sbtest3
-  Preloading table sbtest4
-  Preloading table sbtest5
-  Preloading table sbtest6
-  Preloading table sbtest7
-  Preloading table sbtest8
+  Prewarming table sbtest1
+  Prewarming table sbtest2
+  Prewarming table sbtest3
+  Prewarming table sbtest4
+  Prewarming table sbtest5
+  Prewarming table sbtest6
+  Prewarming table sbtest7
+  Prewarming table sbtest8
   sysbench *.* * (glob)
   
   Running the test with following options:
@@ -136,8 +136,8 @@ oltp_insert.lua + MySQL tests
   SQL statistics:
       queries performed:
           read:                            0
-          write:                           100
-          other:                           0
+          write:                           * (glob)
+          other:                           * (glob)
           total:                           100
       transactions:                        100    (* per sec.) (glob)
       queries:                             100    (* per sec.) (glob)
