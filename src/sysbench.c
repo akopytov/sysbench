@@ -720,8 +720,8 @@ bool sb_more_events(int thread_id)
   }
 
   /* Check if we have a limit on the number of events */
-  if (sb_globals.max_events > 0 &&
-      ck_pr_faa_64(&sb_globals.nevents, 1) >= sb_globals.max_events)
+  const uint64_t max_events = ck_pr_load_64(&sb_globals.max_events);
+  if (max_events > 0 && ck_pr_faa_64(&sb_globals.nevents, 1) >= max_events)
     return false;
 
   /* If we are in tx_rate mode, we take events from queue */
@@ -1055,6 +1055,7 @@ static int run_test(sb_test_t *test)
   pthread_t    checkpoints_thread;
   pthread_t    eventgen_thread;
   unsigned int barrier_threads;
+  uint64_t     old_max_events;
 
   /* initialize test */
   if (test->ops.init != NULL && test->ops.init() != 0)
@@ -1147,6 +1148,13 @@ static int run_test(sb_test_t *test)
   alarm(thread_init_timeout);
 #endif
 
+  if (sb_globals.warmup_time > 0)
+  {
+    /* Disable the max_events limit for the warmup stage */
+    old_max_events = sb_globals.max_events;
+    sb_globals.max_events = 0;
+  }
+
   if (sb_barrier_wait(&worker_barrier) < 0)
   {
     log_text(LOG_FATAL, "Threads initialization failed!");
@@ -1167,9 +1175,13 @@ static int run_test(sb_test_t *test)
 
   if (sb_globals.warmup_time > 0)
   {
-    log_text(LOG_NOTICE, "Warming up for %d seconds...\n", sb_globals.warmup_time);
+    log_text(LOG_NOTICE, "Warming up for %d seconds...\n",
+             sb_globals.warmup_time);
 
     usleep(sb_globals.warmup_time * 1000000);
+
+    /* Re-enable the max_events limit, if it was set */
+    ck_pr_store_64(&sb_globals.max_events, old_max_events);
 
     /* Perform a checkpoint to reset previously collected stats */
     sb_stat_t stat;
