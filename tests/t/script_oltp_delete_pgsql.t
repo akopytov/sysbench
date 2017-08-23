@@ -1,9 +1,9 @@
 ########################################################################
-oltp_insert.lua + PostgreSQL tests
+oltp_delete.lua + PostgreSQL tests 
 ########################################################################
 
   $ . $SBTEST_INCDIR/pgsql_common.sh
-  $ OLTP_SCRIPT_PATH=${SBTEST_SCRIPTDIR}/oltp_insert.lua
+  $ OLTP_SCRIPT_PATH=${SBTEST_SCRIPTDIR}/oltp_delete.lua
   $ . $SBTEST_INCDIR/script_oltp_common.sh
   sysbench *.* * (glob)
   
@@ -137,8 +137,8 @@ oltp_insert.lua + PostgreSQL tests
   SQL statistics:
       queries performed:
           read:                            0
-          write:                           100
-          other:                           0
+          write:                           * (glob)
+          other:                           * (glob)
           total:                           100
       transactions:                        100    (* per sec.) (glob)
       queries:                             100    (* per sec.) (glob)
