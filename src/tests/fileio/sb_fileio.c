@@ -1289,7 +1289,7 @@ int file_wait(int thread_id, long nreq)
         }
 
         sb_counter_inc(thread_id, SB_CNT_WRITE);
-        sb_counter_add(thread_id, SB_CNT_BYTES_READ, oper->len);
+        sb_counter_add(thread_id, SB_CNT_BYTES_WRITTEN, oper->len);
 
         break;
 
