@@ -1055,7 +1055,7 @@ static int run_test(sb_test_t *test)
   pthread_t    checkpoints_thread;
   pthread_t    eventgen_thread;
   unsigned int barrier_threads;
-  uint64_t     old_max_events;
+  uint64_t     old_max_events = 0;
 
   /* initialize test */
   if (test->ops.init != NULL && test->ops.init() != 0)
