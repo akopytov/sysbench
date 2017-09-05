@@ -1,3 +1,14 @@
+2017-09-05  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.9
+	* fixed oltp_delete.lua to not use INSERT statements for
+	consistency with other oltp_* benchmarks (GH-168)
+	* added a workaround for MySQL bug #87337 "8.0.2 reintroduces
+	my_bool to client API"
+	* fixed building on on Debian GNU/kFreeBSD (GH-161)
+	* fixed building against MariaDB 10.2 (thanks to Xavier Bachelot
+	for the patch, GH-160)
+
 2017-07-04  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.8
