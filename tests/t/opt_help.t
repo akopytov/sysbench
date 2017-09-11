@@ -34,12 +34,13 @@ separately.
     --num-threads=N                 deprecated alias for --threads [1]
   
   Pseudo-Random Numbers Generator options:
-    --rand-type=STRING random numbers distribution {uniform,gaussian,special,pareto} [special]
-    --rand-spec-iter=N number of iterations used for numbers generation [12]
-    --rand-spec-pct=N  percentage of values to be treated as 'special' (for special distribution) [1]
-    --rand-spec-res=N  percentage of 'special' values to use (for special distribution) [75]
-    --rand-seed=N      seed for random number generator. When 0, the current time is used as a RNG seed. [0]
-    --rand-pareto-h=N  parameter h for pareto distribution [0.2]
+    --rand-type=STRING   random numbers distribution {uniform, gaussian, special, pareto, zipfian} to use by default [special]
+    --rand-seed=N        seed for random number generator. When 0, the current time is used as an RNG seed. [0]
+    --rand-spec-iter=N   number of iterations for the special distribution [12]
+    --rand-spec-pct=N    percentage of the entire range where 'special' values will fall in the special distribution [1]
+    --rand-spec-res=N    percentage of 'special' values to use for the special distribution [75]
+    --rand-pareto-h=N    shape parameter for the Pareto distribution [0.2]
+    --rand-zipfian-exp=N shape parameter (exponent, theta) for the Zipfian distribution [0.8]
   
   Log options:
     --verbosity=N verbosity level {5 - debug, 0 - only critical messages} [3]

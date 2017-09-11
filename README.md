@@ -25,6 +25,7 @@
 - [Usage](#usage)
     - [General syntax](#general-syntax)
     - [General command line options](#general-command-line-options)
+    - [Random numbers options](#random-numbers-options)
 
 <!-- markdown-toc end -->
 
@@ -258,6 +259,20 @@ The table below lists the supported common options, their descriptions and defau
 | `--luajit-cmd`        | perform a LuaJIT control command. This option is equivalent to `luajit -j`. See [LuaJIT documentation](http://luajit.org/running.html) for more information                                                                                                                                                                                                                                                                                                             |               |
 
 Note that numerical values for all *size* options (like `--thread-stack-size` in this table) may be specified by appending the corresponding multiplicative suffix (K for kilobytes, M for megabytes, G for gigabytes and T for terabytes).
+
+## Random numbers options
+
+sysbench provides a number of algorithms to generate random numbers that are distributed according to a given probability distribution. The table below lists options that can be used to control those algorithms.
+
+*Option*              | *Description* | *Default value*
+----------------------|---------------|----------------
+`--rand-type` | random numbers distribution {uniform, gaussian, special, pareto, zipfian} to use by default. Benchmark scripts may choose to use either the default distribution, or specify it explictly, i.e. override the default. | special
+`--rand-seed` | seed for random number generator. When 0, the current time is used as an RNG seed. | 0
+`--rand-spec-iter` | number of iterations for the special distribution | 12
+`--rand-spec-pct` | percentage of the entire range where 'special' values will fall in the special distribution | 1
+`--rand-spec-res` | percentage of 'special' values to use for the special distribution | 75
+`--rand-pareto-h` | shape parameter for the Pareto distribution | 0.2
+`--rand-zipfian-exp` | shape parameter (theta) for the Zipfian distribution | 0.8`
 
 [coveralls-badge]: https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/akopytov/sysbench?branch=master
