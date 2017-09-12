@@ -29,7 +29,8 @@ typedef enum
   DIST_TYPE_UNIFORM,
   DIST_TYPE_GAUSSIAN,
   DIST_TYPE_SPECIAL,
-  DIST_TYPE_PARETO
+  DIST_TYPE_PARETO,
+  DIST_TYPE_ZIPFIAN
 } rand_dist_t;
 
 typedef uint64_t sb_rng_state_t [2];
@@ -67,6 +68,7 @@ uint32_t sb_rand_uniform(uint32_t, uint32_t);
 uint32_t sb_rand_gaussian(uint32_t, uint32_t);
 uint32_t sb_rand_special(uint32_t, uint32_t);
 uint32_t sb_rand_pareto(uint32_t, uint32_t);
+uint32_t sb_rand_zipfian(uint32_t, uint32_t);
 uint32_t sb_rand_unique(void);
 void sb_rand_str(const char *, char *);
 

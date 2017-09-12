@@ -28,7 +28,7 @@ Legacy PRNG Lua API tests
   sb_rand_special\(0, 9\) = [0-9]{1} (re)
 
 ########################################################################
-issue #96: sb_rand_uniq(1, oltp_table_size) generate duplicate value
+GH-96: sb_rand_uniq(1, oltp_table_size) generate duplicate value
 ########################################################################
   $ cat >$CRAMTMP/api_rand_uniq.lua <<EOF
   > function event()

@@ -5,37 +5,52 @@ PRNG Lua API tests
   $ SB_ARGS="--verbosity=0 --events=1"
 
   $ cat >$CRAMTMP/api_rand.lua <<EOF
+  > ffi.cdef[[int printf(const char *fmt, ...);]]
+  > function init()
+  >   for k, v in pairs(sysbench.rand) do
+  >     print(string.format("sysbench.rand.%s", k))
+  >   end
+  > end
   > function event()
-  >   print("sb_rand(0, 9) = " .. sb_rand(0, 9))
-  >   print("sb_rand_uniq(0, 4294967295) = " .. sb_rand_uniq(0, 4294967295))
-  >   print("sb_rnd() = " .. sb_rnd())
-  >   print([[sb_rand_str("abc-###-@@@-xyz") = ]] .. sb_rand_str("abc-###-@@@-xyz"))
-  >   print("sb_rand_uniform(0, 9) = " .. sb_rand_uniform(0, 9))
-  >   print("sb_rand_gaussian(0, 9) = " .. sb_rand_gaussian(0, 9))
-  >   print("sb_rand_special(0, 9) = " .. sb_rand_special(0, 9))
+  >   print("sysbench.rand.default(0, 99) = " .. sysbench.rand.default(0, 99))
+  >   print("sysbench.rand.unique(0, 4294967295) = " .. sysbench.rand.unique(0, 4294967295))
+  >   ffi.C.printf("sysbench.rand.uniform_uint64() = %llu\n", sysbench.rand.uniform_uint64())
+  >   print([[sysbench.rand.string("abc-###-@@@-xyz") = ]] .. sysbench.rand.string("abc-###-@@@-xyz"))
+  >   print("sysbench.rand.uniform(0, 99) = " .. sysbench.rand.uniform(0, 99))
+  >   print("sysbench.rand.gaussian(0, 99) = " .. sysbench.rand.gaussian(0, 99))
+  >   print("sysbench.rand.special(0, 99) = " .. sysbench.rand.special(0, 99))
+  >   print("sysbench.rand.pareto(0, 99) = " .. sysbench.rand.pareto(0, 99))
+  >   print("sysbench.rand.zipfian(0, 99) = " .. sysbench.rand.zipfian(0, 99))
   > end
   > EOF
 
   $ sysbench $SB_ARGS $CRAMTMP/api_rand.lua run
-  sb_rand\(0, 9\) = [0-9]{1} (re)
-  sb_rand_uniq\(0, 4294967295\) = [0-9]{1,10} (re)
-  sb_rnd\(\) = [0-9]+ (re)
-  sb_rand_str\(".*"\) = abc-[0-9]{3}-[a-z]{3}-xyz (re)
-  sb_rand_uniform\(0, 9\) = [0-9]{1} (re)
-  sb_rand_gaussian\(0, 9\) = [0-9]{1} (re)
-  sb_rand_special\(0, 9\) = [0-9]{1} (re)
+  sysbench.rand.uniform
+  sysbench.rand.special
+  sysbench.rand.zipfian
+  sysbench.rand.unique
+  sysbench.rand.gaussian
+  sysbench.rand.uniform_uint64
+  sysbench.rand.uniform_double
+  sysbench.rand.pareto
+  sysbench.rand.string
+  sysbench.rand.default
+  sysbench.rand.default\(0, 99\) = [0-9]{1,2} (re)
+  sysbench.rand.unique\(0, 4294967295\) = [0-9]{1,10} (re)
+  sysbench.rand.uniform_uint64\(\) = [0-9]+ (re)
+  sysbench.rand.string\(".*"\) = abc-[0-9]{3}-[a-z]{3}-xyz (re)
+  sysbench.rand.uniform\(0, 99\) = [0-9]{1,2} (re)
+  sysbench.rand.gaussian\(0, 99\) = [0-9]{1,2} (re)
+  sysbench.rand.special\(0, 99\) = [0-9]{1,2} (re)
+  sysbench.rand.pareto\(0, 99\) = [0-9]{1,2} (re)
+  sysbench.rand.zipfian\(0, 99\) = [0-9]{1,2} (re)
 
 ########################################################################
-issue #96: sb_rand_uniq(1, oltp_table_size) generate duplicate value
+GH-96: sb_rand_uniq(1, oltp_table_size) generate duplicate value
 ########################################################################
   $ cat >$CRAMTMP/api_rand_uniq.lua <<EOF
   > function event()
-  >   local max = 1000000000
-  >   local n = sb_rand_uniq(1, max)
-  >   if n > max then
-  >     error("n is out of range")
-  >   end
-  >   print(n)
+  >   print(sysbench.rand.unique())
   > end
   > EOF
 
