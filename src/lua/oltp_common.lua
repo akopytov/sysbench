@@ -198,8 +198,10 @@ CREATE TABLE sbtest%d(
 
    con:query(query)
 
-   print(string.format("Inserting %d records into 'sbtest%d'",
-                       sysbench.opt.table_size, table_num))
+   if (sysbench.opt.table_size > 0) then
+      print(string.format("Inserting %d records into 'sbtest%d'",
+                          sysbench.opt.table_size, table_num))
+   end
 
    if sysbench.opt.auto_inc then
       query = "INSERT INTO sbtest" .. table_num .. "(k, c, pad) VALUES"
