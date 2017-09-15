@@ -109,9 +109,7 @@ Command line options tests
   >   ["dash-opt"] = {"dash-opt desc", "dash-opt val"}
   > }
   > 
-  > function help()
-  >    print("Available options:")
-  >    sysbench.cmdline.print_test_options()
+  > function print_opt_table()
   >    local o = sysbench.opt
   >    print(o.str_opt1)
   >    print(o.str_opt2)
@@ -126,6 +124,39 @@ Command line options tests
   >    print(o.list_opt1)
   >    print(o.list_opt2)
   >    print(o.dash_opt)
+  >    print()
+  > end
+  > 
+  > function help()
+  >    print("function help()")
+  >    print("Available options:")
+  >    sysbench.cmdline.print_test_options()
+  >    print_opt_table()
+  > end
+  > 
+  > function init()
+  >   print("function init()")
+  >   print_opt_table()
+  > end
+  > 
+  > function thread_init()
+  >   print("function thread_init()")
+  >   print_opt_table()
+  > end
+  > 
+  > function event()
+  >   print("function event()")
+  >   print_opt_table()
+  > end
+  > 
+  > function thread_done()
+  >   print("function thread_done()")
+  >   print_opt_table()
+  > end
+  > 
+  > function done()
+  >   print("function done()")
+  >   print_opt_table()
   > end
   > EOF
 
@@ -135,6 +166,7 @@ Command line options tests
   $ sysbench cmdline.lua help
   sysbench * (glob)
   
+  function help()
   Available options:
     --dash-opt=STRING      dash-opt desc [dash-opt val]
     --str_opt1=STRING      str_opt1 description
@@ -164,7 +196,7 @@ Command line options tests
   table: 0x* (glob)
   table: 0x* (glob)
   dash-opt val
-
+  
   $ sysbench cmdline.lua prepare
   sysbench * (glob)
   
@@ -177,11 +209,109 @@ Command line options tests
   invalid option: --non-existing-option=3
   [1]
 
-  $ sysbench cmdline.lua run
+  $ sysbench cmdline.lua --events=1 run
   sysbench * (glob)
   
-  FATAL: cannot find the event() function in cmdline.lua
-  [1]
+  function init()
+  
+  opt2
+  opt3
+  false
+  true
+  true
+  10
+  0
+  3.14
+  0.2
+  table: 0x* (glob)
+  table: 0x* (glob)
+  dash-opt val
+  
+  Running the test with following options:
+  Number of threads: 1
+  Initializing random number generator from current time
+  
+  
+  Initializing worker threads...
+  
+  function thread_init()
+  
+  opt2
+  opt3
+  false
+  true
+  true
+  10
+  0
+  3.14
+  0.2
+  table: 0x* (glob)
+  table: 0x* (glob)
+  dash-opt val
+  
+  Threads started!
+  
+  function event()
+  
+  opt2
+  opt3
+  false
+  true
+  true
+  10
+  0
+  3.14
+  0.2
+  table: 0x* (glob)
+  table: 0x* (glob)
+  dash-opt val
+  
+  function thread_done()
+  
+  opt2
+  opt3
+  false
+  true
+  true
+  10
+  0
+  3.14
+  0.2
+  table: 0x* (glob)
+  table: 0x* (glob)
+  dash-opt val
+  
+  
+  General statistics:
+      total time:                          *s (glob)
+      total number of events:              1
+  
+  Latency (ms):
+           min:                                  * (glob)
+           avg:                                  * (glob)
+           max:                                  * (glob)
+           95th percentile:                      * (glob)
+           sum:                                  * (glob)
+  
+  Threads fairness:
+      events (avg/stddev):           1.0000/0.00
+      execution time (avg/stddev):   */0.00 (glob)
+  
+  function done()
+  
+  opt2
+  opt3
+  false
+  true
+  true
+  10
+  0
+  3.14
+  0.2
+  table: 0x* (glob)
+  table: 0x* (glob)
+  dash-opt val
+  
 
   $ sysbench cmdline.lua cleanup
   sysbench * (glob)

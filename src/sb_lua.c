@@ -413,6 +413,9 @@ void sb_lua_done(void)
 
 int sb_lua_op_init(void)
 {
+  if (export_options(gstate))
+      return 1;
+
   lua_getglobal(gstate, INIT_FUNC);
   if (!lua_isnil(gstate, -1))
   {
