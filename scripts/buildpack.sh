@@ -43,13 +43,14 @@ set -eu
 
 PACKAGECLOUD_USER=${PACKAGECLOUD_USER:-"akopytov"}
 PACKAGECLOUD_EXTRA_ARGS=${PACKAGECLOUD_EXTRA_ARGS:-}
-PACKPACK_REPO=${PACKPACK_REPO:-packpack/packpack}
+PACKPACK_REPO=${PACKPACK_REPO:-akopytov/packpack}
 
 distros_x86_64=(
     "el 6 x86_64"
     "el 7 x86_64"
     "fedora 24 x86_64"
     "fedora 25 x86_64"
+    "fedora 26 x86_64"
     "ubuntu precise x86_64"
     "ubuntu trusty x86_64"
     "ubuntu xenial x86_64"
