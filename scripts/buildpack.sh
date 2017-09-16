@@ -50,6 +50,7 @@ distros_x86_64=(
     "el 7 x86_64"
     "fedora 24 x86_64"
     "fedora 25 x86_64"
+    "fedora 26 x86_64"
     "ubuntu precise x86_64"
     "ubuntu trusty x86_64"
     "ubuntu xenial x86_64"
