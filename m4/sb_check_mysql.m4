@@ -114,29 +114,6 @@ AC_DEFINE([USE_MYSQL], 1,
 USE_MYSQL=1
 AC_SUBST([MYSQL_LIBS])
 AC_SUBST([MYSQL_CFLAGS])
-
-# Test if "#include <server/mysql_version.h>" works, see
-# https://jira.mariadb.org/browse/MDEV-13773
-AC_MSG_CHECKING([whether including <server/mysql_version.h> works])
-
-ac_save_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $MYSQL_CFLAGS"
-
-AC_PREPROC_IFELSE(
-  [AC_LANG_SOURCE(
-  [[
-    #include <server/mysql_version.h>
-  ]])],
-  [
-    AC_DEFINE([MARIADB_SERVER_INCLUDES_DIR], 1,
-              [Define to 1 if server/mysql_version.h exists (see MDEV-13773)])
-    AC_MSG_RESULT([yes])
-  ],
-  [
-    AC_MSG_RESULT([no])
-  ])
-
-CPPFLAGS="$ac_save_CPPFLAGS"
 ])
 
 AM_CONDITIONAL([USE_MYSQL], test "x$with_mysql" != xno)

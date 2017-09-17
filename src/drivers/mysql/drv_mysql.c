@@ -35,13 +35,6 @@
 #include <stdio.h>
 
 #include <mysql.h>
-
-#ifdef MARIADB_SERVER_INCLUDES_DIR
-# include <server/mysql_version.h>
-#else
-# include <mysql_version.h>
-#endif
-
 #include <mysqld_error.h>
 #include <errmsg.h>
 
@@ -56,8 +49,8 @@
 
 #define SAFESTR(s) ((s != NULL) ? (s) : "(null)")
 
-#if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 80001 && \
-  MYSQL_VERSION_ID != 80002 /* see https://bugs.mysql.com/?id=87337 */
+#if !defined(MARIADB_BASE_VERSION) && !defined(MARIADB_VERSION_ID) && \
+  MYSQL_VERSION_ID >= 80001 && MYSQL_VERSION_ID != 80002 /* see https://bugs.mysql.com/?id=87337 */
 typedef bool my_bool;
 #endif
 
