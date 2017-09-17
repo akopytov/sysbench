@@ -218,16 +218,7 @@ ACX_PTHREAD
 
 AC_CHECK_LIB(m, sqrt)
 
-AS_IF([test "x$with_mysql" != xno], [
-    AC_CHECK_MYSQLR([$with_mysql])
-    AC_DEFINE([USE_MYSQL], 1,
-              [Define to 1 if you want to compile with MySQL support])
-    USE_MYSQL=1
-    AC_SUBST([MYSQL_LIBS])
-    AC_SUBST([MYSQL_CFLAGS])
-])
-AM_CONDITIONAL([USE_MYSQL], test x$with_mysql != xno)
-AC_SUBST([USE_MYSQL])
+SB_CHECK_MYSQL
 
 AS_IF([test "x$with_drizzle" != xno], [
   AC_LIB_HAVE_LINKFLAGS(drizzle,,

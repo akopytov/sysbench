@@ -35,7 +35,13 @@
 #include <stdio.h>
 
 #include <mysql.h>
-#include <mysql_version.h>
+
+#ifdef MARIADB_SERVER_INCLUDES_DIR
+# include <server/mysql_version.h>
+#else
+# include <mysql_version.h>
+#endif
+
 #include <mysqld_error.h>
 #include <errmsg.h>
 
