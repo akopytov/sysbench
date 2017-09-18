@@ -43,8 +43,9 @@ bulk_insert.lua + MySQL tests
       ignored errors:                      0      (0.00 per sec.)
       reconnects:                          0      (0.00 per sec.)
   
-  General statistics:
-      total time:                          *s (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:                        *s (glob)
       total number of events:              100
   
   Latency (ms):
@@ -52,7 +53,6 @@ bulk_insert.lua + MySQL tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):* (glob)

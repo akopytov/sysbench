@@ -72,8 +72,9 @@
   
   event function
   
-  General statistics:
-      total time: *s (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:*s (glob)
       total number of events:              1
   
   Latency (ms):
@@ -81,7 +82,6 @@
            avg: *.* (glob)
            max: *.* (glob)
            95th percentile: *.* (glob)
-           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           1.0000/0.00
@@ -282,8 +282,9 @@ Command line options tests
   dash-opt val
   
   
-  General statistics:
-      total time:                          *s (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:                        *s (glob)
       total number of events:              1
   
   Latency (ms):
@@ -291,7 +292,6 @@ Command line options tests
            avg:                                  * (glob)
            max:                                  * (glob)
            95th percentile:                      * (glob)
-           sum:                                  * (glob)
   
   Threads fairness:
       events (avg/stddev):           1.0000/0.00

@@ -296,8 +296,10 @@ void sb_report_cumulative(sb_stat_t *stat)
   }
 
   log_text(LOG_NOTICE, "");
-  log_text(LOG_NOTICE, "General statistics:");
-  log_text(LOG_NOTICE, "    total time:                          %.4fs",
+  log_text(LOG_NOTICE, "Throughput:");
+  log_text(LOG_NOTICE, "    events/s (eps):                      %.4f",
+           stat->events / stat->time_interval);
+  log_text(LOG_NOTICE, "    time elapsed:                        %.4fs",
            stat->time_total);
   log_text(LOG_NOTICE, "    total number of events:              %" PRIu64,
            stat->events);
@@ -318,8 +320,6 @@ void sb_report_cumulative(sb_stat_t *stat)
   else
     log_text(LOG_NOTICE, "         percentile stats:               disabled");
 
-  log_text(LOG_NOTICE, "         sum:                            %10.2f",
-           SEC2MS(stat->latency_sum));
   log_text(LOG_NOTICE, "");
 
   /* Aggregate temporary timers copy */

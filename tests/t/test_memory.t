@@ -82,16 +82,16 @@ help' only on Linux.
   1024.00 MiB transferred (* MiB/sec) (glob)
   
   
-  General statistics:
-      total time:                          *s (glob)
-      total number of events:              262144 (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:                        *s (glob)
+      total number of events:              262144
   
   Latency (ms):
            min:                              *.* (glob)
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
@@ -124,16 +124,16 @@ help' only on Linux.
   1024.00 MiB transferred (* MiB/sec) (glob)
   
   
-  General statistics:
-      total time:                          *s (glob)
-      total number of events:              262144 (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:                        *s (glob)
+      total number of events:              262144
   
   Latency (ms):
            min:                              *.* (glob)
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
@@ -166,16 +166,16 @@ help' only on Linux.
   1024.00 MiB transferred (* MiB/sec) (glob)
   
   
-  General statistics:
-      total time:                          *s (glob)
-      total number of events:              262144 (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:                        *s (glob)
+      total number of events:              262144
   
   Latency (ms):
            min:                              *.* (glob)
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
@@ -208,16 +208,16 @@ help' only on Linux.
   1024.00 MiB transferred (* MiB/sec) (glob)
   
   
-  General statistics:
-      total time:                          *s (glob)
-      total number of events:              262144 (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:                        *s (glob)
+      total number of events:              262144
   
   Latency (ms):
            min:                              *.* (glob)
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)

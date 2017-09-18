@@ -148,8 +148,9 @@ oltp_read_write.lua + MySQL tests
       ignored errors:                      0      (* per sec.) (glob)
       reconnects:                          0      (* per sec.) (glob)
   
-  General statistics:
-      total time:                          *s (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:                        *s (glob)
       total number of events:              100
   
   Latency (ms):
@@ -157,7 +158,6 @@ oltp_read_write.lua + MySQL tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
@@ -345,8 +345,9 @@ oltp_read_write.lua + MySQL tests
       ignored errors:                      0      (* per sec.) (glob)
       reconnects:                          0      (* per sec.) (glob)
   
-  General statistics:
-      total time:                          *s (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:                        *s (glob)
       total number of events:              100
   
   Latency (ms):
@@ -354,7 +355,6 @@ oltp_read_write.lua + MySQL tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)

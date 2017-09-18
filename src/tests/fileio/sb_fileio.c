@@ -179,7 +179,8 @@ static unsigned int    fsynced_file2; /* fsyncing in the end */
 static int is_dirty;               /* any writes after last fsync series ? */
 static unsigned int req_performed; /* number of requests done */
 
-static const double megabyte = 1024.0 * 1024.0;
+static const double mebibyte = 1024 * 1024;
+static const double megabyte = 1000 * 1000;
 
 #ifdef HAVE_MMAP
 /* Array of file mappings */
@@ -821,8 +822,8 @@ void file_report_intermediate(sb_stat_t *stat)
   log_timestamp(LOG_NOTICE, stat->time_total,
                 "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "
                 "latency (ms,%u%%): %4.3f",
-                stat->bytes_read / megabyte / seconds,
-                stat->bytes_written / megabyte / seconds,
+                stat->bytes_read / mebibyte / seconds,
+                stat->bytes_written / mebibyte / seconds,
                 stat->other / seconds,
                 sb_globals.percentile,
                 SEC2MS(stat->latency_pct));
@@ -835,21 +836,36 @@ void file_report_cumulative(sb_stat_t *stat)
   const double seconds = stat->time_interval;
 
   log_text(LOG_NOTICE, "\n"
-           "File operations:"
-           "\n"
-           "    reads/s:                      %4.2f\n"
-           "    writes/s:                     %4.2f\n"
-           "    fsyncs/s:                     %4.2f\n"
-           "\n"
-           "Throughput:"
-           "\n"
-           "    read, MiB/s:                  %4.2f\n"
-           "    write, MiB/s:                 %4.2f",
-           stat->reads / seconds, stat->writes / seconds, stat->other / seconds,
+           "Throughput:\n"
+           "         read:  IOPS=%4.2f %4.2f MiB/s (%4.2f MB/s)\n"
+           "         write: IOPS=%4.2f %4.2f MiB/s (%4.2f MB/s)\n"
+           "         fsync: IOPS=%4.2f",
+           stat->reads / seconds,
+           stat->bytes_read / mebibyte / seconds,
            stat->bytes_read / megabyte / seconds,
-           stat->bytes_written / megabyte / seconds);
+           stat->writes / seconds,
+           stat->bytes_written / mebibyte / seconds,
+           stat->bytes_written / megabyte / seconds,
+           stat->other / seconds
+           );
 
-  sb_report_cumulative(stat);
+  log_text(LOG_NOTICE, "");
+
+  log_text(LOG_NOTICE, "Latency (ms):");
+  log_text(LOG_NOTICE, "         min:                            %10.2f",
+           SEC2MS(stat->latency_min));
+  log_text(LOG_NOTICE, "         avg:                            %10.2f",
+           SEC2MS(stat->latency_avg));
+  log_text(LOG_NOTICE, "         max:                            %10.2f",
+           SEC2MS(stat->latency_max));
+
+  if (sb_globals.percentile > 0)
+    log_text(LOG_NOTICE, "        %3dth percentile:                %10.2f",
+             sb_globals.percentile, SEC2MS(stat->latency_pct));
+  else
+    log_text(LOG_NOTICE, "         percentile stats:               disabled");
+
+  log_text(LOG_NOTICE, "");
 }
 
 /* Return name for I/O mode */
@@ -1031,7 +1047,7 @@ int create_files(void)
   if (written > 0)
     log_text(LOG_NOTICE, "%llu bytes written in %.2f seconds (%.2f MiB/sec).",
              written, seconds,
-             (double) (written / megabyte) / seconds);
+             (double) (written / mebibyte) / seconds);
   else
     log_text(LOG_NOTICE, "No bytes written.");
 

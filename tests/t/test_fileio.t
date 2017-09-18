@@ -57,29 +57,16 @@ fileio benchmark tests
   Threads started!
   
   
-  File operations:
-      reads/s:                      *.* (glob)
-      writes/s:                     *.* (glob)
-      fsyncs/s:                     *.* (glob)
-  
   Throughput:
-      read, MiB/s:                  *.* (glob)
-      write, MiB/s:                 *.* (glob)
-  
-  General statistics:
-      total time:                          *.*s (glob)
-      total number of events:              158
+           read:  IOPS=*.* *.* MiB/s (*.* MB/s) (glob)
+           write: IOPS=*.* *.* MiB/s (*.* MB/s) (glob)
+           fsync: IOPS=*.* (glob)
   
   Latency (ms):
            min:                              *.* (glob)
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
-  
-  Threads fairness:
-      events (avg/stddev):           158.0000/0.00
-      execution time (avg/stddev):   *.*/0.00 (glob)
   
   $ sysbench $fileio_args --events=150 --file-test-mode=rndrd run
   sysbench *.* * (glob)
@@ -104,29 +91,16 @@ fileio benchmark tests
   Threads started!
   
   
-  File operations:
-      reads/s:                      *.* (glob)
-      writes/s:                     0.00
-      fsyncs/s:                     0.00
-  
   Throughput:
-      read, MiB/s:                  *.* (glob)
-      write, MiB/s:                 0.00
-  
-  General statistics:
-      total time:                          *.*s (glob)
-      total number of events:              150
+           read:  IOPS=*.* *.* MiB/s (*.* MB/s) (glob)
+           write: IOPS=*.* *.* MiB/s (*.* MB/s) (glob)
+           fsync: IOPS=*.* (glob)
   
   Latency (ms):
            min:                              *.* (glob)
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
-  
-  Threads fairness:
-      events (avg/stddev):           150.0000/0.00
-      execution time (avg/stddev):   *.*/0.00 (glob)
   
 
   $ sysbench $fileio_args --events=150 --file-test-mode=seqrd run
@@ -150,29 +124,16 @@ fileio benchmark tests
   Threads started!
   
   
-  File operations:
-      reads/s:                      *.* (glob)
-      writes/s:                     0.00
-      fsyncs/s:                     0.00
-  
   Throughput:
-      read, MiB/s:                  *.* (glob)
-      write, MiB/s:                 0.00
-  
-  General statistics:
-      total time:                          *.*s (glob)
-      total number of events:              150
+           read:  IOPS=*.* *.* MiB/s (*.* MB/s) (glob)
+           write: IOPS=*.* *.* MiB/s (*.* MB/s) (glob)
+           fsync: IOPS=*.* (glob)
   
   Latency (ms):
            min:                              *.* (glob)
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
-  
-  Threads fairness:
-      events (avg/stddev):           150.0000/0.00
-      execution time (avg/stddev):   *.*/0.00 (glob)
   
 
   $ sysbench $fileio_args --events=150 --file-test-mode=rndwr run
@@ -198,29 +159,16 @@ fileio benchmark tests
   Threads started!
   
   
-  File operations:
-      reads/s:                      0.00
-      writes/s:                     *.* (glob)
-      fsyncs/s:                     *.* (glob)
-  
   Throughput:
-      read, MiB/s:                  0.00
-      write, MiB/s:                 *.* (glob)
-  
-  General statistics:
-      total time:                          *.*s (glob)
-      total number of events:              158
+           read:  IOPS=*.* *.* MiB/s (*.* MB/s) (glob)
+           write: IOPS=*.* *.* MiB/s (*.* MB/s) (glob)
+           fsync: IOPS=*.* (glob)
   
   Latency (ms):
            min:                              *.* (glob)
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
-           sum: *.* (glob)
-  
-  Threads fairness:
-      events (avg/stddev):           158.0000/0.00
-      execution time (avg/stddev):   *.*/0.00 (glob)
   
 
   $ sysbench $fileio_args --events=150 --file-test-mode=foo run

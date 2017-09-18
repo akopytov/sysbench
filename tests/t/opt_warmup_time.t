@@ -37,8 +37,9 @@
   Warming up for 1 seconds...
   
   
-  General statistics:
-      total time:                          2.*s (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:                        2.*s (glob)
       total number of events:              2
   
   Latency (ms):
@@ -46,7 +47,6 @@
            avg: * (glob)
            max: * (glob)
            95th percentile: * (glob)
-           sum: * (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
@@ -68,8 +68,9 @@
   Warming up for 1 seconds...
   
   
-  General statistics:
-      total time:                          5.*s (glob)
+  Throughput:
+      events/s (eps): *.* (glob)
+      time elapsed:                        5.*s (glob)
       total number of events:              5
   
   Latency (ms):
@@ -77,7 +78,6 @@
            avg: * (glob)
            max: * (glob)
            95th percentile: * (glob)
-           sum: * (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
