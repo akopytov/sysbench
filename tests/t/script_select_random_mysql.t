@@ -58,6 +58,7 @@ select_random_*.lua + MySQL tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):* (glob)
@@ -128,6 +129,7 @@ select_random_*.lua + MySQL tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):* (glob)

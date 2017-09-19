@@ -38,6 +38,7 @@ threads benchmark tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)

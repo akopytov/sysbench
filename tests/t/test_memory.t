@@ -92,6 +92,7 @@ help' only on Linux.
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
@@ -134,6 +135,7 @@ help' only on Linux.
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
@@ -176,6 +178,7 @@ help' only on Linux.
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
@@ -218,6 +221,7 @@ help' only on Linux.
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)

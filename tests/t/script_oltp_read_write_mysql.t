@@ -158,6 +158,7 @@ oltp_read_write.lua + MySQL tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)
@@ -203,6 +204,7 @@ oltp_read_write.lua + MySQL tests
   Inserting 10000 records into 'sbtest1'
   Creating a secondary index on 'sbtest1'...
   Dropping table 'sbtest1'...
+
 
   $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-storage-engine=innodb $SBTEST_MYSQL_ARGS"
   $ . $SBTEST_INCDIR/script_oltp_common.sh
@@ -355,6 +357,7 @@ oltp_read_write.lua + MySQL tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           */* (glob)

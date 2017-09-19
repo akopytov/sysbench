@@ -67,6 +67,7 @@ fileio benchmark tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
   $ sysbench $fileio_args --events=150 --file-test-mode=rndrd run
   sysbench *.* * (glob)
@@ -101,6 +102,7 @@ fileio benchmark tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
 
   $ sysbench $fileio_args --events=150 --file-test-mode=seqrd run
@@ -134,6 +136,7 @@ fileio benchmark tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
 
   $ sysbench $fileio_args --events=150 --file-test-mode=rndwr run
@@ -169,6 +172,7 @@ fileio benchmark tests
            avg:                              *.* (glob)
            max:                              *.* (glob)
            95th percentile:         *.* (glob)
+           sum: *.* (glob)
   
 
   $ sysbench $fileio_args --events=150 --file-test-mode=foo run

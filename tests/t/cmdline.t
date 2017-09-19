@@ -82,6 +82,7 @@
            avg: *.* (glob)
            max: *.* (glob)
            95th percentile: *.* (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           1.0000/0.00
@@ -292,6 +293,7 @@ Command line options tests
            avg:                                  * (glob)
            max:                                  * (glob)
            95th percentile:                      * (glob)
+           sum: *.* (glob)
   
   Threads fairness:
       events (avg/stddev):           1.0000/0.00

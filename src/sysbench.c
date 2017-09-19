@@ -320,6 +320,8 @@ void sb_report_cumulative(sb_stat_t *stat)
   else
     log_text(LOG_NOTICE, "         percentile stats:               disabled");
 
+  log_text(LOG_NOTICE, "         sum:                            %10.2f",
+           SEC2MS(stat->latency_sum));
   log_text(LOG_NOTICE, "");
 
   /* Aggregate temporary timers copy */
