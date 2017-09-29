@@ -82,7 +82,7 @@ if test "$GCC" = "yes"
 then
   CFLAGS="-ggdb3 ${CFLAGS}"
   DEBUG_CFLAGS="-O0"
-  OPTIMIZE_CFLAGS="-O2"
+  OPTIMIZE_CFLAGS="-O3"
   GCOV_CFLAGS="-O0 --coverage"
   GCOV_LDFLAGS="-coverage"
   ASAN_CFLAGS="-fsanitize=address"
