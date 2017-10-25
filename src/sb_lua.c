@@ -589,7 +589,10 @@ static void sb_lua_set_paths(lua_State *L)
     lua_pushliteral(L, "/.luarocks/share/lua/?/init.lua;");
   }
 
+  lua_pushliteral(L, "/usr/local/share/lua/5.1/?.lua;");
+
   lua_pushliteral(L, DATADIR "/?.lua;");
+
   lua_concat(L, lua_gettop(L) - top);
 
   /* Mimic the default Lua behavior with respect to LUA_PATH and ';;' */
