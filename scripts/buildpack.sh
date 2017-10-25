@@ -48,7 +48,6 @@ PACKPACK_REPO=${PACKPACK_REPO:-akopytov/packpack}
 distros_x86_64=(
     "el 6 x86_64"
     "el 7 x86_64"
-    "fedora 24 x86_64"
     "fedora 25 x86_64"
     "fedora 26 x86_64"
     "ubuntu trusty x86_64"
@@ -70,7 +69,6 @@ distros_i386=(
 
 distros_aarch64=(
     "el 7 aarch64"
-    "fedora 24 aarch64"
     "fedora 25 aarch64"
     "fedora 26 aarch64"
     "ubuntu trusty aarch64"
