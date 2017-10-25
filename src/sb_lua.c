@@ -614,6 +614,9 @@ static void sb_lua_set_paths(lua_State *L)
     lua_pushstring(L, home);
     lua_pushliteral(L, "/.luarocks/lib/lua/?" DLEXT ";");
   }
+
+  lua_pushliteral(L, "/usr/local/lib/lua/5.1/?" DLEXT ";");
+
   lua_pushliteral(L, LIBDIR ";");
   lua_concat(L, lua_gettop(L) - top);
 
