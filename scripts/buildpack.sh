@@ -51,7 +51,6 @@ distros_x86_64=(
     "fedora 24 x86_64"
     "fedora 25 x86_64"
     "fedora 26 x86_64"
-    "ubuntu precise x86_64"
     "ubuntu trusty x86_64"
     "ubuntu xenial x86_64"
     "ubuntu yakkety x86_64"
@@ -62,7 +61,6 @@ distros_x86_64=(
 )
 
 distros_i386=(
-    "ubuntu precise i386"
     "ubuntu trusty i386"
     "ubuntu xenial i386"
     "ubuntu yakkety i386"
