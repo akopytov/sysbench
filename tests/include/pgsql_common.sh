@@ -16,7 +16,7 @@ function db_show_table() {
   fi
 
   echo "                            Table \"public.$1\""
-  psql sbtest <<EOF
+  psql -q sbtest <<EOF
 \pset footer off
  SELECT
     f.attname AS "Column",
@@ -51,7 +51,7 @@ WHERE c.relkind = 'r'::char
     AND f.attnum > 0
 EOF
   echo "Indexes:"
-  psql -t sbtest <<EOF
+  psql -qt sbtest <<EOF
  SELECT indexdef
 FROM pg_catalog.pg_indexes
 WHERE schemaname = 'public'
