@@ -1,3 +1,19 @@
+2017-10-25  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.10
+	* fixed PK conflicts in oltp_insert.lua by creating empty tables
+	on 'prepare'
+	* made sysbench.opt available to init()/done() by exporting it
+	to the global Lua state
+	* added Fedora 26 (both x86_64 and AArch64) to the list of
+	supported and tested distributions
+	* fixed GH-172: sysbench 1.0.9 doesn't build with mariadb 10.2.8
+	* add the /usr/local LuaRocks root directory to default LUA_PATH
+	and LUA_CPATH
+	* removed Fedora 24, Ubuntu Precise, Yakkety from default build
+	matrices
+	* added Ubuntu Artful to default build matrices
+
 2017-09-05  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.9

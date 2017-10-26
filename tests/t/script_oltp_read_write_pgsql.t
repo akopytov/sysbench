@@ -34,93 +34,101 @@ oltp_read_write.lua + PostgreSQL tests
   Creating table 'sbtest8'...
   Inserting 10000 records into 'sbtest8'
   Creating a secondary index on 'sbtest8'...
-                                                   Table "public.sbtest1"
+                              Table "public.sbtest1"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
   --------+----------------+------------------------------------------------------+----------+--------------+-------------
    id     | integer        | not null default nextval('sbtest1_id_seq'::regclass) | plain    |              | 
    k      | integer        | not null default 0                                   | plain    |              | 
    c      | character(120) | not null default ''::bpchar                          | extended |              | 
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
-  Indexes:
-      "sbtest1_pkey" PRIMARY KEY, btree (id)
-      "k_1" btree (k)
   
-                                                   Table "public.sbtest2"
+  Indexes:
+   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
+   CREATE INDEX k_1 ON sbtest1 USING btree (k)
+  
+                              Table "public.sbtest2"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
   --------+----------------+------------------------------------------------------+----------+--------------+-------------
    id     | integer        | not null default nextval('sbtest2_id_seq'::regclass) | plain    |              | 
    k      | integer        | not null default 0                                   | plain    |              | 
    c      | character(120) | not null default ''::bpchar                          | extended |              | 
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
-  Indexes:
-      "sbtest2_pkey" PRIMARY KEY, btree (id)
-      "k_2" btree (k)
   
-                                                   Table "public.sbtest3"
+  Indexes:
+   CREATE UNIQUE INDEX sbtest2_pkey ON sbtest2 USING btree (id)
+   CREATE INDEX k_2 ON sbtest2 USING btree (k)
+  
+                              Table "public.sbtest3"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
   --------+----------------+------------------------------------------------------+----------+--------------+-------------
    id     | integer        | not null default nextval('sbtest3_id_seq'::regclass) | plain    |              | 
    k      | integer        | not null default 0                                   | plain    |              | 
    c      | character(120) | not null default ''::bpchar                          | extended |              | 
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
-  Indexes:
-      "sbtest3_pkey" PRIMARY KEY, btree (id)
-      "k_3" btree (k)
   
-                                                   Table "public.sbtest4"
+  Indexes:
+   CREATE UNIQUE INDEX sbtest3_pkey ON sbtest3 USING btree (id)
+   CREATE INDEX k_3 ON sbtest3 USING btree (k)
+  
+                              Table "public.sbtest4"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
   --------+----------------+------------------------------------------------------+----------+--------------+-------------
    id     | integer        | not null default nextval('sbtest4_id_seq'::regclass) | plain    |              | 
    k      | integer        | not null default 0                                   | plain    |              | 
    c      | character(120) | not null default ''::bpchar                          | extended |              | 
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
-  Indexes:
-      "sbtest4_pkey" PRIMARY KEY, btree (id)
-      "k_4" btree (k)
   
-                                                   Table "public.sbtest5"
+  Indexes:
+   CREATE UNIQUE INDEX sbtest4_pkey ON sbtest4 USING btree (id)
+   CREATE INDEX k_4 ON sbtest4 USING btree (k)
+  
+                              Table "public.sbtest5"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
   --------+----------------+------------------------------------------------------+----------+--------------+-------------
    id     | integer        | not null default nextval('sbtest5_id_seq'::regclass) | plain    |              | 
    k      | integer        | not null default 0                                   | plain    |              | 
    c      | character(120) | not null default ''::bpchar                          | extended |              | 
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
-  Indexes:
-      "sbtest5_pkey" PRIMARY KEY, btree (id)
-      "k_5" btree (k)
   
-                                                   Table "public.sbtest6"
+  Indexes:
+   CREATE UNIQUE INDEX sbtest5_pkey ON sbtest5 USING btree (id)
+   CREATE INDEX k_5 ON sbtest5 USING btree (k)
+  
+                              Table "public.sbtest6"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
   --------+----------------+------------------------------------------------------+----------+--------------+-------------
    id     | integer        | not null default nextval('sbtest6_id_seq'::regclass) | plain    |              | 
    k      | integer        | not null default 0                                   | plain    |              | 
    c      | character(120) | not null default ''::bpchar                          | extended |              | 
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
-  Indexes:
-      "sbtest6_pkey" PRIMARY KEY, btree (id)
-      "k_6" btree (k)
   
-                                                   Table "public.sbtest7"
+  Indexes:
+   CREATE UNIQUE INDEX sbtest6_pkey ON sbtest6 USING btree (id)
+   CREATE INDEX k_6 ON sbtest6 USING btree (k)
+  
+                              Table "public.sbtest7"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
   --------+----------------+------------------------------------------------------+----------+--------------+-------------
    id     | integer        | not null default nextval('sbtest7_id_seq'::regclass) | plain    |              | 
    k      | integer        | not null default 0                                   | plain    |              | 
    c      | character(120) | not null default ''::bpchar                          | extended |              | 
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
-  Indexes:
-      "sbtest7_pkey" PRIMARY KEY, btree (id)
-      "k_7" btree (k)
   
-                                                   Table "public.sbtest8"
+  Indexes:
+   CREATE UNIQUE INDEX sbtest7_pkey ON sbtest7 USING btree (id)
+   CREATE INDEX k_7 ON sbtest7 USING btree (k)
+  
+                              Table "public.sbtest8"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
   --------+----------------+------------------------------------------------------+----------+--------------+-------------
    id     | integer        | not null default nextval('sbtest8_id_seq'::regclass) | plain    |              | 
    k      | integer        | not null default 0                                   | plain    |              | 
    c      | character(120) | not null default ''::bpchar                          | extended |              | 
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  
   Indexes:
-      "sbtest8_pkey" PRIMARY KEY, btree (id)
-      "k_8" btree (k)
+   CREATE UNIQUE INDEX sbtest8_pkey ON sbtest8 USING btree (id)
+   CREATE INDEX k_8 ON sbtest8 USING btree (k)
   
   Did not find any relation named "sbtest9".
   sysbench *.* * (glob)
@@ -187,15 +195,16 @@ oltp_read_write.lua + PostgreSQL tests
   
   Creating table 'sbtest1'...
   Inserting 10000 records into 'sbtest1'
-                                                   Table "public.sbtest1"
+                              Table "public.sbtest1"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
   --------+----------------+------------------------------------------------------+----------+--------------+-------------
    id     | integer        | not null default nextval('sbtest1_id_seq'::regclass) | plain    |              | 
    k      | integer        | not null default 0                                   | plain    |              | 
    c      | character(120) | not null default ''::bpchar                          | extended |              | 
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  
   Indexes:
-      "sbtest1_pkey" PRIMARY KEY, btree (id)
+   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
   
   sysbench * (glob)
   

@@ -30,21 +30,18 @@ env:
       - TARGET=coverage
       - OS=el DIST=6
       - OS=el DIST=7
-      - OS=fedora DIST=24
       - OS=fedora DIST=25
       - OS=fedora DIST=26
-      - OS=ubuntu DIST=precise
       - OS=ubuntu DIST=trusty
       - OS=ubuntu DIST=xenial
-      - OS=ubuntu DIST=yakkety
       - OS=ubuntu DIST=zesty
+      - OS=ubuntu DIST=artful
       - OS=debian DIST=wheezy
       - OS=debian DIST=jessie
-      - OS=ubuntu DIST=precise ARCH=i386
       - OS=ubuntu DIST=trusty ARCH=i386
       - OS=ubuntu DIST=xenial ARCH=i386
-      - OS=ubuntu DIST=yakkety ARCH=i386
       - OS=ubuntu DIST=zesty ARCH=i386
+      - OS=ubuntu DIST=artful ARCH=i386
       - OS=debian DIST=wheezy ARCH=i386
       - OS=debian DIST=jessie ARCH=i386
 
@@ -54,21 +51,17 @@ matrix:
       compiler: clang
     - env: OS=el DIST=7
       compiler: clang
-    - env: OS=fedora DIST=24
-      compiler: clang
     - env: OS=fedora DIST=25
       compiler: clang
     - env: OS=fedora DIST=26
-      compiler: clang
-    - env: OS=ubuntu DIST=precise
       compiler: clang
     - env: OS=ubuntu DIST=trusty
       compiler: clang
     - env: OS=ubuntu DIST=xenial
       compiler: clang
-    - env: OS=ubuntu DIST=yakkety
-      compiler: clang
     - env: OS=ubuntu DIST=zesty
+      compiler: clang
+    - env: OS=ubuntu DIST=artful
       compiler: clang
     - env: OS=debian DIST=wheezy
       compiler: clang
@@ -76,15 +69,13 @@ matrix:
       compiler: clang
     - env: OS=debian DIST=stretch
       compiler: clang
-    - env: OS=ubuntu DIST=precise ARCH=i386
-      compiler: clang
     - env: OS=ubuntu DIST=trusty ARCH=i386
       compiler: clang
     - env: OS=ubuntu DIST=xenial ARCH=i386
       compiler: clang
-    - env: OS=ubuntu DIST=yakkety ARCH=i386
-      compiler: clang
     - env: OS=ubuntu DIST=zesty ARCH=i386
+      compiler: clang
+    - env: OS=ubuntu DIST=artful ARCH=i386
       compiler: clang
     - env: OS=debian DIST=wheezy ARCH=i386
       compiler: clang
@@ -96,21 +87,17 @@ matrix:
       os: osx
     - env: OS=el DIST=7
       os: osx
-    - env: OS=fedora DIST=24
-      os: osx
     - env: OS=fedora DIST=25
       os: osx
     - env: OS=fedora DIST=26
-      os: osx
-    - env: OS=ubuntu DIST=precise
       os: osx
     - env: OS=ubuntu DIST=trusty
       os: osx
     - env: OS=ubuntu DIST=xenial
       os: osx
-    - env: OS=ubuntu DIST=yakkety
-      os: osx
     - env: OS=ubuntu DIST=zesty
+      os: osx
+    - env: OS=ubuntu DIST=artful
       os: osx
     - env: OS=debian DIST=wheezy
       os: osx
@@ -153,6 +140,10 @@ before_install:
     if [ "x$TARGET" = "xtest" ]; then
       case "${TRAVIS_OS_NAME:-linux}" in
       osx)
+        # Workaround for https://github.com/Homebrew/brew/issues/3299
+        # Should not be necessary after Nov 17 2017
+        brew update
+
         brew install mysql
 
         # OS X requires servers to be started explicitly

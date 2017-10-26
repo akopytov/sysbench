@@ -48,36 +48,31 @@ PACKPACK_REPO=${PACKPACK_REPO:-akopytov/packpack}
 distros_x86_64=(
     "el 6 x86_64"
     "el 7 x86_64"
-    "fedora 24 x86_64"
     "fedora 25 x86_64"
     "fedora 26 x86_64"
-    "ubuntu precise x86_64"
     "ubuntu trusty x86_64"
     "ubuntu xenial x86_64"
-    "ubuntu yakkety x86_64"
     "ubuntu zesty x86_64"
+    "ubuntu artful x86_64"
     "debian wheezy x86_64"
     "debian jessie x86_64"
 )
 
 distros_i386=(
-    "ubuntu precise i386"
     "ubuntu trusty i386"
     "ubuntu xenial i386"
-    "ubuntu yakkety i386"
     "ubuntu zesty i386"
+    "ubuntu artful i386"
     "debian wheezy i386"
     "debian jessie i386"
 )
 
 distros_aarch64=(
     "el 7 aarch64"
-    "fedora 24 aarch64"
     "fedora 25 aarch64"
     "fedora 26 aarch64"
     "ubuntu trusty aarch64"
     "ubuntu xenial aarch64"
-    "ubuntu yakkety aarch64"
     "debian jessie aarch64"
 )
 

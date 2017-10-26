@@ -11,16 +11,18 @@ bulk_insert.lua + PostgreSQL tests
   --------+---------+--------------------+---------+--------------+-------------
    id     | integer | not null           | plain   |              | 
    k      | integer | not null default 0 | plain   |              | 
+  
   Indexes:
-      "sbtest1_pkey" PRIMARY KEY, btree (id)
+   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
   
                               Table "public.sbtest2"
    Column |  Type   |     Modifiers      | Storage | Stats target | Description 
   --------+---------+--------------------+---------+--------------+-------------
    id     | integer | not null           | plain   |              | 
    k      | integer | not null default 0 | plain   |              | 
+  
   Indexes:
-      "sbtest2_pkey" PRIMARY KEY, btree (id)
+   CREATE UNIQUE INDEX sbtest2_pkey ON sbtest2 USING btree (id)
   
   Did not find any relation named "sbtest3".
   sysbench * (glob)
