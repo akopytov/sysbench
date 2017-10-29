@@ -60,6 +60,11 @@ AS_CASE([$host_os:$host_cpu],
           [
             LUAJIT_LIBS="$LUAJIT_LIBS -ldl"
             LUAJIT_LDFLAGS="-rdynamic"
+          ],
+        # -rdynamic are required on FreeBSD
+        [*freebsd*:*],
+          [
+            LUAJIT_LDFLAGS="-rdynamic"
           ]
 )
 
