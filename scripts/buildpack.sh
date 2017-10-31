@@ -35,9 +35,10 @@
 #                       and 'sysbench-prereleases' otherwise.
 #
 #   PACKAGECLOUD_EXTRA_ARGS - extra arguments to pass to the package_cloud
-#                             utility. Empty by default
+#                             utility. Empty by default. Can be used to pass the
+#                             --skip-errors flag to ignore deploy errors.
 #
-#   PACKPACK_REPO - packpack repository to use. Defaults to packpack/packpack.
+#   PACKPACK_REPO - packpack repository to use. Defaults to akopytov/packpack.
 
 set -eu
 
