@@ -449,7 +449,7 @@ int text_handler_process(log_msg_t *msg)
   if (text_msg->priority > sb_globals.verbosity)
     return 0;
 
-  if (!text_msg->flags & LOG_MSG_TEXT_ALLOW_DUPLICATES)
+  if (!(text_msg->flags & LOG_MSG_TEXT_ALLOW_DUPLICATES))
   {
     pthread_mutex_lock(&text_mutex);
     if (!strcmp(text_buf, text_msg->text))
