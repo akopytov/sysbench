@@ -32,7 +32,7 @@ sysbench.cmdline.commands.prepare = {
 
       cmd_prepare()
    end,
-   sysbench.cmdline.PARALLEL_PREPARE
+   sysbench.cmdline.PARALLEL_COMMAND
 }
 
 function prepare_statements()

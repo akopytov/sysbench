@@ -133,6 +133,113 @@ oltp_point_select.lua + PostgreSQL tests
   FATAL: *: prewarm is currently MySQL only (glob)
   sysbench *.* * (glob)
   
+  Dropping table 'sbtest1'...
+  Dropping table 'sbtest2'...
+  Dropping table 'sbtest3'...
+  Dropping table 'sbtest4'...
+  Dropping table 'sbtest5'...
+  Dropping table 'sbtest6'...
+  Dropping table 'sbtest7'...
+  Dropping table 'sbtest8'...
+                              Table "public.sbtest1"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest1_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  
+  Indexes:
+   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
+   CREATE INDEX k_1 ON sbtest1 USING btree (k)
+  
+                              Table "public.sbtest2"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest2_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  
+  Indexes:
+   CREATE UNIQUE INDEX sbtest2_pkey ON sbtest2 USING btree (id)
+   CREATE INDEX k_2 ON sbtest2 USING btree (k)
+  
+                              Table "public.sbtest3"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest3_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  
+  Indexes:
+   CREATE UNIQUE INDEX sbtest3_pkey ON sbtest3 USING btree (id)
+   CREATE INDEX k_3 ON sbtest3 USING btree (k)
+  
+                              Table "public.sbtest4"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest4_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  
+  Indexes:
+   CREATE UNIQUE INDEX sbtest4_pkey ON sbtest4 USING btree (id)
+   CREATE INDEX k_4 ON sbtest4 USING btree (k)
+  
+                              Table "public.sbtest5"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest5_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  
+  Indexes:
+   CREATE UNIQUE INDEX sbtest5_pkey ON sbtest5 USING btree (id)
+   CREATE INDEX k_5 ON sbtest5 USING btree (k)
+  
+                              Table "public.sbtest6"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest6_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  
+  Indexes:
+   CREATE UNIQUE INDEX sbtest6_pkey ON sbtest6 USING btree (id)
+   CREATE INDEX k_6 ON sbtest6 USING btree (k)
+  
+                              Table "public.sbtest7"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest7_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  
+  Indexes:
+   CREATE UNIQUE INDEX sbtest7_pkey ON sbtest7 USING btree (id)
+   CREATE INDEX k_7 ON sbtest7 USING btree (k)
+  
+                              Table "public.sbtest8"
+   Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
+  --------+----------------+------------------------------------------------------+----------+--------------+-------------
+   id     | integer        | not null default nextval('sbtest8_id_seq'::regclass) | plain    |              | 
+   k      | integer        | not null default 0                                   | plain    |              | 
+   c      | character(120) | not null default ''::bpchar                          | extended |              | 
+   pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
+  
+  Indexes:
+   CREATE UNIQUE INDEX sbtest8_pkey ON sbtest8 USING btree (id)
+   CREATE INDEX k_8 ON sbtest8 USING btree (k)
+  
+  Did not find any relation named "sbtest9".
+  sysbench *.* * (glob)
+  
   Running the test with following options:
   Number of threads: 2
   Initializing random number generator from current time
@@ -168,16 +275,6 @@ oltp_point_select.lua + PostgreSQL tests
       events (avg/stddev):           */* (glob)
       execution time (avg/stddev):   */* (glob)
   
-  sysbench *.* * (glob)
-  
-  Dropping table 'sbtest1'...
-  Dropping table 'sbtest2'...
-  Dropping table 'sbtest3'...
-  Dropping table 'sbtest4'...
-  Dropping table 'sbtest5'...
-  Dropping table 'sbtest6'...
-  Dropping table 'sbtest7'...
-  Dropping table 'sbtest8'...
   Did not find any relation named "sbtest1".
   Did not find any relation named "sbtest2".
   Did not find any relation named "sbtest3".

@@ -18,8 +18,9 @@ set -eu
 
 SB_EXTRA_ARGS=${SB_EXTRA_ARGS:-}
 
-ARGS="${OLTP_SCRIPT_PATH} ${DB_DRIVER_ARGS} ${SB_EXTRA_ARGS} --tables=8"
+# Test single-threaded prepare/prewarm/cleanup output
 
+ARGS="${OLTP_SCRIPT_PATH} ${DB_DRIVER_ARGS} --tables=8 --threads=1 ${SB_EXTRA_ARGS}"
 sysbench $ARGS prepare
 
 db_show_table sbtest1
@@ -32,11 +33,31 @@ db_show_table sbtest7
 db_show_table sbtest8
 db_show_table sbtest9 || true # Error on non-existing table
 
-sysbench $ARGS prewarm || true # MySQL only
-
-sysbench --events=100 --threads=2 $ARGS run
-
+sysbench $ARGS prewarm || true # MySQL-only
 sysbench $ARGS cleanup
+
+# Test parallel prepare/prewarm/cleanup. Parallelism may result in
+# non-deterministic output, so we redirect it to /dev/null
+
+ARGS="${OLTP_SCRIPT_PATH} ${DB_DRIVER_ARGS} --tables=8 --threads=2 ${SB_EXTRA_ARGS}"
+
+sysbench $ARGS prepare >/dev/null
+
+db_show_table sbtest1
+db_show_table sbtest2
+db_show_table sbtest3
+db_show_table sbtest4
+db_show_table sbtest5
+db_show_table sbtest6
+db_show_table sbtest7
+db_show_table sbtest8
+db_show_table sbtest9 || true # Error on non-existing table
+
+sysbench $ARGS prewarm >/dev/null || true # MySQL only
+
+sysbench --events=100 $ARGS run
+
+sysbench $ARGS cleanup >/dev/null
 
 db_show_table sbtest1 || true # Error on non-existing table
 db_show_table sbtest2 || true # Error on non-existing table
