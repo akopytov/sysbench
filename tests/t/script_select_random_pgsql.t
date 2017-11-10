@@ -18,8 +18,8 @@ select_random_*.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
    CREATE INDEX k_1 ON sbtest1 USING btree (k)
+   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
   
   Did not find any relation named "sbtest2".
   Did not find any relation named "sbtest3".
@@ -90,8 +90,8 @@ select_random_*.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
    CREATE INDEX k_1 ON sbtest1 USING btree (k)
+   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
   
   Did not find any relation named "sbtest2".
   Did not find any relation named "sbtest3".

@@ -43,8 +43,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
    CREATE INDEX k_1 ON sbtest1 USING btree (k)
+   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
   
                               Table "public.sbtest2"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -55,8 +55,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest2_pkey ON sbtest2 USING btree (id)
    CREATE INDEX k_2 ON sbtest2 USING btree (k)
+   CREATE UNIQUE INDEX sbtest2_pkey ON sbtest2 USING btree (id)
   
                               Table "public.sbtest3"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -67,8 +67,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest3_pkey ON sbtest3 USING btree (id)
    CREATE INDEX k_3 ON sbtest3 USING btree (k)
+   CREATE UNIQUE INDEX sbtest3_pkey ON sbtest3 USING btree (id)
   
                               Table "public.sbtest4"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -79,8 +79,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest4_pkey ON sbtest4 USING btree (id)
    CREATE INDEX k_4 ON sbtest4 USING btree (k)
+   CREATE UNIQUE INDEX sbtest4_pkey ON sbtest4 USING btree (id)
   
                               Table "public.sbtest5"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -91,8 +91,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest5_pkey ON sbtest5 USING btree (id)
    CREATE INDEX k_5 ON sbtest5 USING btree (k)
+   CREATE UNIQUE INDEX sbtest5_pkey ON sbtest5 USING btree (id)
   
                               Table "public.sbtest6"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -103,8 +103,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest6_pkey ON sbtest6 USING btree (id)
    CREATE INDEX k_6 ON sbtest6 USING btree (k)
+   CREATE UNIQUE INDEX sbtest6_pkey ON sbtest6 USING btree (id)
   
                               Table "public.sbtest7"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -115,8 +115,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest7_pkey ON sbtest7 USING btree (id)
    CREATE INDEX k_7 ON sbtest7 USING btree (k)
+   CREATE UNIQUE INDEX sbtest7_pkey ON sbtest7 USING btree (id)
   
                               Table "public.sbtest8"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -127,8 +127,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest8_pkey ON sbtest8 USING btree (id)
    CREATE INDEX k_8 ON sbtest8 USING btree (k)
+   CREATE UNIQUE INDEX sbtest8_pkey ON sbtest8 USING btree (id)
   
   Did not find any relation named "sbtest9".
   sysbench *.* * (glob)
@@ -153,8 +153,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
    CREATE INDEX k_1 ON sbtest1 USING btree (k)
+   CREATE UNIQUE INDEX sbtest1_pkey ON sbtest1 USING btree (id)
   
                               Table "public.sbtest2"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -165,8 +165,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest2_pkey ON sbtest2 USING btree (id)
    CREATE INDEX k_2 ON sbtest2 USING btree (k)
+   CREATE UNIQUE INDEX sbtest2_pkey ON sbtest2 USING btree (id)
   
                               Table "public.sbtest3"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -177,8 +177,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest3_pkey ON sbtest3 USING btree (id)
    CREATE INDEX k_3 ON sbtest3 USING btree (k)
+   CREATE UNIQUE INDEX sbtest3_pkey ON sbtest3 USING btree (id)
   
                               Table "public.sbtest4"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -189,8 +189,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest4_pkey ON sbtest4 USING btree (id)
    CREATE INDEX k_4 ON sbtest4 USING btree (k)
+   CREATE UNIQUE INDEX sbtest4_pkey ON sbtest4 USING btree (id)
   
                               Table "public.sbtest5"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -201,8 +201,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest5_pkey ON sbtest5 USING btree (id)
    CREATE INDEX k_5 ON sbtest5 USING btree (k)
+   CREATE UNIQUE INDEX sbtest5_pkey ON sbtest5 USING btree (id)
   
                               Table "public.sbtest6"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -213,8 +213,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest6_pkey ON sbtest6 USING btree (id)
    CREATE INDEX k_6 ON sbtest6 USING btree (k)
+   CREATE UNIQUE INDEX sbtest6_pkey ON sbtest6 USING btree (id)
   
                               Table "public.sbtest7"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -225,8 +225,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest7_pkey ON sbtest7 USING btree (id)
    CREATE INDEX k_7 ON sbtest7 USING btree (k)
+   CREATE UNIQUE INDEX sbtest7_pkey ON sbtest7 USING btree (id)
   
                               Table "public.sbtest8"
    Column |      Type      |                      Modifiers                       | Storage  | Stats target | Description 
@@ -237,8 +237,8 @@ oltp_read_write.lua + PostgreSQL tests
    pad    | character(60)  | not null default ''::bpchar                          | extended |              | 
   
   Indexes:
-   CREATE UNIQUE INDEX sbtest8_pkey ON sbtest8 USING btree (id)
    CREATE INDEX k_8 ON sbtest8 USING btree (k)
+   CREATE UNIQUE INDEX sbtest8_pkey ON sbtest8 USING btree (id)
   
   Did not find any relation named "sbtest9".
   sysbench *.* * (glob)

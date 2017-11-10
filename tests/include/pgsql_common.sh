@@ -56,6 +56,7 @@ EOF
 FROM pg_catalog.pg_indexes
 WHERE schemaname = 'public'
     AND tablename = '$1'
+ORDER BY 1
 EOF
 }
 
