@@ -161,7 +161,7 @@ build and use an older 0.5 release on Windows.
 
 Assuming you have Xcode (or Xcode Command Line Tools) and Homebrew installed:
 ``` shell
-    brew install automake libtool pkg-config
+    brew install automake libtool openssl pkg-config
     # For MySQL support
     brew install mysql
     # For PostgreSQL support
@@ -172,8 +172,8 @@ Assuming you have Xcode (or Xcode Command Line Tools) and Homebrew installed:
 ``` shell
     ./autogen.sh
     # Add --with-pgsql to build with PostgreSQL support
-    ./configure
-    make
+    LDFLAGS=-L/usr/local/opt/openssl/lib ./configure
+    make -j
     make install
 ```
 
