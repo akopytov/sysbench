@@ -1,3 +1,10 @@
+**WARNING: Oracle support is unmaintained as of sysbench 1.0. You may
+want to
+try [sysbench 0.5](https://github.com/akopytov/sysbench/tree/0.5)
+instead. The corresponding code and instructions below are still in the
+source tree in case somebody wants to update them. Patches are always
+welcome! **
+
 --------------------------------------------------------------
 Oracle Build steps
 --------------------------------------------------------------
