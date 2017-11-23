@@ -273,6 +273,9 @@ AC_CHECK_LIB([umem], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lumem"],
  AC_CHECK_LIB([mtmalloc], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lmtmalloc"]) 
 ) 
 
+# Check for UUID support
+AC_CHECK_LIB([uuid], [uuid_generate], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -luuid"])
+
 # Checks for header files.
 AC_HEADER_STDC
 
@@ -294,6 +297,7 @@ thread.h \
 unistd.h \
 limits.h \
 libgen.h \
+uuid/uuid.h
 ])
 
 
