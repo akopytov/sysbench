@@ -71,5 +71,6 @@ uint32_t sb_rand_pareto(uint32_t, uint32_t);
 uint32_t sb_rand_zipfian(uint32_t, uint32_t);
 uint32_t sb_rand_unique(void);
 void sb_rand_str(const char *, char *);
+uint32_t sb_rand_varstr(char *, uint32_t, uint32_t);
 
 #endif /* SB_RAND_H */
