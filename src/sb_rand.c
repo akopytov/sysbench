@@ -354,7 +354,7 @@ uint32_t sb_rand_varstr(char *buf, uint32_t min_len, uint32_t max_len)
   unsigned int i;
   uint32_t num_chars;
   if (max_len == 0) {
-    return; /* we can't be sure buf is long enough to populate, so be safe */
+    return 0; /* we can't be sure buf is long enough to populate, so be safe */
   }
   if (min_len > max_len)
   {
