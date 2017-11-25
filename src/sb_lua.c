@@ -32,6 +32,7 @@
 #include "db_driver.h"
 #include "sb_rand.h"
 #include "sb_thread.h"
+#include "sb_uuid.h"
 
 #include "sb_ck_pr.h"
 
@@ -45,6 +46,7 @@
 #include "lua/internal/sysbench.rand.lua.h"
 #include "lua/internal/sysbench.sql.lua.h"
 #include "lua/internal/sysbench.histogram.lua.h"
+#include "lua/internal/sysbench.uuid.lua.h"
 
 #define EVENT_FUNC "event"
 #define PREPARE_FUNC "prepare"
@@ -123,6 +125,7 @@ static internal_script_t internal_scripts[] = {
   {"sysbench.sql.lua", sysbench_sql_lua, &sysbench_sql_lua_len},
   {"sysbench.histogram.lua", sysbench_histogram_lua,
    &sysbench_histogram_lua_len},
+  {"sysbench.uuid.lua", sysbench_uuid_lua, &sysbench_uuid_lua_len},
   {NULL, NULL, 0}
 };
 

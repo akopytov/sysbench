@@ -122,6 +122,7 @@ addons:
     - libmysqlclient-dev
     - libpq-dev
     - libaio-dev
+    - uuid-dev
     - clang-3.6
 
 before_install:

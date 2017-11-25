@@ -39,6 +39,8 @@ add_executable(sysbench
   sb_win.h
   sb_rand.c
   sb_rand.h
+  sb_uuid.c
+  sb_uuid.h
   sb_thread.c
   sb_thread.h
   sb_barrier.c
