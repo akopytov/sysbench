@@ -274,6 +274,8 @@ AC_CHECK_LIB([umem], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lumem"],
 ) 
 
 # Check for UUID support
+AC_CHECK_HEADER(uuid/uuid.h, [],
+    AC_MSG_ERROR([Unable to find <uuid/uuid.h>. Please install libuuid-dev (Debian) or libuuid-devel (RedHat/SUSE)]))
 AC_CHECK_LIB([uuid], [uuid_generate], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -luuid"])
 
 # Checks for header files.
@@ -296,8 +298,7 @@ sys/shm.h \
 thread.h \
 unistd.h \
 limits.h \
-libgen.h \
-uuid/uuid.h
+libgen.h
 ])
 
 
