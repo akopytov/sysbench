@@ -21,8 +21,6 @@ AM_CPPFLAGS += -DDATADIR=\"$(pkgdatadir)\" -DLIBDIR=\"$(pkglibdir)\"
 
 bin_PROGRAMS = sysbench
 
-EXTRA_LDFLAGS = @EXTRA_LDFLAGS@
-
 # The following check will be extended as new database drivers will be added
 if USE_MYSQL
 mysql_ldadd = drivers/mysql/libsbmysql.a $(MYSQL_LIBS)
@@ -61,5 +59,5 @@ sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     $(mysql_ldadd) $(drizzle_ldadd) $(attachsql_ldadd) $(pgsql_ldadd) \
     $(ora_ldadd) $(LUAJIT_LIBS) $(CK_LIBS)
 
-sysbench_LDFLAGS = $(EXTRA_LDFLAGS) $(mysql_ldflags) $(attachsql_ldflags) \
+sysbench_LDFLAGS = $(mysql_ldflags) $(attachsql_ldflags) \
     $(pgsql_ldflags) $(ora_ldflags) $(LUAJIT_LDFLAGS)

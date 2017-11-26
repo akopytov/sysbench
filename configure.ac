@@ -62,12 +62,6 @@ AX_COMPILER_VENDOR
 # Checks for user arguments
 
 AC_LIB_PREFIX()
-# Additional linker flags
-AC_ARG_WITH([extra-ldflags],
-              AS_HELP_STRING([--with-extra-ldflags],[additional linker flags, e.g. -all-static]),
-              EXTRA_LDFLAGS=$withval
-)
-AC_SUBST(EXTRA_LDFLAGS)
 
 CPPFLAGS="-D_GNU_SOURCE ${CPPFLAGS}"
 
@@ -267,11 +261,6 @@ AC_SUBST([USE_PGSQL])
 # Check for libaio
 AC_CHECK_AIO
 AM_CONDITIONAL(USE_AIO, test x$enable_aio = xyes)
-
-# Check for advanced memory allocation libraries 
-AC_CHECK_LIB([umem], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lumem"], 
- AC_CHECK_LIB([mtmalloc], [malloc], [EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lmtmalloc"]) 
-) 
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -561,7 +550,6 @@ AC_MSG_RESULT([CFLAGS             : ${CFLAGS} ${AM_CFLAGS}])
 AC_MSG_RESULT([CPPFLAGS           : ${CPPFLAGS} ${AM_CPPFLAGS}])
 AC_MSG_RESULT([LDFLAGS            : ${LDFLAGS} ${AM_LDFLAGS}])
 AC_MSG_RESULT([LIBS               : ${LIBS}])
-AC_MSG_RESULT([EXTRA_LDFLAGS      : ${EXTRA_LDFLAGS}])
 AC_MSG_RESULT([])
 AC_MSG_RESULT([prefix             : $(eval echo ${prefix})])
 AC_MSG_RESULT([bindir             : $(eval echo ${bindir})])
