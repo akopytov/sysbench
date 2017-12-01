@@ -57,13 +57,13 @@ int sb_counters_init(void);
 void sb_counters_done(void);
 
 /* Return the current value for a given counter */
-static inline uint64_t sb_counter_val(int thread_id, sb_counter_type_t type)
+inline uint64_t sb_counter_val(int thread_id, sb_counter_type_t type)
 {
   return ck_pr_load_64(&sb_counters[thread_id][type]);
 }
 
 /* Increment a given stat counter for a given thread  */
-static inline void sb_counter_inc(int thread_id, sb_counter_type_t type)
+inline void sb_counter_inc(int thread_id, sb_counter_type_t type)
 {
   ck_pr_store_64(&sb_counters[thread_id][type],
                  sb_counter_val(thread_id, type)+1);
