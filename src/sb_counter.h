@@ -65,8 +65,7 @@ inline uint64_t sb_counter_val(int thread_id, sb_counter_type_t type)
 }
 
 /* Add a given value to a given stat counter for a given thread */
-static inline void sb_counter_add(int thread_id, sb_counter_type_t type,
-                                  uint64_t val)
+inline void sb_counter_add(int thread_id, sb_counter_type_t type, uint64_t val)
 {
   ck_pr_store_64(&sb_counters[thread_id][type],
                  sb_counter_val(thread_id, type) + val);
