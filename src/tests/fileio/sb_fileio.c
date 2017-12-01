@@ -1779,8 +1779,11 @@ int parse_arguments(void)
   {
     if (mode == NULL)
     {
-      log_text(LOG_FATAL, "Missing required argument: --file-test-mode");
+      log_text(LOG_FATAL, "Missing required argument: --file-test-mode\n");
+
+      log_text(LOG_NOTICE, "fileio options:");
       sb_print_options(fileio_args);
+
       return 1;
     }
     if (!strcmp(mode, "seqwr"))
