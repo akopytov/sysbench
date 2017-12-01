@@ -169,7 +169,7 @@ before_install:
     fi
 
 install:
-  - pip install --user urllib3[secure] cpp-coveralls
+  - pip2 install --user urllib3[secure] cpp-coveralls
   - >
     case "${TRAVIS_OS_NAME:-linux}" in
     osx)
