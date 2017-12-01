@@ -74,6 +74,7 @@ distros_aarch64=(
     "fedora 25 aarch64"
     "fedora 26 aarch64"
     "fedora 27 aarch64"
+    "ubuntu artful aarch64"
     "ubuntu trusty aarch64"
     "ubuntu xenial aarch64"
     "debian jessie aarch64"
