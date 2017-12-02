@@ -28,11 +28,6 @@
 static sb_counters_t last_intermediate_counters;
 static sb_counters_t last_cumulative_counters;
 
-extern inline uint64_t sb_counter_val(int, sb_counter_type_t);
-extern inline void sb_counter_add(int, sb_counter_type_t, uint64_t);
-extern inline void sb_counter_inc(int, sb_counter_type_t);
-
-
 /* Initialize per-thread stats */
 
 int sb_counters_init(void)
@@ -70,6 +65,11 @@ static void sb_counters_checkpoint(sb_counters_t dst, sb_counters_t cp)
   }
 }
 
+/*
+  Return aggregate counter values since the last intermediate report. This is
+  not thread-safe as it updates the global last report state, so it must be
+  called from a single thread.
+*/
 void sb_counters_agg_intermediate(sb_counters_t val)
 {
   memset(val, 0, sizeof(sb_counters_t));
@@ -78,6 +78,11 @@ void sb_counters_agg_intermediate(sb_counters_t val)
   sb_counters_checkpoint(val, last_intermediate_counters);
 }
 
+/*
+  Return aggregate counter values since the last cumulative report. This is
+  not thread-safe as it updates the global last report state, so it must be
+  called from a single thread.
+*/
 void sb_counters_agg_cumulative(sb_counters_t val)
 {
   memset(val, 0, sizeof(sb_counters_t));

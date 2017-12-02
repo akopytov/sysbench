@@ -29,6 +29,10 @@
 #include "lualib.h"
 #include "lauxlib.h"
 
+#define SB_LUA_EXPORT
+#include "sb_counter.h"
+#undef SB_LUA_EXPORT
+
 #include "db_driver.h"
 #include "sb_rand.h"
 #include "sb_thread.h"
