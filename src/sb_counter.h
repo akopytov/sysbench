@@ -69,10 +69,18 @@ inline void sb_counter_inc(int thread_id, sb_counter_type_t type)
                  sb_counter_val(thread_id, type)+1);
 }
 
-/* Return aggregate counter values since the last intermediate report */
+/*
+  Return aggregate counter values since the last intermediate report. This is
+  not thread-safe as it updates the global last report state, so it must be
+  called from a single thread.
+*/
 void sb_counters_agg_intermediate(sb_counters_t val);
 
-/* Return aggregate counter values since the last cumulative report */
+/*
+  Return aggregate counter values since the last cumulative report. This is
+  not thread-safe as it updates the global last report state, so it must be
+  called from a single thread.
+*/
 void sb_counters_agg_cumulative(sb_counters_t val);
 
 #endif
