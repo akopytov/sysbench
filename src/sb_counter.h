@@ -56,18 +56,37 @@ int sb_counters_init(void);
 
 void sb_counters_done(void);
 
+/*
+  Cannot use C99 inline here, because CK atomic primitives use static inlines
+  which in turn leads to compiler warnings. So for performance reasons the
+  following functions are defined 'static inline' too everywhere except sb_lua.c
+  where they are declared and defined as external linkage functions to be
+  available from LuaJIT FFI.
+*/
+#ifndef SB_LUA_EXPORT
+# define SB_LUA_INLINE static inline
+#else
+# define SB_LUA_INLINE
+uint64_t sb_counter_val(int thread_id, sb_counter_type_t type);
+void sb_counter_inc(int thread_id, sb_counter_type_t type);
+#endif
+
 /* Return the current value for a given counter */
-inline uint64_t sb_counter_val(int thread_id, sb_counter_type_t type)
+SB_LUA_INLINE
+uint64_t sb_counter_val(int thread_id, sb_counter_type_t type)
 {
   return ck_pr_load_64(&sb_counters[thread_id][type]);
 }
 
 /* Increment a given stat counter for a given thread  */
-inline void sb_counter_inc(int thread_id, sb_counter_type_t type)
+SB_LUA_INLINE
+void sb_counter_inc(int thread_id, sb_counter_type_t type)
 {
   ck_pr_store_64(&sb_counters[thread_id][type],
                  sb_counter_val(thread_id, type)+1);
 }
+
+#undef SB_LUA_INLINE
 
 /*
   Return aggregate counter values since the last intermediate report. This is

@@ -28,9 +28,6 @@
 static sb_counters_t last_intermediate_counters;
 static sb_counters_t last_cumulative_counters;
 
-extern inline uint64_t sb_counter_val(int thread_id, sb_counter_type_t type);
-extern inline void sb_counter_inc(int thread_id, sb_counter_type_t type);
-
 /* Initialize per-thread stats */
 
 int sb_counters_init(void)
