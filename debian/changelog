@@ -1,3 +1,11 @@
+sysbench (1.0.11-1) unstable; urgency=low
+
+  * add Debian Stretch support by adding optional build dependency on
+    default-libmysqlclient-dev and replacing python-minimal with python
+    (as minimal does not provide the shlex module required by cram)
+
+ -- Alexey Kopytov <akopytov@gmail.com>  Sat, 09 Dec 2017 19:52:23 +0300
+
 sysbench (1.0.6-1) unstable; urgency=low
 
   * Add pkg-config, vim-common and python-minimal and libpq-dev to build dependencies.
