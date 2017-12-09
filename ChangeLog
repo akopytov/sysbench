@@ -1,3 +1,17 @@
+2017-12-09  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.11
+	* add Debian Stretch to CI/build/packaging matrices
+	* add Fedora 27 to CI/build/packaging matrices
+	* make statistic counters usable from Lua scripts
+	* fix the PostgreSQL driver to be compatible with CockroachDB
+	(GH-180)
+	* fix oltp_insert.lua to work correctly when both --tables and
+	--threads are greater than 1 (GH-178)
+	* fix FreeBSD builds by adding -rdynamic to the default linker
+	flags (GH-174)
+	* minor documentation updates
+
 2017-10-25  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.10
