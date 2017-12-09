@@ -58,6 +58,7 @@ distros_x86_64=(
     "ubuntu artful x86_64"
     "debian wheezy x86_64"
     "debian jessie x86_64"
+    "debian stretch x86_64"
 )
 
 distros_i386=(
@@ -67,6 +68,7 @@ distros_i386=(
     "ubuntu artful i386"
     "debian wheezy i386"
     "debian jessie i386"
+    "debian stretch i386"
 )
 
 distros_aarch64=(
@@ -78,6 +80,7 @@ distros_aarch64=(
     "ubuntu trusty aarch64"
     "ubuntu xenial aarch64"
     "debian jessie aarch64"
+    "debian stretch aarch64"
 )
 
 main()
