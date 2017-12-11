@@ -34,7 +34,7 @@ WANT_PIC=yes
 
 P_PWD=`pwd`
 MAINTAINER='sbahra@repnop.org'
-VERSION=${VERSION:-'0.6.0'}
+VERSION=${VERSION:-'1.0.0'}
 VERSION_MAJOR='0'
 BUILD="$PWD/build/ck.build"
 PREFIX=${PREFIX:-"/usr/local"}
@@ -169,7 +169,8 @@ generate_stdout()
 for option; do
 	case "$option" in
 	*=?*)
-		value=`expr -- "$option" : '[^=]*=\(.*\)'`
+		optname=`echo $option|cut -c 3-`
+		value=`expr "$optname" : '[^=]*=\(.*\)'`
 		;;
 	*=)
 		value=
@@ -294,7 +295,8 @@ for option; do
 		fi
 		;;
 	*=*)
-		NAME=`expr -- "$option" : '\([^=]*\)='`
+		optname=`echo $option|cut -c 3-`
+		NAME=`expr "$optname" : '\([^=]*\)='`
 		eval "$NAME='$value'"
 		export $NAME
 		;;
@@ -347,7 +349,7 @@ case "$SYSTEM" in
 		DCORES=`sysctl -n hw.ncpu`
 		SYSTEM=darwin
 		;;
-	MINGW32*)
+	MINGW32*|MSYS_NT*)
 		SYSTEM=mingw32
 		LDFLAGS="-mthreads $LDFLAGS"
 		;;
@@ -482,6 +484,13 @@ case $PLATFORM in
 		PLATFORM=aarch64
 		ENVIRONMENT=64
 		;;
+	"s390x")
+		RTM_ENABLE="CK_MD_RTM_DISABLE"
+		LSE_ENABLE="CK_MD_LSE_DISABLE"
+		MM="${MM:-"CK_MD_RMO"}"
+		PLATFORM=s390x
+		ENVIRONMENT=64
+		;;
 	*)
 		RTM_ENABLE="CK_MD_RTM_DISABLE"
 		LSE_ENABLE="CK_MD_LSE_DISABLE"
@@ -561,9 +570,11 @@ else
 fi
 
 printf "Finding suitable compiler........"
-CC=`pathsearch "${CC:-cc}"`
-if test -z "$CC" -o ! -x "$CC"; then
-	CC=`pathsearch "${CC:-gcc}"`
+if test ! -x "${CC}"; then
+	CC=`pathsearch "${CC:-cc}"`
+	if test -z "$CC" -o ! -x "$CC"; then
+		CC=`pathsearch "${CC:-gcc}"`
+	fi
 fi
 assert "$CC" "not found"
 
@@ -596,7 +607,7 @@ int main(void) {
 EOF
 
 $CC -o .1 .1.c
-COMPILER=`./.1`
+COMPILER=`./.1 2> /dev/null`
 r=$?
 rm -f .1.c .1
 

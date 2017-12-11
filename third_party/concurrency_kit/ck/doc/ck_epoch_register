@@ -34,7 +34,7 @@ Concurrency Kit (libck, \-lck)
 .Sh SYNOPSIS
 .In ck_epoch.h
 .Ft void
-.Fn ck_epoch_register "ck_epoch_t *epoch" "ck_epoch_record_t *record"
+.Fn ck_epoch_register "ck_epoch_t *epoch" "ck_epoch_record_t *record" "void *cl"
 .Sh DESCRIPTION
 The
 .Fn ck_epoch_register 3
@@ -49,7 +49,11 @@ object pointed to by the
 argument will have lifetime managed by the underlying epoch sub-system.
 The record object must not be destroyed after it is associated with a
 .Fn ck_epoch_register 3
-call.
+call. An optional context pointer
+.Fa cl
+may be passed that is retrievable with the
+.Fn ck_epoch_record_ct 3
+function.
 .Sh RETURN VALUES
 This function has no return value.
 .Sh SEE ALSO

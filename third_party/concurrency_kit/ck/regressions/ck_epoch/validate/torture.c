@@ -31,8 +31,8 @@
 #include <unistd.h>
 #include <ck_cc.h>
 #include <ck_pr.h>
+#include <inttypes.h>
 #include <stdbool.h>
-#include <stddef.h>
 #include <string.h>
 #include <ck_epoch.h>
 #include <ck_stack.h>
@@ -119,7 +119,7 @@ read_thread(void *unused CK_CC_UNUSED)
 
 	record = malloc(sizeof *record);
 	assert(record != NULL);
-	ck_epoch_register(&epoch, record);
+	ck_epoch_register(&epoch, record, NULL);
 
 	if (aff_iterate(&a)) {
 		perror("ERROR: failed to affine thread");
@@ -147,10 +147,11 @@ write_thread(void *unused CK_CC_UNUSED)
 	ck_epoch_record_t *record;
 	unsigned long iterations = 0;
 	bool c = ck_pr_faa_uint(&first, 1);
+	uint64_t ac = 0;
 
 	record = malloc(sizeof *record);
 	assert(record != NULL);
-	ck_epoch_register(&epoch, record);
+	ck_epoch_register(&epoch, record, NULL);
 
 	if (aff_iterate(&a)) {
 		perror("ERROR: failed to affine thread");
@@ -160,6 +161,12 @@ write_thread(void *unused CK_CC_UNUSED)
 	ck_pr_inc_uint(&barrier);
 	while (ck_pr_load_uint(&barrier) < n_threads);
 
+#define CK_EPOCH_S	do {		\
+	uint64_t _s = rdtsc();		\
+	ck_epoch_synchronize(record);	\
+	ac += rdtsc() - _s;		\
+} while (0)
+
 	do {
 		/*
 		 * A thread should never observe invalid.value > valid.value.
@@ -167,33 +174,34 @@ write_thread(void *unused CK_CC_UNUSED)
 		 * invalid.value <= valid.value is valid.
 		 */
 		if (!c) ck_pr_store_uint(&valid.value, 1);
-		ck_epoch_synchronize(record);
+		CK_EPOCH_S;
 		if (!c) ck_pr_store_uint(&invalid.value, 1);
 
 		ck_pr_fence_store();
 		if (!c) ck_pr_store_uint(&valid.value, 2);
-		ck_epoch_synchronize(record);
+		CK_EPOCH_S;
 		if (!c) ck_pr_store_uint(&invalid.value, 2);
 
 		ck_pr_fence_store();
 		if (!c) ck_pr_store_uint(&valid.value, 3);
-		ck_epoch_synchronize(record);
+		CK_EPOCH_S;
 		if (!c) ck_pr_store_uint(&invalid.value, 3);
 
 		ck_pr_fence_store();
 		if (!c) ck_pr_store_uint(&valid.value, 4);
-		ck_epoch_synchronize(record);
+		CK_EPOCH_S;
 		if (!c) ck_pr_store_uint(&invalid.value, 4);
 
-		ck_epoch_synchronize(record);
+		CK_EPOCH_S;
 		if (!c) ck_pr_store_uint(&invalid.value, 0);
-		ck_epoch_synchronize(record);
+		CK_EPOCH_S;
 
-		iterations += 4;
+		iterations += 6;
 	} while (ck_pr_load_uint(&leave) == 0 &&
 		 ck_pr_load_uint(&n_rd) > 0);
 
 	fprintf(stderr, "%lu iterations\n", iterations);
+	fprintf(stderr, "%" PRIu64 " average latency\n", ac / iterations);
 	return NULL;
 }
 
