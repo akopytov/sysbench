@@ -5,9 +5,9 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 1. Redistributions of source code must retain the above copyrighs
+ * 1. Redistributions of source code must retain the above copyrights
  *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyrighs
+ * 2. Redistributions in binary form must reproduce the above copyrights
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
@@ -58,11 +58,11 @@ static struct ck_malloc my_allocator = {
 };
 
 const char *test[] = { "Samy", "Al", "Bahra", "dances", "in", "the", "wind.", "Once",
-			"upon", "a", "time", "his", "gypsy", "ate", "one", "itsy",
-			    "bitsy", "spider.", "What", "goes", "up", "must",
-				"come", "down.", "What", "is", "down", "stays",
-				    "down.", "A", "B", "C", "D", "E", "F", "G", "H",
-					"I", "J", "K", "L", "M", "N", "O", "P", "Q" };
+                       "upon", "a", "time", "his", "gypsy", "ate", "one", "itsy",
+                       "bitsy", "spider.", "What", "goes", "up", "must",
+                       "come", "down.", "What", "is", "down", "stays",
+                       "down.", "A", "B", "C", "D", "E", "F", "G", "H",
+                       "I", "J", "K", "L", "M", "N", "O", "P", "Q" };
 
 const char *negative = "negative";
 
@@ -136,6 +136,7 @@ run_test(unsigned int is, unsigned int ad)
 	size_t i, j;
 	const char *blob = "#blobs";
 	unsigned long h;
+	ck_hs_iterator_t it;
 
 	if (ck_hs_init(&hs[0], CK_HS_MODE_SPMC | CK_HS_MODE_OBJECT | ad, hs_hash, hs_compare, &my_allocator, is, 6602834) == false)
 		ck_error("ck_hs_init\n");
@@ -178,6 +179,51 @@ run_test(unsigned int is, unsigned int ad)
 			}
 			if (ck_hs_get(&hs[j], h, test[i]) == NULL) {
 				ck_error("ERROR [%u]: get must not fail after put\n", is);
+			}
+		}
+
+		/* Test iteration */
+		if (j == 0) { // avoid the blob stuff as it's not in the test array
+			ck_hs_iterator_init(&it);
+			void *k = NULL;
+			int matches = 0;
+			int entries = 0;
+			while(ck_hs_next(&hs[j], &it, &k)) {
+				entries++;
+				for (i = 0; i < sizeof(test) / sizeof(*test); i++) {
+					int x = strcmp(test[i], (char *)k);
+					if (x == 0) {
+						matches++;
+						break;
+					}
+				}
+			}
+
+			if (entries != matches) {
+				ck_error("Iteration must match all elements, has: %d, matched: %d [%d]", entries, matches, is);
+			}
+
+			/* Now test iteration in the face of grows (spmc)*/
+			ck_hs_iterator_init(&it);
+			k = NULL;
+			matches = 0;
+			entries = 0;
+			while(ck_hs_next_spmc(&hs[j], &it, &k)) {
+				entries++;
+				for (i = 0; i < sizeof(test) / sizeof(*test); i++) {
+					int x = strcmp(test[i], (char *)k);
+					if (x == 0) {
+						matches++;
+						break;
+					}
+				}
+				if (entries == 20) {
+					ck_hs_grow(&hs[j], 128);
+				}
+			}
+
+			if (entries != matches) {
+				ck_error("After growth, iteration must match all elements, has: %d, matched: %d [%d]", entries, matches, is);
 			}
 		}
 
