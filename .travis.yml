@@ -30,7 +30,6 @@ env:
       - TARGET=coverage
       - OS=el DIST=6
       - OS=el DIST=7
-      - OS=fedora DIST=25
       - OS=fedora DIST=26
       - OS=fedora DIST=27
       - OS=ubuntu DIST=trusty
@@ -53,8 +52,6 @@ matrix:
     - env: OS=el DIST=6
       compiler: clang
     - env: OS=el DIST=7
-      compiler: clang
-    - env: OS=fedora DIST=25
       compiler: clang
     - env: OS=fedora DIST=26
       compiler: clang
@@ -91,8 +88,6 @@ matrix:
     - env: OS=el DIST=6
       os: osx
     - env: OS=el DIST=7
-      os: osx
-    - env: OS=fedora DIST=25
       os: osx
     - env: OS=fedora DIST=26
       os: osx
