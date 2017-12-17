@@ -369,7 +369,28 @@ int file_prepare(void)
     {
       log_errno(LOG_FATAL, "Cannot open file '%s'", file_name);
       log_text(LOG_WARNING, "Did you forget to run the prepare step?");
-      return 1; 
+      return 1;
+    }
+
+    /* Validate file size */
+    struct stat buf;
+    if (fstat(files[i], &buf))
+    {
+      log_errno(LOG_FATAL, "fstat() failed on file '%s'", file_name);
+      return 1;
+    }
+    if (buf.st_size < file_size)
+    {
+      char ss1[16], ss2[16];
+      log_text(LOG_FATAL,
+               "Size of file '%s' is %sB, but at least %sB is expected.",
+               file_name,
+               sb_print_value_size(ss1, sizeof(ss1), buf.st_size),
+               sb_print_value_size(ss2, sizeof(ss2), file_size));
+      log_text(LOG_WARNING,
+               "Did you run 'prepare' with different --file-total-size or "
+               "--file-num values?");
+      return 1;
     }
   }
 

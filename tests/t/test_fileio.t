@@ -190,3 +190,20 @@ fileio benchmark tests
   FATAL: Cannot open file 'test_file.0' errno = 2 (No such file or directory)
   WARNING: Did you forget to run the prepare step?
   [1]
+
+########################################################################
+GH-196:  fileio: validate file sizes on startup
+########################################################################
+  $ args="$fileio_args --verbosity=2"
+  $ sysbench $args --file-total-size=1M prepare
+  $ sysbench $args --file-test-mode=rndwr run
+  FATAL: Size of file 'test_file.0' is 256KiB, but at least 8MiB is expected.
+  WARNING: Did you run 'prepare' with different --file-total-size or --file-num values?
+  [1]
+  $ sysbench $args cleanup
+  $ sysbench $args --file-num=8 prepare
+  $ sysbench $args --file-test-mode=rndwr run
+  FATAL: Size of file 'test_file.0' is 4MiB, but at least 8MiB is expected.
+  WARNING: Did you run 'prepare' with different --file-total-size or --file-num values?
+  [1]
+  $ sysbench $args --file-num=8 cleanup
