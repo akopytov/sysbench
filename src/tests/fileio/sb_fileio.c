@@ -533,7 +533,11 @@ sb_event_t file_get_seq_request(void)
   }
   else
   {
-    file_req->size = file_block_size;
+    if (position + file_max_request_size > file_size)
+      file_req->size = file_size - position;
+    else
+      file_req->size = file_block_size;
+
     file_req->file_id = current_file;
     file_req->pos = position;
   }
