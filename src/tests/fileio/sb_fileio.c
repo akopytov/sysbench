@@ -651,6 +651,9 @@ retry:
   file_req->pos = (long long) (tmppos % (long long) file_size);
   file_req->size = file_block_size;
 
+  if (file_req->pos + file_req->size > file_size)
+    file_req->size = file_size - file_req->pos;
+
   if (sb_globals.validate)
   {
     /*
