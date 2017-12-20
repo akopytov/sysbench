@@ -533,8 +533,10 @@ sb_event_t file_get_seq_request(void)
   }
   else
   {
-    if (position + file_max_request_size > file_size)
+    if (position + file_max_request_size > file_size) {
+      log_text(LOG_WARNING, "operation exceeding file bounds requested. check block alignment");
       file_req->size = file_size - position;
+    }
     else
       file_req->size = file_block_size;
 
@@ -651,8 +653,10 @@ retry:
   file_req->pos = (long long) (tmppos % (long long) file_size);
   file_req->size = file_block_size;
 
-  if (file_req->pos + file_req->size > file_size)
+  if (file_req->pos + file_req->size > file_size) {
+    log_text(LOG_WARNING, "operation exceeding file bounds requested. check block alignment");
     file_req->size = file_size - file_req->pos;
+  }
 
   if (sb_globals.validate)
   {
