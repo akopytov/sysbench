@@ -372,6 +372,9 @@ int file_prepare(void)
       return 1;
     }
 
+    if (test_mode == MODE_WRITE)
+      continue;
+
     /* Validate file size */
     struct stat buf;
     if (fstat(files[i], &buf))
