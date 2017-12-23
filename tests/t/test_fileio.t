@@ -213,7 +213,7 @@ GH-196:  fileio: validate file sizes on startup
   $ unset args
 
 ########################################################################
-GH-198:  fileio: validate file sizes on startup
+GH-198: Tolerate misaligned test_files.
 ########################################################################
   $ args="$fileio_args --verbosity=2 --file-total-size=1M --file-num=128 --file-block-size=4097 --events=2"
   $ sysbench $args --file-total-size=1M prepare
