@@ -210,3 +210,14 @@ GH-196:  fileio: validate file sizes on startup
   $ sysbench $args --file-total-size=1M prepare
   $ sysbench $args --file-test-mode=seqwr --events=1 run
   $ sysbench $args cleanup
+  $ unset args
+
+########################################################################
+GH-198:  fileio: validate file sizes on startup
+########################################################################
+  $ args="$fileio_args --verbosity=2 --file-total-size=1M --file-num=128 --file-block-size=4097 --events=2"
+  $ sysbench $args --file-total-size=1M prepare
+  $ sysbench $args --file-test-mode=seqrd run
+  $ sysbench $args --file-test-mode=rndrd run
+  $ sysbench $args cleanup
+  $ unset args

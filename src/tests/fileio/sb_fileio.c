@@ -164,7 +164,7 @@ static int               file_fsync_end;
 static file_fsync_mode_t file_fsync_mode;
 static double            file_rw_ratio;
 static int               file_merged_requests;
-static long long         file_max_request_size;
+static long long         file_request_size;
 static file_io_mode_t    file_io_mode;
 #ifdef HAVE_LIBAIO
 static unsigned int      file_async_backlog;
@@ -516,22 +516,10 @@ sb_event_t file_get_seq_request(void)
     position= 0;
     current_file= 0;
   }
-  
-  if (file_merged_requests > 0)
-  {
-    if (position + file_max_request_size <= file_size)
-      file_req->size = file_max_request_size;
-    else
-      file_req->size = file_size - position;
-    file_req->file_id = current_file;
-    file_req->pos = position;
-  }
-  else
-  {
-    file_req->size = file_block_size;
-    file_req->file_id = current_file;
-    file_req->pos = position;
-  }
+
+  file_req->file_id = current_file;
+  file_req->pos = position;
+  file_req->size = SB_MIN(file_request_size, file_size - position);
 
   position += file_req->size;
 
@@ -636,7 +624,7 @@ retry:
   tmppos = tmppos - (tmppos % (long long) file_block_size);
   file_req->file_id = (int) (tmppos / (long long) file_size);
   file_req->pos = (long long) (tmppos % (long long) file_size);
-  file_req->size = file_block_size;
+  file_req->size = SB_MIN(file_block_size, file_size - file_req->pos);
 
   if (sb_globals.validate)
   {
@@ -688,7 +676,10 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
   }
   if (file_req->pos + file_req->size > file_size)
   {
-    log_text(LOG_FATAL, "Too large position discovered in request!");
+    log_text(LOG_FATAL, "I/O request exceeds file size. "
+             "file id: %d file size: %lld req offset: %lld req size: %lld",
+             file_req->file_id, (long long) file_size,
+             (long long) file_req->pos, (long long) file_req->size);
     return 1;
   }
   fd = files[file_req->file_id];
@@ -801,7 +792,7 @@ void file_print_mode(void)
   if (file_merged_requests > 0)
     log_text(LOG_NOTICE, "Merging requests up to %sB for sequential IO.",
              sb_print_value_size(sizestr, sizeof(sizestr),
-                                 file_max_request_size));
+                                 file_request_size));
 
   switch (test_mode)
   {
@@ -1827,9 +1818,9 @@ int parse_arguments(void)
   }
 
   if (file_merged_requests > 0)
-    file_max_request_size = file_block_size * file_merged_requests;
+    file_request_size = file_block_size * file_merged_requests;
   else
-    file_max_request_size = file_block_size;
+    file_request_size = file_block_size;
 
   mode = sb_get_value_string("file-extra-flags");
   if (mode == NULL || !strlen(mode))
@@ -1890,13 +1881,13 @@ int parse_arguments(void)
   per_thread = malloc(sizeof(*per_thread) * sb_globals.threads);
   for (i = 0; i < sb_globals.threads; i++)
   {
-    per_thread[i].buffer = sb_memalign(file_max_request_size, sb_getpagesize());
+    per_thread[i].buffer = sb_memalign(file_request_size, sb_getpagesize());
     if (per_thread[i].buffer == NULL)
     {
       log_text(LOG_FATAL, "Failed to allocate a memory buffer");
       return 1;
     }
-    memset(per_thread[i].buffer, 0, file_max_request_size);
+    memset(per_thread[i].buffer, 0, file_request_size);
   }
 
   return 0;
