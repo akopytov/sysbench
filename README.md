@@ -165,7 +165,7 @@ Assuming you have Xcode (or Xcode Commane Line Tools) and Homebrew installed:
     brew install mysql
     # For PostgreSQL support
     brew install postgresql
-    # openssl is not linked by Homebrew, this is to avoid "ld: library not found for -lss"
+    # openssl is not linked by Homebrew, this is to avoid "ld: library not found for -lssl"
     export LDFLAGS=-L/usr/local/opt/openssl/lib 
 ```
 
