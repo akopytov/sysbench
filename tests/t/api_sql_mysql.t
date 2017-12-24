@@ -6,24 +6,28 @@ SQL Lua API + MySQL tests
   $ . ${SBTEST_INCDIR}/api_sql_common.sh
   drv:name() = mysql
   SQL types:
-  NONE = 0
-  INT = 3
-  CHAR = 11
-  VARCHAR = 12
-  TIMESTAMP = 10
-  TIME = 7
-  FLOAT = 5
-  TINYINT = 1
-  BIGINT = 4
-  SMALLINT = 2
-  DATE = 8
-  DATETIME = 9
-  DOUBLE = 6
+  {
+    BIGINT = 4,
+    CHAR = 11,
+    DATE = 8,
+    DATETIME = 9,
+    DOUBLE = 6,
+    FLOAT = 5,
+    INT = 3,
+    NONE = 0,
+    SMALLINT = 2,
+    TIME = 7,
+    TIMESTAMP = 10,
+    TINYINT = 1,
+    VARCHAR = 12
+  }
   --
   SQL error codes:
-  NONE = 0
-  FATAL = 2
-  IGNORABLE = 1
+  {
+    FATAL = 2,
+    IGNORABLE = 1,
+    NONE = 0
+  }
   --
   FATAL: invalid database driver name: 'non-existing'
   failed to initialize the DB driver
@@ -69,27 +73,33 @@ SQL Lua API + MySQL tests
   --
   FATAL: mysql_drv_query() returned error 1048 (Column 'a' cannot be null) for query 'INSERT INTO t VALUES (NULL)'
   Got an error descriptor:
-    sql_errno = \t1048 (esc)
-    connection = \t<sql_connection> (esc)
-    query = \tINSERT INTO t VALUES (NULL) (esc)
-    sql_state = \t23000 (esc)
-    sql_errmsg = \tColumn 'a' cannot be null (esc)
+  {
+    connection = <sql_connection>,
+    query = "INSERT INTO t VALUES (NULL)",
+    sql_errmsg = "Column 'a' cannot be null",
+    sql_errno = 1048,
+    sql_state = "23000"
+  }
   */api_sql.lua:*: SQL error, errno = 1048, state = '23000': Column 'a' cannot be null (glob)
   FATAL: mysql_drv_query() returned error 1406 (Data too long for column 'a' at row 1) for query 'INSERT INTO t VALUES ('test')'
   Got an error descriptor:
-    sql_errno = \t1406 (esc)
-    connection = \t<sql_connection> (esc)
-    query = \tINSERT INTO t VALUES ('test') (esc)
-    sql_state = \t22001 (esc)
-    sql_errmsg = \tData too long for column 'a' at row 1 (esc)
+  {
+    connection = <sql_connection>,
+    query = "INSERT INTO t VALUES ('test')",
+    sql_errmsg = "Data too long for column 'a' at row 1",
+    sql_errno = 1406,
+    sql_state = "22001"
+  }
   */api_sql.lua:*: SQL error, errno = 1406, state = '22001': Data too long for column 'a' at row 1 (glob)
   FATAL: mysql_drv_query() returned error 1051 (Unknown table '*t') for query 'DROP TABLE t' (glob)
   Got an error descriptor:
-    sql_errno = \t1051 (esc)
-    connection = \t<sql_connection> (esc)
-    query = \tDROP TABLE t (esc)
-    sql_state = \t42S02 (esc)
-    sql_errmsg = \tUnknown table '*t' (esc) (glob)
+  {
+    connection = <sql_connection>,
+    query = "DROP TABLE t",
+    sql_errmsg = "Unknown table 'sbtest.t'",
+    sql_errno = 1051,
+    sql_state = "42S02"
+  }
   */api_sql.lua:*: SQL error, errno = 1051, state = '42S02': Unknown table '*t' (glob)
   --
   1
