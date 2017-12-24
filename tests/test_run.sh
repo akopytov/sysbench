@@ -76,7 +76,10 @@ export SBTEST_INCDIR
 export PATH="${sysbench_dir}:${SBTEST_ROOTDIR}/../third_party/cram/scripts:$PATH"
 
 export PYTHONPATH="${SBTEST_ROOTDIR}/../third_party/cram:${PYTHONPATH:-}"
-export LUA_PATH="$SBTEST_SCRIPTDIR/?.lua"
+
+LUA_PATH="$SBTEST_SCRIPTDIR/?;$SBTEST_SCRIPTDIR/?.lua"
+LUA_PATH="$LUA_PATH;$SBTEST_INCDIR/?;$SBTEST_INCDIR/?.lua"
+export LUA_PATH
 
 . $SBTEST_CONFIG
 

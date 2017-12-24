@@ -19,14 +19,15 @@ end
 
 function event()
   local e, m
+  local inspect = require("inspect")
 
   print("drv:name() = " .. drv:name())
   print("SQL types:")
-  for k,v in pairs(sysbench.sql.type) do print(k .. " = " .. v) end
+  print(inspect(sysbench.sql.type))
   print('--')
 
   print("SQL error codes:")
-  for k,v in pairs(sysbench.sql.error) do print(k .. " = " .. v) end
+  print(inspect(sysbench.sql.error))
   print('--')
 
   e, m = pcall(sysbench.sql.driver, "non-existing")
@@ -146,7 +147,8 @@ sysbench $SB_ARGS --mysql-host="non-existing" --pgsql-host="non-existing" run
 cat >$CRAMTMP/api_sql.lua <<EOF
 function sysbench.hooks.sql_error_ignorable(e)
   print("Got an error descriptor:")
-  for k,v in pairs(e) do print("  " .. k .. " = ", v) end
+  local inspect = require("inspect")
+  print(inspect(e))
 end
 
 function event()

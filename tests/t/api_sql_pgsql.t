@@ -6,24 +6,28 @@ SQL Lua API + PostgreSQL tests
   $ . ${SBTEST_INCDIR}/api_sql_common.sh
   drv:name() = pgsql
   SQL types:
-  NONE = 0
-  INT = 3
-  CHAR = 11
-  VARCHAR = 12
-  TIMESTAMP = 10
-  TIME = 7
-  FLOAT = 5
-  TINYINT = 1
-  BIGINT = 4
-  SMALLINT = 2
-  DATE = 8
-  DATETIME = 9
-  DOUBLE = 6
+  {
+    BIGINT = 4,
+    CHAR = 11,
+    DATE = 8,
+    DATETIME = 9,
+    DOUBLE = 6,
+    FLOAT = 5,
+    INT = 3,
+    NONE = 0,
+    SMALLINT = 2,
+    TIME = 7,
+    TIMESTAMP = 10,
+    TINYINT = 1,
+    VARCHAR = 12
+  }
   --
   SQL error codes:
-  NONE = 0
-  FATAL = 2
-  IGNORABLE = 1
+  {
+    FATAL = 2,
+    IGNORABLE = 1,
+    NONE = 0
+  }
   --
   FATAL: invalid database driver name: 'non-existing'
   failed to initialize the DB driver
@@ -73,29 +77,35 @@ SQL Lua API + PostgreSQL tests
   FATAL: PQexec() failed: 7 null value in column "a" violates not-null constraint
   FATAL: failed query was: INSERT INTO t VALUES (NULL)
   Got an error descriptor:
-    sql_errno = \t0 (esc)
-    connection = \t<sql_connection> (esc)
-    query = \tINSERT INTO t VALUES (NULL) (esc)
-    sql_state = \t23502 (esc)
-    sql_errmsg = \tnull value in column "a" violates not-null constraint (esc)
+  {
+    connection = <sql_connection>,
+    query = "INSERT INTO t VALUES (NULL)",
+    sql_errmsg = 'null value in column "a" violates not-null constraint',
+    sql_errno = 0,
+    sql_state = "23502"
+  }
   */api_sql.lua:*: SQL error, errno = 0, state = '23502': null value in column "a" violates not-null constraint (glob)
   FATAL: PQexec() failed: 7 value too long for type character(1)
   FATAL: failed query was: INSERT INTO t VALUES ('test')
   Got an error descriptor:
-    sql_errno = \t0 (esc)
-    connection = \t<sql_connection> (esc)
-    query = \tINSERT INTO t VALUES ('test') (esc)
-    sql_state = \t22001 (esc)
-    sql_errmsg = \tvalue too long for type character(1) (esc)
+  {
+    connection = <sql_connection>,
+    query = "INSERT INTO t VALUES ('test')",
+    sql_errmsg = "value too long for type character(1)",
+    sql_errno = 0,
+    sql_state = "22001"
+  }
   */api_sql.lua:*: SQL error, errno = 0, state = '22001': value too long for type character(1) (glob)
   FATAL: PQexec() failed: 7 table "t" does not exist
   FATAL: failed query was: DROP TABLE t
   Got an error descriptor:
-    sql_errno = \t0 (esc)
-    connection = \t<sql_connection> (esc)
-    query = \tDROP TABLE t (esc)
-    sql_state = \t42P01 (esc)
-    sql_errmsg = \ttable "t" does not exist (esc)
+  {
+    connection = <sql_connection>,
+    query = "DROP TABLE t",
+    sql_errmsg = 'table "t" does not exist',
+    sql_errno = 0,
+    sql_state = "42P01"
+  }
   */api_sql.lua:*: SQL error, errno = 0, state = '42P01': table "t" does not exist (glob)
   --
   1
