@@ -26,13 +26,12 @@ bool sb_more_events(int thread_id);
 -- Main event loop. This is a Lua version of sysbench.c:thread_run()
 -- ----------------------------------------------------------------------
 function thread_run(thread_id)
-   local success, ret
-
    while ffi.C.sb_more_events(thread_id) do
       ffi.C.sb_event_start(thread_id)
 
+      local success, ret
       repeat
-         local success, ret = pcall(event, thread_id)
+         success, ret = pcall(event, thread_id)
 
          if not success then
             if type(ret) ~= "table" or
