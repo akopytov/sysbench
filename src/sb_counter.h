@@ -52,7 +52,7 @@ typedef uint64_t
 sb_counters_t[SB_ALIGN(SB_CNT_MAX * sizeof(uint64_t), CK_MD_CACHELINE) /
               sizeof(uint64_t)];
 
-sb_counters_t *sb_counters CK_CC_CACHELINE;
+extern sb_counters_t *sb_counters;
 
 int sb_counters_init(void);
 
