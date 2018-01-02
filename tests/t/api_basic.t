@@ -101,3 +101,45 @@ Error handling
   $ sysbench $SB_ARGS run
   FATAL: cannot find the event() function in *api_basic.lua (glob)
   [1]
+
+########################################################################
+event() return values
+########################################################################
+
+  $ cat >$CRAMTMP/api_basic.lua <<EOF
+  > sysbench.cmdline.options = { param = {"param", 0} }
+  > function event()
+  >   i = (i or 0) + 1
+  >   local param = sysbench.opt.param
+  >   print(i)
+  >   if param == 1 then
+  >     return 0
+  >   elseif param == 2 then
+  >     return 1
+  >   elseif param == 3 then
+  >     return true
+  >   elseif param == 4 then
+  >     return {}
+  >   elseif param == 5 then
+  >     return false
+  >   elseif param == 6 then
+  >     return nil
+  >   else
+  >     error("Unknown param value")
+  >   end
+  > end
+  > EOF
+  $ sysbench $SB_ARGS run --param=1
+  1
+  $ sysbench $SB_ARGS run --param=2
+  1
+  $ sysbench $SB_ARGS run --param=3
+  1
+  $ sysbench $SB_ARGS run --param=4
+  1
+  $ sysbench $SB_ARGS run --param=5
+  1
+  2
+  $ sysbench $SB_ARGS run --param=6
+  1
+  2
