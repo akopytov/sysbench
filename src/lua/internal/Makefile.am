@@ -1,4 +1,4 @@
-# Copyright (C) 2016 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2016-2018 Alexey Kopytov <akopytov@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,11 +18,19 @@ BUILT_SOURCES = sysbench.lua.h sysbench.rand.lua.h sysbench.sql.lua.h \
                 sysbench.compat.lua.h sysbench.cmdline.lua.h \
                 sysbench.histogram.lua.h
 
-CLEARFILES = $(BUILT_SOURCES)
+CLEANFILES = $(BUILT_SOURCES)
 
 EXTRA_DIST = $(BUILT_SOURCES:.h=)
 
 SUFFIXES = .lua .lua.h
 
 .lua.lua.h:
-	xxd -i $< $@
+	@echo "Creating $@ from $<"
+	@var=$$(echo $< | sed 's/\./_/g')	&& \
+	( echo "unsigned char $${var}[] =" 	&& \
+	sed -e 's/\\/\\\\/g'			\
+	    -e 's/"/\\"/g'			\
+	    -e 's/^/  "/g'			\
+	    -e 's/$$/\\n"/g' $< 		&& \
+	echo ";"				&& \
+	echo "size_t $${var}_len = sizeof($${var}) - 1;" ) > $@

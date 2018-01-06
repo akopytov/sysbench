@@ -132,7 +132,7 @@ build and use an older 0.5 release on Windows.
 
 ### Debian/Ubuntu
 ``` shell
-    apt -y install make automake libtool pkg-config libaio-dev vim-common
+    apt -y install make automake libtool pkg-config libaio-dev
     # For MySQL support
     apt -y install libmysqlclient-dev
     # For PostgreSQL support
@@ -141,7 +141,7 @@ build and use an older 0.5 release on Windows.
 
 ### RHEL/CentOS
 ``` shell
-    yum -y install make automake libtool pkgconfig libaio-devel vim-common
+    yum -y install make automake libtool pkgconfig libaio-devel
     # For MySQL support, replace with mysql-devel on RHEL/CentOS 5
     yum -y install mariadb-devel
     # For PostgreSQL support
@@ -150,7 +150,7 @@ build and use an older 0.5 release on Windows.
 
 ### Fedora
 ``` shell
-    dnf -y install make automake libtool pkgconfig libaio-devel vim-common
+    dnf -y install make automake libtool pkgconfig libaio-devel
     # For MySQL support
     dnf -y install mariadb-devel
     # For PostgreSQL support

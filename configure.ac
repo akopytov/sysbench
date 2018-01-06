@@ -52,11 +52,6 @@ if test x"$sb_have_pkg_config" = xno; then
   AC_MSG_ERROR([the pkg-config package is required to build sysbench])
 fi
 
-AC_CHECK_PROG(sb_have_xxd, xxd, yes, no)
-if test x"$sb_have_xxd" = xno; then
-   AC_MSG_ERROR("xxd is required to build sysbench (usually comes with the vim package)")
-fi
-
 AX_COMPILER_VENDOR
 
 # Checks for user arguments

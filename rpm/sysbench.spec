@@ -19,7 +19,6 @@ BuildRequires: automake
 BuildRequires: libtool
 BuildRequires: pkgconfig
 BuildRequires: libaio-devel
-BuildRequires: vim-common
 # Use bundled cram for tests
 BuildRequires: python
 
@@ -75,6 +74,9 @@ make test
 
 
 %changelog
+* Sat Jan  6 2018 Alexey Kopytov <akopytov@gmail.com> - 1.0.12-1
+- Remove vim-common from build dependencies.
+
 * Sun Apr 09 2017 Alexey Kopytov <akopytov@gmail.com> - 1.0.5-1
 - Add --without-gcc-arch to configure flags
 
