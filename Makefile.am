@@ -36,6 +36,8 @@ EXTRA_DIST = autogen.sh README.md README-WIN.txt README-Oracle.md ChangeLog \
              rpm/sysbench.spec \
              scripts/buildpack.sh
 
+noinst_SCRIPTS = scripts/txt2c.sh
+
 dist-hook:
 	$(MAKE) -C $(distdir)/third_party/cram clean
 

@@ -99,7 +99,7 @@ typedef struct {
   const char *name;
   const unsigned char *source;
   /* Use a pointer, since _len variables are not compile-time constants */
-  unsigned int *source_len;
+  size_t *source_len;
 } internal_script_t;
 
 typedef enum {
