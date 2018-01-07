@@ -21,7 +21,7 @@ Basic Lua API tests
   >   print("tid:" .. (thread_id or "(nil)") .. " cleanup()")
   > end
   > 
-  > function help()
+  > function help(thread_id)
   >   print("tid:" .. (thread_id or "(nil)") .. " help()")
   > end
   > 
@@ -58,7 +58,7 @@ Basic Lua API tests
   tid:(nil) cleanup()
 
   $ sysbench $SB_ARGS help
-  tid:0 help()
+  tid:(nil) help()
  
   $ cat >$CRAMTMP/api_basic.lua <<EOF
   > function event()
