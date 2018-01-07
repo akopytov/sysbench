@@ -50,7 +50,7 @@ sb_ck_pr.h \
 sb_lua.h sb_util.h sb_util.c sb_counter.h sb_counter.c \
 lua/internal/sysbench.lua.h lua/internal/sysbench.sql.lua.h \
 lua/internal/sysbench.rand.lua.h lua/internal/sysbench.cmdline.lua.h  \
-lua/internal/sysbench.compat.lua.h lua/internal/sysbench.histogram.lua.h \
+lua/internal/sysbench.histogram.lua.h \
 xoroshiro128plus.h
 
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \

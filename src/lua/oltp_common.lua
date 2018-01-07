@@ -221,12 +221,13 @@ CREATE TABLE sbtest%d(
 
       if (sysbench.opt.auto_inc) then
          query = string.format("(%d, '%s', '%s')",
-                               sb_rand(1, sysbench.opt.table_size), c_val,
-                               pad_val)
+                               sysbench.rand.default(1, sysbench.opt.table_size),
+                               c_val, pad_val)
       else
          query = string.format("(%d, %d, '%s', '%s')",
-                               i, sb_rand(1, sysbench.opt.table_size), c_val,
-                               pad_val)
+                               i,
+                               sysbench.rand.default(1, sysbench.opt.table_size),
+                               c_val, pad_val)
       end
 
       con:bulk_insert_next(query)

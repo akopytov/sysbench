@@ -68,7 +68,7 @@ function event()
    for i = 1, sysbench.opt.number_of_ranges*2, 2 do
       local rmin = rlen * thread_id
       local rmax = rmin + rlen
-      local val = sb_rand(rmin, rmax)
+      local val = sysbench.rand.default(rmin, rmax)
       params[i]:set(val)
       params[i+1]:set(val + sysbench.opt.delta)
    end

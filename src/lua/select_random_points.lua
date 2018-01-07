@@ -65,7 +65,7 @@ function event()
    for i = 1, sysbench.opt.random_points do
       local rmin = rlen * thread_id
       local rmax = rmin + rlen
-      params[i]:set(sb_rand(rmin, rmax))
+      params[i]:set(sysbench.rand.default(rmin, rmax))
    end
 
    stmt:execute()

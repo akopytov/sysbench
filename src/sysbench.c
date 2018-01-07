@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2018 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -617,12 +617,8 @@ static int parse_test_arguments(sb_test_t *test, int argc, char *argv[])
     if (argv[i] == NULL || strncmp(argv[i], "--", 2))
       continue;
 
-    /*
-      At this stage an unrecognized option must throw a error, unless the test
-      defines no options (for compatibility with legacy Lua scripts). In the
-      latter case we just export all unrecognized options as strings.
-    */
-    if (parse_option(argv[i]+2, test->args == NULL))
+    /* At this stage an unrecognized option must throw a error. */
+    if (parse_option(argv[i]+2, false))
     {
       fprintf(stderr, "invalid option: %s\n", argv[i]);
       return 1;

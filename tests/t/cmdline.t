@@ -414,6 +414,7 @@ Command line options tests
   [1]
 
   $ cat >cmdline.lua <<EOF
+  > sysbench.cmdline.options = { opt1 = {"opt1"}, opt2 = {"opt2"} }
   > function print_cmd()
   >   print("argv = " .. require("inspect")(sysbench.cmdline.argv))
   >   print(string.format("sysbench.cmdline.command = %s",sysbench.cmdline.command))

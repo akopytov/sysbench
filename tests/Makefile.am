@@ -1,4 +1,4 @@
-# Copyright (C) 2016 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2016-2018 Alexey Kopytov <akopytov@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ EXTRA_DIST = $(test_SCRIPTS) \
 
 testroot = 	$(datadir)
 testdir = 	$(testroot)/sysbench/tests
-test_dirs= 	t include include/oltp_legacy
+test_dirs= 	t include
 
 # Used by dist-hook and install-data-local to copy all
 # test files into either dist or install directory

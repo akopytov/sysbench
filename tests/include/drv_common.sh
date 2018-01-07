@@ -10,7 +10,8 @@ set -eu
 
 cat >test.lua <<EOF
 function event()
-  db_query("SELECT 1")
+  c = c or sysbench.sql.driver():connect()
+  c:query("SELECT 1")
 end
 EOF
 

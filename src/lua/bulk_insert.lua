@@ -30,7 +30,7 @@ end
 
 function event()
    if (cursize == 0) then
-      con:bulk_insert_init("INSERT INTO sbtest" .. thread_id+1 .. " VALUES")
+      con:bulk_insert_init("INSERT INTO sbtest" .. sysbench.tid+1 .. " VALUES")
    end
 
    cursize = cursize + 1
@@ -38,7 +38,7 @@ function event()
    con:bulk_insert_next("(" .. cursize .. "," .. cursize .. ")")
 end
 
-function thread_done(thread_9d)
+function thread_done()
    con:bulk_insert_done()
    con:disconnect()
 end
