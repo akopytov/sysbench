@@ -1082,7 +1082,7 @@ static void asm_ahustore(ASMState *as, IRIns *ir)
 	src = ra_alloc1(as, ir->op2, allow);
 	rset_clear(allow, src);
 	if (irt_isinteger(ir->t))
-	  type = ra_allock(as, (int64_t)LJ_TISNUM << 47, allow);
+          type = ra_allock(as, (uint64_t)(int32_t)LJ_TISNUM << 47, allow);
 	else
 	  type = ra_allock(as, irt_toitype(ir->t), allow);
       } else {
