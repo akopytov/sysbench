@@ -32,6 +32,7 @@ env:
       - OS=el DIST=7
       - OS=fedora DIST=26
       - OS=fedora DIST=27
+      - OS=fedora DIST=rawhide
       - OS=ubuntu DIST=trusty
       - OS=ubuntu DIST=xenial
       - OS=ubuntu DIST=zesty
@@ -39,6 +40,7 @@ env:
       - OS=debian DIST=wheezy
       - OS=debian DIST=jessie
       - OS=debian DIST=stretch
+      - OS=debian DIST=sid
       - OS=ubuntu DIST=trusty ARCH=i386
       - OS=ubuntu DIST=xenial ARCH=i386
       - OS=ubuntu DIST=zesty ARCH=i386
@@ -46,6 +48,7 @@ env:
       - OS=debian DIST=wheezy ARCH=i386
       - OS=debian DIST=jessie ARCH=i386
       - OS=debian DIST=stretch ARCH=i386
+      - OS=debian DISST=sid ARCH=i386
 
 matrix:
   exclude:
@@ -56,6 +59,8 @@ matrix:
     - env: OS=fedora DIST=26
       compiler: clang
     - env: OS=fedora DIST=27
+      compiler: clang
+    - env: OS=fedora DIST=rawhide
       compiler: clang
     - env: OS=ubuntu DIST=trusty
       compiler: clang
@@ -70,6 +75,8 @@ matrix:
     - env: OS=debian DIST=jessie
       compiler: clang
     - env: OS=debian DIST=stretch
+      compiler: clang
+    - env: OS=debian DIST=sid
       compiler: clang
     - env: OS=ubuntu DIST=trusty ARCH=i386
       compiler: clang
@@ -85,6 +92,8 @@ matrix:
       compiler: clang
     - env: OS=debian DIST=stretch ARCH=i386
       compiler: clang
+    - env: OS=debian DIST=sid ARCH=i386
+      compiler: clang
     - env: OS=el DIST=6
       os: osx
     - env: OS=el DIST=7
@@ -92,6 +101,8 @@ matrix:
     - env: OS=fedora DIST=26
       os: osx
     - env: OS=fedora DIST=27
+      os: osx
+    - env: OS=fedora DIST=rawhide
       os: osx
     - env: OS=ubuntu DIST=trusty
       os: osx
@@ -106,6 +117,8 @@ matrix:
     - env: OS=debian DIST=jessie
       os: osx
     - env: OS=debian DIST=stretch
+      os: osx
+    - env: OS=debian DIST=sid
       os: osx
     - env: TARGET=distcheck
       compiler: clang
@@ -229,7 +242,7 @@ deploy:
     skip_cleanup: true
     on:
       all_branches: true
-      condition: -n "${OS}" && -n "${DIST}" && -n "${PACKAGECLOUD_TOKEN}"
+      condition: -n "$OS" && -n "$DIST" && -n "$PACKAGECLOUD_TOKEN" && "$DIST" != "rawhide" && "$DIST" != "sid"
 
 after_success:
   - >
