@@ -48,7 +48,7 @@ env:
       - OS=debian DIST=wheezy ARCH=i386
       - OS=debian DIST=jessie ARCH=i386
       - OS=debian DIST=stretch ARCH=i386
-      - OS=debian DISST=sid ARCH=i386
+      - OS=debian DIST=sid ARCH=i386
 
 matrix:
   exclude:
