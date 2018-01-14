@@ -1,5 +1,5 @@
 # ===========================================================================
-#          http://www.gnu.org/software/autoconf-archive/ax_tls.html
+#          https://www.gnu.org/software/autoconf-archive/ax_tls.html
 # ===========================================================================
 #
 # SYNOPSIS
@@ -9,9 +9,9 @@
 # DESCRIPTION
 #
 #   Provides a test for the compiler support of thread local storage (TLS)
-#   extensions. Defines TLS if it is found. Currently knows about GCC/ICC
-#   and MSVC. I think SunPro uses the same as GCC, and Borland apparently
-#   supports either.
+#   extensions. Defines TLS if it is found. Currently knows about C++11,
+#   GCC/ICC, and MSVC. I think SunPro uses the same as GCC, and Borland
+#   apparently supports either.
 #
 # LICENSE
 #
@@ -29,7 +29,7 @@
 #   Public License for more details.
 #
 #   You should have received a copy of the GNU General Public License along
-#   with this program. If not, see <http://www.gnu.org/licenses/>.
+#   with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 #   As a special exception, the respective Autoconf Macro's copyright owner
 #   gives unlimited permission to copy, distribute and modify the configure
@@ -44,28 +44,12 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 11
-
-#   Define m4_ifblank and m4_ifnblank macros from introduced in
-#   autotools 2.64 m4sugar.m4 if using an earlier autotools.
-
-ifdef([m4_ifblank], [], [
-m4_define([m4_ifblank],
-[m4_if(m4_translit([[$1]],  [ ][	][
-]), [], [$2], [$3])])
-])
-
-
-ifdef([m4_ifnblank], [], [
-m4_define([m4_ifnblank],
-[m4_if(m4_translit([[$1]],  [ ][	][
-]), [], [$3], [$2])])
-])
+#serial 14
 
 AC_DEFUN([AX_TLS], [
   AC_MSG_CHECKING([for thread local storage (TLS) class])
   AC_CACHE_VAL([ac_cv_tls],
-   [for ax_tls_keyword in __thread '__declspec(thread)' none; do
+   [for ax_tls_keyword in thread_local _Thread_local __thread '__declspec(thread)' none; do
        AS_CASE([$ax_tls_keyword],
           [none], [ac_cv_tls=none ; break],
           [AC_TRY_COMPILE(
