@@ -242,7 +242,7 @@ deploy:
     skip_cleanup: true
     on:
       all_branches: true
-      condition: -n "${OS}" && -n "${DIST}" && -n "${PACKAGECLOUD_TOKEN}"
+      condition: -n "$OS" && -n "$DIST" && -n "$PACKAGECLOUD_TOKEN" && "$DIST" != "rawhide" && "$DIST" != "sid"
 
 after_success:
   - >
