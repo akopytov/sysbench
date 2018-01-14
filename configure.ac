@@ -4,6 +4,21 @@ AC_PREREQ(2.63)
 AC_INIT([sysbench],[1.0.11],[https://github.com/akopytov/sysbench/issues],
         [sysbench], [https://github.com/akopytov/sysbench])
 AC_CONFIG_AUX_DIR([config])
+
+# Define m4_ifblank and m4_ifnblank macros from introduced in
+#  autotools 2.64 m4sugar.m4 if using an earlier autotools.
+m4_ifdef([m4_ifblank], [], [
+m4_define([m4_ifblank],
+[m4_if(m4_translit([[$1]],  [ ][	][
+]), [], [$2], [$3])])
+])
+
+m4_ifdef([m4_ifnblank], [], [
+m4_define([m4_ifnblank],
+[m4_if(m4_translit([[$1]],  [ ][	][
+]), [], [$3], [$2])])
+])
+
 # Setting CFLAGS here prevents AC_CANONICAL_TARGET from injecting them
 SAVE_CFLAGS=${CFLAGS}
 SAVE_CXXFLAGS=${CXXFLAGS}
