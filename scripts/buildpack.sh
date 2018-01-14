@@ -51,6 +51,7 @@ distros_x86_64=(
     "el 7 x86_64"
     "fedora 26 x86_64"
     "fedora 27 x86_64"
+    "fedora rawhide"
     "ubuntu trusty x86_64"
     "ubuntu xenial x86_64"
     "ubuntu zesty x86_64"
@@ -58,6 +59,7 @@ distros_x86_64=(
     "debian wheezy x86_64"
     "debian jessie x86_64"
     "debian stretch x86_64"
+    "debian sid x86_64"
 )
 
 distros_i386=(
@@ -68,17 +70,20 @@ distros_i386=(
     "debian wheezy i386"
     "debian jessie i386"
     "debian stretch i386"
+    "debian sid i386"
 )
 
 distros_aarch64=(
     "el 7 aarch64"
     "fedora 26 aarch64"
     "fedora 27 aarch64"
+    "fedora rawhide"
     "ubuntu artful aarch64"
     "ubuntu trusty aarch64"
     "ubuntu xenial aarch64"
     "debian jessie aarch64"
     "debian stretch aarch64"
+    "debian sid aarch64"
 )
 
 main()
