@@ -48,7 +48,7 @@ env:
       - OS=debian DIST=wheezy ARCH=i386
       - OS=debian DIST=jessie ARCH=i386
       - OS=debian DIST=stretch ARCH=i386
-      - OS=debian DISST=sid ARCH=i386
+      - OS=debian DIST=sid ARCH=i386
 
 matrix:
   exclude:
@@ -155,10 +155,6 @@ before_install:
     if [ "x$TARGET" = "xtest" ]; then
       case "${TRAVIS_OS_NAME:-linux}" in
       osx)
-        # Workaround for https://github.com/Homebrew/brew/issues/3299
-        # Should not be necessary after Nov 17 2017
-        brew update
-
         brew install mysql
 
         # OS X requires servers to be started explicitly
