@@ -897,11 +897,7 @@ static void *eventgen_thread_proc(void *arg)
     next_ns += intr_ns;
 
     if (next_ns > curr_ns)
-    {
-      const uint64_t intr_ns = next_ns - curr_ns;
-      struct timespec ts = { intr_ns / 1000000000, intr_ns % 1000000000 };
-      nanosleep(&ts, NULL);
-    }
+      sb_nanosleep(next_ns - curr_ns);
 
     /* Enqueue a new event */
     queue_array[i] = sb_timer_value(&sb_exec_timer);
@@ -957,7 +953,7 @@ static void *report_thread_proc(void *arg)
 
   for (;;)
   {
-    usleep(pause_ns / 1000);
+    sb_nanosleep(pause_ns);
 
     report_intermediate();
 
@@ -977,7 +973,6 @@ static void *report_thread_proc(void *arg)
 
 static void *checkpoints_thread_proc(void *arg)
 {
-  unsigned long long       pause_ns;
   unsigned long long       next_ns;
   unsigned long long       curr_ns;
   unsigned int             i;
@@ -1009,8 +1004,7 @@ static void *checkpoints_thread_proc(void *arg)
     if (next_ns <= curr_ns)
       continue;
 
-    pause_ns = next_ns - curr_ns;
-    usleep(pause_ns / 1000);
+    sb_nanosleep(next_ns - curr_ns);
 
     log_timestamp(LOG_NOTICE, NS2SEC(sb_timer_value(&sb_exec_timer)),
                   "Checkpoint report:");
