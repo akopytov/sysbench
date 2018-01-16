@@ -851,13 +851,16 @@ static void *worker_thread(void *arg)
   return NULL;
 }
 
+/* Generate exponentially distributed number with a given Lambda */
+
+static inline double sb_rand_exp(double lambda)
+{
+  return -1.0 / lambda * log(1 - sb_rand_uniform_double());
+}
+
 static void *eventgen_thread_proc(void *arg)
 {
-  unsigned long long pause_ns;
-  unsigned long long next_ns;
-  unsigned long long curr_ns;
-  unsigned long long intr_ns;
-  int                i;
+  int i;
 
   (void)arg; /* unused */
 
@@ -878,25 +881,26 @@ static void *eventgen_thread_proc(void *arg)
 
   eventgen_thread_created = 1;
 
-  curr_ns = sb_timer_value(&sb_exec_timer);
-  /* emulate exponential distribution with Lambda = tx_rate */
-  intr_ns = (long) (log(1 - sb_rand_uniform_double()) /
-                    (-(double) sb_globals.tx_rate)*1000000);
-  next_ns = curr_ns + intr_ns*1000;
+  /*
+    Get exponentially distributed time intervals in nanoseconds with Lambda =
+    tx_rate. Alternatively, we can use Lambda = tx_rate / 1e9
+  */
+  double lambda = sb_globals.tx_rate / 1e9;
+  uint64_t curr_ns = sb_timer_value(&sb_exec_timer);
+  uint64_t intr_ns = sb_rand_exp(lambda);
+  uint64_t next_ns = curr_ns + intr_ns;;
 
   for (;;)
   {
     curr_ns = sb_timer_value(&sb_exec_timer);
+    intr_ns = sb_rand_exp(lambda);
+    next_ns += intr_ns;
 
-    /* emulate exponential distribution with Lambda = tx_rate */
-    intr_ns = (long) (log(1 - sb_rand_uniform_double()) /
-                      (-(double)sb_globals.tx_rate)*1000000);
-
-    next_ns = next_ns + intr_ns*1000;
     if (next_ns > curr_ns)
     {
-      pause_ns = next_ns - curr_ns;
-      usleep(pause_ns / 1000);
+      const uint64_t intr_ns = next_ns - curr_ns;
+      struct timespec ts = { intr_ns / 1000000000, intr_ns % 1000000000 };
+      nanosleep(&ts, NULL);
     }
 
     /* Enqueue a new event */
