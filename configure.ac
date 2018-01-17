@@ -363,35 +363,11 @@ AC_ARG_WITH([debug],
     [with_debug=$withval],
     [with_debug=no])
 
-AC_ARG_ENABLE([profiling],
-    [AS_HELP_STRING([--enable-profiling],
-       [Toggle profiling @<:@default=off@:>@])],
-    [ac_profiling="$enableval"],
-    [ac_profiling="no"])
- 
 AC_ARG_ENABLE([coverage],
     [AS_HELP_STRING([--enable-coverage],
-       [Toggle coverage @<:@default=off@:>@])],
+       [Toggle coverage @<:@default=no@:>@])],
     [ac_coverage="$enableval"],
     [ac_coverage="no"])
-
-AC_ARG_ENABLE([pedantic-warnings],
-    [AS_HELP_STRING([--disable-pedantic-warnings],
-       [Toggle pedanticness @<:@default=on@:>@])],
-    [ac_warn_pedantic="$enableval"],
-    [ac_warn_pedantic="yes"])
-
-AC_ARG_ENABLE([iso-pedantic-warnings],
-    [AS_HELP_STRING([--enable-iso-pedantic-warnings],
-       [Toggle iso pedanticness @<:@default=off@:>@])],
-    [ac_warn_iso_pedantic="$enableval"],
-    [ac_warn_iso_pedantic="no"])
-
-AC_ARG_ENABLE([unreachable],
-  [AS_HELP_STRING([--enable-unreachable],
-    [Enable warnings about unreachable code @<:@default=no@:>@])],
-  [ac_warn_unreachable="$enableval"],
-  [ac_warn_unreachable="no"])
 
 AC_ARG_ENABLE([asan],
   [AS_HELP_STRING([--enable-asan],
@@ -410,12 +386,6 @@ AC_ARG_ENABLE([fail],
        [Turn warnings into failures @<:@default=no@:>@])],
     [ac_warn_fail="$enableval"],
     [ac_warn_fail="no"])
-
-AC_ARG_ENABLE([go-crazy],
-    [AS_HELP_STRING([--disable-go-crazy],
-       [Enables extra little warnings that might be too much @<:@default=on@:>@])],
-    [ac_warn_go_crazy="$enableval"],
-    [ac_warn_go_crazy="no"])
 
 if test "$with_debug" = "yes"
 then
@@ -457,55 +427,19 @@ then
   then
     W_FAIL="-Werror"
   fi
-  BASE_WARNINGS="-W -Wall -Wextra -Wpointer-arith -Wbad-function-cast \
-  -Wstrict-prototypes -Wnested-externs -Wno-inline -Wno-format-zero-length \
-  -funroll-loops ${W_FAIL}"
 
-  if test "$ac_profiling" = "yes"
-  then
-    GPROF_PROFILING="-pg"
-  else
-    GPROF_PROFILING=" "
-  fi
-
-  if test "$ac_coverage" = "yes"
-  then
-    GPROF_COVERAGE="--coverage"
-  else
-    GPROF_COVERAGE=" "
-  fi
-
-  if test "$ac_warn_pedantic" = "yes"
-  then
-    W_PEDANTIC="-Wundef -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wcast-align"
-  fi
-
-  if test "$ac_warn_iso_pedantic" = "yes"
-  then
-    W_PEDANTIC="-pedantic ${W_PEDANTIC}"
-  fi
-
-  if test "$ac_warn_unreachable" = "yes"
-  then
-    W_UNREACHABLE="-Wunreachable-code"
-  fi
-
-  if test "$ac_warn_go_crazy" = "yes"
-  then
-    W_CRAZY="-Wshadow -Wconversion"
-  fi
-
-  CC_WARNINGS="${BASE_WARNINGS} ${W_PEDANTIC} ${W_UNREACHABLE} ${W_CRAZY}"
-
-  NO_REDUNDANT_DECLS="-Wno-redundant-decls"
-  CPPFLAGS="${CPPFLAGS}"
+  CC_WARNINGS="-W -Wall -Wextra -Wpointer-arith -Wbad-function-cast \
+-Wstrict-prototypes -Wnested-externs -Wno-inline -Wno-format-zero-length \
+-Wundef -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations \
+-Wredundant-decls -Wcast-align ${W_FAIL}"
 fi
+
 if test "$ax_cv_c_compiler_vendor" = "sun"
 then
   CC_WARNINGS="-v -errtags=yes -errwarn=%all -erroff=E_INTEGER_OVERFLOW_DETECTED -erroff=E_STATEMENT_NOT_REACHED"
 fi
 
-AM_CFLAGS="${CC_WARNINGS} ${GPROF_PROFILING} ${GPROF_COVERAGE} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
+AM_CFLAGS="-funroll-loops ${CC_WARNINGS} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
 
 AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/src ${LUAJIT_CFLAGS} ${CK_CFLAGS}"
 
