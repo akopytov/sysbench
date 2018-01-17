@@ -1,3 +1,22 @@
+2018-01-17  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.12
+	* improve --rate mode precision for high argument values
+	* add Fedora Rawhide and Debian Sid to CI matrix
+	* fix compile-time architecture detection for some Broadwell
+	CPUs which were incorrectly identified as Core 2.
+	* remove build dependency on xxd (and vim-minimal package)
+	* fix Lua API to correctly stop the benchmark when event()
+	returns a value other than nil or false (thanks to caojiafeng
+	for the patch)
+	* fix the fileio benchmark when the specified file size is not a
+	multiple of block size
+	* fix the fileio benchmark to throw a descriptive error when the
+	specified file size does not match the size of files created by
+	'prepare'
+	* remove Fedora 25 from CI/build/packaging matrices (EOL)
+	* minor improvements in tests and documentation.
+
 2017-12-09  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.11
