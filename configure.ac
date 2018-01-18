@@ -58,8 +58,6 @@ AS_CASE([$CFLAGS],
 
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
-#LT_INIT([dlopen])
-#LT_LIB_DLLOAD
 AC_PROG_LIBTOOL
 
 AC_CHECK_PROG(sb_have_pkg_config, pkg-config, yes, no)
@@ -92,7 +90,7 @@ if test "$GCC" = "yes"
 then
   CFLAGS="-ggdb3 ${CFLAGS}"
   DEBUG_CFLAGS="-O0"
-  OPTIMIZE_CFLAGS="-O2"
+  OPTIMIZE_CFLAGS="-O2 -funroll-loops"
   GCOV_CFLAGS="-O0 --coverage"
   GCOV_LDFLAGS="-coverage"
   ASAN_CFLAGS="-fsanitize=address"
@@ -442,8 +440,8 @@ then
     W_FAIL="-Werror"
   fi
 
-  CC_WARNINGS="-W -Wall -Wextra -Wpointer-arith -Wbad-function-cast \
--Wstrict-prototypes -Wnested-externs -Wno-inline -Wno-format-zero-length \
+  CC_WARNINGS="-Wall -Wextra -Wpointer-arith -Wbad-function-cast \
+-Wstrict-prototypes -Wnested-externs -Wno-format-zero-length \
 -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations \
 -Wredundant-decls -Wcast-align ${W_FAIL}"
 fi
@@ -453,7 +451,7 @@ then
   CC_WARNINGS="-v -errtags=yes -errwarn=%all -erroff=E_INTEGER_OVERFLOW_DETECTED -erroff=E_STATEMENT_NOT_REACHED"
 fi
 
-AM_CFLAGS="-funroll-loops ${CC_WARNINGS} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
+AM_CFLAGS="${CC_WARNINGS} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
 
 AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/src ${LUAJIT_CFLAGS} ${CK_CFLAGS}"
 
