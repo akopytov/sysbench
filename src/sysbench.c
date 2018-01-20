@@ -307,20 +307,20 @@ void sb_report_cumulative(sb_stat_t *stat)
   log_text(LOG_NOTICE, "");
 
   log_text(LOG_NOTICE, "Latency (ms):");
-  log_text(LOG_NOTICE, "         min:                            %10.2f",
+  log_text(LOG_NOTICE, "         min: %39.2f",
            SEC2MS(stat->latency_min));
-  log_text(LOG_NOTICE, "         avg:                            %10.2f",
+  log_text(LOG_NOTICE, "         avg: %39.2f",
            SEC2MS(stat->latency_avg));
-  log_text(LOG_NOTICE, "         max:                            %10.2f",
+  log_text(LOG_NOTICE, "         max: %39.2f",
            SEC2MS(stat->latency_max));
 
   if (sb_globals.percentile > 0)
-    log_text(LOG_NOTICE, "        %3dth percentile:                %10.2f",
+    log_text(LOG_NOTICE, "        %3dth percentile: %27.2f",
              sb_globals.percentile, SEC2MS(stat->latency_pct));
   else
     log_text(LOG_NOTICE, "         percentile stats:               disabled");
 
-  log_text(LOG_NOTICE, "         sum:                            %10.2f",
+  log_text(LOG_NOTICE, "         sum: %39.2f",
            SEC2MS(stat->latency_sum));
   log_text(LOG_NOTICE, "");
 
