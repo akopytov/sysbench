@@ -33,6 +33,8 @@
 # include <pthread.h>
 #endif
 
+#include <signal.h>
+
 #include "sb_thread.h"
 #include "sb_rand.h"
 #include "sb_logger.h"
@@ -84,10 +86,56 @@ void sb_thread_done(void)
     free(threads);
 }
 
+struct sb_thread_proxy {
+  void *(*start_routine) (void *);
+  void *arg;
+};
+
+static int thread_cancel_signal = SIGUSR1;
+
+static void thread_cancel_handler(int sig)
+{
+#ifndef PTHREAD_CANCELED
+# define PTHREAD_CANCELED ((void *) -1)
+#endif
+  if (sig == thread_cancel_signal)
+    pthread_exit(PTHREAD_CANCELED);
+}
+
+static int install_thread_signal_handler(void) {
+  struct sigaction action;
+  memset(&action, 0, sizeof(action));
+  sigemptyset(&action.sa_mask);
+  action.sa_flags = 0;
+  action.sa_handler = thread_cancel_handler;
+  return sigaction(thread_cancel_signal, &action, NULL);
+}
+
+static void* thread_start_routine_proxy(void *arg) {
+  struct sb_thread_proxy *proxy = arg;
+  void *(*start_routine) (void *) = proxy->start_routine;
+  void *real_arg = proxy->arg;
+  free(proxy);
+  install_thread_signal_handler();
+  return start_routine(real_arg);
+}
+
 int sb_thread_create(pthread_t *thread, const pthread_attr_t *attr,
                      void *(*start_routine) (void *), void *arg)
 {
-  return pthread_create(thread, attr, start_routine, arg);
+  struct sb_thread_proxy *proxy = malloc(sizeof(struct sb_thread_proxy));
+  if (!proxy)
+  {
+    return EXIT_FAILURE;
+  }
+  proxy->start_routine = start_routine;
+  proxy->arg = arg;
+  int rv = pthread_create(thread, attr, thread_start_routine_proxy, proxy);
+  if (rv)
+  {
+    free(proxy);
+  }
+  return rv;
 }
 
 int sb_thread_join(pthread_t thread, void **retval)
@@ -97,7 +145,7 @@ int sb_thread_join(pthread_t thread, void **retval)
 
 int sb_thread_cancel(pthread_t thread)
 {
-  return pthread_cancel(thread);
+  return pthread_kill(thread, thread_cancel_signal);
 }
 
 int sb_thread_create_workers(void *(*worker_routine)(void*))
