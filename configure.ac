@@ -340,6 +340,7 @@ isatty \
 memalign \
 memset \
 posix_memalign \
+pthread_cancel \
 pthread_yield \
 setvbuf \
 sqrt \
