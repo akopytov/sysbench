@@ -33,7 +33,9 @@
 # include <pthread.h>
 #endif
 
+#ifndef HAVE_PTHREAD_CANCEL
 #include <signal.h>
+#endif
 
 #include "sb_thread.h"
 #include "sb_rand.h"
@@ -86,6 +88,9 @@ void sb_thread_done(void)
     free(threads);
 }
 
+#ifndef HAVE_PTHREAD_CANCEL
+#define PTHREAD_CANCELED ((void *) -1)
+
 struct sb_thread_proxy {
   void *(*start_routine) (void *);
   void *arg;
@@ -95,9 +100,6 @@ static int thread_cancel_signal = SIGUSR1;
 
 static void thread_cancel_handler(int sig)
 {
-#ifndef PTHREAD_CANCELED
-# define PTHREAD_CANCELED ((void *) -1)
-#endif
   if (sig == thread_cancel_signal)
     pthread_exit(PTHREAD_CANCELED);
 }
@@ -119,10 +121,14 @@ static void* thread_start_routine_proxy(void *arg) {
   install_thread_signal_handler();
   return start_routine(real_arg);
 }
+#endif
 
 int sb_thread_create(pthread_t *thread, const pthread_attr_t *attr,
                      void *(*start_routine) (void *), void *arg)
 {
+#ifdef HAVE_PTHREAD_CANCEL
+  return pthread_create(thread, attr, start_routine, arg);
+#else
   struct sb_thread_proxy *proxy = malloc(sizeof(struct sb_thread_proxy));
   if (!proxy)
   {
@@ -136,6 +142,7 @@ int sb_thread_create(pthread_t *thread, const pthread_attr_t *attr,
     free(proxy);
   }
   return rv;
+#endif
 }
 
 int sb_thread_join(pthread_t thread, void **retval)
@@ -145,7 +152,11 @@ int sb_thread_join(pthread_t thread, void **retval)
 
 int sb_thread_cancel(pthread_t thread)
 {
+#ifdef HAVE_PTHREAD_CANCEL
+  return pthread_cancel(thread);
+#else
   return pthread_kill(thread, thread_cancel_signal);
+#endif
 }
 
 int sb_thread_create_workers(void *(*worker_routine)(void*))
