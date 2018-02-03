@@ -9,7 +9,7 @@ fileio benchmark tests
   
   4 files, 8192Kb each, 32Mb total
   Creating files for the test...
-  Extra file open flags: 0
+  Extra file open flags: (none)
   Creating file test_file.0
   Creating file test_file.1
   Creating file test_file.2
@@ -42,7 +42,7 @@ fileio benchmark tests
   Initializing random number generator from current time
   
   
-  Extra file open flags: 0
+  Extra file open flags: (none)
   4 files, 8MiB each
   32MiB total file size
   Block size 16KiB
@@ -89,7 +89,7 @@ fileio benchmark tests
   Initializing random number generator from current time
   
   
-  Extra file open flags: 0
+  Extra file open flags: (none)
   4 files, 8MiB each
   32MiB total file size
   Block size 16KiB
@@ -137,7 +137,7 @@ fileio benchmark tests
   Initializing random number generator from current time
   
   
-  Extra file open flags: 0
+  Extra file open flags: (none)
   4 files, 8MiB each
   32MiB total file size
   Block size 16KiB
@@ -183,7 +183,7 @@ fileio benchmark tests
   Initializing random number generator from current time
   
   
-  Extra file open flags: 0
+  Extra file open flags: (none)
   4 files, 8MiB each
   32MiB total file size
   Block size 16KiB
@@ -269,3 +269,49 @@ GH-198: Tolerate misaligned test_files.
   $ sysbench $args --file-test-mode=rndrd run
   $ sysbench $args cleanup
   $ unset args
+
+########################################################################
+Extra file flags. Not testing 'direct' as that is not supported on all
+tested platforms
+########################################################################
+  $ args="$fileio_args --file-total-size=16K --file-num=1"
+  $ sysbench $args --file-extra-flags= prepare
+  sysbench * (glob)
+  
+  1 files, 16Kb each, 0Mb total
+  Creating files for the test...
+  Extra file open flags: (none)
+  Creating file test_file.0
+  16384 bytes written in 0.00 seconds (* MiB/sec). (glob)
+
+  $ sysbench $args --file-extra-flags=sync prepare
+  sysbench * (glob)
+  
+  1 files, 16Kb each, 0Mb total
+  Creating files for the test...
+  Extra file open flags: sync 
+  Reusing existing file test_file.0
+  No bytes written.
+
+  $ sysbench $args --file-extra-flags=dsync prepare
+  sysbench * (glob)
+  
+  1 files, 16Kb each, 0Mb total
+  Creating files for the test...
+  Extra file open flags: dsync 
+  Reusing existing file test_file.0
+  No bytes written.
+
+  $ sysbench $args --file-extra-flags=dsync,sync prepare
+  sysbench * (glob)
+  
+  1 files, 16Kb each, 0Mb total
+  Creating files for the test...
+  Extra file open flags: sync dsync 
+  Reusing existing file test_file.0
+  No bytes written.
+
+  $ sysbench $args --file-extra-flags= cleanup
+  sysbench * (glob)
+  
+  Removing test files...
