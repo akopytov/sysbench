@@ -117,10 +117,9 @@ typedef enum
 } file_io_mode_t;
 
 typedef enum {
-  SB_FILE_FLAG_NORMAL,
-  SB_FILE_FLAG_SYNC,
-  SB_FILE_FLAG_DSYNC,
-  SB_FILE_FLAG_DIRECTIO
+  SB_FILE_FLAG_SYNC = 1,
+  SB_FILE_FLAG_DSYNC = 2,
+  SB_FILE_FLAG_DIRECTIO = 4
 } file_flags_t;
 
 #ifdef HAVE_LIBAIO
@@ -215,8 +214,8 @@ static sb_arg_t fileio_args[] = {
          "number of asynchronous operatons to queue per thread", "128", INT),
 #endif
   SB_OPT("file-extra-flags",
-         "additional flags to use on opening files {sync,dsync,direct}",
-         "", STRING),
+         "list of additional flags to use to open files {sync,dsync,direct}",
+         "", LIST),
   SB_OPT("file-fsync-freq", "do fsync() after this number of requests "
          "(0 - don't use fsync())", "100", INT),
   SB_OPT("file-fsync-all", "do fsync() after each write operation", "off",
@@ -776,12 +775,21 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
 
 }
 
+static void print_file_extra_flags(void)
+{
+  log_text(LOG_NOTICE, "Extra file open flags: %s%s%s%s",
+           file_extra_flags == 0 ? "(none)" : "",
+           file_extra_flags & SB_FILE_FLAG_SYNC ? "sync " : "",
+           file_extra_flags & SB_FILE_FLAG_DSYNC ? "dsync ": "",
+           file_extra_flags & SB_FILE_FLAG_DIRECTIO ? "directio" : ""
+           );
+}
 
 void file_print_mode(void)
 {
   char sizestr[16];
-  
-  log_text(LOG_NOTICE, "Extra file open flags: %x", file_extra_flags);
+
+  print_file_extra_flags();
   log_text(LOG_NOTICE, "%d files, %sB each", num_files,
            sb_print_value_size(sizestr, sizeof(sizestr), file_size));
   log_text(LOG_NOTICE, "%sB total file size",
@@ -943,51 +951,62 @@ const char *get_test_mode_str(file_test_mode_t mode)
 
 static int convert_extra_flags(file_flags_t extra_flags, int *open_flags)
 {
-  switch (extra_flags) {
-  case SB_FILE_FLAG_NORMAL:
+  if (extra_flags == 0)
+  {
 #ifdef _WIN32
     *open_flags = FILE_ATTRIBUTE_NORMAL;
 #endif
-    break;
-  case SB_FILE_FLAG_SYNC:
+  }
+  else
+  {
+    *open_flags = 0;
+
+    if (extra_flags & SB_FILE_FLAG_SYNC)
+    {
 #ifdef _WIN32
-    *open_flags = FILE_FLAG_WRITE_THROUGH;
+      *open_flags |= FILE_FLAG_WRITE_THROUGH;
 #else
-    *open_flags = O_SYNC;
+      *open_flags |= O_SYNC;
 #endif
-    break;
-  case SB_FILE_FLAG_DSYNC:
+    }
+
+    if (extra_flags & SB_FILE_FLAG_DSYNC)
+    {
 #ifdef O_DSYNC
-    *open_flags = O_DSYNC;
+      *open_flags |= O_DSYNC;
 #else
-    log_text(LOG_FATAL,
-             "--file-extra-flags=dsync is not supported on this platform.");
-    return 1;
+      log_text(LOG_FATAL,
+               "--file-extra-flags=dsync is not supported on this platform.");
+      return 1;
 #endif
-    break;
-  case SB_FILE_FLAG_DIRECTIO:
+    }
+
+    if (extra_flags & SB_FILE_FLAG_DIRECTIO)
+    {
 #ifdef HAVE_DIRECTIO
-    /* Will call directio(3) later */
+      /* Will call directio(3) later */
 #elif defined(O_DIRECT)
-    *open_flags = O_DIRECT;
+      *open_flags |= O_DIRECT;
 #elif defined _WIN32
-    *open_flags = FILE_FLAG_NO_BUFFERING;
+      *open_flags |= FILE_FLAG_NO_BUFFERING;
 #else
-    log_text(LOG_FATAL,
-             "--file-extra-flags=direct is not supported on this platform.");
-    return 1;
+      log_text(LOG_FATAL,
+               "--file-extra-flags=direct is not supported on this platform.");
+      return 1;
 #endif
-    break;
-  default:
-    log_text(LOG_FATAL, "Unknown extra flags value: %d", (int) extra_flags);
-    return 1;
+    }
+
+    if (extra_flags > SB_FILE_FLAG_DIRECTIO)
+    {
+      log_text(LOG_FATAL, "Unknown extra flags value: %d", (int) extra_flags);
+      return 1;
+    }
   }
 
   return 0;
 }
 
 /* Create files of necessary size for test */
-
 
 int create_files(void)
 {
@@ -1004,7 +1023,7 @@ int create_files(void)
            (long)(file_size / 1024),
            (long)((file_size * num_files) / (1024 * 1024)));
   log_text(LOG_NOTICE, "Creating files for the test...");
-  log_text(LOG_NOTICE, "Extra file open flags: %x", file_extra_flags);
+  print_file_extra_flags();
 
   if (convert_extra_flags(file_extra_flags, &flags))
     return 1;
@@ -1823,20 +1842,25 @@ int parse_arguments(void)
     file_request_size = file_block_size;
 
   mode = sb_get_value_string("file-extra-flags");
-  if (mode == NULL || !strlen(mode))
-    file_extra_flags = SB_FILE_FLAG_NORMAL;
-  else if (!strcmp(mode, "sync"))
-    file_extra_flags = SB_FILE_FLAG_SYNC;
-  else if (!strcmp(mode, "dsync"))
-    file_extra_flags = SB_FILE_FLAG_DSYNC;
-  else if (!strcmp(mode, "direct"))
-    file_extra_flags = SB_FILE_FLAG_DIRECTIO;
-  else
+
+  sb_list_item_t *pos;
+  SB_LIST_FOR_EACH(pos, sb_get_value_list("file-extra-flags"))
   {
-    log_text(LOG_FATAL, "Invalid value for file-extra-flags: %s", mode);
-    return 1;
+    const char *val = SB_LIST_ENTRY(pos, value_t, listitem)->data;
+
+    if (!strcmp(val, "sync"))
+      file_extra_flags |= SB_FILE_FLAG_SYNC;
+    else if (!strcmp(val, "dsync"))
+      file_extra_flags |= SB_FILE_FLAG_DSYNC;
+    else if (!strcmp(val, "direct"))
+      file_extra_flags |= SB_FILE_FLAG_DIRECTIO;
+    else
+    {
+      log_text(LOG_FATAL, "Invalid value for file-extra-flags: %s", mode);
+      return 1;
+    }
   }
-  
+
   file_fsync_freq = sb_get_value_int("file-fsync-freq");
   if (file_fsync_freq < 0)
   {
@@ -1978,7 +2002,7 @@ static FILE_DESCRIPTOR sb_open(const char *name)
 #endif
 
 #ifdef HAVE_DIRECTIO
-  if (VALID_FILE(file) && file_extra_flags == SB_FILE_FLAG_DIRECTIO &&
+  if (VALID_FILE(file) && file_extra_flags & SB_FILE_FLAG_DIRECTIO &&
       directio(file, DIRECTIO_ON))
   {
     log_errno(LOG_FATAL, "directio() failed");
