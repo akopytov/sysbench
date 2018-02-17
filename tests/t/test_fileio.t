@@ -237,7 +237,7 @@ tested platforms
   Creating files for the test...
   Extra file open flags: (none)
   Creating file test_file.0
-  16384 bytes written in 0.00 seconds (* MiB/sec). (glob)
+  16384 bytes written in * seconds (* MiB/sec). (glob)
 
   $ sysbench $args --file-extra-flags=sync prepare
   sysbench * (glob)
