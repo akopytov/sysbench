@@ -654,7 +654,7 @@ void print_run_mode(sb_test_t *test)
     log_text(LOG_NOTICE, "Debug mode enabled.\n");
   
   if (sb_globals.validate)
-    log_text(LOG_NOTICE, "Additional request validation enabled.\n");
+    log_text(LOG_NOTICE, "Validation checks: on.\n");
 
   if (sb_rand_seed)
   {
