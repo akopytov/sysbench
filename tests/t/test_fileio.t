@@ -175,6 +175,9 @@ fileio benchmark tests
            sum: *.* (glob)
   
 
+  $ sysbench $fileio_args --events=150 --file-test-mode=rndwr --validate run | grep Validation
+  Validation checks: on.
+
   $ sysbench $fileio_args --events=150 --file-test-mode=foo run
   sysbench *.* * (glob)
   
