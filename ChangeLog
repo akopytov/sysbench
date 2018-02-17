@@ -1,3 +1,15 @@
+2018-02-17  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.13
+	* remove Ubuntu Zesty from CI/build/packaging matrices (EOL)
+	* minor cleanups in build scripts
+	* improve report formatting for long latency values
+	* fileio: --file-extra-flags now accepts a list of flags rather
+	than just a single value
+	* OLTP: re-prepare prepared statements after reconnects, i.e. in
+	cases when a server connection is lost and sysbench is
+	configured to ignore such errors
+
 2018-01-17  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.12
