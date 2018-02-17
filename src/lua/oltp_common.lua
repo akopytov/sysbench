@@ -1,4 +1,4 @@
--- Copyright (C) 2006-2017 Alexey Kopytov <akopytov@gmail.com>
+-- Copyright (C) 2006-2018 Alexey Kopytov <akopytov@gmail.com>
 
 -- This program is free software; you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -363,8 +363,8 @@ function thread_init()
    prepare_statements()
 end
 
-function thread_done()
-   -- Close prepared statements
+-- Close prepared statements
+function close_statements()
    for t = 1, sysbench.opt.tables do
       for k, s in pairs(stmt[t]) do
          stmt[t][k]:close()
@@ -376,6 +376,10 @@ function thread_done()
    if (stmt.commit ~= nil) then
       stmt.commit:close()
    end
+end
+
+function thread_done()
+   close_statements()
    con:disconnect()
 end
 
@@ -482,5 +486,18 @@ function execute_delete_inserts()
 
       stmt[tnum].deletes:execute()
       stmt[tnum].inserts:execute()
+   end
+end
+
+-- Re-prepare statements if we have reconnected, which is possible when some of
+-- the listed error codes are in the --mysql-ignore-errors list
+function sysbench.hooks.before_restart_event(errdesc)
+   if errdesc.sql_errno == 2013 or -- CR_SERVER_LOST
+      errdesc.sql_errno == 2055 or -- CR_SERVER_LOST_EXTENDED
+      errdesc.sql_errno == 2006 or -- CR_SERVER_GONE_ERROR
+      errdesc.sql_errno == 2011    -- CR_TCP_CONNECTION
+   then
+      close_statements()
+      prepare_statements()
    end
 end
