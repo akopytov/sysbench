@@ -254,7 +254,7 @@ local stmt_defs = {
       "SELECT c FROM sbtest%u WHERE id BETWEEN ? AND ?",
       t.INT, t.INT},
    secondary_ranges = {
-      "SELECT c FROM sbtest%u WHERE k BETWEEN ? AND ?",
+      "SELECT c FROM sbtest%u WHERE k >= ? AND ? >=0 LIMIT %u",
       t.INT, t.INT},
    sum_ranges = {
       "SELECT SUM(k) FROM sbtest%u WHERE id BETWEEN ? AND ?",
@@ -289,7 +289,11 @@ end
 
 function prepare_for_each_table(key)
    for t = 1, sysbench.opt.tables do
-      stmt[t][key] = con:prepare(string.format(stmt_defs[key][1], t))
+      if key == "secondary_ranges" then
+         stmt[t][key] = con:prepare(string.format(stmt_defs[key][1], t, sysbench.opt.range_size))
+      else
+         stmt[t][key] = con:prepare(string.format(stmt_defs[key][1], t))
+      end
 
       local nparam = #stmt_defs[key] - 1
 
