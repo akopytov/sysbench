@@ -41,6 +41,8 @@ sysbench.cmdline.options = {
       {"Number of point SELECT queries per transaction", 10},
    simple_ranges =
       {"Number of simple range SELECT queries per transaction", 1},
+   secondary_ranges =
+      {"Number of secondary range SELECT queries per transaction", 1},
    sum_ranges =
       {"Number of SELECT SUM() queries per transaction", 1},
    order_ranges =
@@ -251,6 +253,9 @@ local stmt_defs = {
    simple_ranges = {
       "SELECT c FROM sbtest%u WHERE id BETWEEN ? AND ?",
       t.INT, t.INT},
+   secondary_ranges = {
+      "SELECT c FROM sbtest%u WHERE k BETWEEN ? AND ?",
+      t.INT, t.INT},
    sum_ranges = {
       "SELECT SUM(k) FROM sbtest%u WHERE id BETWEEN ? AND ?",
        t.INT, t.INT},
@@ -320,6 +325,10 @@ end
 
 function prepare_simple_ranges()
    prepare_for_each_table("simple_ranges")
+end
+
+function prepare_secondary_ranges()
+   prepare_for_each_table("secondary_ranges")
 end
 
 function prepare_sum_ranges()
@@ -438,6 +447,10 @@ end
 
 function execute_simple_ranges()
    execute_range("simple_ranges")
+end
+
+function execute_secondary_ranges()
+   execute_range("secondary_ranges")
 end
 
 function execute_sum_ranges()

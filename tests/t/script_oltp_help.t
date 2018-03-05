@@ -21,6 +21,7 @@ OLTP usage information test
     --table_size=N                Number of rows per table [10000]
     --pgsql_variant=STRING        Use this PostgreSQL variant when running with the PostgreSQL driver. The only currently supported variant is 'redshift'. When enabled, create_secondary is automatically disabled, and delete_inserts is set to 0
     --simple_ranges=N             Number of simple range SELECT queries per transaction [1]
+    --secondary_ranges=N          Number of secondary range SELECT queries per transaction [1]
     --order_ranges=N              Number of SELECT ORDER BY queries per transaction [1]
     --range_selects[=on|off]      Enable/disable all range SELECT queries [on]
     --point_selects=N             Number of point SELECT queries per transaction [10]
