@@ -63,3 +63,15 @@ function event()
       commit()
    end
 end
+
+function sysbench.hooks.report_intermediate(stat)
+   if sysbench.opt.stats_format == "human" then
+         sysbench.report_default(stat)
+   elseif sysbench.opt.stats_format == "csv" then
+         sysbench.report_csv(stat)
+   elseif sysbench.opt.stats_format == "json" then      
+         sysbench.report_json(stat)
+   else
+      sysbench.report_default(stat)
+   end
+end

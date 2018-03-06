@@ -78,6 +78,9 @@ sysbench.cmdline.options = {
    {"Add specific table instructions like charset and ROW format", " CHARSET=utf8 COLLATE=utf8_bin ROW_FORMAT=DYNAMIC "},
    table_name=
    {"Specify a table name instead sbtest", "sbtest"},
+   stats_format=
+   {"Specify how you want the statistics written [default=human readable; csv; json ", "human"}
+   
 
       
 }
