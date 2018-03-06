@@ -56,6 +56,7 @@ inline double sb_rand_uniform_double(void)
   return u.d - 1.0;
 }
 
+
 int sb_rand_register(void);
 void sb_rand_print_help(void);
 int sb_rand_init(void);
@@ -72,5 +73,6 @@ uint32_t sb_rand_zipfian(uint32_t, uint32_t);
 uint32_t sb_rand_unique(void);
 void sb_rand_str(const char *, char *);
 uint32_t sb_rand_varstr(char *, uint32_t, uint32_t);
+uint32_t sb_rand_varstr_alpha(char *, uint32_t, uint32_t);
 
 #endif /* SB_RAND_H */
