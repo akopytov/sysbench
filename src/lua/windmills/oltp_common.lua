@@ -217,8 +217,8 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
    con:query(query)
 
    if (sysbench.opt.table_size > 0) then
-      print(string.format("Inserting %d records into 'windmills%d'",
-                          sysbench.opt.table_size, table_num))
+      print(string.format("Inserting %d records into '%s%d'",
+                          sysbench.opt.table_size, sysbench.opt.table_name, table_num))
    end
 
    if sysbench.opt.auto_inc then
