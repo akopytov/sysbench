@@ -354,7 +354,8 @@ uint32_t sb_rand_varstr(char *buf, uint32_t min_len, uint32_t max_len)
   unsigned int i;
   uint32_t num_chars;
   if (max_len == 0) {
-    return 0; /* we can't be sure buf is long enough to populate, so be safe */
+    return 0;
+    /* we can't be sure buf is long enough to populate, so be safe */
   }
   if (min_len > max_len)
   {
@@ -367,6 +368,35 @@ uint32_t sb_rand_varstr(char *buf, uint32_t min_len, uint32_t max_len)
     buf[i] = sb_rand_uniform('0', 'z');
   }
   return num_chars;
+}
+
+/*
+ *A simple function to return a variable length string with only alpha numeric 
+ */
+
+uint32_t sb_rand_varstr_alpha(char *buf, uint32_t min_len, uint32_t max_len) {
+    unsigned int n;
+    char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    uint32_t num_chars;
+    if (max_len == 0) {
+      return 0; /* we can't be sure buf is long enough to populate, so be safe */
+    }
+    if (min_len > max_len)
+    {
+      min_len = 1;
+    }
+  
+    num_chars = rand() % max_len;
+    /* sb_rand_uniform(min_len, max_len); */
+   
+    int key;
+    int l = (int) (sizeof(charset) -1);
+    for (n = 0;n < num_chars;n++) {        
+        key = rand() % l;   // no instantiation, just assignment, no overhead from sizeof
+        buf[n] = charset[key];
+    }
+    buf[n] = '\0';
+    return num_chars;
 }
 
 /*
