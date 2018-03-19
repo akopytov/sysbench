@@ -73,7 +73,10 @@ sysbench.cmdline.options = {
           "PostgreSQL driver. The only currently supported " ..
           "variant is 'redshift'. When enabled, " ..
           "create_secondary is automatically disabled, and " ..
-          "delete_inserts is set to 0"}
+          "delete_inserts is set to 0"},
+   stats_format=
+   {"Specify how you want the statistics written [default=human readable; csv; json ", "human"}
+ 
 }
 
 -- Prepare the dataset. This command supports parallel execution, i.e. will
@@ -502,5 +505,16 @@ function sysbench.hooks.before_restart_event(errdesc)
    then
       close_statements()
       prepare_statements()
+   end
+end
+function sysbench.hooks.report_intermediate(stat)
+   if sysbench.opt.stats_format == "human" then
+         sysbench.report_default(stat)
+   elseif sysbench.opt.stats_format == "csv" then
+         sysbench.report_csv(stat)
+   elseif sysbench.opt.stats_format == "json" then      
+         sysbench.report_json(stat)
+   else
+      sysbench.report_default(stat)
    end
 end
