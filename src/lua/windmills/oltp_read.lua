@@ -22,7 +22,10 @@
 require("windmills/oltp_common")
 
 function prepare_statements()
-
+   if not sysbench.opt.skip_trx then
+      prepare_begin()
+      prepare_commit()
+   end
    prepare_point_selects()
 
    if sysbench.opt.range_selects then
