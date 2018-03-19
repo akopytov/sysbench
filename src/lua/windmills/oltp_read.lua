@@ -44,6 +44,9 @@ function event()
       execute_order_ranges()
       execute_distinct_ranges()
    end
+   if not sysbench.opt.skip_trx then
+      commit()
+   end
 
 end
 
