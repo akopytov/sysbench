@@ -112,3 +112,5 @@ SQL Lua API + MySQL tests
   8
   9
   10
+  ALERT: attempt to call bulk_insert_next() before bulk_insert_init()
+  */api_sql.lua:*: db_bulk_insert_next() failed (glob)
