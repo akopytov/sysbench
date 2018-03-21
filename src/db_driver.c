@@ -886,6 +886,12 @@ int db_bulk_insert_next(db_conn_t *con, const char *query, size_t query_len)
     return 0;
   }
 
+  if (con->bulk_buffer == NULL)
+  {
+    log_text(LOG_ALERT, "attempt to call bulk_insert_next() before bulk_insert_init()");
+    return 1;
+  }
+
   /*
     Reserve space for '\0' and ',' (if not the first chunk in
     a bulk insert
