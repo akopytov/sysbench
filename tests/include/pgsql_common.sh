@@ -52,7 +52,7 @@ WHERE c.relkind = 'r'::char
 EOF
   echo "Indexes:"
   psql -qt sbtest <<EOF
- SELECT indexdef
+ SELECT REPLACE(indexdef, 'public.', '')
 FROM pg_catalog.pg_indexes
 WHERE schemaname = 'public'
     AND tablename = '$1'
