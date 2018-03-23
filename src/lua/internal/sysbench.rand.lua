@@ -34,6 +34,7 @@ uint32_t sb_rand_unique(void);
 void sb_rand_str(const char *, char *);
 void sb_rand_varstr(char *, uint32_t, uint32_t);
 double sb_rand_uniform_double(void);
+void sb_file_str(char *, char *);
 ]]
 
 function sysbench.rand.uniform_uint64()
@@ -86,4 +87,11 @@ end
 
 function sysbench.rand.uniform_double()
    return ffi.C.sb_rand_uniform_double()
+end
+
+function sysbench.rand.filestr()
+   local buf1 = ffi.new("char[?]", 1024)
+   local buf2 = ffi.new("char[?]", 204800)
+   ffi.C.sb_file_str(buf1, buf2)
+   return ffi.string(buf1), ffi.string(buf2)
 end

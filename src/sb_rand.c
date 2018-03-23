@@ -40,6 +40,8 @@
 #endif
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
 #ifdef HAVE_STRING_H
 # include <string.h>
 #endif
@@ -50,6 +52,7 @@
 # include <math.h>
 #endif
 
+#include "sysbench.h"
 #include "sb_options.h"
 #include "sb_rand.h"
 #include "sb_logger.h"
@@ -85,7 +88,6 @@ static sb_arg_t rand_args[] =
   SB_OPT("rand-zipfian-exp",
          "shape parameter (exponent, theta) for the Zipfian distribution",
          "0.8", DOUBLE),
-
   SB_OPT_END
 };
 
@@ -519,6 +521,56 @@ uint32_t sb_rand_zipfian(uint32_t a, uint32_t b)
   return a +
     sb_rand_zipfian_int(b - a + 1, zipf_exp, zipf_s, zipf_hIntegralX1) - 1;
 }
+
+static FILE *file = NULL;
+
+int sb_file_init()
+{
+  assert(sb_globals.filename != NULL);
+
+  file = fopen(sb_globals.filename, "r");
+  if (file == NULL)
+  {
+    log_text(LOG_FATAL, "Invalid filename: %s", sb_globals.filename);
+    return 1;
+  }
+  return 0;
+}
+
+void sb_file_str(char* buf1, char* buf2)
+{
+  assert(file != NULL);
+
+  char* buf = NULL;
+  size_t len = 0;
+  ssize_t read = getline(&buf, &len, file);
+  if (read != -1)
+  {
+    int pos = 0;
+    while (pos < read) {
+      if (buf[pos++] == '\t') {
+        memcpy(buf1, buf, pos - 1);
+        memcpy(buf2, buf + pos, read - pos - 1);
+        break;
+      }
+    }
+
+    if (pos >= read) {
+      memcpy(buf2, buf, read);
+    }
+  }
+
+  free(buf);
+}
+
+void sb_file_done()
+{
+  if (file)
+  {
+    free(file);
+  }
+}
+
 
 /*
   H(x) is defined as

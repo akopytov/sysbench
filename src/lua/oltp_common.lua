@@ -68,6 +68,8 @@ sysbench.cmdline.options = {
       {"Use a secondary index in place of the PRIMARY KEY", false},
    create_secondary =
       {"Create a secondary index in addition to the PRIMARY KEY", true},
+   use_file =
+      {"If use a text file as dataset", false},
    mysql_storage_engine =
       {"Storage engine, if MySQL is used", "innodb"},
    pgsql_variant =
@@ -151,6 +153,10 @@ function get_pad_value()
    return sysbench.rand.string(pad_value_template)
 end
 
+function get_str_value()
+   return sysbench.rand.filestr()
+end
+
 function create_table(drv, con, table_num)
    local id_index_def, id_def
    local engine_def = ""
@@ -188,15 +194,27 @@ function create_table(drv, con, table_num)
 
    print(string.format("Creating table 'sbtest%d'...", table_num))
 
-   query = string.format([[
-CREATE TABLE sbtest%d(
-  id %s,
-  k INTEGER DEFAULT '0' NOT NULL,
-  c CHAR(120) DEFAULT '' NOT NULL,
-  pad CHAR(60) DEFAULT '' NOT NULL,
-  %s (id)
-) %s %s]],
-      table_num, id_def, id_index_def, engine_def, extra_table_options)
+   if sysbench.opt.use_file then
+      query = string.format([[
+   CREATE TABLE sbtest%d(
+     id %s,
+     k INTEGER DEFAULT '0' NOT NULL,
+     c VARCHAR(512) DEFAULT '' NOT NULL,
+     pad VARCHAR(1024) DEFAULT '' NOT NULL,
+     %s (id)
+   ) %s %s]],
+         table_num, id_def, id_index_def, engine_def, extra_table_options)
+   else
+      query = string.format([[
+   CREATE TABLE sbtest%d(
+     id %s,
+     k INTEGER DEFAULT '0' NOT NULL,
+     c CHAR(120) DEFAULT '' NOT NULL,
+     pad CHAR(60) DEFAULT '' NOT NULL,
+     %s (id)
+   ) %s %s]],
+         table_num, id_def, id_index_def, engine_def, extra_table_options)
+   end
 
    con:query(query)
 
@@ -218,15 +236,19 @@ CREATE TABLE sbtest%d(
 
    for i = 1, sysbench.opt.table_size do
 
-      c_val = get_c_value()
-      pad_val = get_pad_value()
+      if sysbench.opt.use_file then
+         c_val, pad_val = get_str_value()
+      else
+         c_val = get_c_value()
+         pad_val = get_pad_value()
+      end
 
       if (sysbench.opt.auto_inc) then
-         query = string.format("(%d, '%s', '%s')",
+         query = string.format("(%d, \"%s\", \"%s\")",
                                sysbench.rand.default(1, sysbench.opt.table_size),
                                c_val, pad_val)
       else
-         query = string.format("(%d, %d, '%s', '%s')",
+         query = string.format("(%d, %d, \"%s\", \"%s\")",
                                i,
                                sysbench.rand.default(1, sysbench.opt.table_size),
                                c_val, pad_val)
@@ -481,9 +503,15 @@ end
 
 function execute_non_index_updates()
    local tnum = get_table_num()
+   local c_val;
 
    for i = 1, sysbench.opt.non_index_updates do
-      param[tnum].non_index_updates[1]:set_rand_str(c_value_template)
+      if sysbench.opt.use_file then
+         c_val = get_str_value()
+      else
+         c_val = get_c_value()
+      end
+      param[tnum].non_index_updates[1]:set(c_val)
       param[tnum].non_index_updates[2]:set(get_id())
 
       stmt[tnum].non_index_updates:execute()
