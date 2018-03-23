@@ -299,7 +299,7 @@ end
 function connection_methods.query_row(self, query)
    local rs = self:query(query)
 
-   if rs == nil then
+   if rs == nil or rs.nrows == 0 then
       return nil
    end
 
