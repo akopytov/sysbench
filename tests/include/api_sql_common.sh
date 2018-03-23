@@ -210,13 +210,26 @@ sysbench $SB_ARGS run
 ########################################################################
 cat >$CRAMTMP/api_sql.lua <<EOF
 c = sysbench.sql.driver():connect()
-c:query("CREATE TABLE IF NOT EXISTS t1(a INT)")
+c:query("CREATE TABLE t1(a INT)")
 c:bulk_insert_init("INSERT INTO t1 VALUES")
 c:bulk_insert_next("(1)")
 c:bulk_insert_done()
 e,m = pcall(function () c:bulk_insert_next("(2)") end)
 print(m)
 c:bulk_insert_done()
+c:query("DROP TABLE t1")
+EOF
+
+sysbench $SB_ARGS
+
+########################################################################
+# query_row() with an empty result set
+########################################################################
+cat >$CRAMTMP/api_sql.lua <<EOF
+c = sysbench.sql.driver():connect()
+c:query("CREATE TABLE t1(a INT)")
+print(c:query_row("SELECT * FROM t1"))
+c:query("DROP TABLE t1")
 EOF
 
 sysbench $SB_ARGS
