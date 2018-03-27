@@ -200,7 +200,7 @@ function create_table(drv, con, table_num)
      id %s,
      k INTEGER DEFAULT '0' NOT NULL,
      c VARCHAR(512) DEFAULT '' NOT NULL,
-     pad VARCHAR(1024) DEFAULT '' NOT NULL,
+     pad MEDIUMTEXT DEFAULT '' NOT NULL,
      %s (id)
    ) %s %s]],
          table_num, id_def, id_index_def, engine_def, extra_table_options)
