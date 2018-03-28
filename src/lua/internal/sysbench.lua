@@ -60,7 +60,7 @@ end
 -- ----------------------------------------------------------------------
 
 sysbench.hooks = {
-   -- sql_error = <func>,
+   -- sql_error_ignorable = <func>,
    -- report_intermediate = <func>,
    -- report_cumulative = <func>
 }
