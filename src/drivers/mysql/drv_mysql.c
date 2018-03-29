@@ -318,6 +318,10 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
     ssl_cert= "client-cert.pem";
     ssl_ca= "cacert.pem";
 
+    if (access(ssl_key, R_OK)) ssl_key=NULL;
+    if (access(ssl_cert, R_OK)) ssl_cert=NULL;
+    if (access(ssl_ca, R_OK)) ssl_ca=NULL;
+
     DEBUG("mysql_ssl_set(%p, \"%s\", \"%s\", \"%s\", NULL, \"%s\")", con,
           ssl_key, ssl_cert, ssl_ca, args.ssl_cipher);
 
