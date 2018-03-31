@@ -67,8 +67,14 @@ static sb_arg_t mysql_drv_args[] =
   SB_OPT("mysql-user", "MySQL user", "sbtest", STRING),
   SB_OPT("mysql-password", "MySQL password", "", STRING),
   SB_OPT("mysql-db", "MySQL database name", "sbtest", STRING),
+#ifdef MYSQL_OPT_SSL_MODE
+  SB_OPT("mysql-ssl", "SSL mode. This accepts the same values as the "
+         "--ssl-mode option in the MySQL client utilities. Disabled by default",
+         "disabled", STRING),
+#else
   SB_OPT("mysql-ssl", "use SSL connections, if available in the client "
          "library", "off", BOOL),
+#endif
   SB_OPT("mysql-ssl-key", "path name of the client private key file", NULL,
          STRING),
   SB_OPT("mysql-ssl-ca", "path name of the CA file", NULL, STRING),
@@ -95,7 +101,10 @@ typedef struct
   const char         *user;
   const char         *password;
   const char         *db;
-  unsigned char      use_ssl;
+#ifdef MYSQL_OPT_SSL_MODE
+  int                ssl_mode;
+#endif
+  bool               use_ssl;
   const char         *ssl_key;
   const char         *ssl_cert;
   const char         *ssl_ca;
@@ -260,11 +269,26 @@ int mysql_drv_init(void)
   args.user = sb_get_value_string("mysql-user");
   args.password = sb_get_value_string("mysql-password");
   args.db = sb_get_value_string("mysql-db");
-  args.use_ssl = sb_get_value_flag("mysql-ssl");
+
   args.ssl_cipher = sb_get_value_string("mysql-ssl-cipher");
   args.ssl_key = sb_get_value_string("mysql-ssl-key");
   args.ssl_cert = sb_get_value_string("mysql-ssl-cert");
   args.ssl_ca = sb_get_value_string("mysql-ssl-ca");
+
+#ifdef MYSQL_OPT_SSL_MODE
+  const char * const ssl_mode_string = sb_get_value_string("mysql-ssl");
+  args.ssl_mode = find_type(ssl_mode_string, ssl_mode_typelib, FIND_TYPE_BASIC);
+  if (args.ssl_mode <= 0)
+  {
+    log_text(LOG_FATAL, "Invalid value for --mysql-ssl: '%s'");
+    return 1;
+  }
+
+  args.use_ssl = (args.ssl_mode != SSL_MODE_DISABLED);
+#else
+  args.use_ssl = sb_get_value_flag("mysql-ssl");
+#endif
+
   args.use_compression = sb_get_value_flag("mysql-compression");
   args.debug = sb_get_value_flag("mysql-debug");
   if (args.debug)
@@ -323,6 +347,11 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
 {
   MYSQL          *con = db_mysql_con->mysql;
 
+#ifdef MYSQL_OPT_SSL_MODE
+  DEBUG("mysql_options(%p,%s,%d)", con, "MYSQL_OPT_SSL_MODE", args.ssl_mode);
+  mysql_options(con, MYSQL_OPT_SSL_MODE, args.ssl_mode);
+#endif
+
   if (args.use_ssl)
   {
     DEBUG("mysql_ssl_set(%p, \"%s\", \"%s\", \"%s\", NULL, \"%s\")", con,
@@ -332,12 +361,6 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
     mysql_ssl_set(con, args.ssl_key, args.ssl_cert, args.ssl_ca, NULL,
                   args.ssl_cipher);
 
-#ifdef MYSQL_OPT_SSL_MODE
-    unsigned int opt_ssl_mode = SSL_MODE_REQUIRED;
-
-    DEBUG("mysql_options(%p,%s,%u)", con, "MYSQL_OPT_SSL_MODE", opt_ssl_mode);
-    mysql_options(con, MYSQL_OPT_SSL_MODE, &opt_ssl_mode);
-#endif
   }
 
   if (args.use_compression)
