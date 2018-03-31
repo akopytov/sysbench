@@ -47,7 +47,10 @@
       log_text(LOG_DEBUG, format, __VA_ARGS__); \
   } while (0)
 
-#define SAFESTR(s) ((s != NULL) ? (s) : "(null)")
+static inline const char *SAFESTR(const char *s)
+{
+  return s ? s : "(null)";
+}
 
 #if !defined(MARIADB_BASE_VERSION) && !defined(MARIADB_VERSION_ID) && \
   MYSQL_VERSION_ID >= 80001 && MYSQL_VERSION_ID != 80002 /* see https://bugs.mysql.com/?id=87337 */
@@ -66,6 +69,11 @@ static sb_arg_t mysql_drv_args[] =
   SB_OPT("mysql-db", "MySQL database name", "sbtest", STRING),
   SB_OPT("mysql-ssl", "use SSL connections, if available in the client "
          "library", "off", BOOL),
+  SB_OPT("mysql-ssl-key", "path name of the client private key file", NULL,
+         STRING),
+  SB_OPT("mysql-ssl-ca", "path name of the CA file", NULL, STRING),
+  SB_OPT("mysql-ssl-cert",
+         "path name of the client public key certificate file", NULL, STRING),
   SB_OPT("mysql-ssl-cipher", "use specific cipher for SSL connections", "",
          STRING),
   SB_OPT("mysql-compression", "use compression, if available in the "
@@ -84,11 +92,14 @@ typedef struct
   sb_list_t          *hosts;
   sb_list_t          *ports;
   sb_list_t          *sockets;
-  char               *user;
-  char               *password;
-  char               *db;
+  const char         *user;
+  const char         *password;
+  const char         *db;
   unsigned char      use_ssl;
-  char               *ssl_cipher;
+  const char         *ssl_key;
+  const char         *ssl_cert;
+  const char         *ssl_ca;
+  const char         *ssl_cipher;
   unsigned char      use_compression;
   unsigned char      debug;
   sb_list_t          *ignored_errors;
@@ -98,10 +109,10 @@ typedef struct
 typedef struct
 {
   MYSQL        *mysql;
-  char         *host;
-  char         *user;
-  char         *password;
-  char         *db;
+  const char   *host;
+  const char   *user;
+  const char   *password;
+  const char   *db;
   unsigned int port;
   char         *socket;
 } db_mysql_conn_t;
@@ -251,6 +262,9 @@ int mysql_drv_init(void)
   args.db = sb_get_value_string("mysql-db");
   args.use_ssl = sb_get_value_flag("mysql-ssl");
   args.ssl_cipher = sb_get_value_string("mysql-ssl-cipher");
+  args.ssl_key = sb_get_value_string("mysql-ssl-key");
+  args.ssl_cert = sb_get_value_string("mysql-ssl-cert");
+  args.ssl_ca = sb_get_value_string("mysql-ssl-ca");
   args.use_compression = sb_get_value_flag("mysql-compression");
   args.debug = sb_get_value_flag("mysql-debug");
   if (args.debug)
@@ -308,24 +322,15 @@ int mysql_drv_describe(drv_caps_t *caps)
 static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
 {
   MYSQL          *con = db_mysql_con->mysql;
-  const char     *ssl_key;
-  const char     *ssl_cert;
-  const char     *ssl_ca;
 
   if (args.use_ssl)
   {
-    ssl_key= "client-key.pem";
-    ssl_cert= "client-cert.pem";
-    ssl_ca= "cacert.pem";
-
-    if (access(ssl_key, R_OK)) ssl_key=NULL;
-    if (access(ssl_cert, R_OK)) ssl_cert=NULL;
-    if (access(ssl_ca, R_OK)) ssl_ca=NULL;
-
     DEBUG("mysql_ssl_set(%p, \"%s\", \"%s\", \"%s\", NULL, \"%s\")", con,
-          ssl_key, ssl_cert, ssl_ca, args.ssl_cipher);
+          SAFESTR(args.ssl_key), SAFESTR(args.ssl_cert), SAFESTR(args.ssl_ca),
+          SAFESTR(args.ssl_cipher));
 
-    mysql_ssl_set(con, ssl_key, ssl_cert, ssl_ca, NULL, args.ssl_cipher);
+    mysql_ssl_set(con, args.ssl_key, args.ssl_cert, args.ssl_ca, NULL,
+                  args.ssl_cipher);
 
 #ifdef MYSQL_OPT_SSL_MODE
     unsigned int opt_ssl_mode = SSL_MODE_REQUIRED;
@@ -454,7 +459,8 @@ int mysql_drv_connect(db_conn_t *sb_conn)
 
   if (args.use_ssl)
   {
-    DEBUG("mysql_get_ssl_cipher(con): \"%s\"", mysql_get_ssl_cipher(con));
+    DEBUG("mysql_get_ssl_cipher(con): \"%s\"",
+          SAFESTR(mysql_get_ssl_cipher(con)));
   }
 
   sb_conn->ptr = db_mysql_con;
@@ -724,10 +730,10 @@ static db_error_t check_error(db_conn_t *sb_con, const char *func,
   sb_con->sql_errno = (int) error;
 
   sb_con->sql_state = mysql_sqlstate(con);
-  DEBUG("mysql_state(%p) = %s", con, sb_con->sql_state);
+  DEBUG("mysql_state(%p) = %s", con, SAFESTR(sb_con->sql_state));
 
   sb_con->sql_errmsg = mysql_error(con);
-  DEBUG("mysql_error(%p) = %s", con, sb_con->sql_errmsg);
+  DEBUG("mysql_error(%p) = %s", con, SAFESTR(sb_con->sql_errmsg));
 
   /*
     Check if the error code is specified in --mysql-ignore-errors, and return
