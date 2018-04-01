@@ -88,27 +88,37 @@ function sysbench.report_csv(stat)
    ))
 end
 
--- Report statistics in the CSV format. Add the following to your
+-- Report statistics in the JSON format. Add the following to your
 -- script to replace the default human-readable reports
 --
 -- sysbench.hooks.report_intermediate = sysbench.report_json
 function sysbench.report_json(stat)
+   if not gobj then
+      io.write('[\n')
+      -- hack to print the closing bracket when the Lua state of the reporting
+      -- thread is closed
+      gobj = newproxy(true)
+      getmetatable(gobj).__gc = function () io.write('\n]\n') end
+   else
+      io.write(',\n')
+   end
+
    local seconds = stat.time_interval
-   print(string.format([[
-{
-  "time": %4.0f,
-  "threads": %u,
-  "tps": %4.2f,
-  "qps": {
-    "total": %4.2f,
-    "reads": %4.2f,
-    "writes": %4.2f,
-    "other": %4.2f
-  },
-  "latency": %4.2f,
-  "errors": %4.2f,
-  "reconnects": %4.2f
-},]],
+   io.write(([[
+  {
+    "time": %4.0f,
+    "threads": %u,
+    "tps": %4.2f,
+    "qps": {
+      "total": %4.2f,
+      "reads": %4.2f,
+      "writes": %4.2f,
+      "other": %4.2f
+    },
+    "latency": %4.2f,
+    "errors": %4.2f,
+    "reconnects": %4.2f
+  }]]):format(
             stat.time_total,
             stat.threads_running,
             stat.events / seconds,

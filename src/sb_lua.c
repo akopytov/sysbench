@@ -1086,9 +1086,12 @@ int sb_lua_report_thread_init(void)
   return 0;
 }
 
-void sb_lua_report_thread_done(void)
+void sb_lua_report_thread_done(void *arg)
 {
-  sb_lua_close_state(tls_lua_ctxt.L);
+  (void) arg; /* unused */
+
+  if (sb_lua_loaded())
+    sb_lua_close_state(tls_lua_ctxt.L);
 }
 
 /*
