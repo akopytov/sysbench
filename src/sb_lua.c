@@ -828,9 +828,6 @@ int sb_lua_close_state(lua_State *state)
 {
   sb_lua_ctxt_t * const ctxt = &tls_lua_ctxt;
 
-  if (state != NULL)
-    lua_close(state);
-
   if (ctxt != NULL)
   {
     sb_lua_db_disconnect(state);
@@ -841,6 +838,9 @@ int sb_lua_close_state(lua_State *state)
       ctxt->driver = NULL;
     }
   }
+
+  if (state != NULL)
+    lua_close(state);
 
   ctxt->L = NULL;
 
