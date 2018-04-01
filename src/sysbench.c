@@ -220,9 +220,7 @@ static void report_intermediate(void)
     silence intermediate reports at the end of the test
   */
   if (ck_pr_load_uint(&sb_globals.report_interval) == 0)
-  {
     return;
-  }
 
   sb_counters_agg_intermediate(cnt);
   report_get_common_stat(&stat, cnt);
@@ -914,9 +912,9 @@ static void *report_thread_proc(void *arg)
   sb_rand_thread_init();
 
   if (sb_lua_loaded() && sb_lua_report_thread_init())
-  {
     return NULL;
-  }
+
+  pthread_cleanup_push(sb_lua_report_thread_done, NULL);
 
   log_text(LOG_DEBUG, "Reporting thread started");
 
@@ -944,6 +942,8 @@ static void *report_thread_proc(void *arg)
     pause_ns = next_ns - curr_ns;
   }
 
+  pthread_cleanup_pop(1);
+
   return NULL;
 }
 
@@ -963,9 +963,9 @@ static void *checkpoints_thread_proc(void *arg)
   sb_rand_thread_init();
 
   if (sb_lua_loaded() && sb_lua_report_thread_init())
-  {
     return NULL;
-  }
+
+  pthread_cleanup_push(sb_lua_report_thread_done, NULL);
 
   log_text(LOG_DEBUG, "Checkpoints report thread started");
 
@@ -990,8 +990,7 @@ static void *checkpoints_thread_proc(void *arg)
     report_cumulative();
   }
 
-  if (sb_lua_loaded())
-    sb_lua_report_thread_done();
+  pthread_cleanup_pop(1);
 
   return NULL;
 }
@@ -1149,26 +1148,6 @@ static int run_test(sb_test_t *test)
   if (test->ops.cleanup != NULL && test->ops.cleanup() != 0)
     return 1;
 
-  /* print test-specific stats */
-  if (!sb_globals.error)
-  {
-    if (sb_globals.histogram)
-    {
-      log_text(LOG_NOTICE, "Latency histogram (values are in milliseconds)");
-      sb_histogram_print(&sb_latency_histogram);
-      log_text(LOG_NOTICE, " ");
-    }
-
-    report_cumulative();
-  }
-
-  pthread_mutex_destroy(&sb_globals.exec_mutex);
-
-  /* finalize test */
-  if (test->ops.done != NULL)
-    (*(test->ops.done))();
-
-  /* Delay killing the reporting threads to avoid mutex lock leaks */
   if (report_thread_created)
   {
     if (sb_thread_cancel(report_thread) || sb_thread_join(report_thread, NULL))
@@ -1188,6 +1167,25 @@ static int run_test(sb_test_t *test)
         sb_thread_join(checkpoints_thread, NULL))
       log_errno(LOG_FATAL, "Terminating the checkpoint thread failed.");
   }
+
+  /* print test-specific stats */
+  if (!sb_globals.error)
+  {
+    if (sb_globals.histogram)
+    {
+      log_text(LOG_NOTICE, "Latency histogram (values are in milliseconds)");
+      sb_histogram_print(&sb_latency_histogram);
+      log_text(LOG_NOTICE, " ");
+    }
+
+    report_cumulative();
+  }
+
+  pthread_mutex_destroy(&sb_globals.exec_mutex);
+
+  /* finalize test */
+  if (test->ops.done != NULL)
+    (*(test->ops.done))();
 
   return sb_globals.error != 0;
 }
