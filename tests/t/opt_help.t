@@ -46,7 +46,7 @@ separately.
   
   General database options:
   
-    --db-driver=STRING  specifies database driver to use ('help' to get list of available drivers)
+    --db-driver=STRING  specifies database driver to use ('help' to get list of available drivers) * (glob)
     --db-ps-mode=STRING prepared statements usage mode {auto, disable} [auto]
     --db-debug[=on|off] print database-specific debug information [off]
   

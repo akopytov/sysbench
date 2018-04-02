@@ -5,6 +5,9 @@ Skip test if the MySQL driver is not available.
   >   exit 80
   > fi
 
+  $ sysbench --help | grep -- '--db-driver'
+    --db-driver=STRING  specifies database driver to use ('help' to get list of available drivers) [mysql]
+
   $ sysbench --help | sed -n '/mysql options:/,/^$/p'
   mysql options:
     --mysql-host=[LIST,...]          MySQL server host [localhost]
