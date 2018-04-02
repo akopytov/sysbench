@@ -23,8 +23,8 @@
         - [macOS](#macos)
     - [Build and Install](#build-and-install)
 - [Usage](#usage)
-    - [General syntax](#general-syntax)
-    - [General command line options](#general-command-line-options)
+    - [General Syntax](#general-syntax)
+    - [General Command Line Options](#general-command-line-options)
 
 <!-- markdown-toc end -->
 
@@ -193,7 +193,7 @@ with Oracle client libraries.
 
 # Usage
 
-## General syntax
+## General Syntax
 
 The general command line syntax for sysbench is:
 
@@ -239,7 +239,7 @@ The general command line syntax for sysbench is:
 You can use `sysbench --help` to display the general command line syntax
 and options.
 
-## General command line options
+## General Command Line Options
 
 The table below lists the supported common options, their descriptions and default values:
 
