@@ -23,9 +23,9 @@
         - [macOS](#macos)
     - [Build and Install](#build-and-install)
 - [Usage](#usage)
-    - [General syntax](#general-syntax)
-    - [General command line options](#general-command-line-options)
-    - [Random numbers options](#random-numbers-options)
+    - [General Syntax](#general-syntax)
+    - [General Command Line Options](#general-command-line-options)
+    - [Random Numbers Options](#random-numbers-options)
 
 <!-- markdown-toc end -->
 
@@ -194,7 +194,7 @@ with Oracle client libraries.
 
 # Usage
 
-## General syntax
+## General Syntax
 
 The general command line syntax for sysbench is:
 
@@ -240,7 +240,7 @@ The general command line syntax for sysbench is:
 You can use `sysbench --help` to display the general command line syntax
 and options.
 
-## General command line options
+## General Command Line Options
 
 The table below lists the supported common options, their descriptions and default values:
 
@@ -263,7 +263,7 @@ The table below lists the supported common options, their descriptions and defau
 
 Note that numerical values for all *size* options (like `--thread-stack-size` in this table) may be specified by appending the corresponding multiplicative suffix (K for kilobytes, M for megabytes, G for gigabytes and T for terabytes).
 
-## Random numbers options
+## Random Numbers Options
 
 sysbench provides a number of algorithms to generate random numbers that are distributed according to a given probability distribution. The table below lists options that can be used to control those algorithms.
 
