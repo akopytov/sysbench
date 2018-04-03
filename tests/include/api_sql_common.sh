@@ -141,7 +141,11 @@ function event()
   print(m)
 end
 EOF
-sysbench $SB_ARGS --mysql-host="non-existing" --pgsql-host="non-existing" run
+# Reset --mysql-socket if it's specified on the command line, otherwise sysbench
+# will assume --mysql-host=localhost
+sysbench $SB_ARGS --mysql-host="non-existing" --pgsql-host="non-existing" \
+         --mysql-socket= \
+         run
 
 # Error hooks
 cat >$CRAMTMP/api_sql.lua <<EOF
