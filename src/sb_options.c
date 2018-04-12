@@ -144,11 +144,19 @@ option_t *set_option(const char *name, const char *value, sb_arg_type_t type)
 
   if (type != SB_ARG_TYPE_BOOL && (value == NULL || value[0] == '\0'))
     return opt;
-  
+
   switch (type) {
     case SB_ARG_TYPE_BOOL:
-      if (value == NULL || !strcmp(value, "on")) 
+      if (value == NULL || !strcmp(value, "on") ||
+          !strcmp(value, "true") || !strcmp(value, "1"))
+      {
         add_value(&opt->values, "on");
+      }
+      else if (strcmp(value, "off") && strcmp(value, "false") &&
+               strcmp(value, "0"))
+      {
+        return NULL;
+      }
       break;
     case SB_ARG_TYPE_INT:
     case SB_ARG_TYPE_SIZE:

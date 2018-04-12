@@ -491,3 +491,36 @@ Command line options tests
   cmdline_module loaded
   FATAL: */cmdline_module.lua:5: test error (glob)
   [1]
+
+##########################################################################
+# Test boolean option validation
+##########################################################################
+  $ cat > cmdline.lua <<EOF
+  > sysbench.cmdline.options = {
+  >  bool_opt = {"Flag", false}
+  > }
+  > 
+  > function prepare()
+  >   print("bool_opt = " .. tostring(sysbench.opt.bool_opt))
+  > end
+  > EOF
+
+  $ SB_ARGS=--verbosity=0
+  $ sysbench $SB_ARGS cmdline.lua --bool-opt=on prepare
+  bool_opt = true
+  $ sysbench $SB_ARGS cmdline.lua --bool-opt=off prepare
+  bool_opt = false
+  $ sysbench $SB_ARGS cmdline.lua --bool-opt=true prepare
+  bool_opt = true
+  $ sysbench $SB_ARGS cmdline.lua --bool-opt=false prepare
+  bool_opt = false
+  $ sysbench $SB_ARGS cmdline.lua --bool-opt=1 prepare
+  bool_opt = true
+  $ sysbench $SB_ARGS cmdline.lua --bool-opt=0 prepare
+  bool_opt = false
+  $ sysbench $SB_ARGS cmdline.lua --bool-opt=5 prepare
+  invalid option: --bool-opt=5
+  [1]
+  $ sysbench $SB_ARGS cmdline.lua --bool-opt=foo prepare
+  invalid option: --bool-opt=foo
+  [1]
