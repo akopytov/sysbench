@@ -26,6 +26,7 @@
     - [General Syntax](#general-syntax)
     - [General Command Line Options](#general-command-line-options)
     - [Random Numbers Options](#random-numbers-options)
+- [Versioning](#versioning)
 
 <!-- markdown-toc end -->
 
@@ -276,6 +277,22 @@ sysbench provides a number of algorithms to generate random numbers that are dis
 `--rand-spec-res` | percentage of 'special' values to use for the special distribution | 75
 `--rand-pareto-h` | shape parameter for the Pareto distribution | 0.2
 `--rand-zipfian-exp` | shape parameter (theta) for the Zipfian distribution | 0.8`
+
+# Versioning
+
+For transparency and insight into its release cycle, and for striving to maintain backward compatibility, sysbench will be maintained under the Semantic Versioning guidelines as much as possible.
+
+Releases will be numbered with the following format:
+
+`<major>.<minor>.<patch>`
+
+And constructed with the following guidelines:
+
+* Breaking backward compatibility bumps the major (and resets the minor and patch)
+* New additions without breaking backward compatibility bumps the minor (and resets the patch)
+* Bug fixes and misc changes bumps the patch
+
+For more information on SemVer, please visit [http://semver.org/](http://semver.org/).
 
 [coveralls-badge]: https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/akopytov/sysbench?branch=master
