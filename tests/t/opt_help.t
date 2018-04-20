@@ -28,10 +28,6 @@ separately.
     --version[=on|off]              print version and exit [off]
     --config-file=FILENAME          File containing command line options
     --luajit-cmd=STRING             perform LuaJIT control command. This option is equivalent to 'luajit -j'. See LuaJIT documentation for more information
-    --tx-rate=N                     deprecated alias for --rate [0]
-    --max-requests=N                deprecated alias for --events [0]
-    --max-time=N                    deprecated alias for --time [0]
-    --num-threads=N                 deprecated alias for --threads [1]
   
   Pseudo-Random Numbers Generator options:
     --rand-type=STRING   random numbers distribution {uniform, gaussian, special, pareto, zipfian} to use by default [special]
