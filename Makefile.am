@@ -28,7 +28,7 @@ endif
 
 SUBDIRS = $(LUAJIT_DIR) $(CK_DIR) src tests
 
-EXTRA_DIST = autogen.sh README.md README-WIN.txt ChangeLog \
+EXTRA_DIST = autogen.sh README.md ChangeLog \
              snap/snapcraft.yaml.in third_party/cram \
              debian/changelog debian/compat debian/control debian/copyright \
              debian/dirs debian/docs debian/install debian/rules \
