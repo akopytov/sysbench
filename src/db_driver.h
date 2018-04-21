@@ -323,22 +323,6 @@ void db_report_cumulative(sb_stat_t *);
 int register_driver_mysql(sb_list_t *);
 #endif
 
-#ifdef USE_DRIZZLE
-int register_driver_drizzle(sb_list_t *);
-#endif
-
-#ifdef USE_ATTACHSQL
-int register_driver_attachsql(sb_list_t *);
-#endif
-
-#ifdef USE_DRIZZLECLIENT
-int register_driver_drizzleclient(sb_list_t *);
-#endif
-
-#ifdef USE_ORACLE
-int register_driver_oracle(sb_list_t *);
-#endif
-
 #ifdef USE_PGSQL
 int register_driver_pgsql(sb_list_t *);
 #endif

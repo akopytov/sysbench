@@ -161,8 +161,7 @@ function create_table(drv, con, table_num)
      id_index_def = "PRIMARY KEY"
    end
 
-   if drv:name() == "mysql" or drv:name() == "attachsql" or
-      drv:name() == "drizzle"
+   if drv:name() == "mysql"
    then
       if sysbench.opt.auto_inc then
          id_def = "INTEGER NOT NULL AUTO_INCREMENT"

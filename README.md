@@ -190,9 +190,6 @@ To compile sysbench without MySQL support, use `--without-mysql`. If no
 database drivers are available database-related scripts will not work,
 but other benchmarks will be functional.
 
-See [README-Oracle.md](README-Oracle.md) for instructions on building
-with Oracle client libraries.
-
 # Usage
 
 ## General Syntax

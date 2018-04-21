@@ -127,40 +127,6 @@ AS_IF([test "x$with_mysql" != "xno"],
    [mysql_support=no])
 AC_MSG_RESULT([$mysql_support])
 
-# Check if we should compile with Drizzle support
-AC_ARG_WITH([drizzle],
-            AS_HELP_STRING([--with-drizzle],
-                           [compile with Drizzle support (default is disabled)]),
-            [], [with_drizzle=no])
-AC_MSG_CHECKING([whether to compile with Drizzle support])
-AS_IF([test "x$with_drizzle" != "xno"],
-   [drizzle_support=yes],
-   [drizzle_support=no])
-AC_MSG_RESULT([$drizzle_support])
-
-# Check if we should compile with libattachsql support
-AC_ARG_WITH([attachsql],
-            AS_HELP_STRING([--with-attachsql],
-                           [compile with libattachsql support (default is disabled)]),
-            [], [with_attachsql=no])
-AC_MSG_CHECKING([whether to compile with libattachsql support])
-AS_IF([test "x$with_attachsql" != "xno"],
-   [attachsql_support=yes],
-   [attachsql_support=no])
-AC_MSG_RESULT([$attachsql_support])
-
-
-# Check if we should compile with Oracle support
-AC_ARG_WITH([oracle],
-            AS_HELP_STRING([--with-oracle],
-                           [compile with Oracle support (default is disabled)]),
-            [], [with_oracle=no])
-AC_MSG_CHECKING([whether to compile with Oracle support])
-AS_IF([test "x$with_oracle" != "xno"],
-   [oracle_support=yes],
-   [oracle_support=no])
-AC_MSG_RESULT([$oracle_support])
-
 # Check if we should compile with PostgreSQL support
 AC_ARG_WITH([pgsql],
             AS_HELP_STRING([--with-pgsql],
@@ -218,43 +184,6 @@ ACX_PTHREAD
 AC_CHECK_LIB(m, sqrt)
 
 SB_CHECK_MYSQL
-
-AS_IF([test "x$with_drizzle" != xno], [
-  AC_LIB_HAVE_LINKFLAGS(drizzle,,
-    [#include <libdrizzle/drizzle.h>],
-    [
-     int x= DRIZZLE_RETURN_ERROR_CODE;
-     const char *version= drizzle_version();
-    ])
-    AS_IF([test "x$ac_cv_libdrizzle" = xyes], [
-      AC_DEFINE([USE_DRIZZLE],1,
-                [Define to 1 if you want to compile with Drizzle support])
-    ])
-])
-AM_CONDITIONAL(USE_DRIZZLE, test x$ac_cv_libdrizzle = xyes)
-
-AS_IF([test "x$with_attachsql" != xno], [
-  AC_LIB_HAVE_LINKFLAGS(attachsql,,
-    [#include <libattachsql-1.0/attachsql.h>],
-    [
-     const char *version= attachsql_get_library_version();
-    ])
-    AS_IF([test "x$ac_cv_libattachsql" = xyes], [
-      AC_DEFINE(USE_ATTACHSQL,1,
-                [Define to 1 if you want to compile with libattachsql support])
-    ])
-])
-AM_CONDITIONAL(USE_ATTACHSQL, test x$ac_cv_libattachsql = xyes)
-
-
-AS_IF([test x$with_oracle != xno], [
-    AC_DEFINE(USE_ORACLE,1,[Define to 1 if you want to compile with Oracle support])
-    ORA_LIBS="-L${sb_with_oracle}/lib -lclntsh"
-    ORA_CFLAGS="-I${with_oracle}/include -I${with_oracle}/rdbms/demo -I${with_oracle}/rdbms/public"
-    AC_SUBST([ORA_LIBS])
-    AC_SUBST([ORA_CFLAGS])
-])
-AM_CONDITIONAL(USE_ORACLE, test x$with_oracle != xno)
 
 AS_IF([test x$with_pgsql != xno], [
     AC_CHECK_PGSQL([$with_pgsql])
@@ -468,10 +397,7 @@ third_party/concurrency_kit/Makefile
 src/Makefile
 src/drivers/Makefile
 src/drivers/mysql/Makefile
-src/drivers/drizzle/Makefile
-src/drivers/oracle/Makefile
 src/drivers/pgsql/Makefile
-src/drivers/attachsql/Makefile
 src/tests/Makefile
 src/tests/cpu/Makefile
 src/tests/fileio/Makefile
@@ -501,9 +427,6 @@ AC_MSG_RESULT([mandir             : $(eval echo ${mandir})])
 AC_MSG_RESULT([datadir            : $(eval echo ${datadir})])
 AC_MSG_RESULT([])
 AC_MSG_RESULT([MySQL support      : ${mysql_support}])
-AC_MSG_RESULT([Drizzle support    : ${drizzle_support}])
-AC_MSG_RESULT([AttachSQL support  : ${attachsql_support}])
-AC_MSG_RESULT([Oracle support     : ${oracle_support}])
 AC_MSG_RESULT([PostgreSQL support : ${pgsql_support}])
 AC_MSG_RESULT([])
 AC_MSG_RESULT([LuaJIT             : ${sb_use_luajit}])

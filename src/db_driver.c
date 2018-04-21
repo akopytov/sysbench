@@ -103,18 +103,6 @@ int db_register(void)
 #ifdef USE_MYSQL
   register_driver_mysql(&drivers);
 #endif
-#ifdef USE_DRIZZLE
-  register_driver_drizzle(&drivers);
-#endif
-#ifdef USE_ATTACHSQL
-  register_driver_attachsql(&drivers);
-#endif
-#ifdef USE_DRIZZLECLIENT
-  register_driver_drizzleclient(&drivers);
-#endif
-#ifdef USE_ORACLE
-  register_driver_oracle(&drivers);
-#endif
 #ifdef USE_PGSQL
   register_driver_pgsql(&drivers);
 #endif
