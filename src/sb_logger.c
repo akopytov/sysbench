@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2018 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,9 +18,6 @@
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
-#endif
-#ifdef _WIN32
-#include "sb_win.h"
 #endif
 
 #ifdef STDC_HEADERS
@@ -372,16 +369,6 @@ void log_errno(log_msg_priority_t priority, const char *fmt, ...)
   int            old_errno;
   char           *tmp;
 
-#ifdef _WIN32
-  LPVOID         lpMsgBuf;
-  old_errno = GetLastError();
-  FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
-                FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                FORMAT_MESSAGE_IGNORE_INSERTS,
-                NULL, old_errno,
-                0, (LPTSTR)&lpMsgBuf, 0, NULL);
-  tmp = (char *)lpMsgBuf;
-#else
   old_errno = errno;
 #ifdef HAVE_STRERROR_R
 #ifdef STRERROR_R_CHAR_P
@@ -394,8 +381,7 @@ void log_errno(log_msg_priority_t priority, const char *fmt, ...)
   strncpy(errbuf, strerror(old_errno), sizeof(errbuf));
   tmp = errbuf;
 #endif /* HAVE_STRERROR_P */
-#endif /* WIN32 */
-  
+
   va_start(ap, fmt);
   n = vsnprintf(buf, TEXT_BUFFER_SIZE, fmt, ap);
   va_end(ap);
@@ -404,10 +390,6 @@ void log_errno(log_msg_priority_t priority, const char *fmt, ...)
   snprintf(buf + n, TEXT_BUFFER_SIZE - n, " errno = %d (%s)", old_errno,
            tmp);
 
-#ifdef _WIN32
-  LocalFree(lpMsgBuf);
-#endif
-  
   log_text(priority, "%s", buf);
 }
 

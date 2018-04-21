@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2016-2018 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -27,10 +27,6 @@
 
 #ifdef HAVE_PTHREAD_H
 # include <pthread.h>
-#endif
-
-#ifdef _WIN32
-#include "sb_win.h"
 #endif
 
 #define SB_BARRIER_SERIAL_THREAD 1

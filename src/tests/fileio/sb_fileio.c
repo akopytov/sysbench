@@ -20,10 +20,6 @@
 # include "config.h"
 #endif
 
-#ifdef _WIN32
-#include "sb_win.h"
-#endif
-
 #ifdef STDC_HEADERS
 # include <stdio.h>
 # include <stdlib.h>
@@ -49,14 +45,6 @@
 #ifdef HAVE_SYS_MMAN_H
 # include <sys/mman.h>
 #endif
-#ifdef _WIN32
-# include <io.h>
-# include <fcntl.h>
-# include <sys/stat.h>
-# define S_IRUSR _S_IREAD
-# define S_IWUSR _S_IWRITE
-# define HAVE_MMAP
-#endif
 
 #include "sysbench.h"
 #include "crc32.h"
@@ -69,25 +57,10 @@
 #define FILE_CHECKSUM_LENGTH sizeof(int)
 #define FILE_OFFSET_LENGTH sizeof(long)
 
-#ifdef _WIN32
-typedef HANDLE FILE_DESCRIPTOR;
-#define VALID_FILE(fd) (fd != INVALID_HANDLE_VALUE)
-#define SB_INVALID_FILE INVALID_HANDLE_VALUE
-#define FD_FMT "%p"
-#define MAP_SHARED 0
-#define PROT_READ  1
-#define PROT_WRITE 2
-#define MAP_FAILED NULL
-
-void *mmap(void *addr, size_t len, int prot, int flags,
-            FILE_DESCRIPTOR fd, long long off);
-int munmap(void *addr, size_t size);
-#else
 typedef int FILE_DESCRIPTOR;
 #define VALID_FILE(fd) (fd >= 0)
 #define SB_INVALID_FILE (-1)
 #define FD_FMT "%d"
-#endif
 
 /* Supported operations in request */
 typedef enum
@@ -303,7 +276,7 @@ static int file_mmap_done(void);
 #endif
 
 /* Portability wrappers */
-static unsigned long sb_get_allocation_granularity(void);
+static size_t sb_get_allocation_granularity(void);
 static void sb_free_memaligned(void *buf);
 static FILE_DESCRIPTOR sb_open(const char *);
 static int sb_create(const char *);
@@ -410,11 +383,7 @@ int file_done(void)
   unsigned int  i;
   
   for (i = 0; i < num_files; i++)
-#ifndef _WIN32
     close(files[i]);
-#else
-    CloseHandle(files[i]);
-#endif
 
 #ifdef HAVE_LIBAIO
   if (file_async_done())
@@ -951,23 +920,13 @@ const char *get_test_mode_str(file_test_mode_t mode)
 
 static int convert_extra_flags(file_flags_t extra_flags, int *open_flags)
 {
-  if (extra_flags == 0)
-  {
-#ifdef _WIN32
-    *open_flags = FILE_ATTRIBUTE_NORMAL;
-#endif
-  }
-  else
+  if (extra_flags)
   {
     *open_flags = 0;
 
     if (extra_flags & SB_FILE_FLAG_SYNC)
     {
-#ifdef _WIN32
-      *open_flags |= FILE_FLAG_WRITE_THROUGH;
-#else
       *open_flags |= O_SYNC;
-#endif
     }
 
     if (extra_flags & SB_FILE_FLAG_DSYNC)
@@ -987,8 +946,6 @@ static int convert_extra_flags(file_flags_t extra_flags, int *open_flags)
       /* Will call directio(3) later */
 #elif defined(O_DIRECT)
       *open_flags |= O_DIRECT;
-#elif defined _WIN32
-      *open_flags |= FILE_FLAG_NO_BUFFERING;
 #else
       log_text(LOG_FATAL,
                "--file-extra-flags=direct is not supported on this platform.");
@@ -1042,11 +999,7 @@ int create_files(void)
       return 1; 
     }
 
-#ifndef _WIN32
     offset = (long long) lseek(fd, 0, SEEK_END);
-#else
-    offset = (long long) _lseeki64(fd, 0, SEEK_END);
-#endif
 
     if (offset >= file_size)
       log_text(LOG_NOTICE, "Reusing existing file %s", file_name);
@@ -1070,11 +1023,7 @@ int create_files(void)
     }
     
     /* fsync files to prevent cache flush from affecting test results */
-#ifndef _WIN32
     fsync(fd);
-#else
-    _commit(fd);
-#endif
     close(fd);
   }
 
@@ -1374,29 +1323,11 @@ int file_mmap_prepare(void)
   if (test_mode == MODE_WRITE)
     for (i = 0; i < num_files; i++)
     {
-#ifdef _WIN32
-      HANDLE hFile = files[i];
-      LARGE_INTEGER offset;
-      offset.QuadPart = file_size;
-      if (!SetFilePointerEx(hFile ,offset ,NULL, FILE_BEGIN))
-      {
-        log_errno(LOG_FATAL, "SetFilePointerEx() failed on file %d", i);
-        return 1;
-      }
-      if (!SetEndOfFile(hFile))
-      {
-        log_errno(LOG_FATAL, "SetEndOfFile() failed on file %d", i);
-        return 1;
-      }
-      offset.QuadPart = 0;
-      SetFilePointerEx(hFile ,offset ,NULL, FILE_BEGIN);
-#else
       if (ftruncate(files[i], file_size))
       {
         log_errno(LOG_FATAL, "ftruncate() failed on file %d", i);
         return 1;
       }
-#endif 
     }
 
 #if SIZEOF_SIZE_T > 4
@@ -1464,11 +1395,7 @@ int file_fsync(unsigned int file_id, int thread_id)
       )
   {
     if (file_fsync_mode == FSYNC_ALL)
-#ifndef _WIN32
       return fsync(fd);
-#else
-      return !FlushFileBuffers(fd);
-#endif
 
 #ifdef F_FULLFSYNC
       return fcntl(fd, F_FULLFSYNC) != -1;
@@ -1496,119 +1423,12 @@ int file_fsync(unsigned int file_id, int thread_id)
   /* Use msync on file on 64-bit architectures */
   else if (file_io_mode == FILE_IO_MODE_MMAP)
   {
-#ifndef _WIN32
     return msync(mmaps[file_id], file_size, MS_SYNC | MS_INVALIDATE);
-#else
-    return !FlushViewOfFile(mmaps[file_id], (size_t)file_size);
-#endif
   }
 #endif
 
   return 1; /* Unknown I/O mode */
 }
-
-#ifdef _WIN32
-ssize_t pread(HANDLE hFile, void *buf, ssize_t count, long long offset)
-{
-  DWORD         nBytesRead;
-  OVERLAPPED    ov = {0};
-  LARGE_INTEGER li;
-
-  if(!count)
-	  return 0;
-#ifdef _WIN64
-  if(count > UINT_MAX)
-    count= UINT_MAX;
-#endif
-
-  li.QuadPart   = offset;
-  ov.Offset     = li.LowPart;
-  ov.OffsetHigh = li.HighPart;
-
-  if(!ReadFile(hFile, buf, (DWORD)count, &nBytesRead, &ov))
-  {
-    DWORD lastError = GetLastError();
-    if(lastError == ERROR_HANDLE_EOF)
-     return 0;
-    return -1;
-  }
-  return nBytesRead;
-}
-ssize_t pwrite(HANDLE hFile, const void *buf, size_t count, 
-                     long long  offset)
-{
-  DWORD         nBytesWritten;
-  OVERLAPPED    ov = {0};
-  LARGE_INTEGER li;
-
-  if(!count)
-    return 0;
-
-#ifdef _WIN64
-  if(count > UINT_MAX)
-    count= UINT_MAX;
-#endif
-
-  li.QuadPart  = offset;
-  ov.Offset    = li.LowPart;
-  ov.OffsetHigh= li.HighPart;
-
-  if(!WriteFile(hFile, buf, (DWORD)count, &nBytesWritten, &ov))
-  {
-    return -1;
-  }
-  else
-    return nBytesWritten;
-}
-
-#define MAP_SHARED 0
-#define PROT_READ  1
-#define PROT_WRITE 2
-#define MAP_FAILED NULL
-
-void *mmap(void *addr, size_t len, int prot, int flags,
-            FILE_DESCRIPTOR fd, long long off)
-{
-  DWORD flProtect;
-  DWORD flMap;
-  void *retval;
-  LARGE_INTEGER li;
-  HANDLE hMap;
-
-  switch(prot)
-  {
-  case PROT_READ:
-    flProtect = PAGE_READONLY;
-    flMap     = FILE_MAP_READ;
-    break;
-  case PROT_READ|PROT_WRITE:
-    flProtect = PAGE_READWRITE;
-    flMap     = FILE_MAP_ALL_ACCESS;
-    break;
-  default:
-    return MAP_FAILED;
-  }
-  hMap = CreateFileMapping(fd, NULL, flProtect, 0 , 0, NULL);
-
-  if(hMap == INVALID_HANDLE_VALUE)
-    return MAP_FAILED;
-
-  li.QuadPart = off;
-  retval = MapViewOfFileEx(hMap, flMap, li.HighPart, li.LowPart, len, NULL);
-
-  CloseHandle(hMap);
-  return retval;
-}
-
-int munmap(void *start, size_t len)
-{
-  (void) len; /* unused */
-  if(UnmapViewOfFile(start))
-    return 0;
-  return -1;
-}
-#endif
-
 
 ssize_t file_pread(unsigned int file_id, void *buf, ssize_t count,
                    long long offset, int thread_id)
@@ -1966,24 +1786,14 @@ void check_seq_req(sb_file_request_t *prev_req, sb_file_request_t *r)
   Alignment requirement for mmap(). The same as page size, except on Windows
   (on Windows it has to be 64KB, even if pagesize is only 4 or 8KB)
 */
-unsigned long sb_get_allocation_granularity(void)
+size_t sb_get_allocation_granularity(void)
 {
-#ifdef _WIN32
-  SYSTEM_INFO info;
-  GetSystemInfo(&info);
-  return info.dwAllocationGranularity;
-#else
   return sb_getpagesize();
-#endif
 }
 
 static void sb_free_memaligned(void *buf)
 {
-#ifdef _WIN32
-  VirtualFree(buf,0,MEM_FREE);
-#else
   free(buf);
-#endif
 }
 
 static FILE_DESCRIPTOR sb_open(const char *name)
@@ -1994,12 +1804,7 @@ static FILE_DESCRIPTOR sb_open(const char *name)
   if (convert_extra_flags(file_extra_flags, &flags))
     return SB_INVALID_FILE;
 
-#ifndef _WIN32
   file = open(name, O_RDWR | flags, S_IRUSR | S_IWUSR);
-#else
-  file = CreateFile(name, GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
-                    flags, NULL);
-#endif
 
 #ifdef HAVE_DIRECTIO
   if (VALID_FILE(file) && file_extra_flags & SB_FILE_FLAG_DIRECTIO &&
@@ -2023,16 +1828,9 @@ static int sb_create(const char *path)
   FILE_DESCRIPTOR file;
   int res;
 
-#ifndef _WIN32
   file = open(path, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
   res = !VALID_FILE(file);
   close(file);
-#else
-  file = CreateFile(path, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW,
-                    0, NULL);
-  res = !VALID_FILE(file);
-  CloseHandle(file);
-#endif
 
   return res;
 }

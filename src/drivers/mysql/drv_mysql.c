@@ -22,9 +22,6 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#ifdef _WIN32
-#include <winsock2.h>
-#endif
 
 #ifdef HAVE_STRING_H
 # include <string.h>

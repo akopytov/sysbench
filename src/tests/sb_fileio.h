@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2008 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2018 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,10 +18,6 @@
 
 #ifndef SB_FILEIO_H
 #define SB_FILEIO_H
-
-#ifdef _WIN32
-#include "sb_win.h" /* ssize_t defined*/
-#endif
 
 /* File operation types */
 typedef enum

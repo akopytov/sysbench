@@ -1,4 +1,4 @@
-/* Copyright (C) 2011-2017 Alexey Kopytov.
+/* Copyright (C) 2011-2018 Alexey Kopytov.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,9 +17,6 @@
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
-#endif
-#ifdef _WIN32
-#include "sb_win.h"
 #endif
 
 #ifdef STDC_HEADERS

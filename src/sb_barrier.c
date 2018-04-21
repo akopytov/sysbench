@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2016 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2016-2018 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,8 +19,7 @@
 /*
    Thread barrier implementation. It differs from pthread_barrier_t in two ways:
 
-   - it's more portable (will also work on OS X and Windows with existing
-     pthread_* wrappers in sb_win.c).
+   - it's more portable (will also work on OS X).
 
    - it allows defining a callback function which is called right before
      signaling the participating threads to continue, i.e. as soon as the
