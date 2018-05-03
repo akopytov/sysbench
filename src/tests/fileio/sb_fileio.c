@@ -172,7 +172,6 @@ static unsigned int      file_async_backlog;
 static long long       position;      /* current position in file */
 static unsigned int    current_file;  /* current file */
 static unsigned int    fsynced_file;  /* file number to be fsynced (periodic) */
-static unsigned int    fsynced_file2; /* fsyncing in the end */
 
 static int is_dirty;               /* any writes after last fsync series ? */
 static int read_ops;
@@ -198,9 +197,6 @@ static FILE_DESCRIPTOR *files;
 
 /* test mode type */
 static file_test_mode_t test_mode;
-
-/* Limit on the number of events */
-static uint64_t max_events;
 
 /* Previous request needed for validation */
 static sb_file_request_t prev_req;
@@ -247,9 +243,7 @@ static void file_print_mode(void);
 static int file_prepare(void);
 static sb_event_t file_next_event(int thread_id);
 static int file_execute_event(sb_event_t *, int);
-#ifdef HAVE_LIBAIO
 static int file_thread_done(int);
-#endif
 static int file_done(void);
 static void file_report_intermediate(sb_stat_t *);
 static void file_report_cumulative(sb_stat_t *);
@@ -266,11 +260,7 @@ static sb_test_t fileio_test =
     .execute_event = file_execute_event,
     .report_intermediate = file_report_intermediate,
     .report_cumulative = file_report_cumulative,
-#ifdef HAVE_LIBAIO
     .thread_done = file_thread_done,
-#else
-    .thread_done = NULL,
-#endif
     .done = file_done
   },
   .builtin_cmds = {
@@ -295,6 +285,7 @@ static void file_fill_buffer(unsigned char *, unsigned int, size_t);
 static int file_validate_buffer(unsigned char  *, unsigned int, size_t);
 
 /* File operation wrappers */
+static int file_do_fsync(unsigned int, int);
 static int file_fsync(unsigned int, int);
 static ssize_t file_pread(unsigned int, void *, ssize_t, long long, int);
 static ssize_t file_pwrite(unsigned int, void *, ssize_t, long long, int);
@@ -342,10 +333,6 @@ int file_init(void)
 
   init_vars();
   clear_stats();
-
-  /* Use our own limit on the number of events */
-  max_events = sb_globals.max_events;
-  sb_globals.max_events = 0;
 
   return 0;
 }
@@ -473,26 +460,6 @@ sb_event_t file_get_seq_request(void)
   else     
     file_req->operation = FILE_OP_TYPE_READ;
 
-  /* Do final fsync on all files and quit if we are done */
-  if (max_events > 0 && req_performed >= max_events)
-  {
-    /* no fsync for reads */
-    if (file_fsync_end && file_req->operation == FILE_OP_TYPE_WRITE &&
-        fsynced_file2 < num_files)
-    {
-      file_req->file_id = fsynced_file2;
-      file_req->pos = 0;
-      file_req->size = 0;
-      file_req->operation = FILE_OP_TYPE_FSYNC;
-      fsynced_file2++;
-    }
-    else 
-      sb_req.type = SB_REQ_TYPE_NULL;
-
-    SB_THREAD_MUTEX_UNLOCK();
-    return sb_req;
-  }
-
   /* See whether it's time to fsync file(s) */
   if (file_fsync_freq != 0 && file_req->operation == FILE_OP_TYPE_WRITE &&
       is_dirty && req_performed % file_fsync_freq == 0)
@@ -557,7 +524,6 @@ sb_event_t file_get_rnd_request(int thread_id)
   sb_event_t           sb_req;
   sb_file_request_t    *file_req = &sb_req.u.file_request;
   unsigned long long   tmppos;
-  int                  real_mode = test_mode;
   int                  mode = test_mode;
   unsigned int         i;
 
@@ -574,31 +540,6 @@ sb_event_t file_get_rnd_request(int thread_id)
       mode=MODE_RND_READ;
     else
       mode=MODE_RND_WRITE;
-  }
-
-  /* fsync all files (if requested by user) as soon as we are done */
-  if (max_events > 0 && req_performed >= max_events)
-  {
-    if (file_fsync_end != 0 &&
-        (real_mode == MODE_RND_WRITE || real_mode == MODE_RND_RW ||
-         real_mode == MODE_MIXED))
-    {
-      if(fsynced_file2 < num_files)
-      {
-        file_req->file_id = fsynced_file2;
-        file_req->operation = FILE_OP_TYPE_FSYNC;
-        file_req->pos = 0;
-        file_req->size = 0;
-        fsynced_file2++;
-
-        SB_THREAD_MUTEX_UNLOCK();        
-        return sb_req;
-      }
-    }
-    sb_req.type = SB_REQ_TYPE_NULL;
-
-    SB_THREAD_MUTEX_UNLOCK();        
-    return sb_req;
   }
 
   /*
@@ -715,18 +656,8 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
       }
 
       /* Check if we have to fsync each write operation */
-      if (file_fsync_all)
-      {
-        if (file_fsync(file_req->file_id, thread_id))
-        {
-          log_errno(LOG_FATAL, "Failed to fsync file! file: " FD_FMT, fd);
+      if (file_fsync_all && file_fsync(file_req->file_id, thread_id))
           return 1;
-        }
-
-        SB_THREAD_MUTEX_LOCK();
-        other_ops++;
-        SB_THREAD_MUTEX_UNLOCK();
-      }
 
       /* In async mode stats will me updated on AIO requests completion */
       if (file_io_mode != FILE_IO_MODE_ASYNC)
@@ -773,21 +704,9 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
       if (file_fsync_all)
         break;
       if(file_fsync(file_req->file_id, thread_id))
-      {
-        log_errno(LOG_FATAL, "Failed to fsync file! id: %u fd: " FD_FMT,
-                  file_req->file_id, fd);
         return 1;
-      }
 
-      /* In async mode stats will me updated on AIO requests completion */
-      if(file_io_mode != FILE_IO_MODE_ASYNC)
-      {
-        SB_THREAD_MUTEX_LOCK();
-        other_ops++;
-        SB_THREAD_MUTEX_UNLOCK();
-      }
-
-      break;         
+      break;
     default:
       log_text(LOG_FATAL, "Execute of UNKNOWN file request type called (%d)!, "
                "aborting", file_req->operation);
@@ -830,7 +749,7 @@ void file_print_mode(void)
     case MODE_RND_READ:
     case MODE_RND_RW:
       log_text(LOG_NOTICE, "Number of IO requests: %" PRIu64,
-               max_events);
+               sb_globals.max_events);
       log_text(LOG_NOTICE,
                "Read/Write ratio for combined random IO test: %2.2f",
                file_rw_ratio);
@@ -1182,7 +1101,6 @@ void init_vars(void)
   position = 0; /* position in file */
   current_file = 0;
   fsynced_file = 0; /* for counting file to be fsynced */
-  fsynced_file2 = 0;
   req_performed = 0;
   is_dirty = 0;
   if (sb_globals.validate)
@@ -1206,6 +1124,29 @@ void clear_stats(void)
   last_bytes_written = 0;
 }
 
+/*
+  Before the benchmark is stopped, issue fsync() if --file-fsync-end is used,
+  and wait for all async operations to complete.
+*/
+
+int file_thread_done(int thread_id)
+{
+  if (file_fsync_end && test_mode != MODE_READ && test_mode != MODE_RND_READ)
+  {
+    for (unsigned i = 0; i < num_files; i++)
+    {
+      if(file_fsync(i, thread_id))
+        return 1;
+    }
+  }
+
+#ifdef HAVE_LIBAIO
+  if (file_io_mode == FILE_IO_MODE_ASYNC && aio_ctxts[thread_id].nrequests > 0)
+    return file_wait(thread_id, aio_ctxts[thread_id].nrequests);
+#endif
+
+  return 0;
+}
 
 #ifdef HAVE_LIBAIO
 /* Allocate async contexts pool */
@@ -1268,18 +1209,6 @@ int file_async_done(void)
 
   return 0;
 }  
-
-
-/* Wait for all async operations to complete before the end of the test */
-
-
-int file_thread_done(int thread_id)
-{
-  if (file_io_mode == FILE_IO_MODE_ASYNC && aio_ctxts[thread_id].nrequests > 0)
-    return file_wait(thread_id, aio_ctxts[thread_id].nrequests);
-
-  return 0;
-}
 
 /*
   Submit async I/O requests until the length of request queue exceeds
@@ -1492,9 +1421,9 @@ int file_mmap_done(void)
 }
 #endif /* HAVE_MMAP */
 
-int file_fsync(unsigned int file_id, int thread_id)
+int file_do_fsync(unsigned int id, int thread_id)
 {
-  FILE_DESCRIPTOR fd = files[file_id];
+  FILE_DESCRIPTOR fd = files[id];
 #ifdef HAVE_LIBAIO
   struct iocb iocb;
 #else
@@ -1547,15 +1476,32 @@ int file_fsync(unsigned int file_id, int thread_id)
   else if (file_io_mode == FILE_IO_MODE_MMAP)
   {
 #ifndef _WIN32
-    return msync(mmaps[file_id], file_size, MS_SYNC | MS_INVALIDATE);
+    return msync(mmaps[id], file_size, MS_SYNC | MS_INVALIDATE);
 #else
-    return !FlushViewOfFile(mmaps[file_id], (size_t)file_size);
+    return !FlushViewOfFile(mmaps[id], (size_t) file_size);
 #endif
   }
 #endif
 
   return 1; /* Unknown I/O mode */
 }
+
+
+int file_fsync(unsigned int id, int thread_id)
+{
+  if (file_do_fsync(id, thread_id))
+  {
+    log_errno(LOG_FATAL, "Failed to fsync file! file: " FD_FMT, files[id]);
+    return 1;
+  }
+
+  SB_THREAD_MUTEX_LOCK();
+  other_ops++;
+  SB_THREAD_MUTEX_UNLOCK();
+
+  return 0;
+}
+
 
 #ifdef _WIN32
 ssize_t pread(HANDLE hFile, void *buf, ssize_t count, long long offset)

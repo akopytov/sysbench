@@ -687,7 +687,7 @@ bool sb_more_events(int thread_id)
 
   /* Check if we have a time limit */
   if (sb_globals.max_time_ns > 0 &&
-      sb_timer_value(&sb_exec_timer) >= sb_globals.max_time_ns)
+      SB_UNLIKELY(sb_timer_value(&sb_exec_timer) >= sb_globals.max_time_ns))
   {
     log_text(LOG_INFO, "Time limit exceeded, exiting...");
     return false;
@@ -695,8 +695,12 @@ bool sb_more_events(int thread_id)
 
   /* Check if we have a limit on the number of events */
   if (sb_globals.max_events > 0 &&
-      ck_pr_faa_64(&sb_globals.nevents, 1) >= sb_globals.max_events)
+      SB_UNLIKELY(ck_pr_faa_64(&sb_globals.nevents, 1) >=
+                  sb_globals.max_events))
+  {
+    log_text(LOG_INFO, "Event limit exceeded, exiting...");
     return false;
+  }
 
   /* If we are in tx_rate mode, we take events from queue */
   if (sb_globals.tx_rate > 0)
