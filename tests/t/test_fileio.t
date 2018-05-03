@@ -270,3 +270,90 @@ tested platforms
   sysbench * (glob)
   
   Removing test files...
+
+########################################################################
+GH-229: "--file-fsync-freq=0" seems to prevent fsync() at end of test
+########################################################################
+  $ args="fileio --file-total-size=160K --file-num=10 --file-test-mode=seqwr"
+  $ args="$args --file-fsync-freq=0 --file-fsync-end=1"
+  $ args="$args --events=0 --time=1"
+  $ sysbench $args prepare
+  sysbench * (glob)
+  
+  10 files, 16Kb each, 0Mb total
+  Creating files for the test...
+  Extra file open flags: (none)
+  Creating file test_file.0
+  Creating file test_file.1
+  Creating file test_file.2
+  Creating file test_file.3
+  Creating file test_file.4
+  Creating file test_file.5
+  Creating file test_file.6
+  Creating file test_file.7
+  Creating file test_file.8
+  Creating file test_file.9
+  163840 bytes written in * seconds (* MiB/sec). (glob)
+  $ sysbench $args run
+  sysbench * (glob)
+  
+  Running the test with following options:
+  Number of threads: 1
+  Initializing random number generator from current time
+  
+  
+  Extra file open flags: (none)
+  10 files, 16KiB each
+  160KiB total file size
+  Block size 16KiB
+  Calling fsync() at the end of test, Enabled.
+  Using synchronous I/O mode
+  Doing sequential write (creation) test
+  Initializing worker threads...
+  
+  Threads started!
+  
+  
+  Throughput:
+           read:  IOPS=0.00 0.00 MiB/s (0.00 MB/s)
+           write: IOPS=[^0].* [^0].* MiB/s \([^0].* MB/s\) (re)
+           fsync: IOPS=[^0].* (re)
+  
+  Latency (ms):
+           min:                              *.* (glob)
+           avg:                              *.* (glob)
+           max:                              *.* (glob)
+           95th percentile:         *.* (glob)
+           sum: *.* (glob)
+  
+  $ sysbench $args --file-fsync-end=off run
+  sysbench * (glob)
+  
+  Running the test with following options:
+  Number of threads: 1
+  Initializing random number generator from current time
+  
+  
+  Extra file open flags: (none)
+  10 files, 16KiB each
+  160KiB total file size
+  Block size 16KiB
+  Using synchronous I/O mode
+  Doing sequential write (creation) test
+  Initializing worker threads...
+  
+  Threads started!
+  
+  
+  Throughput:
+           read:  IOPS=0.00 0.00 MiB/s (0.00 MB/s)
+           write: IOPS=[^0].* [^0].* MiB/s \([^0].* MB/s\) (re)
+           fsync: IOPS=0.00
+  
+  Latency (ms):
+           min:                              *.* (glob)
+           avg:                              *.* (glob)
+           max:                              *.* (glob)
+           95th percentile:         *.* (glob)
+           sum: *.* (glob)
+  
