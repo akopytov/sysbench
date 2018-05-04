@@ -51,6 +51,24 @@ env:
       - OS=debian DIST=sid ARCH=i386
 
 matrix:
+  include:
+    - env: TARGET=test
+      os: linux-ppc64le
+      addons:
+        apt:
+          packages:
+          - mysql-server
+          - postgresql
+# incompatible with the minimal Makefiles of luajit
+#    - env: TARGET=distcheck
+#      os: linux-ppc64le
+# no packer (yet)
+#    - env: OS=debian DIST=stretch ARCH=ppc64el
+#      os: linux-ppc64le
+#    - env: OS=ubuntu DIST=xenial ARCH=ppc64el
+#      os: linux-ppc64le
+#    - env: OS=ubuntu DIST=bionic ARCH=ppc64el
+#      os: linux-ppc64le
   exclude:
     - env: OS=el DIST=6
       compiler: clang
@@ -170,7 +188,7 @@ before_install:
         echo "Creating user postgres"
         createuser -s postgres
         ;;
-      linux)
+      linux*)
         export ASAN_OPTIONS="detect_leaks=0"
         if [ "${CC}" = "clang" ]; then
           CC=clang-3.6
@@ -187,11 +205,22 @@ install:
       # OS X requires this for user-local pip packages
       export PATH=~/Library/Python/2.7/bin:$PATH
       ;;
+    linux-ppc64le)
+      # travis ppc environment doesn't set up root user righ
+      sudo mysql --defaults-file=/etc/mysql/debian.cnf -e "DROP USER root@localhost; CREATE USER root@localhost IDENTIFIED WITH mysql_native_password BY ''; GRANT ALL ON *.* TO root@localhost WITH GRANT OPTION"
+      sudo -u postgres psql -c "CREATE ROLE $USER WITH LOGIN PASSWORD NULL"
+      SUDO="sudo -u postgres"
+      # Use a luajit that support ppc64
+      rm -rf third_party/luajit
+      git clone --single-branch --branch ppc64-port --depth 2 https://github.com/PPC64/LuaJIT.git third_party/luajit
+      sed -i -e 's:third_party/luajit/Makefile::' configure.ac
+      sed -i -e 's:luajit/inc:luajit/src:' -e 's:lib/libluajit-5.1.a:src/libluajit.a:'  m4/sb_luajit.m4
+      ;;
     esac
 
 before_script:
   - mysql -u root -e 'CREATE DATABASE sbtest'
-  - psql -U postgres -c 'CREATE DATABASE sbtest'
+  - ${SUDO} psql -U postgres -c 'CREATE DATABASE sbtest'
 
 script:
   - >
@@ -200,7 +229,7 @@ script:
       test)
         ./autogen.sh && ./configure --with-mysql --with-pgsql
         make
-        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
+        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=$USER --pgsql-host=/var/run/postgresql" make test
         ;;
       distcheck)
         ./autogen.sh && ./configure --without-mysql
@@ -210,7 +239,7 @@ script:
       coverage)
         ./autogen.sh && ./configure --enable-coverage --enable-asan --enable-msan --with-mysql --with-pgsql
         make -j2
-        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
+        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=$USER --pgsql-host=/var/run/postgresql" make test
         ;;
       esac
     else
