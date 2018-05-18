@@ -1,5 +1,5 @@
 /* Copyright (C) 2006 MySQL AB
-   Copyright (C) 2006-2017 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2006-2018 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,6 +37,6 @@ int sb_lua_call_custom_command(const char *name);
 
 int sb_lua_report_thread_init(void);
 
-void sb_lua_report_thread_done(void);
+void sb_lua_report_thread_done(void *);
 
 bool sb_lua_loaded(void);

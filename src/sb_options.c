@@ -1,5 +1,5 @@
 /* Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2015 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2018 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,9 +18,6 @@
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
-#endif
-#ifdef _WIN32
-# include "sb_win.h"
 #endif
 
 #ifdef STDC_HEADERS
@@ -144,11 +141,19 @@ option_t *set_option(const char *name, const char *value, sb_arg_type_t type)
 
   if (type != SB_ARG_TYPE_BOOL && (value == NULL || value[0] == '\0'))
     return opt;
-  
+
   switch (type) {
     case SB_ARG_TYPE_BOOL:
-      if (value == NULL || !strcmp(value, "on")) 
+      if (value == NULL || !strcmp(value, "on") ||
+          !strcmp(value, "true") || !strcmp(value, "1"))
+      {
         add_value(&opt->values, "on");
+      }
+      else if (strcmp(value, "off") && strcmp(value, "false") &&
+               strcmp(value, "0"))
+      {
+        return NULL;
+      }
       break;
     case SB_ARG_TYPE_INT:
     case SB_ARG_TYPE_SIZE:

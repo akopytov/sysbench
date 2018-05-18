@@ -3,7 +3,7 @@ Tests for custom report hooks
 ########################################################################
 
 # Trigger one intermediate and one cumulative report
-  $ SB_ARGS="api_reports.lua --time=3 --report-interval=2 --verbosity=1"
+  $ SB_ARGS="api_reports.lua --time=5 --report-interval=2 --verbosity=1"
 
 ########################################################################
 # Default human-readable format via a custom hook
@@ -22,7 +22,8 @@ Tests for custom report hooks
 
   $ sysbench $SB_ARGS run
   \[ 2s \] thds: 1 tps: [0-9]*\.[0-9]* qps: 0\.00 \(r\/w\/o: 0\.00\/0\.00\/0\.00\) lat \(ms,95%\): [1-9][0-9]*\.[0-9]* err\/s 0\.00 reconn\/s: 0\.00 (re)
-  \[ 3s \] thds: 0 tps: [0-9]*\.[0-9]* qps: 0\.00 \(r\/w\/o: 0\.00\/0\.00\/0\.00\) lat \(ms,95%\): [1-9][0-9]*\.[0-9]* err\/s 0\.00 reconn\/s: 0\.00 (re)
+  \[ 4s \] thds: 1 tps: [0-9]*\.[0-9]* qps: 0\.00 \(r\/w\/o: 0\.00\/0\.00\/0\.00\) lat \(ms,95%\): [1-9][0-9]*\.[0-9]* err\/s 0\.00 reconn\/s: 0\.00 (re)
+  \[ 5s \] thds: 0 tps: [0-9]*\.[0-9]* qps: 0\.00 \(r\/w\/o: 0\.00\/0\.00\/0\.00\) lat \(ms,95%\): [1-9][0-9]*\.[0-9]* err\/s 0\.00 reconn\/s: 0\.00 (re)
 
 ########################################################################
 # CSV format via a custom hook
@@ -41,7 +42,8 @@ Tests for custom report hooks
 
   $ sysbench $SB_ARGS run
   2,1,[0-9]*\.[0-9]*,0\.00,0\.00,0\.00,0\.00,[1-9][0-9]*\.[0-9]*,0\.00,0\.00 (re)
-  3,0,[0-9]*\.[0-9]*,0\.00,0\.00,0\.00,0\.00,[1-9][0-9]*\.[0-9]*,0\.00,0\.00 (re)
+  4,1,[0-9]*\.[0-9]*,0\.00,0\.00,0\.00,0\.00,[1-9][0-9]*\.[0-9]*,0\.00,0\.00 (re)
+  5,0,[0-9]*\.[0-9]*,0\.00,0\.00,0\.00,0\.00,[1-9][0-9]*\.[0-9]*,0\.00,0\.00 (re)
 
 ########################################################################
 # JSON format via a custom hook
@@ -59,31 +61,49 @@ Tests for custom report hooks
   > EOF
 
   $ sysbench $SB_ARGS run
-  {
-    "time":    2,
-    "threads": 1,
-    "tps": *.*, (glob)
-    "qps": {
-      "total": 0.00,
-      "reads": 0.00,
-      "writes": 0.00,
-      "other": 0.00
+  [
+    {
+      "time":    2,
+      "threads": 1,
+      "tps": *.*, (glob)
+      "qps": {
+        "total": 0.00,
+        "reads": 0.00,
+        "writes": 0.00,
+        "other": 0.00
+      },
+      "latency": [1-9][0-9]*\.[0-9]*, (re)
+      "errors": 0.00,
+      "reconnects": 0.00
     },
-    "latency": [1-9][0-9]*\.[0-9]*, (re)
-    "errors": 0.00,
-    "reconnects": 0.00
-  },
-  {
-    "time":    3,
-    "threads": 0,
-    "tps": *.*, (glob)
-    "qps": {
-      "total": 0.00,
-      "reads": 0.00,
-      "writes": 0.00,
-      "other": 0.00
-    },
-    "latency": [1-9][0-9]*\.[0-9]*, (re)
-    "errors": 0.00,
-    "reconnects": 0.00
-  },
+    {
+      "time":    4,
+      "threads": 1,
+      "tps": *.*, (glob)
+      "qps": {
+        "total": 0.00,
+        "reads": 0.00,
+        "writes": 0.00,
+        "other": 0.00
+      },
+      "latency": [1-9][0-9]*\.[0-9]*, (re)
+      "errors": 0.00,
+      "reconnects": 0.00
+    }
+  ]
+  [
+    {
+      "time":    5,
+      "threads": 0,
+      "tps": *.*, (glob)
+      "qps": {
+        "total": 0.00,
+        "reads": 0.00,
+        "writes": 0.00,
+        "other": 0.00
+      },
+      "latency": [1-9][0-9]*\.[0-9]*, (re)
+      "errors": 0.00,
+      "reconnects": 0.00
+    }
+  ]

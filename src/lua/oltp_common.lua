@@ -52,7 +52,7 @@ sysbench.cmdline.options = {
    non_index_updates =
       {"Number of UPDATE non-index queries per transaction", 1},
    delete_inserts =
-      {"Number of DELETE/INSERT combination per transaction", 1},
+      {"Number of DELETE/INSERT combinations per transaction", 1},
    range_selects =
       {"Enable/disable all range SELECT queries", true},
    auto_inc =
@@ -164,8 +164,7 @@ function create_table(drv, con, table_num)
      id_index_def = "PRIMARY KEY"
    end
 
-   if drv:name() == "mysql" or drv:name() == "attachsql" or
-      drv:name() == "drizzle"
+   if drv:name() == "mysql"
    then
       if sysbench.opt.auto_inc then
          id_def = "INTEGER NOT NULL AUTO_INCREMENT"

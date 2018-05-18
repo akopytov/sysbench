@@ -120,12 +120,6 @@ sb_arg_t general_args[] =
          "equivalent to 'luajit -j'. See LuaJIT documentation for more "
          "information", NULL, STRING),
 
-  /* Deprecated aliases */
-  SB_OPT("tx-rate", "deprecated alias for --rate", "0", INT),
-  SB_OPT("max-requests", "deprecated alias for --events", "0", INT),
-  SB_OPT("max-time", "deprecated alias for --time", "0", INT),
-  SB_OPT("num-threads", "deprecated alias for --threads", "1", INT),
-
   SB_OPT_END
 };
 
@@ -235,9 +229,7 @@ static void report_intermediate(void)
     silence intermediate reports at the end of the test
   */
   if (ck_pr_load_uint(&sb_globals.report_interval) == 0)
-  {
     return;
-  }
 
   sb_counters_agg_intermediate(cnt);
   report_get_common_stat(&stat, cnt);
@@ -581,15 +573,6 @@ static int parse_general_arguments(int argc, char *argv[])
 
       return 1;
     }
-    else if (!strncmp(argv[i] + 2, "test=", 5))
-    {
-      /* Support the deprecated --test for compatibility reasons */
-      fprintf(stderr,
-              "WARNING: the --test option is deprecated. You can pass a "
-              "script name or path on the command line without any options.\n");
-      parse_option(argv[i] + 2, true);
-      testname = sb_get_value_string("test");
-    }
     else if (!parse_option(argv[i]+2, false))
     {
       /* An option from general_args. Exclude it from future processing */
@@ -711,7 +694,7 @@ bool sb_more_events(int thread_id)
 
   /* Check if we have a time limit */
   if (sb_globals.max_time_ns > 0 &&
-      sb_timer_value(&sb_exec_timer) >= sb_globals.max_time_ns)
+      SB_UNLIKELY(sb_timer_value(&sb_exec_timer) >= sb_globals.max_time_ns))
   {
     log_text(LOG_INFO, "Time limit exceeded, exiting...");
     return false;
@@ -719,8 +702,12 @@ bool sb_more_events(int thread_id)
 
   /* Check if we have a limit on the number of events */
   const uint64_t max_events = ck_pr_load_64(&sb_globals.max_events);
-  if (max_events > 0 && ck_pr_faa_64(&sb_globals.nevents, 1) >= max_events)
+  if (max_events > 0 &&
+      SB_UNLIKELY(ck_pr_faa_64(&sb_globals.nevents, 1) >= max_events))
+  {
+    log_text(LOG_INFO, "Event limit exceeded, exiting...");
     return false;
+  }
 
   /* If we are in tx_rate mode, we take events from queue */
   if (sb_globals.tx_rate > 0)
@@ -936,9 +923,9 @@ static void *report_thread_proc(void *arg)
   sb_rand_thread_init();
 
   if (sb_lua_loaded() && sb_lua_report_thread_init())
-  {
     return NULL;
-  }
+
+  pthread_cleanup_push(sb_lua_report_thread_done, NULL);
 
   log_text(LOG_DEBUG, "Reporting thread started");
 
@@ -966,6 +953,8 @@ static void *report_thread_proc(void *arg)
     pause_ns = next_ns - curr_ns;
   }
 
+  pthread_cleanup_pop(1);
+
   return NULL;
 }
 
@@ -985,9 +974,9 @@ static void *checkpoints_thread_proc(void *arg)
   sb_rand_thread_init();
 
   if (sb_lua_loaded() && sb_lua_report_thread_init())
-  {
     return NULL;
-  }
+
+  pthread_cleanup_push(sb_lua_report_thread_done, NULL);
 
   log_text(LOG_DEBUG, "Checkpoints report thread started");
 
@@ -1012,8 +1001,7 @@ static void *checkpoints_thread_proc(void *arg)
     report_cumulative();
   }
 
-  if (sb_lua_loaded())
-    sb_lua_report_thread_done();
+  pthread_cleanup_pop(1);
 
   return NULL;
 }
@@ -1211,26 +1199,6 @@ static int run_test(sb_test_t *test)
   if (test->ops.cleanup != NULL && test->ops.cleanup() != 0)
     return 1;
 
-  /* print test-specific stats */
-  if (!sb_globals.error)
-  {
-    if (sb_globals.histogram)
-    {
-      log_text(LOG_NOTICE, "Latency histogram (values are in milliseconds)");
-      sb_histogram_print(&sb_latency_histogram);
-      log_text(LOG_NOTICE, " ");
-    }
-
-    report_cumulative();
-  }
-
-  pthread_mutex_destroy(&sb_globals.exec_mutex);
-
-  /* finalize test */
-  if (test->ops.done != NULL)
-    (*(test->ops.done))();
-
-  /* Delay killing the reporting threads to avoid mutex lock leaks */
   if (report_thread_created)
   {
     if (sb_thread_cancel(report_thread) || sb_thread_join(report_thread, NULL))
@@ -1250,6 +1218,25 @@ static int run_test(sb_test_t *test)
         sb_thread_join(checkpoints_thread, NULL))
       log_errno(LOG_FATAL, "Terminating the checkpoint thread failed.");
   }
+
+  /* print test-specific stats */
+  if (!sb_globals.error)
+  {
+    if (sb_globals.histogram)
+    {
+      log_text(LOG_NOTICE, "Latency histogram (values are in milliseconds)");
+      sb_histogram_print(&sb_latency_histogram);
+      log_text(LOG_NOTICE, " ");
+    }
+
+    report_cumulative();
+  }
+
+  pthread_mutex_destroy(&sb_globals.exec_mutex);
+
+  /* finalize test */
+  if (test->ops.done != NULL)
+    (*(test->ops.done))();
 
   return sb_globals.error != 0;
 }
@@ -1288,14 +1275,7 @@ static int init(void)
   sb_list_item_t    *pos_val;
   value_t           *val;
 
-  sb_globals.threads = sb_get_value_int("num-threads");
-  if (sb_globals.threads > 1)
-  {
-    log_text(LOG_WARNING, "--num-threads is deprecated, use --threads instead");
-    sb_opt_copy("threads", "num-threads");
-  }
-  else
-    sb_globals.threads = sb_get_value_int("threads");
+  sb_globals.threads = sb_get_value_int("threads");
 
   thread_init_timeout = sb_get_value_int("thread-init-timeout");
   
@@ -1306,14 +1286,7 @@ static int init(void)
     return 1;
   }
 
-  sb_globals.max_events = sb_get_value_int("max-requests");
-  if (sb_globals.max_events > 0)
-  {
-    log_text(LOG_WARNING, "--max-requests is deprecated, use --events instead");
-    sb_opt_copy("events", "max-requests");
-  }
-  else
-    sb_globals.max_events = sb_get_value_int("events");
+  sb_globals.max_events = sb_get_value_int("events");
 
   sb_globals.warmup_time = sb_get_value_int("warmup-time");
   if (sb_globals.warmup_time < 0)
@@ -1323,14 +1296,7 @@ static int init(void)
     return 1;
   }
 
-  int max_time = sb_get_value_int("max-time");
-  if (max_time > 0)
-  {
-    log_text(LOG_WARNING, "--max-time is deprecated, use --time instead");
-    sb_opt_copy("time", "max-time");
-  }
-  else
-    max_time = sb_get_value_int("time");
+  int max_time = sb_get_value_int("time");
 
   sb_globals.max_time_ns = SEC2NS(max_time);
 
@@ -1392,14 +1358,7 @@ static int init(void)
     return 1;
   }
 
-  sb_globals.tx_rate = sb_get_value_int("tx-rate");
-  if (sb_globals.tx_rate > 0)
-  {
-    log_text(LOG_WARNING, "--tx-rate is deprecated, use --rate instead");
-    sb_opt_copy("rate", "tx-rate");
-  }
-  else
-    sb_globals.tx_rate = sb_get_value_int("rate");
+  sb_globals.tx_rate = sb_get_value_int("rate");
 
   sb_globals.report_interval = sb_get_value_int("report-interval");
 

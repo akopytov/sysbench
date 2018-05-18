@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2017 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2017-2018 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,10 +18,6 @@
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
-#endif
-
-#ifdef _WIN32
-#include "sb_win.h"
 #endif
 
 #ifdef STDC_HEADERS
@@ -55,10 +51,6 @@ void *sb_memalign(size_t size, size_t alignment)
   /* Allocate on page boundary */
   (void) alignment; /* unused */
   buffer = valloc(size);
-#elif defined (_WIN32)
-  /* Allocate on page boundary */
-  (void) alignment; /* unused */
-  buffer = VirtualAlloc(NULL, size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 #else
 # error Cannot find an aligned allocation library function!
 #endif
@@ -72,10 +64,6 @@ size_t sb_getpagesize(void)
 {
 #ifdef _SC_PAGESIZE
   return sysconf(_SC_PAGESIZE);
-#elif defined _WIN32
-  SYSTEM_INFO info;
-  GetSystemInfo(&info);
-  return info.dwPageSize;
 #else
   return getpagesize();
 #endif

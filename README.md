@@ -23,9 +23,10 @@
         - [macOS](#macos)
     - [Build and Install](#build-and-install)
 - [Usage](#usage)
-    - [General syntax](#general-syntax)
-    - [General command line options](#general-command-line-options)
-    - [Random numbers options](#random-numbers-options)
+    - [General Syntax](#general-syntax)
+    - [General Command Line Options](#general-command-line-options)
+    - [Random Numbers Options](#random-numbers-options)
+- [Versioning](#versioning)
 
 <!-- markdown-toc end -->
 
@@ -189,12 +190,9 @@ To compile sysbench without MySQL support, use `--without-mysql`. If no
 database drivers are available database-related scripts will not work,
 but other benchmarks will be functional.
 
-See [README-Oracle.md](README-Oracle.md) for instructions on building
-with Oracle client libraries.
-
 # Usage
 
-## General syntax
+## General Syntax
 
 The general command line syntax for sysbench is:
 
@@ -240,7 +238,7 @@ The general command line syntax for sysbench is:
 You can use `sysbench --help` to display the general command line syntax
 and options.
 
-## General command line options
+## General Command Line Options
 
 The table below lists the supported common options, their descriptions and default values:
 
@@ -259,11 +257,11 @@ The table below lists the supported common options, their descriptions and defau
 | `--help`              | Print help on general syntax or on a specified test, and exit                                                                                                                                                                                                                                                                                                                                                                                                           | off             |
 | `--verbosity`         | Verbosity level (0 - only critical messages, 5 - debug)                                                                                                                                                                                                                                                                                                                                                                                                                 | 4               |
 | `--percentile`        | sysbench measures execution times for all processed requests to display statistical information like minimal, average and maximum execution time. For most benchmarks it is also useful to know a request execution time value matching some percentile (e.g. 95% percentile means we should drop 5% of the most long requests and choose the maximal value from the remaining ones). This option allows to specify a percentile rank of query execution times to count | 95              |
-| `--luajit-cmd`        | perform a LuaJIT control command. This option is equivalent to `luajit -j`. See [LuaJIT documentation](http://luajit.org/running.html) for more information                                                                                                                                                                                                                                                                                                             |               |
+| `--luajit-cmd`        | perform a LuaJIT control command. This option is equivalent to `luajit -j`. See [LuaJIT documentation](http://luajit.org/running.html#opt_j) for more information                                                                                                                                                                                                                                                                                                       |               |
 
 Note that numerical values for all *size* options (like `--thread-stack-size` in this table) may be specified by appending the corresponding multiplicative suffix (K for kilobytes, M for megabytes, G for gigabytes and T for terabytes).
 
-## Random numbers options
+## Random Numbers Options
 
 sysbench provides a number of algorithms to generate random numbers that are distributed according to a given probability distribution. The table below lists options that can be used to control those algorithms.
 
@@ -276,6 +274,22 @@ sysbench provides a number of algorithms to generate random numbers that are dis
 `--rand-spec-res` | percentage of 'special' values to use for the special distribution | 75
 `--rand-pareto-h` | shape parameter for the Pareto distribution | 0.2
 `--rand-zipfian-exp` | shape parameter (theta) for the Zipfian distribution | 0.8`
+
+# Versioning
+
+For transparency and insight into its release cycle, and for striving to maintain backward compatibility, sysbench will be maintained under the Semantic Versioning guidelines as much as possible.
+
+Releases will be numbered with the following format:
+
+`<major>.<minor>.<patch>`
+
+And constructed with the following guidelines:
+
+* Breaking backward compatibility bumps the major (and resets the minor and patch)
+* New additions without breaking backward compatibility bumps the minor (and resets the patch)
+* Bug fixes and misc changes bumps the patch
+
+For more information on SemVer, please visit [http://semver.org/](http://semver.org/).
 
 [coveralls-badge]: https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/akopytov/sysbench?branch=master

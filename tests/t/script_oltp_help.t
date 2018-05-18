@@ -14,7 +14,7 @@ OLTP usage information test
     --index_updates=N             Number of UPDATE index queries per transaction [1]
     --range_size=N                Range size for range SELECT queries [100]
     --auto_inc[=on|off]           Use AUTO_INCREMENT column as Primary Key (for MySQL), or its alternatives in other DBMS. When disabled, use client-generated IDs [on]
-    --delete_inserts=N            Number of DELETE/INSERT combination per transaction [1]
+    --delete_inserts=N            Number of DELETE/INSERT combinations per transaction [1]
     --tables=N                    Number of tables [1]
     --mysql_storage_engine=STRING Storage engine, if MySQL is used [innodb]
     --non_index_updates=N         Number of UPDATE non-index queries per transaction [1]

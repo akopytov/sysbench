@@ -137,7 +137,7 @@ void db_connection_free(sql_connection *con);
 
 int db_bulk_insert_init(sql_connection *, const char *, size_t);
 int db_bulk_insert_next(sql_connection *, const char *, size_t);
-void db_bulk_insert_done(sql_connection *);
+int db_bulk_insert_done(sql_connection *);
 
 sql_result *db_query(sql_connection *con, const char *query, size_t len);
 
@@ -273,15 +273,18 @@ function connection_methods.query(self, query)
 end
 
 function connection_methods.bulk_insert_init(self, query)
-   return ffi.C.db_bulk_insert_init(self, query, #query)
+   return assert(ffi.C.db_bulk_insert_init(self, query, #query) == 0,
+                 "db_bulk_insert_init() failed")
 end
 
 function connection_methods.bulk_insert_next(self, val)
-   return ffi.C.db_bulk_insert_next(self, val, #val)
+   return assert(ffi.C.db_bulk_insert_next(self, val, #val) == 0,
+                 "db_bulk_insert_next() failed")
 end
 
 function connection_methods.bulk_insert_done(self)
-   return ffi.C.db_bulk_insert_done(self)
+   return assert(ffi.C.db_bulk_insert_done(self) == 0,
+                 "db_bulk_insert_done() failed")
 end
 
 function connection_methods.prepare(self, query)
@@ -298,7 +301,7 @@ end
 function connection_methods.query_row(self, query)
    local rs = self:query(query)
 
-   if rs == nil then
+   if rs == nil or rs.nrows == 0 then
       return nil
    end
 

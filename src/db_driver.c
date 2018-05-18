@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2004 MySQL AB
-   Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
+   Copyright (C) 2004-2018 Alexey Kopytov <akopytov@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,9 +19,6 @@
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
-#endif
-#ifdef _WIN32
-#include "sb_win.h"
 #endif
 #ifdef STDC_HEADERS
 # include <ctype.h>
@@ -77,7 +74,13 @@ static int db_free_results_int(db_conn_t *con);
 static sb_arg_t db_args[] =
 {
   SB_OPT("db-driver", "specifies database driver to use "
-         "('help' to get list of available drivers)", NULL, STRING),
+         "('help' to get list of available drivers)",
+#ifdef USE_MYSQL
+         "mysql",
+#else
+         NULL,
+#endif
+         STRING),
   SB_OPT("db-ps-mode", "prepared statements usage mode {auto, disable}", "auto",
          STRING),
   SB_OPT("db-debug", "print database-specific debug information", "off", BOOL),
@@ -96,18 +99,6 @@ int db_register(void)
   SB_LIST_INIT(&drivers);
 #ifdef USE_MYSQL
   register_driver_mysql(&drivers);
-#endif
-#ifdef USE_DRIZZLE
-  register_driver_drizzle(&drivers);
-#endif
-#ifdef USE_ATTACHSQL
-  register_driver_attachsql(&drivers);
-#endif
-#ifdef USE_DRIZZLECLIENT
-  register_driver_drizzleclient(&drivers);
-#endif
-#ifdef USE_ORACLE
-  register_driver_oracle(&drivers);
 #endif
 #ifdef USE_PGSQL
   register_driver_pgsql(&drivers);
@@ -884,6 +875,12 @@ int db_bulk_insert_next(db_conn_t *con, const char *query, size_t query_len)
            (rc = db_free_results_int(con)) != 0)
   {
     return 0;
+  }
+
+  if (con->bulk_buffer == NULL)
+  {
+    log_text(LOG_ALERT, "attempt to call bulk_insert_next() before bulk_insert_init()");
+    return 1;
   }
 
   /*

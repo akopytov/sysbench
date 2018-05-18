@@ -5,6 +5,9 @@ Skip test if the MySQL driver is not available.
   >   exit 80
   > fi
 
+  $ sysbench --help | grep -- '--db-driver'
+    --db-driver=STRING  specifies database driver to use ('help' to get list of available drivers) [mysql]
+
   $ sysbench --help | sed -n '/mysql options:/,/^$/p'
   mysql options:
     --mysql-host=[LIST,...]          MySQL server host [localhost]
@@ -13,7 +16,10 @@ Skip test if the MySQL driver is not available.
     --mysql-user=STRING              MySQL user [sbtest]
     --mysql-password=STRING          MySQL password []
     --mysql-db=STRING                MySQL database name [sbtest]
-    --mysql-ssl[=on|off]             use SSL connections, if available in the client library [off]
+    --mysql-ssl* (glob)
+    --mysql-ssl-key=STRING           path name of the client private key file
+    --mysql-ssl-ca=STRING            path name of the CA file
+    --mysql-ssl-cert=STRING          path name of the client public key certificate file
     --mysql-ssl-cipher=STRING        use specific cipher for SSL connections []
     --mysql-compression[=on|off]     use compression, if available in the client library [off]
     --mysql-debug[=on|off]           trace all client library calls [off]

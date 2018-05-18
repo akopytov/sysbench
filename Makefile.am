@@ -1,5 +1,5 @@
 # Copyright (C) 2004 MySQL AB
-# Copyright (C) 2004-2017 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2004-2018 Alexey Kopytov <akopytov@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ endif
 
 SUBDIRS = $(LUAJIT_DIR) $(CK_DIR) src tests
 
-EXTRA_DIST = autogen.sh README.md README-WIN.txt README-Oracle.md ChangeLog \
+EXTRA_DIST = autogen.sh README.md ChangeLog \
              snap/snapcraft.yaml.in third_party/cram \
              debian/changelog debian/compat debian/control debian/copyright \
              debian/dirs debian/docs debian/install debian/rules \
