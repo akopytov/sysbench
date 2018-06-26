@@ -31,6 +31,7 @@ env:
       - OS=el DIST=6
       - OS=el DIST=7
       - OS=fedora DIST=27
+      - OS=fedora DIST=28
       - OS=fedora DIST=rawhide
       - OS=ubuntu DIST=trusty
       - OS=ubuntu DIST=xenial
@@ -54,6 +55,8 @@ matrix:
     - env: OS=el DIST=7
       compiler: clang
     - env: OS=fedora DIST=27
+      compiler: clang
+    - env: OS=fedora DIST=28
       compiler: clang
     - env: OS=fedora DIST=rawhide
       compiler: clang
@@ -90,6 +93,8 @@ matrix:
     - env: OS=el DIST=7
       os: osx
     - env: OS=fedora DIST=27
+      os: osx
+    - env: OS=fedora DIST=28
       os: osx
     - env: OS=fedora DIST=rawhide
       os: osx
