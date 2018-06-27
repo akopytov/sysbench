@@ -49,6 +49,20 @@ env:
       - OS=debian DIST=sid ARCH=i386
 
 matrix:
+  include:
+    - env: TARGET=test
+      os: linux-ppc64le
+      sudo: false
+# incompatible with the minimal Makefiles of luajit
+#    - env: TARGET=distcheck
+#      os: linux-ppc64le
+# no packer (yet)
+#    - env: OS=debian DIST=stretch ARCH=ppc64el
+#      os: linux-ppc64le
+#    - env: OS=ubuntu DIST=xenial ARCH=ppc64el
+#      os: linux-ppc64le
+#    - env: OS=ubuntu DIST=bionic ARCH=ppc64el
+#      os: linux-ppc64le
   exclude:
     - env: OS=el DIST=6
       compiler: clang
@@ -180,6 +194,16 @@ install:
       export PATH=~/Library/Python/2.7/bin:$PATH
       ;;
     esac
+  - >
+    if [ "$(uname -m)" == ppc64le ]; then
+      # Use a luajit that supports ppc64{,le}
+      rm -rf third_party/luajit
+      git clone --single-branch --branch ppc64-port --depth 2 https://github.com/PPC64/LuaJIT.git third_party/luajit
+      sed -i -e 's:third_party/luajit/Makefile::' configure.ac
+      sed -i -e 's:luajit/inc:luajit/src:' -e 's:lib/libluajit-5.1.a:src/libluajit.a:'  m4/sb_luajit.m4
+      # broken test
+      rm tests/t/opt_luajit_cmd.t
+    fi
 
 before_script:
   - mysql -u root -e 'CREATE DATABASE sbtest'
