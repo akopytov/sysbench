@@ -134,7 +134,7 @@ build and use an older 0.5 release on Windows.
 ``` shell
     apt -y install make automake libtool pkg-config libaio-dev
     # For MySQL support
-    apt -y install libmysqlclient-dev
+    apt -y install libmysqlclient-dev libssl-dev
     # For PostgreSQL support
     apt -y install libpq-dev
 ```
@@ -143,7 +143,7 @@ build and use an older 0.5 release on Windows.
 ``` shell
     yum -y install make automake libtool pkgconfig libaio-devel
     # For MySQL support, replace with mysql-devel on RHEL/CentOS 5
-    yum -y install mariadb-devel
+    yum -y install mariadb-devel openssl-devel
     # For PostgreSQL support
     yum -y install postgresql-devel
 ```
@@ -152,7 +152,7 @@ build and use an older 0.5 release on Windows.
 ``` shell
     dnf -y install make automake libtool pkgconfig libaio-devel
     # For MySQL support
-    dnf -y install mariadb-devel
+    dnf -y install mariadb-devel openssl-devel
     # For PostgreSQL support
     dnf -y install postgresql-devel
 ```
