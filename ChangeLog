@@ -1,3 +1,19 @@
+2018-07-03  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.15
+	* CI/build/packaging: add Fedora 28
+	* CI/build/packaging: add Ubuntu Bionic
+	* CI/build/packaging: remove Fedora 26 (EOL)
+	* CI/build/packaging: remove Debian Wheezy (EOL)
+	* fileio: fix GH-229 (--file-fsync-freq=0 seems to prevent
+	fsync() at the end of the test)
+	* command line: improve parsing of boolean command line options
+	* tests: fix GH-220 (Testsuite api_sql_mysql.t failed ...)
+	* tests: fix GH-223 (test failure on ppc64)
+	* tests: fix opt_help.t to pass when the binary is not
+	configured with MySQL support
+	* MySQL driver: use it by default in DB benchmarks
+
 2018-04-01  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.14

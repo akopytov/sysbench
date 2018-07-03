@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.63)
-AC_INIT([sysbench],[1.0.14],[https://github.com/akopytov/sysbench/issues],
+AC_INIT([sysbench],[1.0.15],[https://github.com/akopytov/sysbench/issues],
         [sysbench], [https://github.com/akopytov/sysbench])
 AC_CONFIG_AUX_DIR([config])
 
