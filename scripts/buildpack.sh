@@ -178,9 +178,12 @@ main()
 
         echo "Pushing packages to ${PACKAGECLOUD_USER}/${PACKAGECLOUD_REPO}"
 
-        package_cloud push ${PACKAGECLOUD_EXTRA_ARGS} \
-                      ${PACKAGECLOUD_USER}/${PACKAGECLOUD_REPO}/${OS}/${DIST} \
-                      $files
+        for f in $files ; do
+            echo $f
+            package_cloud push ${PACKAGECLOUD_EXTRA_ARGS} \
+                          ${PACKAGECLOUD_USER}/${PACKAGECLOUD_REPO}/${OS}/${DIST} \
+                          $f
+        done
 
         OS=${PPOS} packpack/packpack clean
     done
