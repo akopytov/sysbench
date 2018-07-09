@@ -2,6 +2,8 @@ sysbench (1.0.15-2) unstable; urgency=low
 
   * add libaio-dev to build dependencies
 
+-- Alexey Kopytov <akopytov@gmail.com>  Sat, 09 Jul 2018 09:24:42 +0300
+
 sysbench (1.0.12-1) unstable; urgency=low
 
   * remove vim-common from build dependencies
