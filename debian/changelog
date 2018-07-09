@@ -1,3 +1,7 @@
+sysbench (1.0.15-2) unstable; urgency=low
+
+  * add libaio-dev to build dependencies
+
 sysbench (1.0.12-1) unstable; urgency=low
 
   * remove vim-common from build dependencies
