@@ -92,9 +92,10 @@ main()
         exit 1
     fi
 
-    if [ ! which package_cloud >/dev/null 2>&1 ]; then
+    if ! which package_cloud >/dev/null 2>&1 ; then
         echo "This script requires package_cloud. You can install it by running:"
         echo "  gem install package_cloud"
+        exit 1
     fi
 
     if [ ! -d packpack ]; then
