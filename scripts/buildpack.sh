@@ -16,7 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-# Build packages for a specified architecture and upload them packagecloud.io
+# Build packages for a specified architecture and upload them to packagecloud.io
 # Expects the following environment variables to be defined:
 #
 #   ARCH - architecture. 'aarch64', 'x86_64 and 'i386' are currently supported
