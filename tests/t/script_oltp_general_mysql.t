@@ -1,0 +1,23 @@
+  $ . $SBTEST_INCDIR/mysql_common.sh
+  $ SB_EXTRA_ARGS=${SB_EXTRA_ARGS:-}
+  $ ARGS="oltp_read_write ${DB_DRIVER_ARGS} --verbosity=1 ${SB_EXTRA_ARGS}"
+
+  $ sysbench $ARGS --create-table-options="COMMENT='foo'" prepare
+  Creating table 'sbtest1'...
+  Inserting 10000 records into 'sbtest1'
+  Creating a secondary index on 'sbtest1'...
+
+  $ db_show_table sbtest1
+  *************************** 1. row ***************************
+  sbtest1
+  CREATE TABLE `sbtest1` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `k` int(11) NOT NULL DEFAULT '0',
+    `c` char(120) NOT NULL DEFAULT '',
+    `pad` char(60) NOT NULL DEFAULT '',
+    PRIMARY KEY (`id`),
+    KEY `k_1` (`k`)
+  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=utf8 COMMENT='foo'
+
+  $ sysbench $ARGS --create-table-options="COMMENT='foo'" cleanup
+  Dropping table 'sbtest1'...

@@ -59,6 +59,8 @@ sysbench.cmdline.options = {
    {"Use AUTO_INCREMENT column as Primary Key (for MySQL), " ..
        "or its alternatives in other DBMS. When disabled, use " ..
        "client-generated IDs", true},
+   create_table_options =
+      {"Extra CREATE TABLE options", ""},
    skip_trx =
       {"Don't start explicit transactions and execute all queries " ..
           "in the AUTOCOMMIT mode", false},
@@ -169,7 +171,6 @@ function create_table(drv, con, table_num)
          id_def = "INTEGER NOT NULL"
       end
       engine_def = "/*! ENGINE = " .. sysbench.opt.mysql_storage_engine .. " */"
-      extra_table_options = mysql_table_options or ""
    elseif drv:name() == "pgsql"
    then
       if not sysbench.opt.auto_inc then
@@ -193,7 +194,8 @@ CREATE TABLE sbtest%d(
   pad CHAR(60) DEFAULT '' NOT NULL,
   %s (id)
 ) %s %s]],
-      table_num, id_def, id_index_def, engine_def, extra_table_options)
+      table_num, id_def, id_index_def, engine_def,
+      sysbench.opt.create_table_options)
 
    con:query(query)
 
