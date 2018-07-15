@@ -68,6 +68,8 @@ sysbench.cmdline.options = {
       {"Create a secondary index in addition to the PRIMARY KEY", true},
    mysql_storage_engine =
       {"Storage engine, if MySQL is used", "innodb"},
+   mysql_table_options =
+      {"Extra table options, if MySQL is used", ""},
    pgsql_variant =
       {"Use this PostgreSQL variant when running with the " ..
           "PostgreSQL driver. The only currently supported " ..
@@ -169,7 +171,7 @@ function create_table(drv, con, table_num)
          id_def = "INTEGER NOT NULL"
       end
       engine_def = "/*! ENGINE = " .. sysbench.opt.mysql_storage_engine .. " */"
-      extra_table_options = mysql_table_options or ""
+      extra_table_options = sysbench.opt.mysql_table_options or ""
    elseif drv:name() == "pgsql"
    then
       if not sysbench.opt.auto_inc then

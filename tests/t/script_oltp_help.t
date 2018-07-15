@@ -12,6 +12,7 @@ OLTP usage information test
     --distinct_ranges=N           Number of SELECT DISTINCT queries per transaction [1]
     --index_updates=N             Number of UPDATE index queries per transaction [1]
     --mysql_storage_engine=STRING Storage engine, if MySQL is used [innodb]
+    --mysql_table_options=STRING  Extra table options, if MySQL is used []
     --non_index_updates=N         Number of UPDATE non-index queries per transaction [1]
     --order_ranges=N              Number of SELECT ORDER BY queries per transaction [1]
     --pgsql_variant=STRING        Use this PostgreSQL variant when running with the PostgreSQL driver. The only currently supported variant is 'redshift'. When enabled, create_secondary is automatically disabled, and delete_inserts is set to 0
