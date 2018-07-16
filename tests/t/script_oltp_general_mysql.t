@@ -17,7 +17,7 @@
     `pad` char(60) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`),
     KEY `k_1` (`k`)
-  ) ENGINE=InnoDB .* COMMENT='foo' (glob)
+  ) ENGINE=InnoDB * COMMENT='foo' (glob)
 
-  $ sysbench $ARGS --create-table-options="COMMENT='foo'" cleanup
+  $ sysbench $ARGS cleanup
   Dropping table 'sbtest1'...
