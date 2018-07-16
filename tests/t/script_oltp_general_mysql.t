@@ -17,7 +17,7 @@
     `pad` char(60) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`),
     KEY `k_1` (`k`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=utf8 COMMENT='foo'
+  ) ENGINE=InnoDB .* COMMENT='foo' (glob)
 
   $ sysbench $ARGS --create-table-options="COMMENT='foo'" cleanup
   Dropping table 'sbtest1'...
