@@ -273,7 +273,7 @@ sysbench provides a number of algorithms to generate random numbers that are dis
 `--rand-spec-pct` | percentage of the entire range where 'special' values will fall in the special distribution | 1
 `--rand-spec-res` | percentage of 'special' values to use for the special distribution | 75
 `--rand-pareto-h` | shape parameter for the Pareto distribution | 0.2
-`--rand-zipfian-exp` | shape parameter (theta) for the Zipfian distribution | 0.8`
+`--rand-zipfian-exp` | shape parameter (theta) for the Zipfian distribution | 0.8
 
 # Versioning
 
