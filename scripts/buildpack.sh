@@ -53,7 +53,6 @@ distros_x86_64=(
     "fedora 28 x86_64"
     "ubuntu trusty x86_64"
     "ubuntu xenial x86_64"
-    "ubuntu artful x86_64"
     "ubuntu bionic x86_64"
     "debian jessie x86_64"
     "debian stretch x86_64"
@@ -62,7 +61,6 @@ distros_x86_64=(
 distros_i386=(
     "ubuntu trusty i386"
     "ubuntu xenial i386"
-    "ubuntu artful i386"
     "ubuntu bionic i386"
     "debian jessie i386"
     "debian stretch i386"
@@ -72,7 +70,6 @@ distros_aarch64=(
     "el 7 aarch64"
     "fedora 27 aarch64"
     "fedora 28 aarch64"
-    "ubuntu artful aarch64"
     "ubuntu bionic aarch64"
     "ubuntu trusty aarch64"
     "ubuntu xenial aarch64"
