@@ -169,20 +169,20 @@ Command line options tests
   
   function help()
   Available options:
-    --dash-opt=STRING      dash-opt desc [dash-opt val]
-    --str_opt1=STRING      str_opt1 description
-    --bool_opt3[=on|off]   bool_opt3 description
-    --int_opt2=N           int_opt2 description
-    --list_opt2=[LIST,...] list_opt2 description
-    --float_opt2=N         float_opt2 description [0.2]
-    --str_opt2=STRING      str_opt2 description [opt2]
-    --list_opt1=[LIST,...] list_opt1 description [foo,bar]
-    --str_opt3=STRING      str_opt3 description [opt3]
-    --int_opt3=N           int_opt3 description [20]
     --bool_opt1[=on|off]   bool_opt1 description [off]
-    --float_opt1=N         float_opt1 description [3.14]
     --bool_opt2[=on|off]   bool_opt2 description [on]
+    --bool_opt3[=on|off]   bool_opt3 description
+    --dash-opt=STRING      dash-opt desc [dash-opt val]
+    --float_opt1=N         float_opt1 description [3.14]
+    --float_opt2=N         float_opt2 description [0.2]
     --int_opt1=N           int_opt1 description [10]
+    --int_opt2=N           int_opt2 description
+    --int_opt3=N           int_opt3 description [20]
+    --list_opt1=[LIST,...] list_opt1 description [foo,bar]
+    --list_opt2=[LIST,...] list_opt2 description
+    --str_opt1=STRING      str_opt1 description
+    --str_opt2=STRING      str_opt2 description [opt2]
+    --str_opt3=STRING      str_opt3 description [opt3]
   
   
   opt2
