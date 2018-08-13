@@ -160,7 +160,7 @@ end
 function create_table(drv, con, table_num)
    local id_index_def, id_def
    local engine_def = ""
-   local extra_table_options = ""
+   local extra_table_options = "ROW_FORMAT=COMPRESSED"
    local query
 
    if sysbench.opt.secondary then
@@ -200,9 +200,9 @@ function create_table(drv, con, table_num)
      id %s,
      k INTEGER DEFAULT '0' NOT NULL,
      c VARCHAR(512) DEFAULT '' NOT NULL,
-     pad MEDIUMTEXT DEFAULT '' NOT NULL,
+     pad MEDIUMTEXT,
      %s (id)
-   ) %s %s]],
+   ) %s %s ROW_FORMAT=COMPRESSED]],
          table_num, id_def, id_index_def, engine_def, extra_table_options)
    else
       query = string.format([[
