@@ -1399,15 +1399,16 @@ static void build_subroutines(BuildCtx *ctx)
   |.  nop
   |
   |.ffunc xpcall
-  |  daddiu NARGS8:RC, NARGS8:RC, -16
+  |  daddiu NARGS8:TMP0, NARGS8:RC, -16
   |  ld CARG1, 0(BASE)
   |   ld CARG2, 8(BASE)
-  |    bltz NARGS8:RC, ->fff_fallback
+  |    bltz NARGS8:TMP0, ->fff_fallback
   |.    lbu TMP1, DISPATCH_GL(hookmask)(DISPATCH)
   |  gettp AT, CARG2
   |  daddiu AT, AT, -LJ_TFUNC
   |  bnez AT, ->fff_fallback		// Traceback must be a function.
   |.   move TMP2, BASE
+  |  move NARGS8:RC, NARGS8:TMP0
   |   daddiu BASE, BASE, 24
   |  // Remember active hook before pcall.
   |  srl TMP3, TMP3, HOOK_ACTIVE_SHIFT
@@ -1980,6 +1981,38 @@ static void build_subroutines(BuildCtx *ctx)
   |1:
   |  jr ra
   |.  move CRET1, r0
+  |
+  |// FP number to int conversion with a check for soft-float.
+  |// Modifies CARG1, CRET1, CRET2, TMP0, AT.
+  |->vm_tointg:
+  |.if JIT
+  |  dsll CRET2, CARG1, 1
+  |  beqz CRET2, >2
+  |.  li TMP0, 1076
+  |  dsrl AT, CRET2, 53
+  |  dsubu TMP0, TMP0, AT
+  |  sltiu AT, TMP0, 54
+  |  beqz AT, >1
+  |.  dextm CRET2, CRET2, 0, 20
+  |  dinsu CRET2, AT, 21, 21
+  |  slt AT, CARG1, r0
+  |  dsrlv CRET1, CRET2, TMP0
+  |  dsubu CARG1, r0, CRET1
+  |  movn CRET1, CARG1, AT
+  |  li CARG1, 64
+  |  subu TMP0, CARG1, TMP0
+  |  dsllv CRET2, CRET2, TMP0	// Integer check.
+  |  sextw AT, CRET1
+  |  xor AT, CRET1, AT		// Range check.
+  |  jr ra
+  |.  movz CRET2, AT, CRET2
+  |1:
+  |  jr ra
+  |.  li CRET2, 1
+  |2:
+  |  jr ra
+  |.  move CRET1, r0
+  |.endif
   |.endif
   |
   |.macro .ffunc_bit, name
@@ -2628,7 +2661,7 @@ static void build_subroutines(BuildCtx *ctx)
   |.  slt CRET1, CARG2, CARG1
   |8:
   |  jr ra
-  |.  nop
+  |.  li CRET1, 0
   |9:
   |  jr ra
   |.  move CRET1, CRET2
@@ -2664,6 +2697,23 @@ static void build_subroutines(BuildCtx *ctx)
   |  jr ra
   |.  li CRET1, 0
   |.endif
+  |
+  |.macro sfmin_max, name, intins
+  |->vm_sf .. name:
+  |.if JIT and not FPU
+  |  move TMP2, ra
+  |  bal ->vm_sfcmpolt
+  |.  nop
+  |  move ra, TMP2
+  |  move TMP0, CRET1
+  |  move CRET1, CARG1
+  |  jr ra
+  |.  intins CRET1, CARG2, TMP0
+  |.endif
+  |.endmacro
+  |
+  |  sfmin_max min, movz
+  |  sfmin_max max, movn
   |
   |//-----------------------------------------------------------------------
   |//-- Miscellaneous functions --------------------------------------------

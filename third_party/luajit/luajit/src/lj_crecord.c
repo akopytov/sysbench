@@ -212,7 +212,7 @@ static void crec_copy_emit(jit_State *J, CRecMemList *ml, MSize mlp,
     ml[i].trval = emitir(IRT(IR_XLOAD, ml[i].tp), trsptr, 0);
     ml[i].trofs = trofs;
     i++;
-    rwin += (LJ_SOFTFP && ml[i].tp == IRT_NUM) ? 2 : 1;
+    rwin += (LJ_SOFTFP32 && ml[i].tp == IRT_NUM) ? 2 : 1;
     if (rwin >= CREC_COPY_REGWIN || i >= mlp) {  /* Flush buffered stores. */
       rwin = 0;
       for ( ; j < i; j++) {
@@ -1130,7 +1130,7 @@ static TRef crec_call_args(jit_State *J, RecordFFData *rd,
 	else
 	  tr = emitconv(tr, IRT_INT, d->size==1 ? IRT_I8 : IRT_I16,IRCONV_SEXT);
       }
-    } else if (LJ_SOFTFP && ctype_isfp(d->info) && d->size > 4) {
+    } else if (LJ_SOFTFP32 && ctype_isfp(d->info) && d->size > 4) {
       lj_needsplit(J);
     }
 #if LJ_TARGET_X86
@@ -1879,6 +1879,8 @@ void LJ_FASTCALL lj_crecord_tonumber(jit_State *J, RecordFFData *rd)
       d = ctype_get(cts, CTID_DOUBLE);
     J->base[0] = crec_ct_tv(J, d, 0, J->base[0], &rd->argv[0]);
   } else {
+    /* Specialize to the ctype that couldn't be converted. */
+    argv2cdata(J, J->base[0], &rd->argv[0]);
     J->base[0] = TREF_NIL;
   }
 }

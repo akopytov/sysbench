@@ -274,10 +274,12 @@ static void emit_movmroi(ASMState *as, Reg base, int32_t ofs, int32_t i)
 /* mov r, i / xor r, r */
 static void emit_loadi(ASMState *as, Reg r, int32_t i)
 {
-  /* XOR r,r is shorter, but modifies the flags. This is bad for HIOP. */
+  /* XOR r,r is shorter, but modifies the flags. This is bad for HIOP/jcc. */
   if (i == 0 && !(LJ_32 && (IR(as->curins)->o == IR_HIOP ||
 			    (as->curins+1 < as->T->nins &&
-			     IR(as->curins+1)->o == IR_HIOP)))) {
+			     IR(as->curins+1)->o == IR_HIOP))) &&
+		!((*as->mcp == 0x0f && (as->mcp[1] & 0xf0) == XI_JCCn) ||
+		  (*as->mcp & 0xf0) == XI_JCCs)) {
     emit_rr(as, XO_ARITH(XOg_XOR), r, r);
   } else {
     MCode *p = as->mcp;
@@ -343,9 +345,27 @@ static void emit_rma(ASMState *as, x86Op xo, Reg rr, const void *addr)
     emit_rmro(as, xo, rr, RID_DISPATCH, (int32_t)dispofs(as, addr));
   } else if (checki32(mcpofs(as, addr)) && checki32(mctopofs(as, addr))) {
     emit_rmro(as, xo, rr, RID_RIP, (int32_t)mcpofs(as, addr));
-  } else if (!checki32((intptr_t)addr) && (xo == XO_MOV || xo == XO_MOVSD)) {
-    emit_rmro(as, xo, rr, rr, 0);
-    emit_loadu64(as, rr, (uintptr_t)addr);
+  } else if (!checki32((intptr_t)addr)) {
+    Reg ra = (rr & 15);
+    if (xo != XO_MOV) {
+      /* We can't allocate a register here. Use and restore DISPATCH. Ugly. */
+      uint64_t dispaddr = (uintptr_t)J2GG(as->J)->dispatch;
+      uint8_t i8 = xo == XO_GROUP3b ? *as->mcp++ : 0;
+      ra = RID_DISPATCH;
+      if (checku32(dispaddr)) {
+	emit_loadi(as, ra, (int32_t)dispaddr);
+      } else {  /* Full-size 64 bit load. */
+	MCode *p = as->mcp;
+	*(uint64_t *)(p-8) = dispaddr;
+	p[-9] = (MCode)(XI_MOVri+(ra&7));
+	p[-10] = 0x48 + ((ra>>3)&1);
+	p -= 10;
+	as->mcp = p;
+      }
+      if (xo == XO_GROUP3b) emit_i8(as, i8);
+    }
+    emit_rmro(as, xo, rr, ra, 0);
+    emit_loadu64(as, ra, (uintptr_t)addr);
   } else
 #endif
   {

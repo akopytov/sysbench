@@ -12,6 +12,8 @@ static intptr_t get_k64val(IRIns *ir)
     return (intptr_t)ir_kgc(ir);
   } else if (ir->o == IR_KPTR || ir->o == IR_KKPTR) {
     return (intptr_t)ir_kptr(ir);
+  } else if (LJ_SOFTFP && ir->o == IR_KNUM) {
+    return (intptr_t)ir_knum(ir)->u64;
   } else {
     lua_assert(ir->o == IR_KINT || ir->o == IR_KNULL);
     return ir->i;  /* Sign-extended. */

@@ -241,7 +241,7 @@ static void emit_loadk(ASMState *as, Reg rd, uint64_t u64, int is64)
 #define mcpofs(as, k) \
   ((intptr_t)((uintptr_t)(k) - (uintptr_t)(as->mcp - 1)))
 #define checkmcpofs(as, k) \
-  ((((mcpofs(as, k)>>2) + 0x00040000) >> 19) == 0)
+  (A64F_S_OK(mcpofs(as, k)>>2, 19))
 
 static Reg ra_allock(ASMState *as, intptr_t k, RegSet allow);
 
@@ -312,7 +312,7 @@ static void emit_cond_branch(ASMState *as, A64CC cond, MCode *target)
 {
   MCode *p = --as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(((delta + 0x40000) >> 19) == 0);
+  lua_assert(A64F_S_OK(delta, 19));
   *p = A64I_BCC | A64F_S19(delta) | cond;
 }
 
@@ -320,24 +320,24 @@ static void emit_branch(ASMState *as, A64Ins ai, MCode *target)
 {
   MCode *p = --as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(((delta + 0x02000000) >> 26) == 0);
-  *p = ai | ((uint32_t)delta & 0x03ffffffu);
+  lua_assert(A64F_S_OK(delta, 26));
+  *p = ai | A64F_S26(delta);
 }
 
 static void emit_tnb(ASMState *as, A64Ins ai, Reg r, uint32_t bit, MCode *target)
 {
   MCode *p = --as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(bit < 63 && ((delta + 0x2000) >> 14) == 0);
+  lua_assert(bit < 63 && A64F_S_OK(delta, 14));
   if (bit > 31) ai |= A64I_X;
-  *p = ai | A64F_BIT(bit & 31) | A64F_S14((uint32_t)delta & 0x3fffu) | r;
+  *p = ai | A64F_BIT(bit & 31) | A64F_S14(delta) | r;
 }
 
 static void emit_cnb(ASMState *as, A64Ins ai, Reg r, MCode *target)
 {
   MCode *p = --as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(((delta + 0x40000) >> 19) == 0);
+  lua_assert(A64F_S_OK(delta, 19));
   *p = ai | A64F_S19(delta) | r;
 }
 
@@ -347,8 +347,8 @@ static void emit_call(ASMState *as, void *target)
 {
   MCode *p = --as->mcp;
   ptrdiff_t delta = (char *)target - (char *)p;
-  if ((((delta>>2) + 0x02000000) >> 26) == 0) {
-    *p = A64I_BL | ((uint32_t)(delta>>2) & 0x03ffffffu);
+  if (A64F_S_OK(delta>>2, 26)) {
+    *p = A64I_BL | A64F_S26(delta>>2);
   } else {  /* Target out of range: need indirect call. But don't use R0-R7. */
     Reg r = ra_allock(as, i64ptr(target),
 		      RSET_RANGE(RID_X8, RID_MAX_GPR)-RSET_FIXED);

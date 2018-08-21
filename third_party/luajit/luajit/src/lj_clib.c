@@ -158,11 +158,13 @@ BOOL WINAPI GetModuleHandleExA(DWORD, LPCSTR, HMODULE*);
 /* Default libraries. */
 enum {
   CLIB_HANDLE_EXE,
+#if !LJ_TARGET_UWP
   CLIB_HANDLE_DLL,
   CLIB_HANDLE_CRT,
   CLIB_HANDLE_KERNEL32,
   CLIB_HANDLE_USER32,
   CLIB_HANDLE_GDI32,
+#endif
   CLIB_HANDLE_MAX
 };
 
@@ -208,7 +210,7 @@ static const char *clib_extname(lua_State *L, const char *name)
 static void *clib_loadlib(lua_State *L, const char *name, int global)
 {
   DWORD oldwerr = GetLastError();
-  void *h = (void *)LoadLibraryExA(clib_extname(L, name), NULL, 0);
+  void *h = LJ_WIN_LOADLIBA(clib_extname(L, name));
   if (!h) clib_error(L, "cannot load module " LUA_QS ": %s", name);
   SetLastError(oldwerr);
   UNUSED(global);
@@ -218,6 +220,7 @@ static void *clib_loadlib(lua_State *L, const char *name, int global)
 static void clib_unloadlib(CLibrary *cl)
 {
   if (cl->handle == CLIB_DEFHANDLE) {
+#if !LJ_TARGET_UWP
     MSize i;
     for (i = CLIB_HANDLE_KERNEL32; i < CLIB_HANDLE_MAX; i++) {
       void *h = clib_def_handle[i];
@@ -226,10 +229,15 @@ static void clib_unloadlib(CLibrary *cl)
 	FreeLibrary((HINSTANCE)h);
       }
     }
+#endif
   } else if (cl->handle) {
     FreeLibrary((HINSTANCE)cl->handle);
   }
 }
+
+#if LJ_TARGET_UWP
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+#endif
 
 static void *clib_getsym(CLibrary *cl, const char *name)
 {
@@ -239,6 +247,9 @@ static void *clib_getsym(CLibrary *cl, const char *name)
     for (i = 0; i < CLIB_HANDLE_MAX; i++) {
       HINSTANCE h = (HINSTANCE)clib_def_handle[i];
       if (!(void *)h) {  /* Resolve default library handles (once). */
+#if LJ_TARGET_UWP
+	h = (HINSTANCE)&__ImageBase;
+#else
 	switch (i) {
 	case CLIB_HANDLE_EXE: GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, NULL, &h); break;
 	case CLIB_HANDLE_DLL:
@@ -249,11 +260,12 @@ static void *clib_getsym(CLibrary *cl, const char *name)
 	  GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
 			     (const char *)&_fmode, &h);
 	  break;
-	case CLIB_HANDLE_KERNEL32: h = LoadLibraryExA("kernel32.dll", NULL, 0); break;
-	case CLIB_HANDLE_USER32: h = LoadLibraryExA("user32.dll", NULL, 0); break;
-	case CLIB_HANDLE_GDI32: h = LoadLibraryExA("gdi32.dll", NULL, 0); break;
+	case CLIB_HANDLE_KERNEL32: h = LJ_WIN_LOADLIBA("kernel32.dll"); break;
+	case CLIB_HANDLE_USER32: h = LJ_WIN_LOADLIBA("user32.dll"); break;
+	case CLIB_HANDLE_GDI32: h = LJ_WIN_LOADLIBA("gdi32.dll"); break;
 	}
 	if (!h) continue;
+#endif
 	clib_def_handle[i] = (void *)h;
       }
       p = (void *)GetProcAddress(h, name);
