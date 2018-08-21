@@ -3,8 +3,7 @@
 <head>
 <title>Extensions</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<meta name="Author" content="Mike Pall">
-<meta name="Copyright" content="Copyright (C) 2005-2017, Mike Pall">
+<meta name="Copyright" content="Copyright (C) 2005-2018">
 <meta name="Language" content="en">
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
@@ -374,6 +373,7 @@ LuaJIT supports some extensions from Lua&nbsp;5.3:
 <li>Unicode escape <tt>'\u{XX...}'</tt> embeds the UTF-8 encoding in string literals.</li>
 <li>The argument table <tt>arg</tt> can be read (and modified) by <tt>LUA_INIT</tt> and <tt>-e</tt> chunks.</li>
 <li><tt>io.read()</tt> and <tt>file:read()</tt> accept formats with or without a leading <tt>*</tt>.</li>
+<li><tt>assert()</tt> accepts any type of error object.</li>
 <li><tt>table.move(a1, f, e, t [,a2])</tt>.</li>
 <li><tt>coroutine.isyieldable()</tt>.</li>
 <li>Lua/C API extensions:
@@ -472,7 +472,7 @@ C++ destructors.</li>
 </div>
 <div id="foot">
 <hr class="hide">
-Copyright &copy; 2005-2017 Mike Pall
+Copyright &copy; 2005-2018
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

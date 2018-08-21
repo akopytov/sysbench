@@ -350,6 +350,7 @@ int dasm_encode(Dst_DECL, void *buffer)
 	  break;
 	case DASM_REL_LG:
 	  CK(n >= 0, UNDEF_LG);
+	  /* fallthrough */
 	case DASM_REL_PC:
 	  CK(n >= 0, UNDEF_PC);
 	  n = *DASM_POS2PTR(D, n);

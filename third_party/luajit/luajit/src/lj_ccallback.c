@@ -61,7 +61,11 @@ static MSize CALLBACK_OFS2SLOT(MSize ofs)
 
 #elif LJ_TARGET_PPC
 
+#if LJ_ARCH_PPC64
+#define CALLBACK_MCODE_HEAD		40
+#else  /* PPC 32bits */
 #define CALLBACK_MCODE_HEAD		24
+#endif
 
 #elif LJ_TARGET_MIPS32
 
@@ -193,11 +197,24 @@ static void callback_mcode_init(global_State *g, uint32_t *page)
   uint32_t *p = page;
   void *target = (void *)lj_vm_ffi_callback;
   MSize slot;
+#if LJ_ARCH_PPC64
+  // Store on R0 the global state and point R12 to the function so TOC is calculated correctly.
+  *p++ = PPCI_LI | PPCF_T(RID_R12) | ((((intptr_t)target) >> 32) & 0xffff);
+  *p++ = PPCI_LI | PPCF_T(RID_TMP) | ((((intptr_t)g) >> 32) & 0xffff);
+  *p++ = PPCI_RLDICR | PPCF_T(RID_R12) | PPCF_A(RID_R12) | PPCF_SH(32) | PPCF_M6(63-32);  /* sldi */
+  *p++ = PPCI_RLDICR | PPCF_T(RID_TMP) | PPCF_A(RID_TMP) | PPCF_SH(32) | PPCF_M6(63-32);  /* sldi */
+  *p++ = PPCI_ORIS | PPCF_A(RID_R12) | PPCF_T(RID_R12) | ((((intptr_t)target) >> 16) & 0xffff);
+  *p++ = PPCI_ORIS | PPCF_A(RID_TMP) | PPCF_T(RID_TMP) | ((((intptr_t)g) >> 16) & 0xffff);
+  *p++ = PPCI_ORI | PPCF_A(RID_R12) | PPCF_T(RID_R12) | (((intptr_t)target) & 0xffff);
+  *p++ = PPCI_ORI | PPCF_A(RID_TMP) | PPCF_T(RID_TMP) | (((intptr_t)g) & 0xffff);
+  *p++ = PPCI_MTCTR | PPCF_T(RID_R12);
+#else  /* PPC 32bits */
   *p++ = PPCI_LIS | PPCF_T(RID_TMP) | (u32ptr(target) >> 16);
   *p++ = PPCI_LIS | PPCF_T(RID_R12) | (u32ptr(g) >> 16);
   *p++ = PPCI_ORI | PPCF_A(RID_TMP)|PPCF_T(RID_TMP) | (u32ptr(target) & 0xffff);
   *p++ = PPCI_ORI | PPCF_A(RID_R12)|PPCF_T(RID_R12) | (u32ptr(g) & 0xffff);
   *p++ = PPCI_MTCTR | PPCF_T(RID_TMP);
+#endif
   *p++ = PPCI_BCTR;
   for (slot = 0; slot < CALLBACK_MAX_SLOT; slot++) {
     *p++ = PPCI_LI | PPCF_T(RID_R11) | slot;
@@ -267,7 +284,7 @@ static void callback_mcode_new(CTState *cts)
   if (CALLBACK_MAX_SLOT == 0)
     lj_err_caller(cts->L, LJ_ERR_FFI_CBACKOV);
 #if LJ_TARGET_WINDOWS
-  p = VirtualAlloc(NULL, sz, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+  p = LJ_WIN_VALLOC(NULL, sz, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
   if (!p)
     lj_err_caller(cts->L, LJ_ERR_FFI_CBACKOV);
 #elif LJ_TARGET_POSIX
@@ -285,7 +302,7 @@ static void callback_mcode_new(CTState *cts)
 #if LJ_TARGET_WINDOWS
   {
     DWORD oprot;
-    VirtualProtect(p, sz, PAGE_EXECUTE_READ, &oprot);
+    LJ_WIN_VPROTECT(p, sz, PAGE_EXECUTE_READ, &oprot);
   }
 #elif LJ_TARGET_POSIX
   mprotect(p, sz, (PROT_READ|PROT_EXEC));
@@ -419,6 +436,23 @@ void lj_ccallback_mcode_free(CTState *cts)
 
 #elif LJ_TARGET_PPC
 
+#define CALLBACK_HANDLE_GPR \
+  if (n > 1) { \
+    lua_assert(((LJ_ABI_SOFTFP && ctype_isnum(cta->info)) ||  /* double. */ \
+		ctype_isinteger(cta->info)) && n == 2);  /* int64_t. */ \
+    ngpr = (ngpr + 1u) & ~1u;  /* Align int64_t to regpair. */ \
+  } \
+  if (ngpr + n <= maxgpr) { \
+    sp = &cts->cb.gpr[ngpr]; \
+    ngpr += n; \
+    goto done; \
+  }
+
+#if LJ_ABI_SOFTFP
+#define CALLBACK_HANDLE_REGARG \
+  CALLBACK_HANDLE_GPR \
+  UNUSED(isfp);
+#else
 #define CALLBACK_HANDLE_REGARG \
   if (isfp) { \
     if (nfpr + 1 <= CCALL_NARG_FPR) { \
@@ -427,20 +461,15 @@ void lj_ccallback_mcode_free(CTState *cts)
       goto done; \
     } \
   } else {  /* Try to pass argument in GPRs. */ \
-    if (n > 1) { \
-      lua_assert(ctype_isinteger(cta->info) && n == 2);  /* int64_t. */ \
-      ngpr = (ngpr + 1u) & ~1u;  /* Align int64_t to regpair. */ \
-    } \
-    if (ngpr + n <= maxgpr) { \
-      sp = &cts->cb.gpr[ngpr]; \
-      ngpr += n; \
-      goto done; \
-    } \
+    CALLBACK_HANDLE_GPR \
   }
+#endif
 
+#if !LJ_ABI_SOFTFP
 #define CALLBACK_HANDLE_RET \
   if (ctype_isfp(ctr->info) && ctr->size == sizeof(float)) \
     *(double *)dp = *(float *)dp;  /* FPRs always hold doubles. */
+#endif
 
 #elif LJ_TARGET_MIPS32
 

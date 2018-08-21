@@ -194,7 +194,7 @@ LJLIB_CF(ffi_meta___eq)		LJLIB_REC(cdata_arith MM_eq)
 
 LJLIB_CF(ffi_meta___len)	LJLIB_REC(cdata_arith MM_len)
 {
-  return ffi_arith(L);
+  return lj_carith_len(L);
 }
 
 LJLIB_CF(ffi_meta___lt)		LJLIB_REC(cdata_arith MM_lt)
@@ -746,6 +746,9 @@ LJLIB_CF(ffi_abi)	LJLIB_REC(.)
 #endif
 #if LJ_ABI_WIN
   case H_(4ab624a8,4ab624a8): b = 1; break;  /* win */
+#endif
+#if LJ_TARGET_UWP
+  case H_(a40f0bcb,a40f0bcb): b = 1; break;  /* uwp */
 #endif
   case H_(3af93066,1f001464): b = 1; break;  /* le/be */
 #if LJ_GC64

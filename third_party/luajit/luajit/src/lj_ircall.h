@@ -51,7 +51,7 @@ typedef struct CCallInfo {
 #define CCI_XARGS(ci)		(((ci)->flags >> CCI_XARGS_SHIFT) & 3)
 #define CCI_XA			(1u << CCI_XARGS_SHIFT)
 
-#if LJ_SOFTFP || (LJ_32 && LJ_HASFFI)
+#if LJ_SOFTFP32 || (LJ_32 && LJ_HASFFI)
 #define CCI_XNARGS(ci)		(CCI_NARGS((ci)) + CCI_XARGS((ci)))
 #else
 #define CCI_XNARGS(ci)		CCI_NARGS((ci))
@@ -78,13 +78,19 @@ typedef struct CCallInfo {
 #define IRCALLCOND_SOFTFP_FFI(x)	NULL
 #endif
 
-#if LJ_SOFTFP && LJ_TARGET_MIPS32
+#if LJ_SOFTFP && LJ_TARGET_MIPS
 #define IRCALLCOND_SOFTFP_MIPS(x)	x
 #else
 #define IRCALLCOND_SOFTFP_MIPS(x)	NULL
 #endif
 
-#define LJ_NEED_FP64	(LJ_TARGET_ARM || LJ_TARGET_PPC || LJ_TARGET_MIPS32)
+#if LJ_SOFTFP && LJ_TARGET_MIPS64
+#define IRCALLCOND_SOFTFP_MIPS64(x)	x
+#else
+#define IRCALLCOND_SOFTFP_MIPS64(x)	NULL
+#endif
+
+#define LJ_NEED_FP64	(LJ_TARGET_ARM || LJ_TARGET_PPC || LJ_TARGET_MIPS)
 
 #if LJ_HASFFI && (LJ_SOFTFP || LJ_NEED_FP64)
 #define IRCALLCOND_FP64_FFI(x)		x
@@ -110,6 +116,14 @@ typedef struct CCallInfo {
 #else
 #define XA_FP		0
 #define XA2_FP		0
+#endif
+
+#if LJ_SOFTFP32
+#define XA_FP32		CCI_XA
+#define XA2_FP32	(CCI_XA+CCI_XA)
+#else
+#define XA_FP32		0
+#define XA2_FP32	0
 #endif
 
 #if LJ_32
@@ -181,20 +195,21 @@ typedef struct CCallInfo {
   _(ANY,	pow,			2,   N, NUM, XA2_FP) \
   _(ANY,	atan2,			2,   N, NUM, XA2_FP) \
   _(ANY,	ldexp,			2,   N, NUM, XA_FP) \
-  _(SOFTFP,	lj_vm_tobit,		2,   N, INT, 0) \
-  _(SOFTFP,	softfp_add,		4,   N, NUM, 0) \
-  _(SOFTFP,	softfp_sub,		4,   N, NUM, 0) \
-  _(SOFTFP,	softfp_mul,		4,   N, NUM, 0) \
-  _(SOFTFP,	softfp_div,		4,   N, NUM, 0) \
-  _(SOFTFP,	softfp_cmp,		4,   N, NIL, 0) \
+  _(SOFTFP,	lj_vm_tobit,		1,   N, INT, XA_FP32) \
+  _(SOFTFP,	softfp_add,		2,   N, NUM, XA2_FP32) \
+  _(SOFTFP,	softfp_sub,		2,   N, NUM, XA2_FP32) \
+  _(SOFTFP,	softfp_mul,		2,   N, NUM, XA2_FP32) \
+  _(SOFTFP,	softfp_div,		2,   N, NUM, XA2_FP32) \
+  _(SOFTFP,	softfp_cmp,		2,   N, NIL, XA2_FP32) \
   _(SOFTFP,	softfp_i2d,		1,   N, NUM, 0) \
-  _(SOFTFP,	softfp_d2i,		2,   N, INT, 0) \
-  _(SOFTFP_MIPS, lj_vm_sfmin,		4,   N, NUM, 0) \
-  _(SOFTFP_MIPS, lj_vm_sfmax,		4,   N, NUM, 0) \
+  _(SOFTFP,	softfp_d2i,		1,   N, INT, XA_FP32) \
+  _(SOFTFP_MIPS, lj_vm_sfmin,		2,   N, NUM, XA2_FP32) \
+  _(SOFTFP_MIPS, lj_vm_sfmax,		2,   N, NUM, XA2_FP32) \
+  _(SOFTFP_MIPS64, lj_vm_tointg,	1,   N, INT, 0) \
   _(SOFTFP_FFI,	softfp_ui2d,		1,   N, NUM, 0) \
   _(SOFTFP_FFI,	softfp_f2d,		1,   N, NUM, 0) \
-  _(SOFTFP_FFI,	softfp_d2ui,		2,   N, INT, 0) \
-  _(SOFTFP_FFI,	softfp_d2f,		2,   N, FLOAT, 0) \
+  _(SOFTFP_FFI,	softfp_d2ui,		1,   N, INT, XA_FP32) \
+  _(SOFTFP_FFI,	softfp_d2f,		1,   N, FLOAT, XA_FP32) \
   _(SOFTFP_FFI,	softfp_i2f,		1,   N, FLOAT, 0) \
   _(SOFTFP_FFI,	softfp_ui2f,		1,   N, FLOAT, 0) \
   _(SOFTFP_FFI,	softfp_f2i,		1,   N, INT, 0) \
@@ -272,7 +287,7 @@ LJ_DATA const CCallInfo lj_ir_callinfo[IRCALL__MAX+1];
 #define fp64_f2l __aeabi_f2lz
 #define fp64_f2ul __aeabi_f2ulz
 #endif
-#elif LJ_TARGET_MIPS
+#elif LJ_TARGET_MIPS || LJ_TARGET_PPC
 #define softfp_add __adddf3
 #define softfp_sub __subdf3
 #define softfp_mul __muldf3
