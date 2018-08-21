@@ -30,14 +30,13 @@ env:
       - TARGET=coverage
       - OS=el DIST=6
       - OS=el DIST=7
-      - OS=fedora DIST=26
       - OS=fedora DIST=27
+      - OS=fedora DIST=28
       - OS=fedora DIST=rawhide
       - OS=ubuntu DIST=trusty
       - OS=ubuntu DIST=xenial
       - OS=ubuntu DIST=artful
       - OS=ubuntu DIST=bionic
-      - OS=debian DIST=wheezy
       - OS=debian DIST=jessie
       - OS=debian DIST=stretch
       - OS=debian DIST=sid
@@ -45,7 +44,6 @@ env:
       - OS=ubuntu DIST=xenial ARCH=i386
       - OS=ubuntu DIST=artful ARCH=i386
       - OS=ubuntu DIST=bionic ARCH=i386
-      - OS=debian DIST=wheezy ARCH=i386
       - OS=debian DIST=jessie ARCH=i386
       - OS=debian DIST=stretch ARCH=i386
       - OS=debian DIST=sid ARCH=i386
@@ -54,11 +52,7 @@ matrix:
   include:
     - env: TARGET=test
       os: linux-ppc64le
-      addons:
-        apt:
-          packages:
-          - mysql-server
-          - postgresql
+      sudo: false
 # incompatible with the minimal Makefiles of luajit
 #    - env: TARGET=distcheck
 #      os: linux-ppc64le
@@ -74,9 +68,9 @@ matrix:
       compiler: clang
     - env: OS=el DIST=7
       compiler: clang
-    - env: OS=fedora DIST=26
-      compiler: clang
     - env: OS=fedora DIST=27
+      compiler: clang
+    - env: OS=fedora DIST=28
       compiler: clang
     - env: OS=fedora DIST=rawhide
       compiler: clang
@@ -87,8 +81,6 @@ matrix:
     - env: OS=ubuntu DIST=artful
       compiler: clang
     - env: OS=ubuntu DIST=bionic
-      compiler: clang
-    - env: OS=debian DIST=wheezy
       compiler: clang
     - env: OS=debian DIST=jessie
       compiler: clang
@@ -104,8 +96,6 @@ matrix:
       compiler: clang
     - env: OS=ubuntu DIST=bionic ARCH=i386
       compiler: clang
-    - env: OS=debian DIST=wheezy ARCH=i386
-      compiler: clang
     - env: OS=debian DIST=jessie ARCH=i386
       compiler: clang
     - env: OS=debian DIST=stretch ARCH=i386
@@ -116,9 +106,9 @@ matrix:
       os: osx
     - env: OS=el DIST=7
       os: osx
-    - env: OS=fedora DIST=26
-      os: osx
     - env: OS=fedora DIST=27
+      os: osx
+    - env: OS=fedora DIST=28
       os: osx
     - env: OS=fedora DIST=rawhide
       os: osx
@@ -129,8 +119,6 @@ matrix:
     - env: OS=ubuntu DIST=artful
       os: osx
     - env: OS=ubuntu DIST=bionic
-      os: osx
-    - env: OS=debian DIST=wheezy
       os: osx
     - env: OS=debian DIST=jessie
       os: osx
@@ -210,11 +198,6 @@ install:
       sudo mysql --defaults-file=/etc/mysql/debian.cnf -e "DROP USER root@localhost; CREATE USER root@localhost IDENTIFIED WITH mysql_native_password BY ''; GRANT ALL ON *.* TO root@localhost WITH GRANT OPTION"
       sudo -u postgres psql -c "CREATE ROLE $USER WITH LOGIN PASSWORD NULL"
       SUDO="sudo -u postgres"
-      # Use a luajit that support ppc64
-      rm -rf third_party/luajit
-      git clone --single-branch --branch ppc64-port --depth 2 https://github.com/PPC64/LuaJIT.git third_party/luajit
-      sed -i -e 's:third_party/luajit/Makefile::' configure.ac
-      sed -i -e 's:luajit/inc:luajit/src:' -e 's:lib/libluajit-5.1.a:src/libluajit.a:'  m4/sb_luajit.m4
       ;;
     esac
 

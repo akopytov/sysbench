@@ -1,4 +1,4 @@
--- Copyright (C) 2017 Alexey Kopytov <akopytov@gmail.com>
+-- Copyright (C) 2017-2018 Alexey Kopytov <akopytov@gmail.com>
 
 -- This program is free software; you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -72,6 +72,40 @@ local arg_types = {
    table = sysbench.cmdline.ARG_LIST
 }
 
+local function __genOrderedIndex( t )
+   local orderedIndex = {}
+   for key in pairs(t) do
+      table.insert( orderedIndex, key )
+   end
+   table.sort( orderedIndex )
+   return orderedIndex
+end
+
+local function orderedNext(t, state)
+   local key = nil
+   if state == nil then
+      t.__orderedIndex = __genOrderedIndex( t )
+      key = t.__orderedIndex[1]
+   else
+      for i = 1,table.getn(t.__orderedIndex) do
+         if t.__orderedIndex[i] == state then
+            key = t.__orderedIndex[i+1]
+         end
+      end
+   end
+
+   if key then
+      return key, t[key]
+   end
+
+   t.__orderedIndex = nil
+   return
+end
+
+local function orderedPairs(t)
+   return orderedNext, t, nil
+end
+
 -- Parse command line options definitions, if present in the script as a
 -- 'sysbench.cmdline.options' table. If no such table exists, or if there a
 -- parsing error, return false. Return true on success. After parsing the
@@ -93,7 +127,7 @@ function sysbench.cmdline.read_cmdline_options()
    local args = ffi.new('sb_arg_t[?]', i)
    i = 0
 
-   for name, def in pairs(sysbench.cmdline.options) do
+   for name, def in orderedPairs(sysbench.cmdline.options) do
       -- name
       assert(type(name) == "string" and type(def) == "table",
              "wrong table structure in sysbench.cmdline.options")
