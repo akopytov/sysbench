@@ -212,7 +212,7 @@ script:
       test)
         ./autogen.sh && ./configure --with-mysql --with-pgsql
         make
-        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=$USER --pgsql-host=/var/run/postgresql" make test
+        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=$USER" make test
         ;;
       distcheck)
         ./autogen.sh && ./configure --without-mysql
@@ -222,7 +222,7 @@ script:
       coverage)
         ./autogen.sh && ./configure --enable-coverage --enable-asan --enable-msan --with-mysql --with-pgsql
         make -j2
-        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=$USER --pgsql-host=/var/run/postgresql" make test
+        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=$USER" make test
         ;;
       esac
     else
