@@ -50,9 +50,32 @@ env:
 
 matrix:
   include:
-    - env: TARGET=test
+    - env:
+        - TARGET=test
+        - PGPORT=5432
+      compiler: clang-6.0
       os: linux-ppc64le
       sudo: required
+      services:
+        - docker
+        - postgresql
+      addons:
+        mariadb: '10.3'
+        postgresql: "11"
+        apt:
+          sources:
+          - sourceline: 'deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg 11'
+            key_url: 'https://www.postgresql.org/media/keys/ACCC4CF8.asc'
+          packages:
+          packages:
+          - postgresql-11
+          - postgresql-client-11
+          - libmysqlclient-dev
+          - libpq-dev
+          - libaio-dev
+          - clang-6.0
+      before_install:
+        - sudo -u postgres psql -c "grant ALL on DATABASE postgres to travis WITH GRANT OPTION;"
 # incompatible with the minimal Makefiles of luajit
 #    - env: TARGET=distcheck
 #      os: linux-ppc64le
@@ -159,7 +182,7 @@ before_install:
     fi
   - >
     if [ "x$TARGET" = "xtest" ]; then
-      case "${TRAVIS_OS_NAME:-linux}" in
+      case "${TRAVIS_OS_NAME}" in
       osx)
         brew install mysql
 
@@ -176,11 +199,8 @@ before_install:
         echo "Creating user postgres"
         createuser -s postgres
         ;;
-      linux*)
+      linux)
         export ASAN_OPTIONS="detect_leaks=0"
-        if [ "${CC}" = "clang" ]; then
-          CC=clang-3.6
-        fi
         ;;
       esac
     fi
@@ -196,7 +216,7 @@ install:
     esac
     if [ $(uname -m) == 'ppc64le' ]; then
       # travis ppc environment doesn't set up root user right
-      sudo mysql --defaults-file=/etc/mysql/debian.cnf -e "DROP USER root@localhost; CREATE USER root@localhost IDENTIFIED WITH mysql_native_password BY ''; GRANT ALL ON *.* TO root@localhost WITH GRANT OPTION"
+      #sudo mysql --defaults-file=/etc/mysql/debian.cnf -e "DROP USER root@localhost; CREATE USER root@localhost IDENTIFIED WITH mysql_native_password BY ''; GRANT ALL ON *.* TO root@localhost WITH GRANT OPTION"
       sudo -u postgres psql -c "CREATE ROLE $USER WITH LOGIN PASSWORD NULL"
       SUDO="sudo -u postgres"
     fi
