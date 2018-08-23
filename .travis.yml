@@ -222,8 +222,9 @@ install:
     fi
 
 before_script:
-  - mysql -u root -e 'CREATE DATABASE sbtest'
+  - mysql -u root -e 'CREATE DATABASE sbtest; SELECT VERSION(), CURRENT_USER();'
   - ${SUDO} psql -U postgres -c 'CREATE DATABASE sbtest'
+  - ${SUDO} psql -U postgres -c 'SELECT VERSION(), CURRENT_USER;'
 
 script:
   - >
