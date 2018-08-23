@@ -52,7 +52,7 @@ matrix:
   include:
     - env: TARGET=test
       os: linux-ppc64le
-      sudo: false
+      sudo: required
 # incompatible with the minimal Makefiles of luajit
 #    - env: TARGET=distcheck
 #      os: linux-ppc64le
@@ -187,19 +187,19 @@ before_install:
 
 install:
   - pip2 install --user urllib3[secure] cpp-coveralls
-  - >
-    case "${TRAVIS_OS_NAME:-linux}" in
+  - |
+    case "${TRAVIS_OS_NAME}" in
     osx)
       # OS X requires this for user-local pip packages
       export PATH=~/Library/Python/2.7/bin:$PATH
       ;;
-    linux-ppc64le)
-      # travis ppc environment doesn't set up root user righ
+    esac
+    if [ $(uname -m) == 'ppc64le' ]; then
+      # travis ppc environment doesn't set up root user right
       sudo mysql --defaults-file=/etc/mysql/debian.cnf -e "DROP USER root@localhost; CREATE USER root@localhost IDENTIFIED WITH mysql_native_password BY ''; GRANT ALL ON *.* TO root@localhost WITH GRANT OPTION"
       sudo -u postgres psql -c "CREATE ROLE $USER WITH LOGIN PASSWORD NULL"
       SUDO="sudo -u postgres"
-      ;;
-    esac
+    fi
 
 before_script:
   - mysql -u root -e 'CREATE DATABASE sbtest'
