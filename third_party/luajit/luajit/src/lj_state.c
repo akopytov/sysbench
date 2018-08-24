@@ -232,9 +232,9 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud)
 #else
   uintptr_t target = (uintptr_t)(void *)lj_vm_exit_handler & ~(uintptr_t)0xffff;
 #endif
+#if LJ_HASJIT
   uintptr_t range = (1u << LJ_TARGET_JUMPRANGE) - (1u << 21);
   uintptr_t allocbase;
-#if LJ_HASJIT
   G2J(g)->prngstate = rand();
   if (LJ_PRNG_BITS(G2J(g), 1)) {
     allocbase = (target - range > target) ? 0 : target - range;
