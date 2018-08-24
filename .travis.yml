@@ -214,12 +214,6 @@ install:
       export PATH=~/Library/Python/2.7/bin:$PATH
       ;;
     esac
-    if [ $(uname -m) == 'ppc64le' ]; then
-      # travis ppc environment doesn't set up root user right
-      #sudo mysql --defaults-file=/etc/mysql/debian.cnf -e "DROP USER root@localhost; CREATE USER root@localhost IDENTIFIED WITH mysql_native_password BY ''; GRANT ALL ON *.* TO root@localhost WITH GRANT OPTION"
-      sudo -u postgres psql -c "CREATE ROLE $USER WITH LOGIN PASSWORD NULL"
-      SUDO="sudo -u postgres"
-    fi
 
 before_script:
   - mysql -u root -e 'CREATE DATABASE sbtest; SELECT VERSION(), CURRENT_USER();'
@@ -233,7 +227,7 @@ script:
       test)
         ./autogen.sh && ./configure --with-mysql --with-pgsql
         make
-        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=$USER" make test
+        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
         ;;
       distcheck)
         ./autogen.sh && ./configure --without-mysql
@@ -243,7 +237,7 @@ script:
       coverage)
         ./autogen.sh && ./configure --enable-coverage --enable-asan --enable-msan --with-mysql --with-pgsql
         make -j2
-        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=$USER" make test
+        SBTEST_MYSQL_ARGS="--mysql-user=root" SBTEST_PGSQL_ARGS="--pgsql-user=postgres" make test
         ;;
       esac
     else
