@@ -13,7 +13,7 @@ select_random_*.lua + MySQL tests
   sbtest1
   CREATE TABLE `sbtest1` (
     `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `k` int(11) NOT NULL DEFAULT *0*, (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -84,7 +84,7 @@ select_random_*.lua + MySQL tests
   sbtest1
   CREATE TABLE `sbtest1` (
     `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `k` int(11) NOT NULL DEFAULT *0*, (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
