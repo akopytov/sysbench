@@ -8,6 +8,7 @@ OLTP usage information test
   oltp_read_write.lua options:
     --auto_inc[=on|off]           Use AUTO_INCREMENT column as Primary Key (for MySQL), or its alternatives in other DBMS. When disabled, use client-generated IDs [on]
     --create_secondary[=on|off]   Create a secondary index in addition to the PRIMARY KEY [on]
+    --create_table_options=STRING Extra CREATE TABLE options []
     --delete_inserts=N            Number of DELETE/INSERT combinations per transaction [1]
     --distinct_ranges=N           Number of SELECT DISTINCT queries per transaction [1]
     --index_updates=N             Number of UPDATE index queries per transaction [1]
