@@ -75,7 +75,9 @@ matrix:
           - libaio-dev
           - clang-6.0
       before_install:
-        - sudo -u postgres psql -c "grant ALL on DATABASE postgres to travis WITH GRANT OPTION;"
+        - sudo sed -i 's/peer/trust/g' /etc/postgresql/11/main/pg_hba.conf
+        - sudo systemctl restart postgresql@11-main
+
 # incompatible with the minimal Makefiles of luajit
 #    - env: TARGET=distcheck
 #      os: linux-ppc64le
@@ -217,8 +219,8 @@ install:
 
 before_script:
   - mysql -u root -e 'CREATE DATABASE sbtest; SELECT VERSION(), CURRENT_USER();'
-  - ${SUDO} psql -U postgres -c 'CREATE DATABASE sbtest'
-  - ${SUDO} psql -U postgres -c 'SELECT VERSION(), CURRENT_USER;'
+  - psql -U postgres -c 'CREATE DATABASE sbtest'
+  - psql -U postgres -c 'SELECT VERSION(), CURRENT_USER;'
 
 script:
   - >
