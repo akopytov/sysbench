@@ -44,23 +44,35 @@ AS_IF([test "x$sb_cv_lib_ck" = "xsystem"],
     CK_LIBS="\$(abs_top_builddir)/third_party/concurrency_kit/lib/libck.a"
 
     case $target_cpu in
-      powerpc*|aarch64)
-        # Assume 128-byte cache line on AArch64 and PowerPC
+      # Assume 128-byte cache line on AArch64 and PowerPC
+      aarch64)
         CPPFLAGS="${CPPFLAGS} -DCK_MD_CACHELINE=128"
+        CK_CONFIGURE_FLAGS="--platform=$target_cpu --profile=aarch64"
+        ;;
+      powerpc64*)
+        CPPFLAGS="${CPPFLAGS} -DCK_MD_CACHELINE=128"
+        CK_CONFIGURE_FLAGS="--platform=ppc64${target_cpu#powerpc64} --profile=ppc64"
+        ;;
+      powerpc)
+        CPPFLAGS="${CPPFLAGS} -DCK_MD_CACHELINE=128"
+        CK_CONFIGURE_FLAGS="--platform=powerpc --profile=ppc"
         ;;
         # Force --platform=i*86 for CK, otherwise its configure script
         # autodetects target based on 'uname -m' which doesn't work for
         # cross-compiliation
       i486*|i586*)
-        CK_CONFIGURE_FLAGS="--platform=i586"
+        CK_CONFIGURE_FLAGS="--platform=i586 --profile=i86pc"
         ;;
       i686*)
-        CK_CONFIGURE_FLAGS="--platform=i686"
+        CK_CONFIGURE_FLAGS="--platform=i686 --profile=i86pc"
+        ;;
+      *)
+        CK_CONFIGURE_FLAGS="--platform=$target_cpu --profile=$target_cpu"
         ;;
     esac
     # Add --enable-lse to CK build flags, if LSE instructions are supported by
     # the target architecture
-    if test "$cross_compiling" = no -a "$host_cpu" = aarch64; then
+    if test "$host_cpu" = aarch64; then
       AC_MSG_CHECKING([whether LSE instructions are supported])
       AC_COMPILE_IFELSE(
         [AC_LANG_PROGRAM(,
@@ -75,17 +87,16 @@ AS_IF([test "x$sb_cv_lib_ck" = "xsystem"],
                                   : "memory");
         ]])],
         [
-          CK_CONFIGURE_FLAGS="--enable-lse"
+          CK_CONFIGURE_FLAGS="$CK_CONFIGURE_FLAGS --enable-lse"
           AC_MSG_RESULT([yes])
         ],
         [
-          CK_CONFIGURE_FLAGS=""
           AC_MSG_RESULT([no])
         ]
       )
-
-      AC_SUBST([CK_CONFIGURE_FLAGS])
     fi
+
+    AC_SUBST([CK_CONFIGURE_FLAGS])
   ]
 )
 
