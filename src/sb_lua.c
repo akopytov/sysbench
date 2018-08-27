@@ -1008,7 +1008,7 @@ static void stat_to_lua_table(lua_State *L, sb_stat_t *stat)
   stat_to_number(threads_running);
   stat_to_number(time_interval);
   stat_to_number(time_total);
-  stat_to_number(latency_pct);
+  //stat_to_number(latency_pct); //update this
   stat_to_number(events);
   stat_to_number(reads);
   stat_to_number(writes);

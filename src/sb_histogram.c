@@ -113,12 +113,11 @@ void sb_histogram_update(sb_histogram_t *h, double value)
 }
 
 
-double sb_histogram_get_pct_intermediate(sb_histogram_t *h,
-                                         double percentile)
+sb_histogram_snapshot_t *sb_histogram_snapshot_intermediate(sb_histogram_t *h)
 {
   size_t   i, s;
-  uint64_t nevents, ncur, nmax;
-  double   res;
+  uint64_t nevents;
+  sb_histogram_snapshot_t *snapshot = malloc(sizeof(sb_histogram_snapshot_t));
 
   nevents = 0;
 
@@ -156,24 +155,14 @@ double sb_histogram_get_pct_intermediate(sb_histogram_t *h,
     }
   }
 
-  /*
-    Now that we have an aggregate 'snapshot' of current arrays and the total
-    number of events in it, calculate the current, intermediate percentile value
-    to return.
-  */
-  nmax = floor(nevents * percentile / 100 + 0.5);
+  snapshot->array = array;
+  snapshot->size = size;
 
-  ncur = 0;
-  for (i = 0; i < size; i++)
-  {
-    ncur += array[i];
-    if (ncur >= nmax)
-      break;
-  }
+  snapshot->nevents = nevents;
 
-  res = exp(i / h->range_mult + h->range_deduct);
+  snapshot->range_deduct = h->range_deduct;
+  snapshot->range_mult = h->range_mult;
 
-  /* Finally, add temp_array into accumulated values in cumulative_array. */
   for (i = 0; i < size; i++)
   {
     h->cumulative_array[i] += array[i];
@@ -182,6 +171,34 @@ double sb_histogram_get_pct_intermediate(sb_histogram_t *h,
   h->cumulative_nevents += nevents;
 
   pthread_rwlock_unlock(&h->lock);
+
+  return snapshot;
+}
+
+double *sb_histogram_snapshot_get_pct(sb_histogram_snapshot_t* snapshot, double* percentiles, size_t npercentiles)
+{
+  size_t i, n;
+  uint64_t ncur, nmax;
+  double *res = malloc(npercentiles * sizeof(double));
+
+  /*
+    Now that we have an aggregate 'snapshot' of current arrays and the total
+    number of events in it, calculate the current, intermediate percentile value
+    to return.
+  */
+  for(i = 0; i < npercentiles; i++){
+    nmax = floor(snapshot->nevents * *(percentiles + i) / 100 + 0.5);
+
+    ncur = 0;
+    for (n = 0; n < snapshot->size; n++)
+    {
+      ncur += snapshot->array[n];
+      if (ncur >= nmax)
+        break;
+    }
+
+    res[i] = MS2SEC(exp(n / snapshot->range_mult + snapshot->range_deduct));
+  }
 
   return res;
 }
@@ -215,32 +232,9 @@ static void merge_intermediate_into_cumulative(sb_histogram_t *h)
 }
 
 
-/*
-  Calculate a given percentile from the cumulative array. This should be called
-  with the histogram lock either read- or write-locked.
-*/
-static double get_pct_cumulative(sb_histogram_t *h, double percentile)
+double *sb_histogram_get_pct_cumulative(sb_histogram_t *h, double *percentiles, size_t npercentiles)
 {
-  size_t   i;
-  uint64_t ncur, nmax;
-
-  nmax = floor(h->cumulative_nevents * percentile / 100 + 0.5);
-
-  ncur = 0;
-  for (i = 0; i < h->array_size; i++)
-  {
-    ncur += h->cumulative_array[i];
-    if (ncur >= nmax)
-      break;
-  }
-
-  return exp(i / h->range_mult + h->range_deduct);
-}
-
-
-double sb_histogram_get_pct_cumulative(sb_histogram_t *h, double percentile)
-{
-  double res;
+  double *res = malloc(npercentiles * sizeof(double));
 
   /*
     This can be called concurrently with other sb_histogram_get_pct_*()
@@ -253,18 +247,29 @@ double sb_histogram_get_pct_cumulative(sb_histogram_t *h, double percentile)
 
   merge_intermediate_into_cumulative(h);
 
-  res = get_pct_cumulative(h, percentile);
+  sb_histogram_snapshot_t snapshot;
+
+  snapshot.array = malloc(h->array_size * sizeof(uint64_t)); //memory vs parallelism //memcpy vs loop inside locks- test speed somehow
+  memcpy(snapshot.array, h->cumulative_array, h->array_size * sizeof(uint64_t));
+
+  snapshot.size = h->array_size;
+  snapshot.nevents = h->cumulative_nevents;
+  snapshot.range_deduct = h->range_deduct;
+  snapshot.range_mult = h->range_mult;
 
   pthread_rwlock_unlock(&h->lock);
+
+  res = sb_histogram_snapshot_get_pct(&snapshot, percentiles, npercentiles);
+
+  free(snapshot.array);
 
   return res;
 }
 
 
-double sb_histogram_get_pct_checkpoint(sb_histogram_t *h,
-                                       double percentile)
+double *sb_histogram_get_pct_checkpoint(sb_histogram_t *h, double *percentiles, size_t npercentiles)
 {
-  double   res;
+  double   *res = malloc(npercentiles * sizeof(double));
 
   /*
     This can be called concurrently with other sb_histogram_get_pct_*()
@@ -277,13 +282,25 @@ double sb_histogram_get_pct_checkpoint(sb_histogram_t *h,
 
   merge_intermediate_into_cumulative(h);
 
-  res = get_pct_cumulative(h, percentile);
+  sb_histogram_snapshot_t snapshot;
+
+  snapshot.array = malloc(h->array_size * sizeof(uint64_t)); //memory vs parallelism //malloc vs loop - test speed somehow
+  memcpy(snapshot.array, h->cumulative_array, h->array_size * sizeof(uint64_t));
+
+  snapshot.size = h->array_size;
+  snapshot.nevents = h->cumulative_nevents;
+  snapshot.range_deduct = h->range_deduct;
+  snapshot.range_mult = h->range_mult;
 
   /* Reset the cumulative array */
   memset(h->cumulative_array, 0, h->array_size * sizeof(uint64_t));
   h->cumulative_nevents = 0;
 
   pthread_rwlock_unlock(&h->lock);
+
+  res = sb_histogram_snapshot_get_pct(&snapshot, percentiles, npercentiles);
+
+  free(snapshot.array);
 
   return res;
 }

@@ -66,6 +66,16 @@ typedef struct {
 /* Global latency histogram */
 extern sb_histogram_t sb_latency_histogram;
 
+typedef struct {
+  uint64_t * array;
+  uint64_t nevents;
+
+  size_t size;
+
+  double range_deduct;
+  double range_mult;
+} sb_histogram_snapshot_t;
+
 /*
   Allocate a new histogram and initialize it with sb_histogram_init().
 */
@@ -92,13 +102,11 @@ void sb_histogram_update(sb_histogram_t *h, double value);
   that no concurrent updates are lost and will be accounted in either the
   current or later merge of intermediate clues.
 */
-double sb_histogram_get_pct_intermediate(sb_histogram_t *h, double percentile);
+sb_histogram_snapshot_t *sb_histogram_snapshot_intermediate(sb_histogram_t *h);
 
-/*
-  Merge intermediate histogram values into cumulative ones and calculate a given
-  percentile value from the cumulative array.
-*/
-double sb_histogram_get_pct_cumulative(sb_histogram_t *h, double percentile);
+double *sb_histogram_snapshot_get_pct(sb_histogram_snapshot_t *snapshot, double *percentiles, size_t npercentiles);
+
+double *sb_histogram_get_pct_cumulative(sb_histogram_t *h, double *percentiles, size_t npercentiles);
 
 /*
    Similar to sb_histogram_get_pct_cumulative(), but also resets cumulative
@@ -106,7 +114,7 @@ double sb_histogram_get_pct_cumulative(sb_histogram_t *h, double percentile);
    atomically so that no conucrrent updates are lost after percentile
    calculation. This is currently used only by 'checkpoint' reports.
 */
-double sb_histogram_get_pct_checkpoint(sb_histogram_t *h, double percentile);
+double *sb_histogram_get_pct_checkpoint(sb_histogram_t *h, double *percentiles, size_t npercentiles);
 
 /*
   Print a given histogram to stdout

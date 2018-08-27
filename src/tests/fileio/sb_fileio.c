@@ -734,14 +734,19 @@ void file_report_intermediate(sb_stat_t *stat)
 {
   const double seconds = stat->time_interval;
 
+  sb_histogram_snapshot_t *snapshot = sb_histogram_snapshot_intermediate(&sb_latency_histogram);
+  double *latency_pcts = sb_histogram_snapshot_get_pct(snapshot, sb_globals.percentiles, sb_globals.npercentiles);
+
   log_timestamp(LOG_NOTICE, stat->time_total,
                 "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "
-                "latency (ms,%u%%): %4.3f",
+                "%s",
                 stat->bytes_read / mebibyte / seconds,
                 stat->bytes_written / mebibyte / seconds,
                 stat->other / seconds,
-                sb_globals.percentile,
-                SEC2MS(stat->latency_pct));
+                create_pct_string_intermediate(sb_globals.percentiles, latency_pcts, sb_globals.npercentiles)
+                );
+
+  free(latency_pcts);
 }
 
 /* Print cumulative test statistics. */
@@ -774,10 +779,13 @@ void file_report_cumulative(sb_stat_t *stat)
   log_text(LOG_NOTICE, "         max:                            %10.2f",
            SEC2MS(stat->latency_max));
 
-  if (sb_globals.percentile > 0)
-    log_text(LOG_NOTICE, "        %3dth percentile:                %10.2f",
-             sb_globals.percentile, SEC2MS(stat->latency_pct));
-  else
+  if (sb_globals.npercentiles > 0){
+    double *latency_pcts = sb_histogram_get_pct_cumulative(&sb_latency_histogram, sb_globals.percentiles, sb_globals.npercentiles);
+
+    log_text(LOG_NOTICE, create_pct_string_cumulative(sb_globals.percentiles, latency_pcts, sb_globals.npercentiles));
+
+    free(latency_pcts);
+  }else
     log_text(LOG_NOTICE, "         percentile stats:               disabled");
 
   log_text(LOG_NOTICE, "         sum:                            %10.2f",
