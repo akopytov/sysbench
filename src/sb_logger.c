@@ -516,25 +516,31 @@ int oper_handler_done(void)
 }
 
 char *create_pct_string_intermediate(double* percentiles, double* results, size_t npercentiles){
-  char *res = "";
+  char *res = malloc(sizeof(char));
+  *res = '\0';
   for(size_t i = 0; i < npercentiles; i++){
-    char *to_append = malloc(100 * sizeof(char));
-        sprintf(to_append, "lat (ms,%f%%): %4.2f ", *(percentiles + i), SEC2MS(*(results + i)));
+    char *to_append = malloc((strlen("lat (ms,%4.2f%%): %4.2f ") + 4 + 4 + 1) * sizeof(char));
+        sprintf(to_append, "lat (ms,%4.2f%%): %4.2f ", *(percentiles + i), SEC2MS(*(results + i)));
     char *buf = malloc((strlen(res) + strlen(to_append)) * sizeof(char) + 1);
     buf = strcat(buf, res);
-    res = strcat(buf, to_append);//Figure out memory management here
+    free(res);
+    res = strcat(buf, to_append);
+    free(to_append);
   }
   return res;
 }
 
 char *create_pct_string_cumulative(double* percentiles, double* results, size_t npercentiles){
-  char *res = "";
+  char *res = malloc(sizeof(char));
+  *res = '\0';
   for(size_t i = 0; i < npercentiles; i++){
-    char *to_append = malloc(77 * sizeof(char));
-    sprintf(to_append, "        %3fth percentile:                %27.2f ", *(percentiles + i), SEC2MS(*(results + i)));
+    char *to_append = malloc((strlen("         %4.2fth percentile:%25.2f\t") + 4 + 25 + 1) * sizeof(char));
+    sprintf(to_append, "         %4.2fth percentile:%25.2f\t", *(percentiles + i), SEC2MS(*(results + i)));
     char *buf = malloc((strlen(res) + strlen(to_append)) * sizeof(char) + 1);
     buf = strcat(buf, res);
-    res = strcat(buf, to_append);//Figure out memory management here
+    free(res);
+    res = strcat(buf, to_append);
+    free(to_append);
   }
   return res;
 }
