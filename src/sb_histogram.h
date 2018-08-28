@@ -67,7 +67,7 @@ typedef struct {
 extern sb_histogram_t sb_latency_histogram;
 
 typedef struct {
-  uint64_t * array;
+  uint64_t *array;
   uint64_t nevents;
 
   size_t size;

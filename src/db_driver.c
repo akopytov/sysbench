@@ -977,7 +977,8 @@ void db_report_intermediate(sb_stat_t *stat)
   log_timestamp(LOG_NOTICE, stat->time_total,
                 "thds: %u tps: %4.2f "
                 "qps: %4.2f (r/w/o: %4.2f/%4.2f/%4.2f) "
-                "%s err/s: %4.2f "
+                "%s "
+                "err/s: %4.2f "
                 "reconn/s: %4.2f",
                 stat->threads_running,
                 stat->events / seconds,

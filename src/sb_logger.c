@@ -482,7 +482,7 @@ int oper_handler_init(void)
     n++;
   }
 
-  sb_globals.percentiles = malloc(n * sizeof(double)); //Memory leak
+  sb_globals.percentiles = malloc(n * sizeof(double));
   sb_globals.npercentiles = n;
 
   SB_LIST_FOR_EACH(pos, tmp){
@@ -519,9 +519,10 @@ char *create_pct_string_intermediate(double* percentiles, double* results, size_
   char *res = malloc(sizeof(char));
   *res = '\0';
   for(size_t i = 0; i < npercentiles; i++){
-    char *to_append = malloc((strlen("lat (ms,%4.2f%%): %4.2f ") + 4 + 4 + 1) * sizeof(char));
-        sprintf(to_append, "lat (ms,%4.2f%%): %4.2f ", *(percentiles + i), SEC2MS(*(results + i)));
+    char *to_append = malloc((strlen("lat (ms,%5.2f%%): %4.2f ") + 5 + 4 + 1) * sizeof(char));
+        sprintf(to_append, "lat (ms,%5.2f%%): %4.2f ", *(percentiles + i), SEC2MS(*(results + i)));
     char *buf = malloc((strlen(res) + strlen(to_append)) * sizeof(char) + 1);
+    *buf = '\0';
     buf = strcat(buf, res);
     free(res);
     res = strcat(buf, to_append);
@@ -534,9 +535,10 @@ char *create_pct_string_cumulative(double* percentiles, double* results, size_t 
   char *res = malloc(sizeof(char));
   *res = '\0';
   for(size_t i = 0; i < npercentiles; i++){
-    char *to_append = malloc((strlen("         %4.2fth percentile:%25.2f\t") + 4 + 25 + 1) * sizeof(char));
-    sprintf(to_append, "         %4.2fth percentile:%25.2f\t", *(percentiles + i), SEC2MS(*(results + i)));
+    char *to_append = malloc((strlen("         %5.2fth percentile:%25.2f\t") + 5 + 25 + 1) * sizeof(char));
+    sprintf(to_append, "         %5.2fth percentile:%25.2f\n", *(percentiles + i), SEC2MS(*(results + i)));
     char *buf = malloc((strlen(res) + strlen(to_append)) * sizeof(char) + 1);
+    *buf = '\0';
     buf = strcat(buf, res);
     free(res);
     res = strcat(buf, to_append);
