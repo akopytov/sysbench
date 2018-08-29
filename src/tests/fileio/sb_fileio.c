@@ -734,8 +734,7 @@ void file_report_intermediate(sb_stat_t *stat)
 {
   const double seconds = stat->time_interval;
 
-  sb_histogram_snapshot_t *snapshot = sb_histogram_snapshot_intermediate(&sb_latency_histogram);
-  double *latency_pcts = sb_histogram_snapshot_get_pct(snapshot, sb_globals.percentiles, sb_globals.npercentiles);
+  double *latency_pcts = sb_histogram_get_pct_intermediate(&sb_latency_histogram, sb_globals.percentiles, sb_globals.npercentiles);
 
   log_timestamp(LOG_NOTICE, stat->time_total,
                 "reads: %4.2f MiB/s writes: %4.2f MiB/s fsyncs: %4.2f/s "

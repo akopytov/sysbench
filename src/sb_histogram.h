@@ -96,16 +96,24 @@ int sb_histogram_init(sb_histogram_t *h, size_t size,
 /* Update histogram with a given value. */
 void sb_histogram_update(sb_histogram_t *h, double value);
 
+/* Calculate given percentile values from a given histogram snapshopt */
+double *sb_histogram_snapshot_get_pct(sb_histogram_snapshot_t *snapshot, double *percentiles, size_t npercentiles);
+
+/* Capture a snapshot of the given histogram */
+sb_histogram_snapshot_t *sb_histogram_snapshot_intermediate(sb_histogram_t *h);
+
 /*
-  Calculate a given percentile value from the intermediate histogram values,
+  Calculate given percentile values from the intermediate histogram values,
   then merge intermediate values into cumulative ones atomically, i.e. in a way
   that no concurrent updates are lost and will be accounted in either the
   current or later merge of intermediate clues.
 */
-sb_histogram_snapshot_t *sb_histogram_snapshot_intermediate(sb_histogram_t *h);
+double *sb_histogram_get_pct_intermediate(sb_histogram_t *h, double *percentiles, size_t npercentiles);
 
-double *sb_histogram_snapshot_get_pct(sb_histogram_snapshot_t *snapshot, double *percentiles, size_t npercentiles);
-
+/*
+  Merge intermediate histogram values into cumulative ones and calculate given
+  percentile values from the cumulative array.
+*/
 double *sb_histogram_get_pct_cumulative(sb_histogram_t *h, double *percentiles, size_t npercentiles);
 
 /*

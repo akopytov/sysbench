@@ -233,12 +233,8 @@ static void report_intermediate(void)
   sb_counters_agg_intermediate(cnt);
   report_get_common_stat(&stat, cnt);
 
-  sb_histogram_snapshot_t *snapshot = sb_histogram_snapshot_intermediate(&sb_latency_histogram);
-
   stat.latency_pcts =
-    sb_histogram_snapshot_get_pct(snapshot, sb_globals.percentiles, sb_globals.npercentiles);
-
-  free(snapshot);
+    sb_histogram_get_pct_intermediate(&sb_latency_histogram, sb_globals.percentiles, sb_globals.npercentiles);
 
   stat.time_interval = NS2SEC(sb_timer_current(&sb_intermediate_timer));
 

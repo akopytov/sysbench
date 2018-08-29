@@ -113,6 +113,35 @@ void sb_histogram_update(sb_histogram_t *h, double value)
 }
 
 
+double *sb_histogram_snapshot_get_pct(sb_histogram_snapshot_t* snapshot, double* percentiles, size_t npercentiles)
+{
+  size_t i, n;
+  uint64_t ncur, nmax;
+  double *res = malloc(npercentiles * sizeof(double));
+
+  /*
+    Now that we have an aggregate 'snapshot' of current arrays and the total
+    number of events in it, calculate the current, intermediate percentile values
+    to return.
+  */
+  for(i = 0; i < npercentiles; i++){
+    nmax = floor(snapshot->nevents * *(percentiles + i) / 100 + 0.5);
+
+    ncur = 0;
+    for (n = 0; n < snapshot->size; n++)
+    {
+      ncur += snapshot->array[n];
+      if (ncur >= nmax)
+        break;
+    }
+
+    res[i] = MS2SEC(exp(n / snapshot->range_mult + snapshot->range_deduct));
+  }
+
+  return res;
+}
+
+
 sb_histogram_snapshot_t *sb_histogram_snapshot_intermediate(sb_histogram_t *h)
 {
   size_t   i, s;
@@ -122,7 +151,7 @@ sb_histogram_snapshot_t *sb_histogram_snapshot_intermediate(sb_histogram_t *h)
   nevents = 0;
 
   /*
-    This can be called concurrently with other sb_histogram_get_pct_*()
+    This can be called concurrently with other sb_histogram_*()
     functions, so use the lock to protect shared structures. This will not block
     sb_histogram_update() calls, but we make sure we don't lose any concurrent
     increments by atomically fetching each array element and replacing it with
@@ -175,32 +204,15 @@ sb_histogram_snapshot_t *sb_histogram_snapshot_intermediate(sb_histogram_t *h)
   return snapshot;
 }
 
-double *sb_histogram_snapshot_get_pct(sb_histogram_snapshot_t* snapshot, double* percentiles, size_t npercentiles)
+
+double *sb_histogram_get_pct_intermediate(sb_histogram_t *h, double *percentiles, size_t npercentiles)
 {
-  size_t i, n;
-  uint64_t ncur, nmax;
-  double *res = malloc(npercentiles * sizeof(double));
+  sb_histogram_snapshot_t *snapshot = sb_histogram_snapshot_intermediate(h);
+  double *results = sb_histogram_snapshot_get_pct(snapshot, percentiles, npercentiles);
 
-  /*
-    Now that we have an aggregate 'snapshot' of current arrays and the total
-    number of events in it, calculate the current, intermediate percentile value
-    to return.
-  */
-  for(i = 0; i < npercentiles; i++){
-    nmax = floor(snapshot->nevents * *(percentiles + i) / 100 + 0.5);
+  free(snapshot);
 
-    ncur = 0;
-    for (n = 0; n < snapshot->size; n++)
-    {
-      ncur += snapshot->array[n];
-      if (ncur >= nmax)
-        break;
-    }
-
-    res[i] = MS2SEC(exp(n / snapshot->range_mult + snapshot->range_deduct));
-  }
-
-  return res;
+  return results;
 }
 
 
@@ -237,7 +249,7 @@ double *sb_histogram_get_pct_cumulative(sb_histogram_t *h, double *percentiles, 
   double *res = malloc(npercentiles * sizeof(double));
 
   /*
-    This can be called concurrently with other sb_histogram_get_pct_*()
+    This can be called concurrently with other sb_histogram_*()
     functions, so use the lock to protect shared structures. This will not block
     sb_histogram_update() calls, but we make sure we don't lose any concurrent
     increments by atomically fetching each array element and replacing it with
@@ -272,7 +284,7 @@ double *sb_histogram_get_pct_checkpoint(sb_histogram_t *h, double *percentiles, 
   double   *res = malloc(npercentiles * sizeof(double));
 
   /*
-    This can be called concurrently with other sb_histogram_get_pct_*()
+    This can be called concurrently with other sb_histogram_*()
     functions, so use the lock to protect shared structures. This will not block
     sb_histogram_update() calls, but we make sure we don't lose any concurrent
     increments by atomically fetching each array element and replacing it with

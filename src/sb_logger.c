@@ -94,8 +94,8 @@ static log_handler_t text_handler = {
 
 static sb_arg_t oper_handler_args[] =
 {
-  SB_OPT("percentile", "percentile to calculate in latency statistics (1-100). "
-         "Use the special value of 0 to disable percentile calculations",
+  SB_OPT("percentile", "list of percentiles to calculate in latency statistics (0-100). "
+         "Use an empty list to disable percentile calculations",
          "95", LIST),
   SB_OPT("histogram", "print latency histogram in report", "off", BOOL),
 
