@@ -534,7 +534,7 @@ char *create_pct_string(double* percentiles, double* results, size_t npercentile
 
 char *create_pct_string_intermediate(double* percentiles, double* results, size_t npercentiles){
   char *format_string = "lat (ms,%5.2f%%): %4.2f ";
-  return create_pct_string(percentiles, results, npercentiles, format_string, strlen(format_string) + 6 + 7 + 1); //6 is the maximum number of chars for 100.00 to be formatted, 7 is the maximum number of chars for an assumed upper bound of 1000.00ms latency.
+  return create_pct_string(percentiles, results, npercentiles, format_string, strlen(format_string) + 6 + 10 + 1); //6 is the maximum number of chars for 100.00 to be formatted, 10 is the maximum number of chars for an assumed upper bound of 1000000.00ms latency.
 }
 
 char *create_pct_string_cumulative(double* percentiles, double* results, size_t npercentiles){
