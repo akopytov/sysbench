@@ -515,12 +515,12 @@ int oper_handler_done(void)
   return 0;
 }
 
-char *create_pct_string_intermediate(double* percentiles, double* results, size_t npercentiles){
+char *create_pct_string(double* percentiles, double* results, size_t npercentiles, char* format_string, int max_str_length){
   char *res = malloc(sizeof(char));
   *res = '\0';
   for(size_t i = 0; i < npercentiles; i++){
-    char *to_append = malloc((strlen("lat (ms,%5.2f%%): %4.2f ") + 5 + 4 + 1) * sizeof(char));
-        sprintf(to_append, "lat (ms,%5.2f%%): %4.2f ", *(percentiles + i), SEC2MS(*(results + i)));
+    char *to_append = malloc(max_str_length * sizeof(char)); //6 is the maximum number of chars for 100.00 to be formatted, 7 is the maximum number of chars for an assumed upper bound
+        sprintf(to_append, format_string, *(percentiles + i), SEC2MS(*(results + i)));
     char *buf = malloc((strlen(res) + strlen(to_append)) * sizeof(char) + 1);
     *buf = '\0';
     buf = strcat(buf, res);
@@ -529,20 +529,15 @@ char *create_pct_string_intermediate(double* percentiles, double* results, size_
     free(to_append);
   }
   return res;
+
+}
+
+char *create_pct_string_intermediate(double* percentiles, double* results, size_t npercentiles){
+  char *format_string = "lat (ms,%5.2f%%): %4.2f ";
+  return create_pct_string(percentiles, results, npercentiles, format_string, strlen(format_string) + 6 + 7 + 1); //6 is the maximum number of chars for 100.00 to be formatted, 7 is the maximum number of chars for an assumed upper bound
 }
 
 char *create_pct_string_cumulative(double* percentiles, double* results, size_t npercentiles){
-  char *res = malloc(sizeof(char));
-  *res = '\0';
-  for(size_t i = 0; i < npercentiles; i++){
-    char *to_append = malloc((strlen("         %5.2fth percentile:%25.2f\t") + 5 + 25 + 1) * sizeof(char));
-    sprintf(to_append, "         %5.2fth percentile:%25.2f\n", *(percentiles + i), SEC2MS(*(results + i)));
-    char *buf = malloc((strlen(res) + strlen(to_append)) * sizeof(char) + 1);
-    *buf = '\0';
-    buf = strcat(buf, res);
-    free(res);
-    res = strcat(buf, to_append);
-    free(to_append);
-  }
-  return res;
+  char *format_string = "         %5.2fth percentile:%25.2f\n";
+  return create_pct_string(percentiles, results, npercentiles, format_string, strlen(format_string) + 6 + 25 + 1); //6 is the maximum number of chars for 100.00 to be formatted
 }
