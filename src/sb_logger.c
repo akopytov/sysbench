@@ -519,7 +519,7 @@ char *create_pct_string(double* percentiles, double* results, size_t npercentile
   char *res = malloc(sizeof(char));
   *res = '\0';
   for(size_t i = 0; i < npercentiles; i++){
-    char *to_append = malloc(max_str_length * sizeof(char)); //6 is the maximum number of chars for 100.00 to be formatted, 7 is the maximum number of chars for an assumed upper bound
+    char *to_append = malloc(max_str_length * sizeof(char));
         sprintf(to_append, format_string, *(percentiles + i), SEC2MS(*(results + i)));
     char *buf = malloc((strlen(res) + strlen(to_append)) * sizeof(char) + 1);
     *buf = '\0';
