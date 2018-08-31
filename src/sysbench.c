@@ -187,11 +187,10 @@ static void sigalrm_thread_init_timeout_handler(int sig)
 void sb_report_intermediate(sb_stat_t *stat)
 {
   log_timestamp(LOG_NOTICE, stat->time_total,
-                "thds: %" PRIu32 " eps: %4.2f lat (ms,%u%%): %4.2f",
+                "thds: %" PRIu32 " eps: %4.2f %s",
                 stat->threads_running,
                 stat->events / stat->time_interval,
-                sb_globals.percentile,
-                SEC2MS(stat->latency_pct));
+                create_pct_string_intermediate(sb_globals.percentiles, stat->latency_pcts, sb_globals.npercentiles));
   if (sb_globals.tx_rate > 0)
     log_timestamp(LOG_NOTICE, stat->time_total,
                   "queue length: %" PRIu64 " concurrency: %" PRIu64,
@@ -234,9 +233,8 @@ static void report_intermediate(void)
   sb_counters_agg_intermediate(cnt);
   report_get_common_stat(&stat, cnt);
 
-  stat.latency_pct =
-    MS2SEC(sb_histogram_get_pct_intermediate(&sb_latency_histogram,
-                                             sb_globals.percentile));
+  stat.latency_pcts =
+    sb_histogram_get_pct_intermediate(&sb_latency_histogram, sb_globals.percentiles, sb_globals.npercentiles);
 
   stat.time_interval = NS2SEC(sb_timer_current(&sb_intermediate_timer));
 
@@ -306,9 +304,9 @@ void sb_report_cumulative(sb_stat_t *stat)
   log_text(LOG_NOTICE, "         max: %39.2f",
            SEC2MS(stat->latency_max));
 
-  if (sb_globals.percentile > 0)
-    log_text(LOG_NOTICE, "        %3dth percentile: %27.2f",
-             sb_globals.percentile, SEC2MS(stat->latency_pct));
+  if (sb_globals.npercentiles > 0)
+    log_text(LOG_NOTICE,
+             create_pct_string_cumulative(sb_globals.percentiles, stat->latency_pcts, sb_globals.npercentiles));
   else
     log_text(LOG_NOTICE, "         percentile stats:               disabled");
 
@@ -378,9 +376,8 @@ static void checkpoint(sb_stat_t *stat)
 
   stat->time_interval = NS2SEC(sb_timer_current(&sb_checkpoint_timer));
 
-  stat->latency_pct =
-    MS2SEC(sb_histogram_get_pct_checkpoint(&sb_latency_histogram,
-                                           sb_globals.percentile));
+  stat->latency_pcts = sb_histogram_get_pct_checkpoint(&sb_latency_histogram,
+                                           sb_globals.percentiles, sb_globals.npercentiles);
 
   /* Atomically reset each timer after copying it into its timers_copy slot */
   for (size_t i = 0; i < sb_globals.threads; i++)
@@ -748,7 +745,7 @@ void sb_event_stop(int thread_id)
 
   value = sb_timer_stop(timer);
 
-  if (sb_globals.percentile > 0)
+  if (sb_globals.npercentiles > 0)
     sb_histogram_update(&sb_latency_histogram, NS2MS(value));
 
   sb_counter_inc(thread_id, SB_CNT_EVENT);

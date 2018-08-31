@@ -150,4 +150,10 @@ void log_errno(log_msg_priority_t priority, const char *fmt, ...)
 
 void log_done(void);
 
+char *create_pct_string(double* percentiles, double* results, size_t npercentiles, char* format_string, int max_str_length);
+
+char *create_pct_string_intermediate(double *percentiles, double *results, size_t npercentiles);
+
+char *create_pct_string_cumulative(double *percentiles, double *results, size_t npercentiles);
+
 #endif /* SB_LOGGER_H */

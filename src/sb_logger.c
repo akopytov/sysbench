@@ -94,9 +94,9 @@ static log_handler_t text_handler = {
 
 static sb_arg_t oper_handler_args[] =
 {
-  SB_OPT("percentile", "percentile to calculate in latency statistics (1-100). "
-         "Use the special value of 0 to disable percentile calculations",
-         "95", INT),
+  SB_OPT("percentile", "list of percentiles to calculate in latency statistics (0-100). "
+         "Use an empty list to disable percentile calculations",
+         "95", LIST),
   SB_OPT("histogram", "print latency histogram in report", "off", BOOL),
 
   SB_OPT_END
@@ -463,21 +463,38 @@ int text_handler_process(log_msg_t *msg)
 
 int oper_handler_init(void)
 {
-  int          tmp;
+  sb_list_t           *tmp;
+  uint64_t            n = 0, i = 0;
 
-  tmp = sb_get_value_int("percentile");
-  if (tmp < 0 || tmp > 100)
-  {
-    log_text(LOG_FATAL, "Invalid value for --percentile: %d",
-             tmp);
-    return 1;
+  tmp = sb_get_value_list("percentile");
+
+  sb_list_item_t *pos;
+  SB_LIST_FOR_EACH(pos, tmp){
+    value_t *val = SB_LIST_ENTRY(pos, value_t, listitem);
+    double res = atof(val->data);
+
+    if (res < 0 || res > 100)
+    {
+      log_text(LOG_FATAL, "Invalid value for --percentile: %f",
+              res);
+      return 1;
+    }
+    n++;
   }
-  sb_globals.percentile = tmp;
+
+  sb_globals.percentiles = malloc(n * sizeof(double));
+  sb_globals.npercentiles = n;
+
+  SB_LIST_FOR_EACH(pos, tmp){
+    value_t *val = SB_LIST_ENTRY(pos, value_t, listitem);
+    sb_globals.percentiles[i] = atof(val->data);
+    i++;
+  }
 
   sb_globals.histogram = sb_get_value_flag("histogram");
-  if (sb_globals.percentile == 0 && sb_globals.histogram != 0)
+  if (sb_globals.npercentiles == 0 && sb_globals.histogram != 0)
   {
-    log_text(LOG_FATAL, "--histogram cannot be used with --percentile=0");
+    log_text(LOG_FATAL, "--histogram cannot be used with --percentile=NULL");
     return 1;
   }
 
@@ -496,4 +513,31 @@ int oper_handler_done(void)
   sb_histogram_done(&sb_latency_histogram);
 
   return 0;
+}
+
+char *create_pct_string(double* percentiles, double* results, size_t npercentiles, char* format_string, int max_str_length){
+  char *res = malloc(sizeof(char));
+  *res = '\0';
+  for(size_t i = 0; i < npercentiles; i++){
+    char *to_append = malloc(max_str_length * sizeof(char));
+        sprintf(to_append, format_string, *(percentiles + i), SEC2MS(*(results + i)));
+    char *buf = malloc((strlen(res) + strlen(to_append)) * sizeof(char) + 1);
+    *buf = '\0';
+    buf = strcat(buf, res);
+    free(res);
+    res = strcat(buf, to_append);
+    free(to_append);
+  }
+  return res;
+
+}
+
+char *create_pct_string_intermediate(double* percentiles, double* results, size_t npercentiles){
+  char *format_string = "lat (ms,%5.2f%%): %4.2f ";
+  return create_pct_string(percentiles, results, npercentiles, format_string, strlen(format_string) + 6 + 10 + 1); //6 is the maximum number of chars for 100.00 to be formatted, 10 is the maximum number of chars for an assumed upper bound of 1000000.00ms latency.
+}
+
+char *create_pct_string_cumulative(double* percentiles, double* results, size_t npercentiles){
+  char *format_string = "         %5.2fth percentile:%25.2f\n";
+  return create_pct_string(percentiles, results, npercentiles, format_string, strlen(format_string) + 6 + 25 + 1); //6 is the maximum number of chars for 100.00 to be formatted
 }
