@@ -1020,6 +1020,7 @@ static void stat_to_lua_table(lua_State *L, sb_stat_t *stat)
     char *percentile = malloc((strlen(format_str) + 6 + 1) * sizeof(char)); //6 is the maximum number of chars for 100.00 to be formatted
     sprintf(percentile, format_str, *(sb_globals.percentiles + i));
     sb_lua_var_number(L, percentile, *(stat->latency_pcts + i));
+    free(percentile);
   }
 }
 

@@ -248,6 +248,8 @@ static void report_intermediate(void)
     current_test->ops.report_intermediate(&stat);
   else
     sb_report_intermediate(&stat);
+
+  free(stat.latency_pcts);
 }
 
 /* Default cumulative reports handler */
@@ -408,6 +410,8 @@ static void report_cumulative(void)
     current_test->ops.report_cumulative(&stat);
   else
     sb_report_cumulative(&stat);
+
+  free(stat->latency_pcts);
 }
 
 
@@ -1167,6 +1171,7 @@ static int run_test(sb_test_t *test)
     /* Perform a checkpoint to reset previously collected stats */
     sb_stat_t stat;
     checkpoint(&stat);
+    free(stat->latency_pcts);
   }
 
   /* Signal the report threads to start reporting */

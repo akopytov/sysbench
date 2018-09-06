@@ -296,7 +296,7 @@ double *sb_histogram_get_pct_checkpoint(sb_histogram_t *h, double *percentiles, 
 
   sb_histogram_snapshot_t snapshot;
 
-  snapshot.array = malloc(h->array_size * sizeof(uint64_t)); //memory vs parallelism //malloc vs loop - test speed somehow
+  snapshot.array = malloc(h->array_size * sizeof(uint64_t));
   memcpy(snapshot.array, h->cumulative_array, h->array_size * sizeof(uint64_t));
 
   snapshot.size = h->array_size;
