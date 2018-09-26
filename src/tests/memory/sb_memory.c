@@ -309,8 +309,8 @@ int event_rnd_none(sb_event_t *req, int thread_id)
 
   for (ssize_t i = 0; i < memory_block_size; i += SIZEOF_SIZE_T)
   {
-    size_t offset = (volatile size_t) (sb_rand_uniform_double() *
-                                       (memory_block_size / SIZEOF_SIZE_T));
+    size_t offset = (volatile size_t)
+	    sb_rand_default(0, (memory_block_size - 1) / SIZEOF_SIZE_T);
     (void) offset; /* unused */
     /* nop */
   }
@@ -326,8 +326,8 @@ int event_rnd_read(sb_event_t *req, int thread_id)
 
   for (ssize_t i = 0; i < memory_block_size; i += SIZEOF_SIZE_T)
   {
-    size_t offset = (size_t) (sb_rand_uniform_double() *
-                              (memory_block_size / SIZEOF_SIZE_T));
+    size_t offset = (size_t)
+	    sb_rand_default(0, (memory_block_size - 1) / SIZEOF_SIZE_T);
     size_t val = SIZE_T_LOAD(tls_buf + offset);
     (void) val; /* unused */
   }
@@ -343,8 +343,8 @@ int event_rnd_write(sb_event_t *req, int thread_id)
 
   for (ssize_t i = 0; i < memory_block_size; i += SIZEOF_SIZE_T)
   {
-    size_t offset = (size_t) (sb_rand_uniform_double() *
-                              (memory_block_size / SIZEOF_SIZE_T));
+    size_t offset = (size_t)
+	    sb_rand_default(0, (memory_block_size - 1) / SIZEOF_SIZE_T);
     SIZE_T_STORE(tls_buf + offset, i);
   }
 
