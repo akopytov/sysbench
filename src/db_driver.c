@@ -233,7 +233,9 @@ db_driver_t *db_create(const char *name)
     SB_LIST_FOR_EACH(pos, &drivers)
     {
       tmp = SB_LIST_ENTRY(pos, db_driver_t, listitem);
-      if (!strcmp(tmp->sname, name))
+      size_t l = strlen(tmp->sname);
+      size_t name_l = strlen(name);
+      if (name_l >= l && strncmp(name + name_l - l, tmp->sname, l) == 0)
       {
         drv = tmp;
         break;
