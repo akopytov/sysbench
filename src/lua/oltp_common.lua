@@ -493,6 +493,27 @@ function execute_delete_inserts()
    end
 end
 
+function execute_delete_inserts_select_latest()
+   local tnum = get_table_num()
+
+   for i = 1, 3 do
+      local id = get_id()
+      local k = get_id()
+      param[tnum].deletes[1]:set(id)
+      
+      param[tnum].inserts[1]:set(id)
+      param[tnum].inserts[2]:set(k)
+      param[tnum].inserts[3]:set_rand_str(c_value_template)
+      param[tnum].inserts[4]:set_rand_str(pad_value_template)
+
+      param[tnum].point_selects[1]:set(id)
+
+      stmt[tnum].deletes:execute()
+      stmt[tnum].inserts:execute()
+      stmt[tnum].point_selects:execute()
+   end
+end
+
 -- Re-prepare statements if we have reconnected, which is possible when some of
 -- the listed error codes are in the --mysql-ignore-errors list
 function sysbench.hooks.before_restart_event(errdesc)

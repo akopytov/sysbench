@@ -57,7 +57,8 @@ function event()
 
    execute_index_updates()
    execute_non_index_updates()
-   execute_delete_inserts()
+   -- execute_delete_inserts()
+   execute_delete_inserts_select_latest()
 
    if not sysbench.opt.skip_trx then
       commit()
