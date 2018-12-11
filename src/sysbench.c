@@ -877,7 +877,7 @@ static void *eventgen_thread_proc(void *arg)
   if (pthread_mutex_init(&queue_mutex, NULL) ||
       pthread_cond_init(&queue_cond, NULL))
   {
-    sb_barrier_wait(&thread_start_barrier);
+    sb_barrier_wait(&worker_barrier);
     return NULL;
   }
 
