@@ -68,6 +68,9 @@ sysbench.cmdline.options = {
       {"Use a secondary index in place of the PRIMARY KEY", false},
    create_secondary =
       {"Create a secondary index in addition to the PRIMARY KEY", true},
+   reconnect =
+      {"Reconnect after every N events. The default (0) is to not reconnect",
+       0},
    mysql_storage_engine =
       {"Storage engine, if MySQL is used", "innodb"},
    pgsql_variant =
@@ -503,5 +506,16 @@ function sysbench.hooks.before_restart_event(errdesc)
    then
       close_statements()
       prepare_statements()
+   end
+end
+
+function check_reconnect()
+   if sysbench.opt.reconnect > 0 then
+      transactions = (transactions or 0) + 1
+      if transactions % sysbench.opt.reconnect == 0 then
+         close_statements()
+         con:reconnect()
+         prepare_statements()
+      end
    end
 end

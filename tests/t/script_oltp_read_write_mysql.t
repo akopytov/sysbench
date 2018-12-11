@@ -285,6 +285,8 @@ oltp_read_write.lua + MySQL tests
   Inserting 10000 records into 'sbtest1'
   Creating a secondary index on 'sbtest1'...
   Dropping table 'sbtest1'...
+  # Test --reconnect
+      reconnects:                          20     (* per sec.) (glob)
 
 
   $ DB_DRIVER_ARGS="--db-driver=mysql --mysql-storage-engine=innodb $SBTEST_MYSQL_ARGS"
@@ -565,3 +567,5 @@ oltp_read_write.lua + MySQL tests
   Inserting 10000 records into 'sbtest1'
   Creating a secondary index on 'sbtest1'...
   Dropping table 'sbtest1'...
+  # Test --reconnect
+      reconnects:                          20     (* per sec.) (glob)

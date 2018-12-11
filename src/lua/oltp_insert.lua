@@ -62,4 +62,6 @@ function event()
                                  "(%d, %d, '%s', '%s')",
                               table_name, i, k_val, c_val, pad_val))
    end
+
+   check_reconnect()
 end

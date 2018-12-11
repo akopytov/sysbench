@@ -27,4 +27,6 @@ end
 
 function event()
    execute_non_index_updates()
+
+   check_reconnect()
 end

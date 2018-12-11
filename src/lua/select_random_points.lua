@@ -69,4 +69,6 @@ function event()
    end
 
    stmt:execute()
+
+   check_reconnect()
 end
