@@ -30,18 +30,20 @@ env:
       - TARGET=coverage
       - OS=el DIST=6
       - OS=el DIST=7
-      - OS=fedora DIST=27
       - OS=fedora DIST=28
+      - OS=fedora DIST=29
       - OS=fedora DIST=rawhide
       - OS=ubuntu DIST=trusty
       - OS=ubuntu DIST=xenial
       - OS=ubuntu DIST=bionic
+      - OS=ubuntu DIST=cosmic
       - OS=debian DIST=jessie
       - OS=debian DIST=stretch
       - OS=debian DIST=sid
       - OS=ubuntu DIST=trusty ARCH=i386
       - OS=ubuntu DIST=xenial ARCH=i386
       - OS=ubuntu DIST=bionic ARCH=i386
+      - OS=ubuntu DIST=cosmic ARCH=i386
       - OS=debian DIST=jessie ARCH=i386
       - OS=debian DIST=stretch ARCH=i386
       - OS=debian DIST=sid ARCH=i386
@@ -52,9 +54,9 @@ matrix:
       compiler: clang
     - env: OS=el DIST=7
       compiler: clang
-    - env: OS=fedora DIST=27
-      compiler: clang
     - env: OS=fedora DIST=28
+      compiler: clang
+    - env: OS=fedora DIST=29
       compiler: clang
     - env: OS=fedora DIST=rawhide
       compiler: clang
@@ -63,6 +65,8 @@ matrix:
     - env: OS=ubuntu DIST=xenial
       compiler: clang
     - env: OS=ubuntu DIST=bionic
+      compiler: clang
+    - env: OS=ubuntu DIST=cosmic
       compiler: clang
     - env: OS=debian DIST=jessie
       compiler: clang
@@ -76,6 +80,8 @@ matrix:
       compiler: clang
     - env: OS=ubuntu DIST=bionic ARCH=i386
       compiler: clang
+    - env: OS=ubuntu DIST=cosmic ARCH=i386
+      compiler: clang
     - env: OS=debian DIST=jessie ARCH=i386
       compiler: clang
     - env: OS=debian DIST=stretch ARCH=i386
@@ -86,9 +92,9 @@ matrix:
       os: osx
     - env: OS=el DIST=7
       os: osx
-    - env: OS=fedora DIST=27
-      os: osx
     - env: OS=fedora DIST=28
+      os: osx
+    - env: OS=fedora DIST=29
       os: osx
     - env: OS=fedora DIST=rawhide
       os: osx
@@ -97,6 +103,8 @@ matrix:
     - env: OS=ubuntu DIST=xenial
       os: osx
     - env: OS=ubuntu DIST=bionic
+      os: osx
+    - env: OS=ubuntu DIST=cosmic
       os: osx
     - env: OS=debian DIST=jessie
       os: osx
