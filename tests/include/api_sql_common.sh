@@ -181,9 +181,11 @@ EOF
 sysbench $SB_ARGS run
 
 
+cat <<EOF
 ########################################################################
 # Multiple connections test
 ########################################################################
+EOF
 cat >$CRAMTMP/api_sql.lua <<EOF
 function thread_init()
   drv = sysbench.sql.driver()
@@ -209,9 +211,11 @@ EOF
 
 sysbench $SB_ARGS run
 
+cat <<EOF
 ########################################################################
 # Incorrect bulk API usage
 ########################################################################
+EOF
 cat >$CRAMTMP/api_sql.lua <<EOF
 c = sysbench.sql.driver():connect()
 c:query("CREATE TABLE t1(a INT)")
@@ -226,14 +230,34 @@ EOF
 
 sysbench $SB_ARGS
 
+cat <<EOF
 ########################################################################
 # query_row() with an empty result set
 ########################################################################
+EOF
 cat >$CRAMTMP/api_sql.lua <<EOF
 c = sysbench.sql.driver():connect()
 c:query("CREATE TABLE t1(a INT)")
 print(c:query_row("SELECT * FROM t1"))
 c:query("DROP TABLE t1")
+EOF
+
+sysbench $SB_ARGS
+
+cat <<EOF
+########################################################################
+# GH-282: Mysql's fetch_row() is broken
+########################################################################
+EOF
+cat >$CRAMTMP/api_sql.lua <<EOF
+connection = sysbench.sql.driver():connect()
+rows = connection:query("select 1 union select 2")
+
+r = rows:fetch_row();
+while ( r ) do
+  print( r[ 1 ] )
+  r = rows:fetch_row()
+end
 EOF
 
 sysbench $SB_ARGS

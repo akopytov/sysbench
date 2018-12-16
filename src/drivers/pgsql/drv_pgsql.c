@@ -721,7 +721,7 @@ int pgsql_drv_fetch_row(db_result_t *rs, db_row_t *row)
   */
   rownum = (intptr_t) row->ptr;
   if (rownum >= (int) rs->nrows)
-    return DB_ERROR_NONE;
+    return DB_ERROR_IGNORABLE;
 
   for (i = 0; i < (int) rs->nfields; i++)
   {
