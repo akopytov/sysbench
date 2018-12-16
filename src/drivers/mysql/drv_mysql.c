@@ -999,8 +999,10 @@ int mysql_drv_fetch_row(db_result_t *rs, db_row_t *row)
   DEBUG("mysql_fetch_row(%p) = %p", rs->ptr, my_row);
 
   unsigned long *lengths = mysql_fetch_lengths(rs->ptr);
+  DEBUG("mysql_fetch_lengths(%p) = %p", rs->ptr, lengths);
+
   if (lengths == NULL)
-    return DB_ERROR_NONE;
+    return DB_ERROR_IGNORABLE;
 
   for (size_t i = 0; i < rs->nfields; i++)
   {
