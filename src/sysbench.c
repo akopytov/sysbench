@@ -1237,8 +1237,12 @@ static int run_test(sb_test_t *test)
 
   if (eventgen_thread_created)
   {
-    if (sb_thread_cancel(eventgen_thread) ||
-        sb_thread_join(eventgen_thread, NULL))
+    /*
+      When a time limit is used, the event generation thread may terminate
+      itself.
+    */
+    if ((sb_thread_cancel(eventgen_thread) ||
+         sb_thread_join(eventgen_thread, NULL)) && sb_globals.max_time_ns == 0)
       log_text(LOG_FATAL, "Terminating the event generator thread failed.");
   }
 
