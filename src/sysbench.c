@@ -925,6 +925,7 @@ static void *eventgen_thread_proc(void *arg)
       log_text(LOG_FATAL,
                "The event queue is full. This means the worker threads are "
                "unable to keep up with the specified event generation rate");
+      sb_globals.error = 1;
       return NULL;
     }
 
