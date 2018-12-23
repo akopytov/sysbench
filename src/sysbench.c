@@ -736,13 +736,6 @@ bool sb_more_events(int thread_id)
       }
     }
 
-    if (ck_pr_load_int(&queue_is_full))
-    {
-      log_text(LOG_FATAL, "Event queue is full. Terminating the worker thread");
-
-      return false;
-    }
-
     ck_pr_inc_int(&sb_globals.concurrency);
 
     timers[thread_id].queue_time = sb_timer_value(&sb_exec_timer) -
