@@ -140,8 +140,6 @@ static uint64_t           queue_array[MAX_QUEUE_LEN] CK_CC_CACHELINE;
 static ck_ring_buffer_t   queue_ring_buffer[MAX_QUEUE_LEN] CK_CC_CACHELINE;
 static ck_ring_t          queue_ring CK_CC_CACHELINE;
 
-static int queue_is_full CK_CC_CACHELINE;
-
 static int report_thread_created CK_CC_CACHELINE;
 static int checkpoints_thread_created;
 static int eventgen_thread_created;
@@ -710,7 +708,7 @@ bool sb_more_events(int thread_id)
     void *ptr = NULL;
 
     while (!ck_ring_dequeue_spmc(&queue_ring, queue_ring_buffer, &ptr) &&
-           !ck_pr_load_int(&queue_is_full))
+           !sb_globals.error)
     {
       pthread_mutex_lock(&queue_mutex);
       pthread_cond_wait(&queue_cond, &queue_mutex);
@@ -907,11 +905,11 @@ static void *eventgen_thread_proc(void *arg)
     if (ck_ring_enqueue_spmc(&queue_ring, queue_ring_buffer,
                              &queue_array[i]) == false)
     {
-      ck_pr_store_int(&queue_is_full, 1);
+      sb_globals.error = 1;
       log_text(LOG_FATAL,
                "The event queue is full. This means the worker threads are "
                "unable to keep up with the specified event generation rate");
-      sb_globals.error = 1;
+      pthread_cond_broadcast(&queue_cond);
       return NULL;
     }
 
@@ -1074,9 +1072,6 @@ static int run_test(sb_test_t *test)
     return 1;
 
   pthread_mutex_init(&sb_globals.exec_mutex, NULL);
-
-
-  queue_is_full = 0;
 
   sb_globals.threads_running = 0;
 
