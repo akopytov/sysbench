@@ -181,9 +181,18 @@ static sb_list_item_t *sockets_pos;
 static pthread_mutex_t pos_mutex;
 
 #ifdef HAVE_MYSQL_OPT_SSL_MODE
+
+#if MYSQL_VERSION_ID < 50711
+/*
+  In MySQL 5.6 the only valid SSL mode is SSL_MODE_REQUIRED. Define
+  SSL_MODE_DISABLED to enable the 'disabled' default value for --mysql-ssl
+*/
+#define SSL_MODE_DISABLED 1
+#endif
+
 static ssl_mode_map_t ssl_mode_names[] = {
-#if MYSQL_VERSION_ID >= 50711
   {"DISABLED", SSL_MODE_DISABLED},
+#if MYSQL_VERSION_ID >= 50711
   {"PREFERRED", SSL_MODE_PREFERRED},
 #endif
   {"REQUIRED", SSL_MODE_REQUIRED},
