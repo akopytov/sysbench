@@ -323,10 +323,10 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
 
     mysql_ssl_set(con, ssl_key, ssl_cert, ssl_ca, NULL, args.ssl_cipher);
 
-#ifdef MYSQL_OPT_SSL_MODE
+#ifdef HAVE_MYSQL_OPT_SSL_MODE
     unsigned int opt_ssl_mode = SSL_MODE_REQUIRED;
 
-    DEBUG("mysql_options(%p,%s,%u)", con, "MYSQL_OPT_SSL_MODE", opt_ssl_mode);
+    DEBUG("mysql_options(%p, %s, %u)", con, "MYSQL_OPT_SSL_MODE", opt_ssl_mode);
     mysql_options(con, MYSQL_OPT_SSL_MODE, &opt_ssl_mode);
 #endif
   }
