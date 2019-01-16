@@ -114,7 +114,24 @@ AC_DEFINE([USE_MYSQL], 1,
 USE_MYSQL=1
 AC_SUBST([MYSQL_LIBS])
 AC_SUBST([MYSQL_CFLAGS])
+
+AC_MSG_CHECKING([if mysql.h defines MYSQL_OPT_SSL_MODE])
+
+SAVE_CFLAGS="${CFLAGS}"
+CFLAGS="${CFLAGS} ${MYSQL_CFLAGS}"
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
+        [[
+#include <mysql.h>
+
+enum mysql_option opt = MYSQL_OPT_SSL_MODE;
+        ]])], [
+          AC_DEFINE([HAVE_MYSQL_OPT_SSL_MODE], 1,
+                    [Define to 1 if mysql.h defines MYSQL_OPT_SSL_MODE])
+          AC_MSG_RESULT([yes])
+          ], [AC_MSG_RESULT([no])])
 ])
+CFLAGS="${SAVE_CFLAGS}"
+
 
 AM_CONDITIONAL([USE_MYSQL], test "x$with_mysql" != xno)
 AC_SUBST([USE_MYSQL])
