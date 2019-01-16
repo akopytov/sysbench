@@ -182,11 +182,15 @@ static pthread_mutex_t pos_mutex;
 
 #ifdef HAVE_MYSQL_OPT_SSL_MODE
 static ssl_mode_map_t ssl_mode_names[] = {
+#if MYSQL_VERSION_ID >= 50711
   {"DISABLED", SSL_MODE_DISABLED},
   {"PREFERRED", SSL_MODE_PREFERRED},
+#endif
   {"REQUIRED", SSL_MODE_REQUIRED},
+#if MYSQL_VERSION_ID >= 50711
   {"VERIFY_CA", SSL_MODE_VERIFY_CA},
   {"VERIFY_IDENTITY", SSL_MODE_VERIFY_IDENTITY},
+#endif
   {NULL, 0}
 };
 #endif
