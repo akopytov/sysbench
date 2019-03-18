@@ -247,7 +247,7 @@ static DWORD WINAPI profile_thread(void *psx)
 {
   ProfileState *ps = (ProfileState *)psx;
   int interval = ps->interval;
-#if LJ_TARGET_WINDOWS
+#if LJ_TARGET_WINDOWS && !LJ_TARGET_UWP
   ps->wmm_tbp(interval);
 #endif
   while (1) {
@@ -255,7 +255,7 @@ static DWORD WINAPI profile_thread(void *psx)
     if (ps->abort) break;
     profile_trigger(ps);
   }
-#if LJ_TARGET_WINDOWS
+#if LJ_TARGET_WINDOWS && !LJ_TARGET_UWP
   ps->wmm_tep(interval);
 #endif
   return 0;
@@ -264,9 +264,9 @@ static DWORD WINAPI profile_thread(void *psx)
 /* Start profiling timer thread. */
 static void profile_timer_start(ProfileState *ps)
 {
-#if LJ_TARGET_WINDOWS
+#if LJ_TARGET_WINDOWS && !LJ_TARGET_UWP
   if (!ps->wmm) {  /* Load WinMM library on-demand. */
-    ps->wmm = LoadLibraryExA("winmm.dll", NULL, 0);
+    ps->wmm = LJ_WIN_LOADLIBA("winmm.dll");
     if (ps->wmm) {
       ps->wmm_tbp = (WMM_TPFUNC)GetProcAddress(ps->wmm, "timeBeginPeriod");
       ps->wmm_tep = (WMM_TPFUNC)GetProcAddress(ps->wmm, "timeEndPeriod");

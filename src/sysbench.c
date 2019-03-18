@@ -140,11 +140,11 @@ static int thread_init_timeout;
 static sb_barrier_t report_barrier;
 
 /* structures to handle queue of events, needed for tx_rate mode */
+static pthread_mutex_t    queue_mutex;
+static pthread_cond_t     queue_cond;
 static uint64_t           queue_array[MAX_QUEUE_LEN] CK_CC_CACHELINE;
 static ck_ring_buffer_t   queue_ring_buffer[MAX_QUEUE_LEN] CK_CC_CACHELINE;
 static ck_ring_t          queue_ring CK_CC_CACHELINE;
-
-static int queue_is_full CK_CC_CACHELINE;
 
 static int report_thread_created CK_CC_CACHELINE;
 static int checkpoints_thread_created;
@@ -715,14 +715,23 @@ bool sb_more_events(int thread_id)
     void *ptr = NULL;
 
     while (!ck_ring_dequeue_spmc(&queue_ring, queue_ring_buffer, &ptr) &&
-           !ck_pr_load_int(&queue_is_full))
-      usleep(500000.0 * sb_globals.threads / sb_globals.tx_rate);
-
-    if (ck_pr_load_int(&queue_is_full))
+           !sb_globals.error)
     {
-      log_text(LOG_FATAL, "Event queue is full. Terminating the worker thread");
+      pthread_mutex_lock(&queue_mutex);
+      pthread_cond_wait(&queue_cond, &queue_mutex);
+      pthread_mutex_unlock(&queue_mutex);
 
-      return false;
+      /* Re-check for global error and time limit after waiting */
+
+      if (sb_globals.error)
+        return false;
+
+      if (sb_globals.max_time_ns > 0 &&
+          SB_UNLIKELY(sb_timer_value(&sb_exec_timer) >= sb_globals.max_time_ns))
+      {
+        log_text(LOG_INFO, "Time limit exceeded, exiting...");
+        return false;
+      }
     }
 
     ck_pr_inc_int(&sb_globals.concurrency);
@@ -842,13 +851,11 @@ static void *worker_thread(void *arg)
 
 static inline double sb_rand_exp(double lambda)
 {
-  return -1.0 / lambda * log(1 - sb_rand_uniform_double());
+  return -lambda * log(1 - sb_rand_uniform_double());
 }
 
 static void *eventgen_thread_proc(void *arg)
 {
-  int i;
-
   (void)arg; /* unused */
 
   sb_tls_thread_id = SB_BACKGROUND_THREAD_ID;
@@ -858,7 +865,12 @@ static void *eventgen_thread_proc(void *arg)
 
   ck_ring_init(&queue_ring, MAX_QUEUE_LEN);
 
-  i = 0;
+  if (pthread_mutex_init(&queue_mutex, NULL) ||
+      pthread_cond_init(&queue_cond, NULL))
+  {
+    sb_barrier_wait(&worker_barrier);
+    return NULL;
+  }
 
   log_text(LOG_DEBUG, "Event generating thread started");
 
@@ -872,16 +884,25 @@ static void *eventgen_thread_proc(void *arg)
     Get exponentially distributed time intervals in nanoseconds with Lambda =
     tx_rate. Alternatively, we can use Lambda = tx_rate / 1e9
   */
-  double lambda = sb_globals.tx_rate / 1e9;
+  const double lambda = 1e9 / sb_globals.tx_rate;
+
   uint64_t curr_ns = sb_timer_value(&sb_exec_timer);
   uint64_t intr_ns = sb_rand_exp(lambda);
-  uint64_t next_ns = curr_ns + intr_ns;;
+  uint64_t next_ns = curr_ns + intr_ns;
 
-  for (;;)
+  for (int i = 0; ; i = (i+1) % MAX_QUEUE_LEN)
   {
     curr_ns = sb_timer_value(&sb_exec_timer);
     intr_ns = sb_rand_exp(lambda);
     next_ns += intr_ns;
+
+    if (sb_globals.max_time_ns > 0 &&
+        SB_UNLIKELY(curr_ns >= sb_globals.max_time_ns))
+    {
+      /* Wake all waiting threads */
+      pthread_cond_broadcast(&queue_cond);
+      return NULL;
+    }
 
     if (next_ns > curr_ns)
       sb_nanosleep(next_ns - curr_ns);
@@ -889,17 +910,18 @@ static void *eventgen_thread_proc(void *arg)
     /* Enqueue a new event */
     queue_array[i] = sb_timer_value(&sb_exec_timer);
     if (ck_ring_enqueue_spmc(&queue_ring, queue_ring_buffer,
-                             &queue_array[i++]) == false)
+                             &queue_array[i]) == false)
     {
-      ck_pr_store_int(&queue_is_full, 1);
+      sb_globals.error = 1;
       log_text(LOG_FATAL,
                "The event queue is full. This means the worker threads are "
                "unable to keep up with the specified event generation rate");
+      pthread_cond_broadcast(&queue_cond);
       return NULL;
     }
 
-    if (i >= MAX_QUEUE_LEN - 1)
-      i = 0;
+    /* Wake up one waiting thread, if there are any */
+    pthread_cond_signal(&queue_cond);
   }
 
   return NULL;
@@ -1059,9 +1081,6 @@ static int run_test(sb_test_t *test)
 
   pthread_mutex_init(&sb_globals.exec_mutex, NULL);
 
-
-  queue_is_full = 0;
-
   sb_globals.threads_running = 0;
 
   /* Calculate the required number of threads for the worker start barrier */
@@ -1207,8 +1226,12 @@ static int run_test(sb_test_t *test)
 
   if (eventgen_thread_created)
   {
-    if (sb_thread_cancel(eventgen_thread) ||
-        sb_thread_join(eventgen_thread, NULL))
+    /*
+      When a time limit is used, the event generation thread may terminate
+      itself.
+    */
+    if ((sb_thread_cancel(eventgen_thread) ||
+         sb_thread_join(eventgen_thread, NULL)) && sb_globals.max_time_ns == 0)
       log_text(LOG_FATAL, "Terminating the event generator thread failed.");
   }
 

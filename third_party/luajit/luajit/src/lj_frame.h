@@ -219,6 +219,15 @@ enum { LJ_CONT_TAILCALL, LJ_CONT_FFI_CALLBACK };  /* Special continuations. */
 #define CFRAME_OFS_MULTRES	456
 #define CFRAME_SIZE		400
 #define CFRAME_SHIFT_MULTRES	3
+#elif LJ_ARCH_PPC64
+#define CFRAME_OFS_ERRF         88
+#define CFRAME_OFS_NRES         80
+#define CFRAME_OFS_L            72
+#define CFRAME_OFS_PC           64
+#define CFRAME_OFS_MULTRES      56
+#define CFRAME_OFS_PREV         48
+#define CFRAME_SIZE             400
+#define CFRAME_SHIFT_MULTRES    3
 #else
 #define CFRAME_OFS_ERRF		48
 #define CFRAME_OFS_NRES		44
@@ -226,7 +235,7 @@ enum { LJ_CONT_TAILCALL, LJ_CONT_FFI_CALLBACK };  /* Special continuations. */
 #define CFRAME_OFS_L		36
 #define CFRAME_OFS_PC		32
 #define CFRAME_OFS_MULTRES	28
-#define CFRAME_SIZE		272
+#define CFRAME_SIZE		(LJ_ARCH_HASFPU ? 272 : 128)
 #define CFRAME_SHIFT_MULTRES	3
 #endif
 #elif LJ_TARGET_MIPS32

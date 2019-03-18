@@ -84,3 +84,12 @@ ARGS="$ARGS --auto-inc=off --verbosity=1"
 sysbench $ARGS prepare
 sysbench $ARGS run
 sysbench $ARGS cleanup
+
+echo "# Test --reconnect"
+
+ARGS="${OLTP_SCRIPT_PATH} ${DB_DRIVER_ARGS} ${SB_EXTRA_ARGS} --events=100 \
+--reconnect=5"
+
+sysbench $ARGS prepare >/dev/null || true
+sysbench $ARGS run | grep reconnects:
+sysbench $ARGS cleanup >/dev/null || true

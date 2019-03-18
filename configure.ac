@@ -359,7 +359,7 @@ then
   CC_WARNINGS="-Wall -Wextra -Wpointer-arith -Wbad-function-cast \
 -Wstrict-prototypes -Wnested-externs -Wno-format-zero-length \
 -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations \
--Wredundant-decls -Wcast-align ${W_FAIL}"
+-Wredundant-decls -Wcast-align -Wvla ${W_FAIL}"
 fi
 
 if test "$ax_cv_c_compiler_vendor" = "sun"

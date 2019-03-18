@@ -64,7 +64,7 @@ static sb_arg_t mysql_drv_args[] =
   SB_OPT("mysql-user", "MySQL user", "sbtest", STRING),
   SB_OPT("mysql-password", "MySQL password", "", STRING),
   SB_OPT("mysql-db", "MySQL database name", "sbtest", STRING),
-#ifdef MYSQL_OPT_SSL_MODE
+#ifdef HAVE_MYSQL_OPT_SSL_MODE
   SB_OPT("mysql-ssl", "SSL mode. This accepts the same values as the "
          "--ssl-mode option in the MySQL client utilities. Disabled by default",
          "disabled", STRING),
@@ -98,8 +98,8 @@ typedef struct
   const char         *user;
   const char         *password;
   const char         *db;
-#ifdef MYSQL_OPT_SSL_MODE
-  int                ssl_mode;
+#ifdef HAVE_MYSQL_OPT_SSL_MODE
+  unsigned int       ssl_mode;
 #endif
   bool               use_ssl;
   const char         *ssl_key;
@@ -122,6 +122,14 @@ typedef struct
   unsigned int port;
   char         *socket;
 } db_mysql_conn_t;
+
+#ifdef HAVE_MYSQL_OPT_SSL_MODE
+typedef struct {
+  const char *name;
+  enum mysql_ssl_mode mode;
+} ssl_mode_map_t;
+#endif
+
 
 /* Structure used for DB-to-MySQL bind types map */
 
@@ -171,6 +179,30 @@ static sb_list_item_t *ports_pos;
 static sb_list_item_t *sockets_pos;
 
 static pthread_mutex_t pos_mutex;
+
+#ifdef HAVE_MYSQL_OPT_SSL_MODE
+
+#if MYSQL_VERSION_ID < 50711
+/*
+  In MySQL 5.6 the only valid SSL mode is SSL_MODE_REQUIRED. Define
+  SSL_MODE_DISABLED to enable the 'disabled' default value for --mysql-ssl
+*/
+#define SSL_MODE_DISABLED 1
+#endif
+
+static ssl_mode_map_t ssl_mode_names[] = {
+  {"DISABLED", SSL_MODE_DISABLED},
+#if MYSQL_VERSION_ID >= 50711
+  {"PREFERRED", SSL_MODE_PREFERRED},
+#endif
+  {"REQUIRED", SSL_MODE_REQUIRED},
+#if MYSQL_VERSION_ID >= 50711
+  {"VERIFY_CA", SSL_MODE_VERIFY_CA},
+  {"VERIFY_IDENTITY", SSL_MODE_VERIFY_IDENTITY},
+#endif
+  {NULL, 0}
+};
+#endif
 
 /* MySQL driver operations */
 
@@ -272,12 +304,21 @@ int mysql_drv_init(void)
   args.ssl_cert = sb_get_value_string("mysql-ssl-cert");
   args.ssl_ca = sb_get_value_string("mysql-ssl-ca");
 
-#ifdef MYSQL_OPT_SSL_MODE
+#ifdef HAVE_MYSQL_OPT_SSL_MODE
   const char * const ssl_mode_string = sb_get_value_string("mysql-ssl");
-  args.ssl_mode = find_type(ssl_mode_string, ssl_mode_typelib, FIND_TYPE_BASIC);
-  if (args.ssl_mode <= 0)
+
+  args.ssl_mode = 0;
+
+  for (int i = 0; ssl_mode_names[i].name != NULL; i++) {
+    if (!strcasecmp(ssl_mode_string, ssl_mode_names[i].name)) {
+      args.ssl_mode = ssl_mode_names[i].mode;
+      break;
+    }
+  }
+
+  if (args.ssl_mode == 0)
   {
-    log_text(LOG_FATAL, "Invalid value for --mysql-ssl: '%s'");
+    log_text(LOG_FATAL, "Invalid value for --mysql-ssl: '%s'", ssl_mode_string);
     return 1;
   }
 
@@ -344,9 +385,9 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
 {
   MYSQL          *con = db_mysql_con->mysql;
 
-#ifdef MYSQL_OPT_SSL_MODE
+#ifdef HAVE_MYSQL_OPT_SSL_MODE
   DEBUG("mysql_options(%p,%s,%d)", con, "MYSQL_OPT_SSL_MODE", args.ssl_mode);
-  mysql_options(con, MYSQL_OPT_SSL_MODE, args.ssl_mode);
+  mysql_options(con, MYSQL_OPT_SSL_MODE, &args.ssl_mode);
 #endif
 
   if (args.use_ssl)
@@ -357,7 +398,6 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
 
     mysql_ssl_set(con, args.ssl_key, args.ssl_cert, args.ssl_ca, NULL,
                   args.ssl_cipher);
-
   }
 
   if (args.use_compression)
@@ -999,8 +1039,10 @@ int mysql_drv_fetch_row(db_result_t *rs, db_row_t *row)
   DEBUG("mysql_fetch_row(%p) = %p", rs->ptr, my_row);
 
   unsigned long *lengths = mysql_fetch_lengths(rs->ptr);
+  DEBUG("mysql_fetch_lengths(%p) = %p", rs->ptr, lengths);
+
   if (lengths == NULL)
-    return DB_ERROR_NONE;
+    return DB_ERROR_IGNORABLE;
 
   for (size_t i = 0; i < rs->nfields; i++)
   {

@@ -42,13 +42,13 @@
 
 LJLIB_ASM(assert)		LJLIB_REC(.)
 {
-  GCstr *s;
   lj_lib_checkany(L, 1);
-  s = lj_lib_optstr(L, 2);
-  if (s)
-    lj_err_callermsg(L, strdata(s));
-  else
+  if (L->top == L->base+1)
     lj_err_caller(L, LJ_ERR_ASSERT);
+  else if (tvisstr(L->base+1) || tvisnumber(L->base+1))
+    lj_err_callermsg(L, strdata(lj_lib_checkstr(L, 2)));
+  else
+    lj_err_run(L);
   return FFH_UNREACHABLE;
 }
 
@@ -287,18 +287,27 @@ LJLIB_ASM(tonumber)		LJLIB_REC(.)
   } else {
     const char *p = strdata(lj_lib_checkstr(L, 1));
     char *ep;
+    unsigned int neg = 0;
     unsigned long ul;
     if (base < 2 || base > 36)
       lj_err_arg(L, 2, LJ_ERR_BASERNG);
-    ul = strtoul(p, &ep, base);
-    if (p != ep) {
-      while (lj_char_isspace((unsigned char)(*ep))) ep++;
-      if (*ep == '\0') {
-	if (LJ_DUALNUM && LJ_LIKELY(ul < 0x80000000u))
-	  setintV(L->base-1-LJ_FR2, (int32_t)ul);
-	else
-	  setnumV(L->base-1-LJ_FR2, (lua_Number)ul);
-	return FFH_RES(1);
+    while (lj_char_isspace((unsigned char)(*p))) p++;
+    if (*p == '-') { p++; neg = 1; } else if (*p == '+') { p++; }
+    if (lj_char_isalnum((unsigned char)(*p))) {
+      ul = strtoul(p, &ep, base);
+      if (p != ep) {
+	while (lj_char_isspace((unsigned char)(*ep))) ep++;
+	if (*ep == '\0') {
+	  if (LJ_DUALNUM && LJ_LIKELY(ul < 0x80000000u+neg)) {
+	    if (neg) ul = -ul;
+	    setintV(L->base-1-LJ_FR2, (int32_t)ul);
+	  } else {
+	    lua_Number n = (lua_Number)ul;
+	    if (neg) n = -n;
+	    setnumV(L->base-1-LJ_FR2, n);
+	  }
+	  return FFH_RES(1);
+	}
       }
     }
   }

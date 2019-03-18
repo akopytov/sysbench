@@ -54,7 +54,6 @@ static sb_arg_t memory_args[] =
 
 /* Memory test operations */
 static int memory_init(void);
-static int memory_thread_init(int);
 static void memory_print_mode(void);
 static sb_event_t memory_next_event(int);
 static int event_rnd_none(sb_event_t *, int);
@@ -72,7 +71,6 @@ static sb_test_t memory_test =
   .lname = "Memory functions speed test",
   .ops = {
     .init = memory_init,
-    .thread_init = memory_thread_init,
     .print_mode = memory_print_mode,
     .next_event = memory_next_event,
     .report_intermediate = memory_report_intermediate,
@@ -92,14 +90,11 @@ static unsigned int memory_access_rnd;
 static unsigned int memory_hugetlb;
 #endif
 
-static TLS uint64_t tls_total_ops CK_CC_CACHELINE;
-static TLS size_t *tls_buf;
-static TLS size_t *tls_buf_end;
+static ssize_t max_offset;
 
-/* Array of per-thread buffers */
+/* Arrays of per-thread buffers and event counters */
 static size_t **buffers;
-/* Global buffer */
-static size_t *buffer;
+static uint64_t *thread_counters;
 
 #ifdef HAVE_LARGE_PAGES
 static void * hugetlb_alloc(size_t size);
@@ -117,6 +112,7 @@ int memory_init(void)
 {
   unsigned int i;
   char         *s;
+  size_t       *buffer;
 
   memory_block_size = sb_get_value_size("memory-block-size");
   if (memory_block_size < SIZEOF_SIZE_T ||
@@ -127,6 +123,8 @@ int memory_init(void)
              sb_get_value_string("memory-block-size"));
     return 1;
   }
+
+  max_offset = memory_block_size / SIZEOF_SIZE_T - 1;
 
   memory_total_size = sb_get_value_size("memory-total-size");
 
@@ -168,7 +166,7 @@ int memory_init(void)
     log_text(LOG_FATAL, "Invalid value for memory-access-mode: %s", s);
     return 1;
   }
-  
+
   if (memory_scope == SB_MEM_SCOPE_GLOBAL)
   {
 #ifdef HAVE_LARGE_PAGES
@@ -186,15 +184,20 @@ int memory_init(void)
 
     memset(buffer, 0, memory_block_size);
   }
-  else
+
+  thread_counters = malloc(sb_globals.threads * sizeof(uint64_t));
+  buffers = malloc(sb_globals.threads * sizeof(void *));
+  if (thread_counters == NULL || buffers == NULL)
   {
-    buffers = malloc(sb_globals.threads * sizeof(void *));
-    if (buffers == NULL)
-    {
-      log_text(LOG_FATAL, "Failed to allocate buffers array!");
-      return 1;
-    }
-    for (i = 0; i < sb_globals.threads; i++)
+    log_text(LOG_FATAL, "Failed to allocate thread-local memory!");
+    return 1;
+  }
+
+  for (i = 0; i < sb_globals.threads; i++)
+  {
+    if (memory_scope == SB_MEM_SCOPE_GLOBAL)
+      buffers[i] = buffer;
+    else
     {
 #ifdef HAVE_LARGE_PAGES
       if (memory_hugetlb)
@@ -211,6 +214,9 @@ int memory_init(void)
 
       memset(buffers[i], 0, memory_block_size);
     }
+
+    thread_counters[i] =
+      memory_total_size / memory_block_size / sb_globals.threads;
   }
 
   switch (memory_oper) {
@@ -237,46 +243,16 @@ int memory_init(void)
   /* Use our own limit on the number of events */
   sb_globals.max_events = 0;
 
-  return 0;
-}
-
-
-int memory_thread_init(int thread_id)
-{
-  (void) thread_id; /* unused */
-
-  /* Initialize thread-local variables for each thread */
-
-  if (memory_total_size > 0)
-  {
-    tls_total_ops = memory_total_size / memory_block_size / sb_globals.threads;
-  }
-
-  switch (memory_scope) {
-  case SB_MEM_SCOPE_GLOBAL:
-    tls_buf = buffer;
-    break;
-  case SB_MEM_SCOPE_LOCAL:
-    tls_buf = buffers[thread_id];
-    break;
-  default:
-    log_text(LOG_FATAL, "Invalid memory scope");
-    return 1;
-  }
-
-  tls_buf_end = (size_t *) (void *) ((char *) tls_buf + memory_block_size);
 
   return 0;
 }
 
 
-sb_event_t memory_next_event(int thread_id)
+sb_event_t memory_next_event(int tid)
 {
   sb_event_t      req;
 
-  (void) thread_id; /* unused */
-
-  if (memory_total_size > 0 && !tls_total_ops--)
+  if (memory_total_size > 0 && thread_counters[tid]-- == 0)
   {
     req.type = SB_REQ_TYPE_NULL;
     return req;
@@ -302,33 +278,29 @@ sb_event_t memory_next_event(int thread_id)
 # error Unsupported platform.
 #endif
 
-int event_rnd_none(sb_event_t *req, int thread_id)
+int event_rnd_none(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
-  (void) thread_id; /* unused */
+  (void) tid; /* unused */
 
-  for (ssize_t i = 0; i < memory_block_size; i += SIZEOF_SIZE_T)
+  for (ssize_t i = 0; i <= max_offset; i++)
   {
-    size_t offset = (volatile size_t) (sb_rand_uniform_double() *
-                                       (memory_block_size / SIZEOF_SIZE_T));
+    size_t offset = (volatile size_t) sb_rand_default(0, max_offset);
     (void) offset; /* unused */
-    /* nop */
   }
 
   return 0;
 }
 
 
-int event_rnd_read(sb_event_t *req, int thread_id)
+int event_rnd_read(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
-  (void) thread_id; /* unused */
 
-  for (ssize_t i = 0; i < memory_block_size; i += SIZEOF_SIZE_T)
+  for (ssize_t i = 0; i <= max_offset; i++)
   {
-    size_t offset = (size_t) (sb_rand_uniform_double() *
-                              (memory_block_size / SIZEOF_SIZE_T));
-    size_t val = SIZE_T_LOAD(tls_buf + offset);
+    size_t offset = (size_t) sb_rand_default(0, max_offset);
+    size_t val = SIZE_T_LOAD(buffers[tid] + offset);
     (void) val; /* unused */
   }
 
@@ -336,29 +308,25 @@ int event_rnd_read(sb_event_t *req, int thread_id)
 }
 
 
-int event_rnd_write(sb_event_t *req, int thread_id)
+int event_rnd_write(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
-  (void) thread_id; /* unused */
 
-  for (ssize_t i = 0; i < memory_block_size; i += SIZEOF_SIZE_T)
+  for (ssize_t i = 0; i <= max_offset; i++)
   {
-    size_t offset = (size_t) (sb_rand_uniform_double() *
-                              (memory_block_size / SIZEOF_SIZE_T));
-    SIZE_T_STORE(tls_buf + offset, i);
+    size_t offset = (size_t) sb_rand_default(0, max_offset);
+    SIZE_T_STORE(buffers[tid] + offset, i);
   }
 
   return 0;
 }
 
 
-int event_seq_none(sb_event_t *req, int thread_id)
+int event_seq_none(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
-  (void) thread_id; /* unused */
 
-  for (size_t *buf = tls_buf, *end = buf + memory_block_size / SIZEOF_SIZE_T;
-       buf < end; buf++)
+  for (size_t *buf = buffers[tid], *end = buf + max_offset; buf <= end; buf++)
   {
     ck_pr_barrier();
     /* nop */
@@ -368,13 +336,11 @@ int event_seq_none(sb_event_t *req, int thread_id)
 }
 
 
-int event_seq_read(sb_event_t *req, int thread_id)
+int event_seq_read(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
-  (void) thread_id; /* unused */
 
-  for (size_t *buf = tls_buf, *end = buf + memory_block_size / SIZEOF_SIZE_T;
-       buf < end; buf++)
+  for (size_t *buf = buffers[tid], *end = buf + max_offset; buf < end; buf++)
   {
     size_t val = SIZE_T_LOAD(buf);
     (void) val; /* unused */
@@ -384,15 +350,13 @@ int event_seq_read(sb_event_t *req, int thread_id)
 }
 
 
-int event_seq_write(sb_event_t *req, int thread_id)
+int event_seq_write(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
-  (void) thread_id; /* unused */
 
-  for (size_t *buf = tls_buf, *end = buf + memory_block_size / SIZEOF_SIZE_T;
-       buf < end; buf++)
+  for (size_t *buf = buffers[tid], *end = buf + max_offset; buf < end; buf++)
   {
-    SIZE_T_STORE(buf, end - buf);
+    SIZE_T_STORE(buf, (size_t) tid);
   }
 
   return 0;

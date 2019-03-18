@@ -491,6 +491,29 @@ TValue *lj_tab_newkey(lua_State *L, GCtab *t, cTValue *key)
 	  freenode->next = nn->next;
 	  nn->next = n->next;
 	  setmref(n->next, nn);
+	  /*
+	  ** Rechaining a resurrected string key creates a new dilemma:
+	  ** Another string key may have originally been resurrected via
+	  ** _any_ of the previous nodes as a chain anchor. Including
+	  ** a node that had to be moved, which makes them unreachable.
+	  ** It's not feasible to check for all previous nodes, so rechain
+	  ** any string key that's currently in a non-main positions.
+	  */
+	  while ((nn = nextnode(freenode))) {
+	    if (tvisstr(&nn->key) && !tvisnil(&nn->val)) {
+	      Node *mn = hashstr(t, strV(&nn->key));
+	      if (mn != freenode) {
+		freenode->next = nn->next;
+		nn->next = mn->next;
+		setmref(mn->next, nn);
+	      } else {
+		freenode = nn;
+	      }
+	    } else {
+	      freenode = nn;
+	    }
+	  }
+	  break;
 	} else {
 	  freenode = nn;
 	}

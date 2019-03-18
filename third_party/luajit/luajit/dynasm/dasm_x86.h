@@ -194,12 +194,13 @@ void dasm_put(Dst_DECL, int start, ...)
       switch (action) {
       case DASM_DISP:
 	if (n == 0) { if (mrm < 0) mrm = p[-2]; if ((mrm&7) != 5) break; }
-      case DASM_IMM_DB: if (((n+128)&-256) == 0) goto ob;
+	/* fallthrough */
+      case DASM_IMM_DB: if (((n+128)&-256) == 0) goto ob; /* fallthrough */
       case DASM_REL_A: /* Assumes ptrdiff_t is int. !x64 */
       case DASM_IMM_D: ofs += 4; break;
       case DASM_IMM_S: CK(((n+128)&-256) == 0, RANGE_I); goto ob;
       case DASM_IMM_B: CK((n&-256) == 0, RANGE_I); ob: ofs++; break;
-      case DASM_IMM_WB: if (((n+128)&-256) == 0) goto ob;
+      case DASM_IMM_WB: if (((n+128)&-256) == 0) goto ob; /* fallthrough */
       case DASM_IMM_W: CK((n&-65536) == 0, RANGE_I); ofs += 2; break;
       case DASM_SPACE: p++; ofs += n; break;
       case DASM_SETLABEL: b[pos-2] = -0x40000000; break;  /* Neg. label ofs. */
@@ -207,8 +208,8 @@ void dasm_put(Dst_DECL, int start, ...)
 	if (*p < 0x40 && p[1] == DASM_DISP) mrm = n;
 	if (*p < 0x20 && (n&7) == 4) ofs++;
 	switch ((*p++ >> 3) & 3) {
-	case 3: n |= b[pos-3];
-	case 2: n |= b[pos-2];
+	case 3: n |= b[pos-3]; /* fallthrough */
+	case 2: n |= b[pos-2]; /* fallthrough */
 	case 1: if (n <= 7) { b[pos-1] |= 0x10; ofs--; }
 	}
 	continue;
@@ -329,11 +330,14 @@ int dasm_link(Dst_DECL, size_t *szp)
 	  pos += 2;
 	  break;
 	}
+	  /* fallthrough */
 	case DASM_SPACE: case DASM_IMM_LG: case DASM_VREG: p++;
+	  /* fallthrough */
 	case DASM_DISP: case DASM_IMM_S: case DASM_IMM_B: case DASM_IMM_W:
 	case DASM_IMM_D: case DASM_IMM_WB: case DASM_IMM_DB:
 	case DASM_SETLABEL: case DASM_REL_A: case DASM_IMM_PC: pos++; break;
 	case DASM_LABEL_LG: p++;
+	  /* fallthrough */
 	case DASM_LABEL_PC: b[pos++] += ofs; break; /* Fix label offset. */
 	case DASM_ALIGN: ofs -= (b[pos++]+ofs)&*p++; break; /* Adjust ofs. */
 	case DASM_EXTERN: p += 2; break;
@@ -391,12 +395,15 @@ int dasm_encode(Dst_DECL, void *buffer)
 	    if (mrm != 5) { mm[-1] -= 0x80; break; } }
 	  if (((n+128) & -256) != 0) goto wd; else mm[-1] -= 0x40;
 	}
+	  /* fallthrough */
 	case DASM_IMM_S: case DASM_IMM_B: wb: dasmb(n); break;
 	case DASM_IMM_DB: if (((n+128)&-256) == 0) {
 	    db: if (!mark) mark = cp; mark[-2] += 2; mark = NULL; goto wb;
 	  } else mark = NULL;
+	  /* fallthrough */
 	case DASM_IMM_D: wd: dasmd(n); break;
 	case DASM_IMM_WB: if (((n+128)&-256) == 0) goto db; else mark = NULL;
+	  /* fallthrough */
 	case DASM_IMM_W: dasmw(n); break;
 	case DASM_VREG: {
 	  int t = *p++;
@@ -421,7 +428,9 @@ int dasm_encode(Dst_DECL, void *buffer)
 	}
 	case DASM_REL_LG: p++; if (n >= 0) goto rel_pc;
 	  b++; n = (int)(ptrdiff_t)D->globals[-n];
-	case DASM_REL_A: rel_a: n -= (int)(ptrdiff_t)(cp+4); goto wd; /* !x64 */
+	  /* fallthrough */
+	case DASM_REL_A: rel_a:
+	  n -= (unsigned int)(ptrdiff_t)(cp+4); goto wd; /* !x64 */
 	case DASM_REL_PC: rel_pc: {
 	  int shrink = *b++;
 	  int *pb = DASM_POS2PTR(D, n); if (*pb < 0) { n = pb[1]; goto rel_a; }
@@ -432,6 +441,7 @@ int dasm_encode(Dst_DECL, void *buffer)
 	}
 	case DASM_IMM_LG:
 	  p++; if (n < 0) { n = (int)(ptrdiff_t)D->globals[-n]; goto wd; }
+	  /* fallthrough */
 	case DASM_IMM_PC: {
 	  int *pb = DASM_POS2PTR(D, n);
 	  n = *pb < 0 ? pb[1] : (*pb + (int)(ptrdiff_t)base);
@@ -452,6 +462,7 @@ int dasm_encode(Dst_DECL, void *buffer)
 	case DASM_EXTERN: n = DASM_EXTERN(Dst, cp, p[1], *p); p += 2; goto wd;
 	case DASM_MARK: mark = cp; break;
 	case DASM_ESC: action = *p++;
+	  /* fallthrough */
 	default: *cp++ = action; break;
 	case DASM_SECTION: case DASM_STOP: goto stop;
 	}

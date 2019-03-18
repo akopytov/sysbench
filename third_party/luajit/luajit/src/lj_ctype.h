@@ -153,7 +153,7 @@ typedef struct CType {
 
 /* Simplify target-specific configuration. Checked in lj_ccall.h. */
 #define CCALL_MAX_GPR		8
-#define CCALL_MAX_FPR		8
+#define CCALL_MAX_FPR		13
 
 typedef LJ_ALIGN(8) union FPRCBArg { double d; float f[2]; } FPRCBArg;
 

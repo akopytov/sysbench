@@ -19,6 +19,7 @@ OLTP usage information test
     --point_selects=N             Number of point SELECT queries per transaction [10]
     --range_selects[=on|off]      Enable/disable all range SELECT queries [on]
     --range_size=N                Range size for range SELECT queries [100]
+    --reconnect=N                 Reconnect after every N events. The default (0) is to not reconnect [0]
     --secondary[=on|off]          Use a secondary index in place of the PRIMARY KEY [off]
     --simple_ranges=N             Number of simple range SELECT queries per transaction [1]
     --skip_trx[=on|off]           Don't start explicit transactions and execute all queries in the AUTOCOMMIT mode [off]

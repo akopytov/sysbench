@@ -1012,7 +1012,7 @@ static void LJ_FASTCALL recff_string_format(jit_State *J, RecordFFData *rd)
     handle_num:
       tra = lj_ir_tonum(J, tra);
       tr = lj_ir_call(J, id, tr, trsf, tra);
-      if (LJ_SOFTFP) lj_needsplit(J);
+      if (LJ_SOFTFP32) lj_needsplit(J);
       break;
     case STRFMT_STR:
       if (!tref_isstr(tra)) {

@@ -85,12 +85,21 @@ typedef union FPRArg {
 
 #elif LJ_TARGET_PPC
 
+#if LJ_ARCH_PPC64
 #define CCALL_NARG_GPR		8
-#define CCALL_NARG_FPR		8
+#define CCALL_NARG_FPR		13
 #define CCALL_NRET_GPR		4	/* For complex double. */
 #define CCALL_NRET_FPR		1
+#define CCALL_SPS_EXTRA		14
+#define CCALL_SPS_FREE		0
+#else
+#define CCALL_NARG_GPR		8
+#define CCALL_NARG_FPR		(LJ_ABI_SOFTFP ? 0 : 8)
+#define CCALL_NRET_GPR		4	/* For complex double. */
+#define CCALL_NRET_FPR		(LJ_ABI_SOFTFP ? 0 : 1)
 #define CCALL_SPS_EXTRA		4
 #define CCALL_SPS_FREE		0
+#endif
 
 typedef intptr_t GPRArg;
 typedef double FPRArg;

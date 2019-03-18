@@ -8,7 +8,7 @@
 
 #include "lj_obj.h"
 
-#if LJ_HASJIT && (LJ_SOFTFP || (LJ_32 && LJ_HASFFI))
+#if LJ_HASJIT && (LJ_SOFTFP32 || (LJ_32 && LJ_HASFFI))
 
 #include "lj_err.h"
 #include "lj_buf.h"

@@ -66,10 +66,9 @@ SQL Lua API + PostgreSQL tests
   301 400 0123456789 0123456789
   --
   1
-  ALERT: reconnect is not supported by the current driver
   2
   --
-  reconnects = 0
+  reconnects = 1
   FATAL: Connection to database failed: could not translate host name "non-existing" to address: * (glob)
   
   connection creation failed
@@ -108,6 +107,9 @@ SQL Lua API + PostgreSQL tests
   }
   */api_sql.lua:*: SQL error, errno = 0, state = '42P01': table "t" does not exist (glob)
   --
+  ########################################################################
+  # Multiple connections test
+  ########################################################################
   1
   2
   3
@@ -118,6 +120,17 @@ SQL Lua API + PostgreSQL tests
   8
   9
   10
+  ########################################################################
+  # Incorrect bulk API usage
+  ########################################################################
   ALERT: attempt to call bulk_insert_next() before bulk_insert_init()
   */api_sql.lua:*: db_bulk_insert_next() failed (glob)
+  ########################################################################
+  # query_row() with an empty result set
+  ########################################################################
   nil
+  ########################################################################
+  # GH-282: Mysql's fetch_row() is broken
+  ########################################################################
+  1
+  2

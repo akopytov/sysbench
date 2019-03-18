@@ -1,3 +1,20 @@
+2018-12-16  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.16
+	* build/CI/packaging: add Ubuntu Cosmic.
+	* build/CI/packaging: add Fedora 29.
+	* build/CI/packaging: remove Fedora 27 (EOL).
+	* SQL API: fix GH-282 (Mysql's fetch_row() is broken)
+	* --rate mode: fix latency stats skew on low rates
+	* Lua: Add /usr/share/lua/5.1 to LUA_PATH and /usr/lib/lua/5.1
+	to LUA_CPATH.
+	* build/CI/packaging: add -Wvla to default compiler flags.
+	* build/CI/packaging: fix debian/changelog format
+	* build/CI/packaging: fix buildpack.sh to not push multiple file
+	types to packagecloud.
+	* build/CI/packaging: add libaio-dev to Debian/Ubuntu build
+	dependencies.
+
 2018-07-03  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.15
