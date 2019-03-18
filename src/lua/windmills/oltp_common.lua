@@ -545,7 +545,7 @@ function execute_delete_inserts()
       kwatts_s = sysbench.rand.default(0,4000000)
       location =sysbench.rand.varstringalpha(5, 50)
       active = sysbench.rand.default(0,1)
-      strrecordtype =  sysbench.rand.string("@@@")
+      strrecordtype =  sysbench.rand.varstringalpha(3, 3)
       
       param[tnum].deletes[1]:set(id)
 
