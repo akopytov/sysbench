@@ -75,8 +75,9 @@ sysbench.cmdline.options = {
           "PostgreSQL driver. The only currently supported " ..
           "variant is 'redshift'. When enabled, " ..
           "create_secondary is automatically disabled, and " ..
-          "delete_inserts is set to 0"},
-
+          "delete_inserts is set to 0"}
+  
+ 
 }
 
 -- Prepare the dataset. This command supports parallel execution, i.e. will
@@ -506,16 +507,4 @@ function sysbench.hooks.before_restart_event(errdesc)
       prepare_statements()
    end
 end
-
-function check_reconnect()
-   if sysbench.opt.reconnect > 0 then
-      transactions = (transactions or 0) + 1
-      if transactions % sysbench.opt.reconnect == 0 then
-         close_statements()
-         con:reconnect()
-         prepare_statements()
-      end
-   end
-end
-
 
