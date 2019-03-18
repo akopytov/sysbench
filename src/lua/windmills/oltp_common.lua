@@ -198,7 +198,7 @@ function create_table(drv, con, table_num)
    --print("DEBUG TABLE OPTION" .. sysbench.opt.mysql_table_options)
    
    con:query(string.format([[   
-   DROP TABLE IF EXISTS `%s%d`]],sysbench.opt.table_name, table_num))
+   DROP TABLE IF EXISTS %s%d]],sysbench.opt.table_name, table_num))
    
    query = string.format([[   
    CREATE TABLE `%s%d` (
