@@ -66,6 +66,9 @@ sysbench.cmdline.options = {
       {"Use a secondary index in place of the PRIMARY KEY", false},
    create_secondary =
       {"Create a secondary index in addition to the PRIMARY KEY", true},
+  reconnect =
+      {"Reconnect after every N events. The default (0) is to not reconnect",
+       0},      
    mysql_storage_engine =
       {"Storage engine, if MySQL is used", "innodb"},
    pgsql_variant =
