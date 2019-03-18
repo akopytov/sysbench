@@ -75,8 +75,9 @@ sysbench.cmdline.options = {
           "PostgreSQL driver. The only currently supported " ..
           "variant is 'redshift'. When enabled, " ..
           "create_secondary is automatically disabled, and " ..
-          "delete_inserts is set to 0"}
-  
+          "delete_inserts is set to 0"},
+   stats_format=
+   {"Specify how you want the statistics written [default=human readable; csv; json ", "human"}
  
 }
 
@@ -508,3 +509,25 @@ function sysbench.hooks.before_restart_event(errdesc)
    end
 end
 
+function check_reconnect()
+   if sysbench.opt.reconnect > 0 then
+      transactions = (transactions or 0) + 1
+      if transactions % sysbench.opt.reconnect == 0 then
+         close_statements()
+         con:reconnect()
+         prepare_statements()
+      end
+   end
+end
+
+function sysbench.hooks.report_intermediate(stat)
+   if sysbench.opt.stats_format == "human" then
+         sysbench.report_default(stat)
+   elseif sysbench.opt.stats_format == "csv" then
+         sysbench.report_csv(stat)
+   elseif sysbench.opt.stats_format == "json" then      
+         sysbench.report_json(stat)
+   else
+      sysbench.report_default(stat)
+   end
+end
