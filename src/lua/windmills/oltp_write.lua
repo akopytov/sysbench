@@ -27,11 +27,9 @@ function prepare_statements()
       prepare_commit()
    end
 
-   
    prepare_index_updates()
    prepare_non_index_updates()
    prepare_delete_inserts()
-  
 end
 
 function event()
@@ -39,7 +37,6 @@ function event()
       begin()
    end
 
-     
    execute_index_updates()
    execute_non_index_updates()
    execute_delete_inserts()
@@ -47,7 +44,11 @@ function event()
    if not sysbench.opt.skip_trx then
       commit()
    end
+
+   check_reconnect()
 end
+
+
 
 function sysbench.hooks.report_intermediate(stat)
    if sysbench.opt.stats_format == "human" then

@@ -291,6 +291,7 @@ end
 
 function prepare_for_each_table(key)
    for t = 1, sysbench.opt.tables do
+   
       stmt[t][key] = con:prepare(string.format(stmt_defs[key][1], t))
 
       local nparam = #stmt_defs[key] - 1
