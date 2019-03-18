@@ -508,6 +508,18 @@ function sysbench.hooks.before_restart_event(errdesc)
       prepare_statements()
    end
 end
+
+function check_reconnect()
+   if sysbench.opt.reconnect > 0 then
+      transactions = (transactions or 0) + 1
+      if transactions % sysbench.opt.reconnect == 0 then
+         close_statements()
+         con:reconnect()
+         prepare_statements()
+      end
+   end
+end
+
 function sysbench.hooks.report_intermediate(stat)
    if sysbench.opt.stats_format == "human" then
          sysbench.report_default(stat)
