@@ -88,6 +88,10 @@ sysbench.cmdline.options = {
       
 }
 
+local function get_id()
+   return sysbench.rand.default(1, sysbench.opt.table_size)
+end
+
 -- Prepare the dataset. This command supports parallel execution, i.e. will
 -- benefit from executing with --threads > 1 as long as --tables > 1
 function cmd_prepare()
@@ -322,11 +326,10 @@ local stmt_defs = {
        {t.CHAR, 3},get_id()},
    deletes = {
       "DELETE FROM %s%u WHERE id=?",
-      get_id(),
-   inserts = if (sysbench.opt.auto_inc) then {
-      "INSERT INTO %s%u (uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
-      t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}} else "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
-      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}} end,
+      get_id()},
+   inserts = {
+      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
+      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
 }
 
 function prepare_begin()
@@ -455,10 +458,6 @@ end
 
 local function get_table_num()
    return sysbench.rand.uniform(1, sysbench.opt.tables)
-end
-
-local function get_id()
-   return sysbench.rand.default(1, sysbench.opt.table_size)
 end
 
 function begin()
