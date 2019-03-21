@@ -297,7 +297,37 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
    end
 end
 
-
+local t = sysbench.sql.type
+local stmt_defs = {
+   point_selects = {
+      "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id=?",
+      t.INT},
+   simple_ranges = {
+      "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id BETWEEN ? AND ?",
+      t.INT, t.INT},
+   sum_ranges = {
+      "SELECT SUM(kwatts_s) FROM %s%u WHERE millid BETWEEN ? AND ?  and active=1",
+       sysbench.rand.default(1,199), sysbench.rand.default(200,400)},
+   order_ranges = {
+      "SELECT id, millid, date,active,kwatts_s  FROM %s%u WHERE id BETWEEN ? AND ? ORDER BY millid",
+       t.INT, t.INT},
+   distinct_ranges = {
+      "SELECT DISTINCT millid,active,kwatts_s   FROM %s%u WHERE id BETWEEN ? AND ? AND active =1 ORDER BY millid",
+      t.INT, t.INT},
+   index_updates = {
+      "UPDATE %s%u SET kwatts_s=kwatts_s+1 WHERE id=?",
+      t.INT},
+   non_index_updates = {
+      "UPDATE %s%u SET strrecordtype=? WHERE id=?",
+       {t.CHAR, 3},t.INT},
+   deletes = {
+      "DELETE FROM %s%u WHERE id=?",
+      t.INT},
+   inserts = {
+      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
+      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
+  
+}
 
 function prepare_begin()
    stmt.begin = con:prepare("BEGIN")
@@ -566,34 +596,3 @@ function sysbench.hooks.report_intermediate(stat)
       sysbench.report_default(stat)
    end
 end
-
-local t = sysbench.sql.type
-local stmt_defs = {
-   point_selects = {
-      "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id=?",
-      get_id()},
-   simple_ranges = {
-      "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id BETWEEN ? AND ?",
-      get_id(), get_id()},
-   sum_ranges = {
-      "SELECT SUM(kwatts_s) FROM %s%u WHERE millid BETWEEN ? AND ?  and active=1",
-       sysbench.rand.default(1,199), sysbench.rand.default(200,400)},
-   order_ranges = {
-      "SELECT id, millid, date,active,kwatts_s  FROM %s%u WHERE id BETWEEN ? AND ? ORDER BY millid",
-       get_id(), get_id()},
-   distinct_ranges = {
-      "SELECT DISTINCT millid,active,kwatts_s   FROM %s%u WHERE id BETWEEN ? AND ? AND active =1 ORDER BY millid",
-      get_id(), get_id()},
-   index_updates = {
-      "UPDATE %s%u SET kwatts_s=kwatts_s+1 WHERE id=?",
-      get_id()},
-   non_index_updates = {
-      "UPDATE %s%u SET strrecordtype=? WHERE id=?",
-       {t.CHAR, 3},get_id()},
-   deletes = {
-      "DELETE FROM %s%u WHERE id=?",
-      get_id()},
-   inserts = {
-      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
-      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
-}
