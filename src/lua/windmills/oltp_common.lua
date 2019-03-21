@@ -88,10 +88,6 @@ sysbench.cmdline.options = {
       
 }
 
-local function get_id()
-   return sysbench.rand.default(1, sysbench.opt.table_size)
-end
-
 -- Prepare the dataset. This command supports parallel execution, i.e. will
 -- benefit from executing with --threads > 1 as long as --tables > 1
 function cmd_prepare()
@@ -301,36 +297,7 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
    end
 end
 
-local t = sysbench.sql.type
-local stmt_defs = {
-   point_selects = {
-      "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id=?",
-      get_id()},
-   simple_ranges = {
-      "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id BETWEEN ? AND ?",
-      get_id(), get_id()},
-   sum_ranges = {
-      "SELECT SUM(kwatts_s) FROM %s%u WHERE millid BETWEEN ? AND ?  and active=1",
-       sysbench.rand.default(1,199), sysbench.rand.default(200,400)},
-   order_ranges = {
-      "SELECT id, millid, date,active,kwatts_s  FROM %s%u WHERE id BETWEEN ? AND ? ORDER BY millid",
-       get_id(), get_id()},
-   distinct_ranges = {
-      "SELECT DISTINCT millid,active,kwatts_s   FROM %s%u WHERE id BETWEEN ? AND ? AND active =1 ORDER BY millid",
-      get_id(), get_id()},
-   index_updates = {
-      "UPDATE %s%u SET kwatts_s=kwatts_s+1 WHERE id=?",
-      get_id()},
-   non_index_updates = {
-      "UPDATE %s%u SET strrecordtype=? WHERE id=?",
-       {t.CHAR, 3},get_id()},
-   deletes = {
-      "DELETE FROM %s%u WHERE id=?",
-      get_id()},
-   inserts = {
-      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
-      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
-}
+
 
 function prepare_begin()
    stmt.begin = con:prepare("BEGIN")
@@ -458,6 +425,10 @@ end
 
 local function get_table_num()
    return sysbench.rand.uniform(1, sysbench.opt.tables)
+end
+
+local function get_id()
+   return sysbench.rand.default(1, sysbench.opt.table_size)
 end
 
 function begin()
@@ -595,3 +566,34 @@ function sysbench.hooks.report_intermediate(stat)
       sysbench.report_default(stat)
    end
 end
+
+local t = sysbench.sql.type
+local stmt_defs = {
+   point_selects = {
+      "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id=?",
+      get_id()},
+   simple_ranges = {
+      "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id BETWEEN ? AND ?",
+      get_id(), get_id()},
+   sum_ranges = {
+      "SELECT SUM(kwatts_s) FROM %s%u WHERE millid BETWEEN ? AND ?  and active=1",
+       sysbench.rand.default(1,199), sysbench.rand.default(200,400)},
+   order_ranges = {
+      "SELECT id, millid, date,active,kwatts_s  FROM %s%u WHERE id BETWEEN ? AND ? ORDER BY millid",
+       get_id(), get_id()},
+   distinct_ranges = {
+      "SELECT DISTINCT millid,active,kwatts_s   FROM %s%u WHERE id BETWEEN ? AND ? AND active =1 ORDER BY millid",
+      get_id(), get_id()},
+   index_updates = {
+      "UPDATE %s%u SET kwatts_s=kwatts_s+1 WHERE id=?",
+      get_id()},
+   non_index_updates = {
+      "UPDATE %s%u SET strrecordtype=? WHERE id=?",
+       {t.CHAR, 3},get_id()},
+   deletes = {
+      "DELETE FROM %s%u WHERE id=?",
+      get_id()},
+   inserts = {
+      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
+      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
+}
