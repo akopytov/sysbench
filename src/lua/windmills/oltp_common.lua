@@ -327,7 +327,6 @@ local stmt_defs = {
       "INSERT INTO %s%u (uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
       t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}} else "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
       t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}} end,
-  
 }
 
 function prepare_begin()
