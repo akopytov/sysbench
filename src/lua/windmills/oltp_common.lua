@@ -197,8 +197,7 @@ function create_table(drv, con, table_num)
    
    --print("DEBUG TABLE OPTION" .. sysbench.opt.mysql_table_options)
    
-   con:query(string.format([[   
-   DROP TABLE IF EXISTS %s%d]],sysbench.opt.table_name, table_num))
+   con:query(string.format([[DROP TABLE IF EXISTS %s%d]],sysbench.opt.table_name, table_num))
    
    query = string.format([[   
    CREATE TABLE `%s%d` (
@@ -257,7 +256,7 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
       strrecordtype =  sysbench.rand.string("@@@")
       location =sysbench.rand.varstringalpha(5, 50)
       active = sysbench.rand.default(0,1)
-      millid = sysbench.rand.default(1,100)
+      millid = sysbench.rand.default(1,400)
       kwatts_s = sysbench.rand.default(0,4000000)
  
                                                                                                                                   
@@ -302,31 +301,32 @@ local t = sysbench.sql.type
 local stmt_defs = {
    point_selects = {
       "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id=?",
-      t.INT},
+      get_id()},
    simple_ranges = {
       "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id BETWEEN ? AND ?",
-      t.INT, t.INT},
+      get_id(), get_id()},
    sum_ranges = {
-      "SELECT SUM(kwatts_s) FROM %s%u WHERE id BETWEEN ? AND ?",
-       t.INT, t.INT},
+      "SELECT SUM(kwatts_s) FROM %s%u WHERE millid BETWEEN ? AND ?  and active=1",
+       sysbench.rand.default(1,199), sysbench.rand.default(200,400)},
    order_ranges = {
       "SELECT id, millid, date,active,kwatts_s  FROM %s%u WHERE id BETWEEN ? AND ? ORDER BY millid",
-       t.INT, t.INT},
+       get_id(), get_id()},
    distinct_ranges = {
       "SELECT DISTINCT millid,active,kwatts_s   FROM %s%u WHERE id BETWEEN ? AND ? AND active =1 ORDER BY millid",
-      t.INT, t.INT},
+      get_id(), get_id()},
    index_updates = {
       "UPDATE %s%u SET kwatts_s=kwatts_s+1 WHERE id=?",
-      t.INT},
+      get_id()},
    non_index_updates = {
       "UPDATE %s%u SET strrecordtype=? WHERE id=?",
-       {t.CHAR, 3},t.INT},
+       {t.CHAR, 3},get_id()},
    deletes = {
       "DELETE FROM %s%u WHERE id=?",
-      t.INT},
-   inserts = {
-      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
-      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
+      get_id(),
+   inserts = if (sysbench.opt.auto_inc) then {
+      "INSERT INTO %s%u (uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
+      t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}} else "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
+      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}} end,
   
 }
 
@@ -541,7 +541,7 @@ function execute_delete_inserts()
 --      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtyped) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
 --      t.BIGINT, t.TINYINT, t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
       
-      millid = sysbench.rand.default(1,100)
+      millid = sysbench.rand.default(1,400)
       kwatts_s = sysbench.rand.default(0,4000000)
       location =sysbench.rand.varstringalpha(5, 50)
       active = sysbench.rand.default(0,1)
