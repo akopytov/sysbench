@@ -319,7 +319,7 @@ local stmt_defs = {
       t.INT},
    non_index_updates = {
       "UPDATE %s%u SET strrecordtype=? WHERE id=?",
-       {t.CHAR, 3},t.INT},
+       {t.CHAR,3},t.INT},
    deletes = {
       "DELETE FROM %s%u WHERE id=?",
       t.INT},
@@ -523,7 +523,7 @@ function execute_non_index_updates()
    local tnum = get_table_num()
 
    for i = 1, sysbench.opt.non_index_updates do
-      param[tnum].non_index_updates[1]:set_rand_str(c_value_template)
+      param[tnum].non_index_updates[1]:sysbench.rand.string("@@@")
       param[tnum].non_index_updates[2]:set(get_id())
 
       stmt[tnum].non_index_updates:execute()
