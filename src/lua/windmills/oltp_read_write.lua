@@ -42,9 +42,7 @@ function prepare_statements()
 end
 
 function event()
-   if not sysbench.opt.skip_trx then
-      begin()
-   end
+
 
    execute_point_selects()
 
@@ -55,9 +53,14 @@ function event()
       execute_distinct_ranges()
    end
 
+   if not sysbench.opt.skip_trx then
+      begin()
+   end
    execute_index_updates()
+   execute_point_selects()
    execute_non_index_updates()
    execute_delete_inserts()
+   execute_simple_ranges()
 
    if not sysbench.opt.skip_trx then
       commit()
