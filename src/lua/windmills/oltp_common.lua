@@ -307,7 +307,7 @@ local stmt_defs = {
       t.INT, t.INT},
    sum_ranges = {
       "SELECT SUM(kwatts_s) FROM %s%u WHERE millid BETWEEN ? AND ?  and active=1",
-       sysbench.rand.default(1,199), sysbench.rand.default(200,400)},
+        t.INT, t.INT},
    order_ranges = {
       "SELECT id, millid, date,active,kwatts_s  FROM %s%u WHERE id BETWEEN ? AND ? ORDER BY millid",
        t.INT, t.INT},
@@ -523,7 +523,7 @@ function execute_non_index_updates()
    local tnum = get_table_num()
 
    for i = 1, sysbench.opt.non_index_updates do
-      param[tnum].non_index_updates[1]:sysbench.rand.string("@@@")
+      param[tnum].non_index_updates[1]:set(sysbench.rand.varstringalpha(3,3))
       param[tnum].non_index_updates[2]:set(get_id())
 
       stmt[tnum].non_index_updates:execute()
