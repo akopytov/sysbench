@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2017-2018 Alexey Kopytov <akopytov@gmail.com>
+# Copyright (C) 2017-2019 Alexey Kopytov <akopytov@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -57,6 +57,7 @@ distros_x86_64=(
     "ubuntu cosmic x86_64"
     "debian jessie x86_64"
     "debian stretch x86_64"
+    "debian buster x86_64"
 )
 
 distros_i386=(
@@ -66,6 +67,7 @@ distros_i386=(
     "ubuntu cosmic i386"
     "debian jessie i386"
     "debian stretch i386"
+    "debian buster i386"
 )
 
 distros_aarch64=(
@@ -78,6 +80,7 @@ distros_aarch64=(
     "ubuntu xenial aarch64"
     "debian jessie aarch64"
     "debian stretch aarch64"
+    "debian buster aarch64"
 )
 
 main()
