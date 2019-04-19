@@ -39,6 +39,7 @@ env:
       - OS=ubuntu DIST=cosmic
       - OS=debian DIST=jessie
       - OS=debian DIST=stretch
+      - OS=debian DIST=buster
       - OS=debian DIST=sid
       - OS=ubuntu DIST=trusty ARCH=i386
       - OS=ubuntu DIST=xenial ARCH=i386
@@ -46,6 +47,7 @@ env:
       - OS=ubuntu DIST=cosmic ARCH=i386
       - OS=debian DIST=jessie ARCH=i386
       - OS=debian DIST=stretch ARCH=i386
+      - OS=debian DIST=buster ARCH=i386
       - OS=debian DIST=sid ARCH=i386
 
 matrix:
@@ -72,6 +74,8 @@ matrix:
       compiler: clang
     - env: OS=debian DIST=stretch
       compiler: clang
+    - env: OS=debian DIST=buster
+      compiler: clang
     - env: OS=debian DIST=sid
       compiler: clang
     - env: OS=ubuntu DIST=trusty ARCH=i386
@@ -85,6 +89,8 @@ matrix:
     - env: OS=debian DIST=jessie ARCH=i386
       compiler: clang
     - env: OS=debian DIST=stretch ARCH=i386
+      compiler: clang
+    - env: OS=debian DIST=buster ARCH=i386
       compiler: clang
     - env: OS=debian DIST=sid ARCH=i386
       compiler: clang
@@ -109,6 +115,8 @@ matrix:
     - env: OS=debian DIST=jessie
       os: osx
     - env: OS=debian DIST=stretch
+      os: osx
+    - env: OS=debian DIST=buster
       os: osx
     - env: OS=debian DIST=sid
       os: osx
