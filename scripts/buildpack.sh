@@ -49,8 +49,10 @@ PACKPACK_REPO=${PACKPACK_REPO:-akopytov/packpack}
 distros_x86_64=(
     "el 6 x86_64"
     "el 7 x86_64"
+    "el 8 x86_64"
     "fedora 28 x86_64"
     "fedora 29 x86_64"
+    "fedora 30 x86_64"
     "ubuntu trusty x86_64"
     "ubuntu xenial x86_64"
     "ubuntu bionic x86_64"
@@ -72,8 +74,10 @@ distros_i386=(
 
 distros_aarch64=(
     "el 7 aarch64"
+    "el 8 aarch64"
     "fedora 28 aarch64"
     "fedora 29 aarch64"
+    "fedora 30 aarch64"
     "ubuntu bionic aarch64"
     "ubuntu cosmic aarch64"
     "ubuntu trusty aarch64"
