@@ -33,7 +33,6 @@ env:
       - OS=fedora DIST=29
       - OS=fedora DIST=30
       - OS=fedora DIST=rawhide
-      - OS=ubuntu DIST=trusty
       - OS=ubuntu DIST=xenial
       - OS=ubuntu DIST=bionic
       - OS=ubuntu DIST=cosmic
@@ -41,7 +40,6 @@ env:
       - OS=debian DIST=stretch
       - OS=debian DIST=buster
       - OS=debian DIST=sid
-      - OS=ubuntu DIST=trusty ARCH=i386
       - OS=ubuntu DIST=xenial ARCH=i386
       - OS=ubuntu DIST=bionic ARCH=i386
       - OS=ubuntu DIST=cosmic ARCH=i386
@@ -62,8 +60,6 @@ matrix:
       compiler: clang
     - env: OS=fedora DIST=rawhide
       compiler: clang
-    - env: OS=ubuntu DIST=trusty
-      compiler: clang
     - env: OS=ubuntu DIST=xenial
       compiler: clang
     - env: OS=ubuntu DIST=bionic
@@ -77,8 +73,6 @@ matrix:
     - env: OS=debian DIST=buster
       compiler: clang
     - env: OS=debian DIST=sid
-      compiler: clang
-    - env: OS=ubuntu DIST=trusty ARCH=i386
       compiler: clang
     - env: OS=ubuntu DIST=xenial ARCH=i386
       compiler: clang
@@ -103,8 +97,6 @@ matrix:
     - env: OS=fedora DIST=30
       os: osx
     - env: OS=fedora DIST=rawhide
-      os: osx
-    - env: OS=ubuntu DIST=trusty
       os: osx
     - env: OS=ubuntu DIST=xenial
       os: osx

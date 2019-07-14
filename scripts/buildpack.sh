@@ -51,7 +51,6 @@ distros_x86_64=(
     "el 7 x86_64"
     "fedora 29 x86_64"
     "fedora 39 x86_64"
-    "ubuntu trusty x86_64"
     "ubuntu xenial x86_64"
     "ubuntu bionic x86_64"
     "ubuntu cosmic x86_64"
@@ -61,7 +60,6 @@ distros_x86_64=(
 )
 
 distros_i386=(
-    "ubuntu trusty i386"
     "ubuntu xenial i386"
     "ubuntu bionic i386"
     "ubuntu cosmic i386"
@@ -76,7 +74,6 @@ distros_aarch64=(
     "fedora 30 aarch64"
     "ubuntu bionic aarch64"
     "ubuntu cosmic aarch64"
-    "ubuntu trusty aarch64"
     "ubuntu xenial aarch64"
     "debian jessie aarch64"
     "debian stretch aarch64"
