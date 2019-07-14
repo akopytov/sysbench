@@ -1729,9 +1729,9 @@ op_template = function(params, template, nparams)
     elseif p == "M" then
       op = op + parse_shiftmask(params[n], false); n = n + 1
     elseif p == "J" or p == "K" then
-      local mode, n, s = parse_label(params[n], false)
-      if p == "K" then n = n + 2048 end
-      waction("REL_"..mode, n, s, 1)
+      local mode, m, s = parse_label(params[n], false)
+      if p == "K" then m = m + 2048 end
+      waction("REL_"..mode, m, s, 1)
       n = n + 1
     elseif p == "0" then
       if band(shr(op, rs), 31) == 0 then werror("cannot use r0") end
