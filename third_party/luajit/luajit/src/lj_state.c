@@ -245,6 +245,7 @@ LUA_API lua_State *lua_newstate(lua_Alloc f, void *ud)
   G2J(g)->range = range;
   G2J(g)->allocbase = allocbase;
 #endif
+#endif
   L->status = LUA_OK;
   return L;
 }
