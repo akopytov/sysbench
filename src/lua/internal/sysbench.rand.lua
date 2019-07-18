@@ -32,8 +32,7 @@ uint32_t sb_rand_pareto(uint32_t, uint32_t);
 uint32_t sb_rand_zipfian(uint32_t, uint32_t);
 uint32_t sb_rand_unique(void);
 void sb_rand_str(const char *, char *);
-void sb_rand_varstr(char *, uint32_t, uint32_t);
-void sb_rand_varstr_alpha(char *, uint32_t, uint32_t);
+uint32_t sb_rand_varstr(char *, uint32_t, uint32_t);
 double sb_rand_uniform_double(void);
 ]]
 
@@ -84,7 +83,6 @@ function sysbench.rand.varstring(min_len, max_len)
    local nchars = ffi.C.sb_rand_varstr(buf, min_len, max_len)
    return ffi.string(buf, nchars)
 end
-
 
 function sysbench.rand.uniform_double()
    return ffi.C.sb_rand_uniform_double()
