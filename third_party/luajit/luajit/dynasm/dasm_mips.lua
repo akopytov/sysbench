@@ -809,9 +809,9 @@ map_op[".template__"] = function(params, template, nparams)
     elseif p == "X" then
       op = op + parse_index(params[n]); n = n + 1
     elseif p == "B" or p == "J" then
-      local mode, n, s = parse_label(params[n], false)
-      if p == "B" then n = n + 2048 end
-      waction("REL_"..mode, n, s, 1)
+      local mode, m, s = parse_label(params[n], false)
+      if p == "B" then m = m + 2048 end
+      waction("REL_"..mode, m, s, 1)
       n = n + 1
     elseif p == "A" then
       op = op + parse_imm(params[n], 5, 6, 0, false); n = n + 1

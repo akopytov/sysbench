@@ -4317,7 +4317,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  ins_next2
     |
     |7:  // Possible table write barrier for the value. Skip valiswhite check.
-    |  barrierback TAB:CARG2, TMP3, TMP0, <2
+    |  barrierback TAB:CARG2, TMP3, CRET1, <2
     break;
 
   case BC_TSETM:

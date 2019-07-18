@@ -1,3 +1,13 @@
+2019-03-15  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.17
+	* build/CI/packaging: update RPM spec to support RHEL8-beta
+	(thanks to Alexey Bychko for the patch)
+	* regression tests: remove unnecessary error leading to opt_rate.t instability.
+	* --rate mode: return a non-zero exit code on event queue
+	overflow.
+	* --rate mode: fix a bogus error about eventgen thread termination
+
 2018-12-16  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.16

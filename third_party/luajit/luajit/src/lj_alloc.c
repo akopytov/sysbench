@@ -255,7 +255,8 @@ static void *mmap_probe(size_t size)
   for (retry = 0; retry < LJ_ALLOC_MMAP_PROBE_MAX; retry++) {
     void *p = mmap((void *)hint_addr, size, MMAP_PROT, MMAP_FLAGS_PROBE, -1, 0);
     uintptr_t addr = (uintptr_t)p;
-    if ((addr >> LJ_ALLOC_MBITS) == 0 && addr >= LJ_ALLOC_MMAP_PROBE_LOWER) {
+    if ((addr >> LJ_ALLOC_MBITS) == 0 && addr >= LJ_ALLOC_MMAP_PROBE_LOWER &&
+	((addr + size) >> LJ_ALLOC_MBITS) == 0) {
       /* We got a suitable address. Bump the hint address. */
       hint_addr = addr + size;
       errno = olderr;
