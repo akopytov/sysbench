@@ -168,16 +168,16 @@ function sysbench.report_cumulative_csv(stat)
       )
       local seconds = stat.time_interval
       print(string.format("%.0f,%u,%4.2f,%4.2f," ..
-                          "%4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f," ...
+                          "%4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f," ..
                           "%4.2f,%4.2f,%4.2f,%4.2f,%4.2f," ..
-                          "%4.2f" ..
+                          "%4.2f," ..
                           "%4.2f,%4.2f,%4.2f," ..
                           "%4.2f",
                        stat.time_total,
                        stat.threads_running,
                        stat.events,
                        stat.events / seconds,
-                       (stat.reads + stat.writes + stat.other) ,
+                       (stat.reads + stat.writes + stat.other),
                        (stat.reads + stat.writes + stat.other) / seconds,
                        stat.reads,
                        stat.reads / seconds,
