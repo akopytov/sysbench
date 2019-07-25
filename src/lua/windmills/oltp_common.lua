@@ -325,6 +325,12 @@ local stmt_defs = {
    non_index_updates = {
       "UPDATE %s%u SET strrecordtype=? WHERE id=?",
        {t.CHAR,3},t.INT},
+   non_index_updates1 = {
+      "UPDATE %s%u SET active=0 WHERE id=?",
+       {t.CHAR,3},t.INT},
+   non_index_updates2 = {
+      "UPDATE %s%u SET active=1 WHERE id=?",
+       t.INT},
    deletes = {
       "DELETE FROM %s%u WHERE id=?",
       t.INT},
@@ -398,6 +404,9 @@ end
 
 function prepare_index_updates()
    prepare_for_each_table("index_updates")
+   prepare_for_each_table("index_updates1")
+   prepare_for_each_table("index_updates2")
+   
 end
 
 function prepare_non_index_updates()
@@ -528,6 +537,18 @@ function execute_non_index_updates()
    local tnum = get_table_num()
 
    for i = 1, sysbench.opt.non_index_updates do
+      param[tnum].non_index_updates[1]:set(sysbench.rand.varstringalpha(3,3))
+      param[tnum].non_index_updates[2]:set(get_id())
+
+      stmt[tnum].non_index_updates:execute()
+   end
+   for i = 1, sysbench.opt.non_index_updates1 do
+      param[tnum].non_index_updates[1]:set(sysbench.rand.varstringalpha(3,3))
+      param[tnum].non_index_updates[2]:set(get_id())
+
+      stmt[tnum].non_index_updates:execute()
+   end
+  for i = 1, sysbench.opt.non_index_updates2 do
       param[tnum].non_index_updates[1]:set(sysbench.rand.varstringalpha(3,3))
       param[tnum].non_index_updates[2]:set(get_id())
 
