@@ -161,12 +161,17 @@ end
 
 function sysbench.report_cumulative_csv(stat)
       print("Work in progress")
-      print("TotalTime,RunningThreads,totalEvents,Events/s,operations/s,reads/s,writes/s,oterOps/s,latencyPct,errors/s,reconnects/s")
+      print("TotalTime,RunningThreads,totalEvents,Events/s,operations/s,reads/s,writes/s," ..
+            "oterOps/s,latencyPct,errors/s,reconnects/s" ..
+            "Latency(ms) min, Latency(ms) max, Latency(ms) avg, Latency(ms) sum"
+      )
       local seconds = stat.time_interval
       print(string.format("%.0f,%u,%4.2f,%4.2f," ..
                           "%4.2f,%4.2f,%4.2f,%4.2f," ..
                           "%4.2f,%4.2f," ..
-                          "%4.2f",
+                          "%4.2f" ..
+                          "%39.2f,%39.2f,%39.2f," ..
+                          "%39.2f",
                        stat.time_total,
                        stat.threads_running,
                        stat.events,
@@ -177,7 +182,11 @@ function sysbench.report_cumulative_csv(stat)
                        stat.other / seconds,
                        stat.latency_pct * 1000,
                        stat.errors / seconds,
-                       stat.reconnects / seconds
+                       stat.reconnects / seconds,
+                       stat.latency_min,
+                       stat.latency_max,
+                       stat.latency_avg,
+                       stat.latency_sum
     ))
       
       
