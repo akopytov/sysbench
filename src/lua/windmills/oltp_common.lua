@@ -294,6 +294,11 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
                           sysbench.opt.table_name,table_num))
       con:query(string.format("CREATE INDEX kuuid_x ON %s%d(uuid)",
                               sysbench.opt.table_name,table_num, table_num))
+      con:query(string.format("CREATE INDEX millid_x ON %s%d(millid)",
+                              sysbench.opt.table_name,table_num, table_num))
+      con:query(string.format("CREATE INDEX active_x ON %s%d(active)",
+                              sysbench.opt.table_name,table_num, table_num))
+                              
    end
 end
 
