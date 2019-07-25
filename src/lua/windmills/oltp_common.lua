@@ -404,13 +404,12 @@ end
 
 function prepare_index_updates()
    prepare_for_each_table("index_updates")
-   prepare_for_each_table("index_updates1")
-   prepare_for_each_table("index_updates2")
-   
 end
 
 function prepare_non_index_updates()
    prepare_for_each_table("non_index_updates")
+   prepare_for_each_table("non_index_updates1")
+   prepare_for_each_table("non_index_updates2")
 end
 
 function prepare_delete_inserts()
