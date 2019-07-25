@@ -599,6 +599,6 @@ end
 
 function sysbench.hooks.report_cumulative(stat)
    if sysbench.opt.stats_format == "csv" then
-         sysbench.report_cumulative_csv()
+         sysbench.report_cumulative_csv(stat)
    end
 end

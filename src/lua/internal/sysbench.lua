@@ -159,6 +159,6 @@ function sysbench.report_default(stat)
    ))
 end
 
-function sysbench.report_cumulative_csv()
+function sysbench.report_cumulative_csv(stat)
       print("Work in progress")
 end
