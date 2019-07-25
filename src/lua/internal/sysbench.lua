@@ -161,27 +161,33 @@ end
 
 function sysbench.report_cumulative_csv(stat)
       print("Work in progress")
-      print("TotalTime,RunningThreads,totalEvents,Events/s,operations/s,reads/s,writes/s," ..
-            "oterOps/s,latencyPct,errors/s,reconnects/s" ..
+      print("TotalTime,RunningThreads,totalEvents,Events/s," ..
+            "Tot Operations,operations/s,tot reads,reads/s,Tot writes,writes/s," ..
+            "oterOps/s,latencyPct,Tot errors,errors/s,Tot reconnects,reconnects/s," ..
             "Latency(ms) min, Latency(ms) max, Latency(ms) avg, Latency(ms) sum"
       )
       local seconds = stat.time_interval
       print(string.format("%.0f,%u,%4.2f,%4.2f," ..
-                          "%4.2f,%4.2f,%4.2f,%4.2f," ..
-                          "%4.2f,%4.2f," ..
+                          "%4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f," ...
+                          "%4.2f,%4.2f,%4.2f,%4.2f,%4.2f," ..
                           "%4.2f" ..
-                          "%39.2f,%39.2f,%39.2f," ..
-                          "%39.2f",
+                          "%4.2f,%4.2f,%4.2f," ..
+                          "%4.2f",
                        stat.time_total,
                        stat.threads_running,
                        stat.events,
                        stat.events / seconds,
+                       (stat.reads + stat.writes + stat.other) ,
                        (stat.reads + stat.writes + stat.other) / seconds,
+                       stat.reads,
                        stat.reads / seconds,
                        stat.writes / seconds,
+                       stat.writes,
                        stat.other / seconds,
                        stat.latency_pct * 1000,
+                       stat.errors,
                        stat.errors / seconds,
+                       stat.reconnects,
                        stat.reconnects / seconds,
                        stat.latency_min,
                        stat.latency_max,
