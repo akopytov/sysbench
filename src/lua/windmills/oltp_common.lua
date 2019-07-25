@@ -534,24 +534,22 @@ end
 
 function execute_non_index_updates()
    local tnum = get_table_num()
-
+    
    for i = 1, sysbench.opt.non_index_updates do
       param[tnum].non_index_updates[1]:set(sysbench.rand.varstringalpha(3,3))
       param[tnum].non_index_updates[2]:set(get_id())
 
       stmt[tnum].non_index_updates:execute()
    end
-   for i = 1, sysbench.opt.non_index_updates1 do
-      param[tnum].non_index_updates[1]:set(sysbench.rand.varstringalpha(3,3))
-      param[tnum].non_index_updates[2]:set(get_id())
+   for i = 1, sysbench.opt.non_index_updates do
+      param[tnum].non_index_updates1[1]:set(get_id())
 
-      stmt[tnum].non_index_updates:execute()
+      stmt[tnum].non_index_updates1:execute()
    end
-  for i = 1, sysbench.opt.non_index_updates2 do
-      param[tnum].non_index_updates[1]:set(sysbench.rand.varstringalpha(3,3))
-      param[tnum].non_index_updates[2]:set(get_id())
-
-      stmt[tnum].non_index_updates:execute()
+  for i = 1, sysbench.opt.non_index_updates do
+      param[tnum].non_index_updates2[1]:set(get_id())
+      
+      stmt[tnum].non_index_updates2:execute()
    end
 end
 
