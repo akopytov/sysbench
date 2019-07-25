@@ -158,3 +158,7 @@ function sysbench.report_default(stat)
                        stat.reconnects / seconds
    ))
 end
+
+function sysbench.report_cumulative_csv(stat)
+      print("Work in progress")
+end
