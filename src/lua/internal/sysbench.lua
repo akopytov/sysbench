@@ -161,4 +161,24 @@ end
 
 function sysbench.report_cumulative_csv(stat)
       print("Work in progress")
+      
+      local seconds = stat.time_interval
+      print(string.format("%.0f,%u,%4.2f," ..
+                          "%4.2f,%4.2f,%4.2f,%4.2f," ..
+                          "%4.2f,%4.2f," ..
+                          "%4.2f",
+                       stat.time_total,
+                       stat.threads_running,
+                       stat.events / seconds,
+                       (stat.reads + stat.writes + stat.other) / seconds,
+                       stat.reads / seconds,
+                       stat.writes / seconds,
+                       stat.other / seconds,
+                       stat.latency_pct * 1000,
+                       stat.errors / seconds,
+                       stat.reconnects / seconds
+    ))
+      
+      
+      
 end
