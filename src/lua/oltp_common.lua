@@ -137,13 +137,13 @@ sysbench.cmdline.commands = {
 -- Template strings of random digits with 11-digit groups separated by dashes
 
 -- 10 groups, 119 characters
-local c_value_template = "###########-###########-###########-" ..
+c_value_template = "###########-###########-###########-" ..
    "###########-###########-###########-" ..
    "###########-###########-###########-" ..
    "###########"
 
 -- 5 groups, 59 characters
-local pad_value_template = "###########-###########-###########-" ..
+pad_value_template = "###########-###########-###########-" ..
    "###########-###########"
 
 function get_c_value()
@@ -247,8 +247,8 @@ CREATE TABLE sbtest%d(
    end
 end
 
-local t = sysbench.sql.type
-local stmt_defs = {
+t = sysbench.sql.type
+stmt_defs = {
    point_selects = {
       "SELECT c FROM sbtest%u WHERE id=?",
       t.INT},
@@ -277,6 +277,7 @@ local stmt_defs = {
       "INSERT INTO sbtest%u (id, k, c, pad) VALUES (?, ?, ?, ?)",
       t.INT, t.INT, {t.CHAR, 120}, {t.CHAR, 60}},
 }
+
 
 function prepare_begin()
    stmt.begin = con:prepare("BEGIN")
@@ -400,11 +401,11 @@ function cleanup()
    end
 end
 
-local function get_table_num()
+function get_table_num()
    return sysbench.rand.uniform(1, sysbench.opt.tables)
 end
 
-local function get_id()
+function get_id()
    return sysbench.rand.default(1, sysbench.opt.table_size)
 end
 
