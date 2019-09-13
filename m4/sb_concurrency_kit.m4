@@ -57,6 +57,9 @@ AS_IF([test "x$sb_cv_lib_ck" = "xsystem"],
       i686*)
         CK_CONFIGURE_FLAGS="--platform=i686"
         ;;
+      mips64*)
+        CK_CONFIGURE_FLAGS="--use-cc-builtins"
+        ;;
     esac
     # Add --enable-lse to CK build flags, if LSE instructions are supported by
     # the target architecture
