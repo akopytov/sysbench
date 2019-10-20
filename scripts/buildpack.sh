@@ -54,7 +54,6 @@ distros_x86_64=(
     "fedora 39 x86_64"
     "ubuntu xenial x86_64"
     "ubuntu bionic x86_64"
-    "ubuntu cosmic x86_64"
     "ubuntu disco x86_64"
     "debian jessie x86_64"
     "debian stretch x86_64"
@@ -64,7 +63,6 @@ distros_x86_64=(
 distros_i386=(
     "ubuntu xenial i386"
     "ubuntu bionic i386"
-    "ubuntu cosmic i386"
     "ubuntu disco i386"
     "debian jessie i386"
     "debian stretch i386"
@@ -76,7 +74,6 @@ distros_aarch64=(
     "fedora 29 aarch64"
     "fedora 30 aarch64"
     "ubuntu bionic aarch64"
-    "ubuntu cosmic aarch64"
     "ubuntu disco aarch64"
     "ubuntu xenial aarch64"
     "debian jessie aarch64"
