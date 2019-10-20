@@ -94,4 +94,4 @@ else
     exit 1
 fi
 
-$PYTHON cram --shell=/bin/bash --verbose $tests
+$PYTHON $(which cram) --shell=/bin/bash --verbose $tests
