@@ -49,6 +49,7 @@ PACKPACK_REPO=${PACKPACK_REPO:-akopytov/packpack}
 distros_x86_64=(
     "el 6 x86_64"
     "el 7 x86_64"
+    "el 8 x86_64"
     "fedora 29 x86_64"
     "fedora 39 x86_64"
     "ubuntu xenial x86_64"
