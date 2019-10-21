@@ -83,10 +83,10 @@ export LUA_PATH
 
 . $SBTEST_CONFIG
 
-if $(which python >/dev/null 2>&1)
+if $(command -v python >/dev/null 2>&1)
 then
     PYTHON=python
-elif $(which python2 >/dev/null 2&1)
+elif $(command -v python2 >/dev/null 2&1)
 then
     PYTHON=python2
 else
@@ -94,4 +94,4 @@ else
     exit 1
 fi
 
-$PYTHON $(which cram) --shell=/bin/bash --verbose $tests
+$PYTHON command cram --shell=/bin/bash --verbose $tests
