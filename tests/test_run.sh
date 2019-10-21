@@ -83,4 +83,15 @@ export LUA_PATH
 
 . $SBTEST_CONFIG
 
-cram --shell=/bin/bash --verbose $tests
+if $(command -v python >/dev/null 2>&1)
+then
+    PYTHON=python
+elif $(command -v python2 >/dev/null 2>&1)
+then
+    PYTHON=python2
+else
+    echo "Cannot find python interpreter in PATH"
+    exit 1
+fi
+
+$PYTHON $(command -v cram) --shell=/bin/bash --verbose $tests
