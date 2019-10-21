@@ -1,3 +1,17 @@
+2019-10-21  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.18
+	* build/CI/packaging: add Ubuntu Eoan.
+	* build/CI/packaging: remove Ubuntu Cosmic (EOL).
+	* build/CI/packaging: add CentOS 8.
+	* build/CI/packaging: add Ubuntu Disco.
+	* build/CI/packaging: remove Ubuntu Trusty (EOL).
+	* build/CI/packaging: remove Fedora 28 (EOL).
+	* build/CI/packaging: add Fedora 30.
+	* build/CI/packaging: cherry-pick fix for LuaJIT/LuaJIT#484 to
+	fix builds on macOS Mojave.
+	* build/CI/packaging: add Debian Buster
+
 2019-03-15  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.17
