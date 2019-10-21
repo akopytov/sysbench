@@ -86,7 +86,7 @@ export LUA_PATH
 if $(command -v python >/dev/null 2>&1)
 then
     PYTHON=python
-elif $(command -v python2 >/dev/null 2&1)
+elif $(command -v python2 >/dev/null 2>&1)
 then
     PYTHON=python2
 else
