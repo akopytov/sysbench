@@ -165,7 +165,7 @@ before_install:
     if [ "x$TARGET" = "xtest" ]; then
       case "${TRAVIS_OS_NAME:-linux}" in
       osx)
-        brew install openssl mysql
+        brew install mysql
 
         # OS X requires servers to be started explicitly
         brew services start mysql
@@ -190,7 +190,7 @@ before_install:
     fi
 
 install:
-  - pip2 install --user cpp-coveralls
+  - pip install --user cpp-coveralls
   - >
     case "${TRAVIS_OS_NAME:-linux}" in
     osx)
