@@ -1,6 +1,6 @@
 2019-12-08  Alexey Kopytov  <akopytov@gmail.com>
 
-	* version 1.0.18
+	* version 1.0.19
 	* build/CI/packaging: fix Ubuntu packaging for Bionic and later versions
 	* regression tests: compatibility fix for PostgreSQL 12
 	* build/CI/packaging: fix macOs builds in Travis
