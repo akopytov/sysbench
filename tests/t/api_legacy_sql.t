@@ -50,7 +50,7 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   t
   CREATE TABLE `t` (
-    `a` int(11) DEFAULT NULL
+    `a` int* DEFAULT NULL (glob)
   ) * (glob)
 
   $ mysql -uroot sbtest -Nse "SELECT COUNT(DISTINCT a) FROM t"
@@ -99,8 +99,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -109,8 +109,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest2
   CREATE TABLE `sbtest2` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -119,8 +119,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest3
   CREATE TABLE `sbtest3` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -129,8 +129,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest4
   CREATE TABLE `sbtest4` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -139,8 +139,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest5
   CREATE TABLE `sbtest5` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -149,8 +149,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest6
   CREATE TABLE `sbtest6` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -159,8 +159,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest7
   CREATE TABLE `sbtest7` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -169,8 +169,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest8
   CREATE TABLE `sbtest8` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -244,8 +244,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
@@ -287,8 +287,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -297,8 +297,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest2
   CREATE TABLE `sbtest2` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -307,8 +307,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest3
   CREATE TABLE `sbtest3` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -317,8 +317,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest4
   CREATE TABLE `sbtest4` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -327,8 +327,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest5
   CREATE TABLE `sbtest5` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -337,8 +337,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest6
   CREATE TABLE `sbtest6` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -347,8 +347,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest7
   CREATE TABLE `sbtest7` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -357,8 +357,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest8
   CREATE TABLE `sbtest8` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -432,8 +432,8 @@ Legacy SQL Lua API tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `k` int(10) unsigned NOT NULL DEFAULT '0',
+    `id` int* unsigned NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* unsigned NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
