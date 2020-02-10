@@ -38,8 +38,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -48,8 +48,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest2
   CREATE TABLE `sbtest2` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -58,8 +58,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest3
   CREATE TABLE `sbtest3` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -68,8 +68,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest4
   CREATE TABLE `sbtest4` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -78,8 +78,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest5
   CREATE TABLE `sbtest5` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -88,8 +88,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest6
   CREATE TABLE `sbtest6` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -98,8 +98,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest7
   CREATE TABLE `sbtest7` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -108,8 +108,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest8
   CREATE TABLE `sbtest8` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -139,8 +139,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -149,8 +149,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest2
   CREATE TABLE `sbtest2` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -159,8 +159,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest3
   CREATE TABLE `sbtest3` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -169,8 +169,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest4
   CREATE TABLE `sbtest4` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -179,8 +179,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest5
   CREATE TABLE `sbtest5` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -189,8 +189,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest6
   CREATE TABLE `sbtest6` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -199,8 +199,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest7
   CREATE TABLE `sbtest7` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -209,8 +209,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest8
   CREATE TABLE `sbtest8` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -271,8 +271,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
@@ -320,8 +320,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -330,8 +330,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest2
   CREATE TABLE `sbtest2` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -340,8 +340,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest3
   CREATE TABLE `sbtest3` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -350,8 +350,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest4
   CREATE TABLE `sbtest4` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -360,8 +360,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest5
   CREATE TABLE `sbtest5` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -370,8 +370,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest6
   CREATE TABLE `sbtest6` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -380,8 +380,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest7
   CREATE TABLE `sbtest7` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -390,8 +390,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest8
   CREATE TABLE `sbtest8` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -421,8 +421,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -431,8 +431,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest2
   CREATE TABLE `sbtest2` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -441,8 +441,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest3
   CREATE TABLE `sbtest3` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -451,8 +451,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest4
   CREATE TABLE `sbtest4` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -461,8 +461,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest5
   CREATE TABLE `sbtest5` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -471,8 +471,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest6
   CREATE TABLE `sbtest6` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -481,8 +481,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest7
   CREATE TABLE `sbtest7` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -491,8 +491,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest8
   CREATE TABLE `sbtest8` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`),
@@ -553,8 +553,8 @@ oltp_read_write.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL AUTO_INCREMENT, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     `c` char(120)* NOT NULL DEFAULT '', (glob)
     `pad` char(60)* NOT NULL DEFAULT '', (glob)
     PRIMARY KEY (`id`)
