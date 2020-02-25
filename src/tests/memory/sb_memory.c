@@ -22,6 +22,7 @@
 
 #include "sysbench.h"
 #include "sb_rand.h"
+#include "sb_counter.h"
 
 #ifdef HAVE_SYS_IPC_H
 # include <sys/ipc.h>
@@ -310,6 +311,9 @@ int event_rnd_read(sb_event_t *req, int tid)
     size_t offset = (size_t) sb_rand_default(0, max_offset);
     size_t val = SIZE_T_LOAD(buffers[tid] + offset);
     (void) val; /* unused */
+    if (sb_globals.report_interval) {
+        sb_counter_inc(tid, SB_CNT_READ);
+    }
   }
 
   return 0;
@@ -324,6 +328,9 @@ int event_rnd_write(sb_event_t *req, int tid)
   {
     size_t offset = (size_t) sb_rand_default(0, max_offset);
     SIZE_T_STORE(buffers[tid] + offset, i);
+    if (sb_globals.report_interval) {
+        sb_counter_inc(tid, SB_CNT_WRITE);
+    }
   }
 
   return 0;
@@ -352,6 +359,9 @@ int event_seq_read(sb_event_t *req, int tid)
   {
     size_t val = SIZE_T_LOAD(buf);
     (void) val; /* unused */
+    if (sb_globals.report_interval) {
+        sb_counter_inc(tid, SB_CNT_READ);
+    }
   }
 
   return 0;
@@ -365,6 +375,9 @@ int event_seq_write(sb_event_t *req, int tid)
   for (size_t *buf = buffers[tid], *end = buf + iterations; buf < end; buf++)
   {
     SIZE_T_STORE(buf, (size_t) tid);
+    if (sb_globals.report_interval) {
+        sb_counter_inc(tid, SB_CNT_WRITE);
+    }
   }
 
   return 0;
@@ -420,9 +433,10 @@ void memory_print_mode(void)
 void memory_report_intermediate(sb_stat_t *stat)
 {
   const double megabyte = 1024.0 * 1024.0;
+  uint64_t events = stat->writes ? stat->writes : stat->reads;
 
   log_timestamp(LOG_NOTICE, stat->time_total, "%4.2f MiB/sec",
-                stat->events * memory_block_size / megabyte /
+                events * SIZEOF_SIZE_T / megabyte /
                 stat->time_interval);
 }
 
