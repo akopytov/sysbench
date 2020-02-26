@@ -1,3 +1,9 @@
+sysbench (1.0.18-1) unstable; urgency=low
+
+  * add libssl-dev to build dependencies
+
+ -- Alexey Kopytov <akopytov@gmail.com>  Sun, 08 Dec 2019 14:02:01 +0300
+
 sysbench (1.0.15-2) unstable; urgency=low
 
   * add libaio-dev to build dependencies

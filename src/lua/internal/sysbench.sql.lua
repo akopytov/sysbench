@@ -416,8 +416,6 @@ function statement_methods.bind_param(self, ...)
 
    local binds = ffi.new("sql_bind[?]", len)
 
-   local i, param
-
    for i, param in ipairs({...}) do
       binds[i-1].type = param.type
       binds[i-1].buffer = param.buffer
@@ -465,7 +463,6 @@ function result_methods.fetch_row(self)
       return nil
    end
 
-   local i
    for i = 0, self.nfields-1 do
       if row.values[i].ptr ~= nil then -- not a NULL value
          res[i+1] = ffi.string(row.values[i].ptr, tonumber(row.values[i].len))

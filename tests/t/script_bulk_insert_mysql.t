@@ -9,15 +9,15 @@ bulk_insert.lua + MySQL tests
   *************************** 1. row ***************************
   sbtest1
   CREATE TABLE `sbtest1` (
-    `id` int(11) NOT NULL,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     PRIMARY KEY (`id`)
   ) ENGINE=InnoDB * (glob)
   *************************** 1. row ***************************
   sbtest2
   CREATE TABLE `sbtest2` (
-    `id` int(11) NOT NULL,
-    `k` int(11) NOT NULL DEFAULT '0',
+    `id` int* NOT NULL, (glob)
+    `k` int* NOT NULL DEFAULT '0', (glob)
     PRIMARY KEY (`id`)
   ) ENGINE=InnoDB * (glob)
   ERROR 1146 (42S02) at line 1: Table 'sbtest.sbtest3' doesn't exist
