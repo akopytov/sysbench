@@ -26,7 +26,8 @@ function db_show_table() {
         ELSE ''
     END ||
     CASE
-        WHEN f.atthasdef = 't' THEN 'default ' || d.adsrc
+        WHEN f.atthasdef = 't' THEN 'default ' ||
+             pg_catalog.pg_get_expr(d.adbin, d.adrelid, true)
         ELSE ''
     END AS "Modifiers",
     CASE
