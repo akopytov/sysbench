@@ -83,6 +83,7 @@ static sb_test_t memory_test =
 
 static ssize_t memory_block_size;
 static long long    memory_total_size;
+static long long    memory_total_size_per_thread;
 static unsigned int memory_scope;
 static unsigned int memory_oper;
 static unsigned int memory_access_rnd;
@@ -91,6 +92,7 @@ static unsigned int memory_hugetlb;
 #endif
 
 static ssize_t max_offset;
+static ssize_t iterations;
 
 /* Arrays of per-thread buffers and event counters */
 static size_t **buffers;
@@ -127,6 +129,10 @@ int memory_init(void)
   max_offset = memory_block_size / SIZEOF_SIZE_T - 1;
 
   memory_total_size = sb_get_value_size("memory-total-size");
+  memory_total_size_per_thread = memory_total_size / sb_globals.threads;
+
+  iterations = (memory_total_size_per_thread > memory_block_size ?
+          memory_block_size : memory_total_size_per_thread) / SIZEOF_SIZE_T - 1;
 
   s = sb_get_value_string("memory-scope");
   if (!strcmp(s, "global"))
@@ -216,7 +222,9 @@ int memory_init(void)
     }
 
     thread_counters[i] =
-      memory_total_size / memory_block_size / sb_globals.threads;
+      memory_total_size_per_thread /
+      (memory_total_size_per_thread > memory_block_size ?
+              memory_block_size : memory_total_size_per_thread);
   }
 
   switch (memory_oper) {
@@ -283,7 +291,7 @@ int event_rnd_none(sb_event_t *req, int tid)
   (void) req; /* unused */
   (void) tid; /* unused */
 
-  for (ssize_t i = 0; i <= max_offset; i++)
+  for (ssize_t i = 0; i <= iterations; i++)
   {
     size_t offset = (volatile size_t) sb_rand_default(0, max_offset);
     (void) offset; /* unused */
@@ -297,7 +305,7 @@ int event_rnd_read(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
 
-  for (ssize_t i = 0; i <= max_offset; i++)
+  for (ssize_t i = 0; i <= iterations; i++)
   {
     size_t offset = (size_t) sb_rand_default(0, max_offset);
     size_t val = SIZE_T_LOAD(buffers[tid] + offset);
@@ -312,7 +320,7 @@ int event_rnd_write(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
 
-  for (ssize_t i = 0; i <= max_offset; i++)
+  for (ssize_t i = 0; i <= iterations; i++)
   {
     size_t offset = (size_t) sb_rand_default(0, max_offset);
     SIZE_T_STORE(buffers[tid] + offset, i);
@@ -326,7 +334,7 @@ int event_seq_none(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
 
-  for (size_t *buf = buffers[tid], *end = buf + max_offset; buf <= end; buf++)
+  for (size_t *buf = buffers[tid], *end = buf + iterations; buf <= end; buf++)
   {
     ck_pr_barrier();
     /* nop */
@@ -340,7 +348,7 @@ int event_seq_read(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
 
-  for (size_t *buf = buffers[tid], *end = buf + max_offset; buf < end; buf++)
+  for (size_t *buf = buffers[tid], *end = buf + iterations; buf < end; buf++)
   {
     size_t val = SIZE_T_LOAD(buf);
     (void) val; /* unused */
@@ -354,7 +362,7 @@ int event_seq_write(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
 
-  for (size_t *buf = buffers[tid], *end = buf + max_offset; buf < end; buf++)
+  for (size_t *buf = buffers[tid], *end = buf + iterations; buf < end; buf++)
   {
     SIZE_T_STORE(buf, (size_t) tid);
   }
@@ -431,7 +439,7 @@ void memory_report_cumulative(sb_stat_t *stat)
 
   if (memory_oper != SB_MEM_OP_NONE)
   {
-    const double mb = stat->events * memory_block_size / megabyte;
+    const double mb = memory_total_size / megabyte;
     log_text(LOG_NOTICE, "%4.2f MiB transferred (%4.2f MiB/sec)\n",
              mb, mb / stat->time_interval);
   }
