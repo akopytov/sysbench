@@ -115,6 +115,7 @@ typedef struct
 /* Forward declarations */
 
 struct db_conn;
+struct db_conn_setting;
 struct db_stmt;
 struct db_result;
 struct db_row;
@@ -124,7 +125,7 @@ struct db_row;
 typedef int drv_op_init(void);
 typedef int drv_op_thread_init(int);
 typedef int drv_op_describe(drv_caps_t *);
-typedef int drv_op_connect(struct db_conn *);
+typedef int drv_op_connect(struct db_conn *, struct db_conn_setting *);
 typedef int drv_op_reconnect(struct db_conn *);
 typedef int drv_op_disconnect(struct db_conn *);
 typedef int drv_op_prepare(struct db_stmt *, const char *, size_t);
@@ -245,6 +246,16 @@ typedef struct db_conn
                                        )];
 } db_conn_t;
 
+typedef struct db_conn_setting
+{
+  char *socket;
+  const char *host;
+  unsigned int port;
+  const char *user;
+  const char *password;
+  const char *db;
+} db_conn_setting_t;
+
 /* Prepared statement definition */
 
 typedef struct db_stmt
@@ -274,7 +285,7 @@ int db_destroy(db_driver_t *);
 
 int db_describe(db_driver_t *, drv_caps_t *);
 
-db_conn_t *db_connection_create(db_driver_t *);
+db_conn_t *db_connection_create(db_driver_t *, db_conn_setting_t *);
 
 int db_connection_close(db_conn_t *);
 
