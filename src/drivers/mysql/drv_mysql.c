@@ -209,7 +209,7 @@ static ssl_mode_map_t ssl_mode_names[] = {
 static int mysql_drv_init(void);
 static int mysql_drv_thread_init(int);
 static int mysql_drv_describe(drv_caps_t *);
-static int mysql_drv_connect(db_conn_t *);
+static int mysql_drv_connect(db_conn_t *, db_conn_setting_t *);
 static int mysql_drv_reconnect(db_conn_t *);
 static int mysql_drv_disconnect(db_conn_t *);
 static int mysql_drv_prepare(db_stmt_t *, const char *, size_t);

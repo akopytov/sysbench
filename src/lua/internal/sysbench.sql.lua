@@ -197,12 +197,6 @@ function sysbench.sql.driver(driver_name)
    return ffi.gc(drv, ffi.C.db_destroy)
 end
 
-function to_cstr(str)
-  local cstr = ffi.new('char[?]', #str)
-  ffi.copy(cstr, str)
-  return cstr
-end
-
 --[[
   create new setting from setting object.
   setting = {
@@ -222,42 +216,45 @@ end
   }
   to avoid GC. see https://luajit.org/ext_ffi_semantics.html#gc
 ]]--
-function sysbench.sql.new_setting(setting)
-  local st = ffi.new('sql_conn_setting')
-  local anchor = {}
-  if setting.socket then
-    st.socket = to_cstr(setting.socket)
-    st.host = nil
-    st.port = 0
-  elseif setting.host and setting.port > 0 then
-    st.socket = nil
-    st.host = to_cstr(setting.host)
-    st.port = to_cstr(setting.port)
-  else
-    error("neither socket nor host specified", 2)
-  end
-  if
-  st.user = to_cstr(setting.user)
-  st.password = to_cstr(setting.password)
-  st.db = to_cstr(setting.db)
-  return {
-    raw = st,
-    anchor = {
-      socket = st.socket,
-      host = st.host,
-      user = st.user,
-      password = st.password,
-      db = st.db
-    }
-  }
+local function to_cstr(str)
+   local cstr = ffi.new('char[?]', #str + 1)
+   ffi.copy(cstr, str)
+   return cstr
+end
+local function make_setting(setting)
+   local st = ffi.new('sql_conn_setting')
+   local anchor = {}
+   if setting.socket then
+      anchor.socket = to_cstr(setting.socket)
+      st.socket = anchor.socket
+      st.host = nil
+      st.port = 0
+   elseif setting.host and setting.port > 0 then
+      anchor.host = to_cstr(setting.host)
+      st.socket = nil
+      st.host = anchor.host
+      st.port = setting.port
+   else
+      error("neither socket nor host specified", 2)
+   end
+   anchor.user = to_cstr(setting.user)
+   anchor.password = to_cstr(setting.password)
+   anchor.db = to_cstr(setting.db)
+   st.user = anchor.user
+   st.password = anchor.password
+   st.db = anchor.db
+   return {
+      raw = st,
+      anchor = anchor
+   }
 end
 
 -- sql_driver methods
 local driver_methods = {}
 
--- setting must be create with sysbench.sql.new_setting or nil
 function driver_methods.connect(self, setting)
-   local con = ffi.C.db_connection_create(self, setting.raw)
+   local con = ffi.C.db_connection_create(self, 
+      setting and make_setting(setting).raw or nil)
    if con == nil then
       error("connection creation failed", 2)
    end
