@@ -12,4 +12,5 @@ Skip test if the PostgreSQL driver is not available.
     --pgsql-user=STRING     PostgreSQL user [sbtest]
     --pgsql-password=STRING PostgreSQL password []
     --pgsql-db=STRING       PostgreSQL database name [sbtest]
-  
+    --pgsql-sslmode=STRING  PostgreSQL SSL mode (disable, allow, prefer, require, verify-ca, verify-full) [prefer]
+
