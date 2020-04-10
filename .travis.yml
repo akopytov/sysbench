@@ -2,6 +2,10 @@
 #
 # Travis CI configuration
 
+arch:
+  - amd64
+  - arm64
+
 dist: trusty
 sudo: required
 
@@ -98,6 +102,22 @@ matrix:
       compiler: clang
     - env: OS=debian DIST=sid ARCH=i386
       compiler: clang
+    - env: OS=ubuntu DIST=xenial ARCH=i386
+      arch: arm64
+    - env: OS=ubuntu DIST=bionic ARCH=i386
+      arch: arm64
+    - env: OS=ubuntu DIST=disco ARCH=i386
+      arch: arm64
+    - env: OS=ubuntu DIST=eoan ARCH=i386
+      arch: arm64
+    - env: OS=debian DIST=jessie ARCH=i386
+      arch: arm64
+    - env: OS=debian DIST=stretch ARCH=i386
+      arch: arm64
+    - env: OS=debian DIST=buster ARCH=i386
+      arch: arm64
+    - env: OS=debian DIST=sid ARCH=i386
+      arch: arm64
     - env: OS=el DIST=6
       os: osx
     - env: OS=el DIST=7
@@ -138,6 +158,8 @@ matrix:
       compiler: clang
     - os: osx
       compiler: gcc
+    - os: osx
+      arch: arm64
 
 addons:
   apt:
