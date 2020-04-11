@@ -119,6 +119,8 @@ matrix:
     - env: OS=debian DIST=sid ARCH=i386
       arch: arm64
     - env: OS=el DIST=6
+      arch: arm64
+    - env: OS=el DIST=6
       os: osx
     - env: OS=el DIST=7
       os: osx
@@ -152,10 +154,14 @@ matrix:
       compiler: clang
     - env: TARGET=distcheck
       os: osx
+    - env: TARGET=distcheck
+      arch: arm64
     - env: TARGET=coverage
       os: osx
     - env: TARGET=coverage
       compiler: clang
+    - env: TARGET=coverage
+      arch: arm64
     - os: osx
       compiler: gcc
     - os: osx
