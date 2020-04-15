@@ -37,6 +37,8 @@ sysbench.cmdline.options = {
       {"Range size for range SELECT queries", 100},
    tables =
       {"Number of tables", 1},
+   serial_cache_size =
+      {"Cache size used for the serial column", 1000},
    point_selects =
       {"Number of point SELECT queries per transaction", 10},
    simple_ranges =
@@ -187,7 +189,9 @@ function create_table(drv, con, table_num)
       error("Unsupported database driver:" .. drv:name())
    end
 
-   print(string.format("Creating table 'sbtest%d'...", table_num))
+   time = os.date("*t")
+   print(string.format("(%2d:%2d:%2d) Creating table 'sbtest%d'...", 
+                       time.hour, time.min, time.sec, table_num))
 
    query = string.format([[
 CREATE TABLE sbtest%d(
@@ -202,9 +206,17 @@ CREATE TABLE sbtest%d(
 
    con:query(query)
 
+   if sysbench.opt.auto_inc and sysbench.opt.serial_cache_size > 0 then
+      print(string.format("alter sequence with cache size: %d", sysbench.opt.serial_cache_size))
+      query = "ALTER SEQUENCE sbtest" .. table_num .. 
+	          "_id_seq cache " .. sysbench.opt.serial_cache_size
+      con:query(query)
+   end
+
    if (sysbench.opt.table_size > 0) then
-      print(string.format("Inserting %d records into 'sbtest%d'",
-                          sysbench.opt.table_size, table_num))
+      time = os.date("*t")
+      print(string.format("(%2d:%2d:%2d) Inserting %d records into 'sbtest%d'",
+                          time.hour, time.min, time.sec, sysbench.opt.table_size, table_num))
    end
 
    if sysbench.opt.auto_inc then
@@ -240,11 +252,15 @@ CREATE TABLE sbtest%d(
    con:bulk_insert_done()
 
    if sysbench.opt.create_secondary then
-      print(string.format("Creating a secondary index on 'sbtest%d'...",
-                          table_num))
+      time = os.date("*t")
+      print(string.format("(%2d:%2d:%2d) Creating a secondary index on 'sbtest%d'...",
+                          time.hour, time.min, time.sec, table_num))
       con:query(string.format("CREATE INDEX k_%d ON sbtest%d(k)",
                               table_num, table_num))
    end
+   time = os.date("*t")
+   print(string.format("(%2d:%2d:%2d) Done Loading", time.hour, time.min, time.sec))
+
 end
 
 local t = sysbench.sql.type
@@ -415,6 +431,12 @@ end
 function commit()
    stmt.commit:execute()
 end
+
+function enable_debug()
+   query = "set yb_debug_mode=true"
+   con:query(query)
+end
+
 
 function execute_point_selects()
    local tnum = get_table_num()
