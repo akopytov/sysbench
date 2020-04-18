@@ -36,7 +36,6 @@ env:
       - OS=fedora DIST=31
       - OS=ubuntu DIST=xenial
       - OS=ubuntu DIST=bionic
-      - OS=ubuntu DIST=disco
       - OS=ubuntu DIST=eoan
       - OS=debian DIST=jessie
       - OS=debian DIST=stretch
@@ -44,7 +43,6 @@ env:
       - OS=debian DIST=sid
       - OS=ubuntu DIST=xenial ARCH=i386
       - OS=ubuntu DIST=bionic ARCH=i386
-      - OS=ubuntu DIST=disco ARCH=i386
       - OS=ubuntu DIST=eoan ARCH=i386
       - OS=debian DIST=jessie ARCH=i386
       - OS=debian DIST=stretch ARCH=i386
