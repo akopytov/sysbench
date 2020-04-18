@@ -164,15 +164,13 @@ before_install:
       case "${TRAVIS_OS_NAME:-linux}" in
       osx)
         brew update
-        brew install mysql
+        brew install mysql postgresql
 
         # OS X requires servers to be started explicitly
         brew services start mysql
 
-        # Avoid PostgreSQL upgrade woes, just reinstall the database
-        brew uninstall --ignore-dependencies postgresql
-        rm -rf /usr/local/var/postgres
-        brew install postgresql
+        brew postgresql-upgrade-database
+        brew services start postgresql
 
         echo "Starting PostgreSQL"
         pg_ctl -wD /usr/local/var/postgres start
