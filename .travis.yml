@@ -255,7 +255,7 @@ script:
     else
       # To avoid name conflicts, deploy source packages only for
       # "default", i.e. x86_64 architecture
-      if [[ -z "${ARCH}" ]]; then
+      if [[ -z "$TRAVIS_CPU_ARCH" || "$TRAVIS_CPU_ARCH" == amd64 ]]; then
         PACKAGECLOUD_GLOB='build/*.{rpm,deb,dsc}'
       else
       # Exclude *.src.rpm and *.dsc
