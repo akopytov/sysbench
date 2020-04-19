@@ -168,6 +168,8 @@ matrix:
       arch: arm64
     - arch: arm64
       compiler: clang
+    - env: OS=debian DIST=jessie
+      arch: arm64
 
 addons:
   apt:
