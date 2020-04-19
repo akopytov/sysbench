@@ -166,6 +166,8 @@ matrix:
       compiler: gcc
     - os: osx
       arch: arm64
+    - arch: arm64
+      compiler: clang
 
 addons:
   apt:
