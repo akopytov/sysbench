@@ -82,7 +82,7 @@ static sb_arg_t rand_args[] =
 
 static rand_dist_t rand_type;
 /* pointer to the default PRNG as defined by --rand-type */
-static uint32_t (*rand_func)(uint32_t, uint32_t);
+static uint64_t (*rand_func)(uint64_t, uint64_t);
 static unsigned int rand_iter;
 
 /*
@@ -101,15 +101,15 @@ static double zipf_s;
 static double zipf_hIntegralX1;
 
 /* Unique sequence generator state */
-static uint32_t rand_unique_index CK_CC_CACHELINE;
-static uint32_t rand_unique_offset;
+static uint64_t rand_unique_index CK_CC_CACHELINE;
+static uint64_t rand_unique_offset;
 
 extern inline uint64_t sb_rand_uniform_uint64(void);
 extern inline double sb_rand_uniform_double(void);
 extern inline uint64_t xoroshiro_rotl(const uint64_t, int);
 extern inline uint64_t xoroshiro_next(uint64_t s[2]);
 
-static void rand_unique_seed(uint32_t index, uint32_t offset);
+static void rand_unique_seed(uint64_t index, uint64_t offset);
 
 /* Helper functions for the Zipfian distribution */
 static double hIntegral(double x, double e);
@@ -215,21 +215,21 @@ void sb_rand_thread_init(void)
   with the --rand-type command line option
 */
 
-uint32_t sb_rand_default(uint32_t a, uint32_t b)
+uint64_t sb_rand_default(uint64_t a, uint64_t b)
 {
   return rand_func(a,b);
 }
 
 /* uniform distribution */
 
-uint32_t sb_rand_uniform(uint32_t a, uint32_t b)
+uint64_t sb_rand_uniform(uint64_t a, uint64_t b)
 {
   return a + sb_rand_uniform_double() * (b - a + 1);
 }
 
 /* gaussian distribution */
 
-uint32_t sb_rand_gaussian(uint32_t a, uint32_t b)
+uint64_t sb_rand_gaussian(uint64_t a, uint64_t b)
 {
   double       sum;
   double       t;
@@ -239,14 +239,14 @@ uint32_t sb_rand_gaussian(uint32_t a, uint32_t b)
   for(i=0, sum=0; i < rand_iter; i++)
     sum += sb_rand_uniform_double() * t;
 
-  return a + (uint32_t) (sum * rand_iter_mult) ;
+  return a + (uint64_t) (sum * rand_iter_mult) ;
 }
 
 /* Pareto distribution */
 
-uint32_t sb_rand_pareto(uint32_t a, uint32_t b)
+uint64_t sb_rand_pareto(uint64_t a, uint64_t b)
 {
-  return a + (uint32_t) ((b - a + 1) *
+  return a + (uint64_t) ((b - a + 1) *
                          pow(sb_rand_uniform_double(), pareto_power));
 }
 
@@ -273,10 +273,10 @@ void sb_rand_str(const char *fmt, char *buf)
   the number of characters written into the buffer.
  */
 
-uint32_t sb_rand_varstr(char *buf, uint32_t min_len, uint32_t max_len)
+uint64_t sb_rand_varstr(char *buf, uint64_t min_len, uint64_t max_len)
 {
   unsigned int i;
-  uint32_t num_chars;
+  uint64_t num_chars;
   if (max_len == 0) {
     return 0; /* we can't be sure buf is long enough to populate, so be safe */
   }
@@ -298,19 +298,19 @@ uint32_t sb_rand_varstr(char *buf, uint32_t min_len, uint32_t max_len)
   https://github.com/preshing/RandomSequence
 */
 
-static uint32_t rand_unique_permute(uint32_t x)
+static uint64_t rand_unique_permute(uint64_t x)
 {
-  static const uint32_t prime = UINT32_C(4294967291);
+  static const uint64_t prime = UINT32_C(4294967291);
 
   if (x >= prime)
     return x; /* The 5 integers out of range are mapped to themselves. */
 
-  uint32_t residue = ((uint64_t) x * x) % prime;
+  uint64_t residue = ((uint64_t) x * x) % prime;
   return (x <= prime / 2) ? residue : prime - residue;
 }
 
 
-static void rand_unique_seed(uint32_t index, uint32_t offset)
+static void rand_unique_seed(uint64_t index, uint64_t offset)
 {
   rand_unique_index = rand_unique_permute(rand_unique_permute(index) +
                                           0x682f0161);
@@ -320,9 +320,9 @@ static void rand_unique_seed(uint32_t index, uint32_t offset)
 
 /* This is safe to be called concurrently from multiple threads */
 
-uint32_t sb_rand_unique(void)
+uint64_t sb_rand_unique(void)
 {
-  uint32_t index = ck_pr_faa_32(&rand_unique_index, 1);
+  uint64_t index = ck_pr_faa_64(&rand_unique_index, 1);
 
   return rand_unique_permute((rand_unique_permute(index) + rand_unique_offset) ^
                              0x5bf03635);
@@ -340,7 +340,7 @@ uint32_t sb_rand_unique(void)
   and Computer Simulation, (TOMACS) 6.3 (1996): 169-184.
 */
 
-static uint32_t sb_rand_zipfian_int(uint32_t n, double e, double s,
+static uint64_t sb_rand_zipfian_int(uint64_t n, double e, double s,
                                     double hIntegralX1)
 {
   /*
@@ -373,7 +373,7 @@ static uint32_t sb_rand_zipfian_int(uint32_t n, double e, double s,
     /* u is uniformly distributed in (hIntegralX1, hIntegralNumberOfElements] */
 
     double x = hIntegralInverse(u, e);
-    uint32_t k = (uint32_t) (x + 0.5);
+    uint64_t k = (uint64_t) (x + 0.5);
 
     /*
       Limit k to the range [1, numberOfElements] if it would be outside due to
@@ -437,7 +437,7 @@ static uint32_t sb_rand_zipfian_int(uint32_t n, double e, double s,
   }
 }
 
-uint32_t sb_rand_zipfian(uint32_t a, uint32_t b)
+uint64_t sb_rand_zipfian(uint64_t a, uint64_t b)
 {
   /* sb_rand_zipfian_int() returns a number in the range [1, b - a + 1] */
   return a +
