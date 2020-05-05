@@ -27,7 +27,6 @@ uint64_t sb_rand_uniform_uint64(void);
 uint32_t sb_rand_default(uint32_t, uint32_t);
 uint32_t sb_rand_uniform(uint32_t, uint32_t);
 uint32_t sb_rand_gaussian(uint32_t, uint32_t);
-uint32_t sb_rand_special(uint32_t, uint32_t);
 uint32_t sb_rand_pareto(uint32_t, uint32_t);
 uint32_t sb_rand_zipfian(uint32_t, uint32_t);
 uint32_t sb_rand_unique(void);
@@ -50,10 +49,6 @@ end
 
 function sysbench.rand.gaussian(a, b)
    return ffi.C.sb_rand_gaussian(a, b)
-end
-
-function sysbench.rand.special(a, b)
-   return ffi.C.sb_rand_special(a, b)
 end
 
 function sysbench.rand.pareto(a, b)
