@@ -67,7 +67,7 @@ static sb_arg_t rand_args[] =
 {
   SB_OPT("rand-type",
          "random numbers distribution {uniform, gaussian, special, pareto, "
-         "zipfian} to use by default", "special", STRING),
+         "zipfian} to use by default", "uniform", STRING),
   SB_OPT("rand-seed",
          "seed for random number generator. When 0, the current time is "
          "used as an RNG seed.", "0", INT),
