@@ -2,7 +2,7 @@
 -- DynASM. A dynamic assembler for code generation engines.
 -- Originally designed and implemented for LuaJIT.
 --
--- Copyright (C) 2005-2017 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2020 Mike Pall. All rights reserved.
 -- See below for full copyright notice.
 ------------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ local _info = {
   url =		"http://luajit.org/dynasm.html",
   license =	"MIT",
   copyright =	[[
-Copyright (C) 2005-2017 Mike Pall. All rights reserved.
+Copyright (C) 2005-2020 Mike Pall. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -630,6 +630,7 @@ end
 -- Load architecture-specific module.
 local function loadarch(arch)
   if not match(arch, "^[%w_]+$") then return "bad arch name" end
+  _G._map_def = map_def
   local ok, m_arch = pcall(require, "dasm_"..arch)
   if not ok then return "cannot load module: "..m_arch end
   g_arch = m_arch

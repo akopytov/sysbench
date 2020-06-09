@@ -1,7 +1,7 @@
 /*
 ** NARROW: Narrowing of numbers to integers (double to int32_t).
 ** STRIPOV: Stripping of overflow checks.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_opt_narrow_c
@@ -551,8 +551,13 @@ TRef lj_opt_narrow_unm(jit_State *J, TRef rc, TValue *vc)
 {
   rc = conv_str_tonum(J, rc, vc);
   if (tref_isinteger(rc)) {
-    if ((uint32_t)numberVint(vc) != 0x80000000u)
-      return emitir(IRTGI(IR_SUBOV), lj_ir_kint(J, 0), rc);
+    uint32_t k = (uint32_t)numberVint(vc);
+    if ((LJ_DUALNUM || k != 0) && k != 0x80000000u) {
+      TRef zero = lj_ir_kint(J, 0);
+      if (!LJ_DUALNUM)
+	emitir(IRTGI(IR_NE), rc, zero);
+      return emitir(IRTGI(IR_SUBOV), zero, rc);
+    }
     rc = emitir(IRTN(IR_CONV), rc, IRCONV_NUM_INT);
   }
   return emitir(IRTN(IR_NEG), rc, lj_ir_ksimd(J, LJ_KSIMD_NEG));
@@ -588,10 +593,10 @@ TRef lj_opt_narrow_pow(jit_State *J, TRef rb, TRef rc, TValue *vb, TValue *vc)
   /* Narrowing must be unconditional to preserve (-x)^i semantics. */
   if (tvisint(vc) || numisint(numV(vc))) {
     int checkrange = 0;
-    /* Split pow is faster for bigger exponents. But do this only for (+k)^i. */
+    /* pow() is faster for bigger exponents. But do this only for (+k)^i. */
     if (tref_isk(rb) && (int32_t)ir_knum(IR(tref_ref(rb)))->u32.hi >= 0) {
       int32_t k = numberVint(vc);
-      if (!(k >= -65536 && k <= 65536)) goto split_pow;
+      if (!(k >= -65536 && k <= 65536)) goto force_pow_num;
       checkrange = 1;
     }
     if (!tref_isinteger(rc)) {
@@ -602,19 +607,11 @@ TRef lj_opt_narrow_pow(jit_State *J, TRef rb, TRef rc, TValue *vb, TValue *vc)
       TRef tmp = emitir(IRTI(IR_ADD), rc, lj_ir_kint(J, 65536));
       emitir(IRTGI(IR_ULE), tmp, lj_ir_kint(J, 2*65536));
     }
-    return emitir(IRTN(IR_POW), rb, rc);
+  } else {
+force_pow_num:
+    rc = lj_ir_tonum(J, rc);  /* Want POW(num, num), not POW(num, int). */
   }
-split_pow:
-  /* FOLD covers most cases, but some are easier to do here. */
-  if (tref_isk(rb) && tvispone(ir_knum(IR(tref_ref(rb)))))
-    return rb;  /* 1 ^ x ==> 1 */
-  rc = lj_ir_tonum(J, rc);
-  if (tref_isk(rc) && ir_knum(IR(tref_ref(rc)))->n == 0.5)
-    return emitir(IRTN(IR_FPMATH), rb, IRFPM_SQRT);  /* x ^ 0.5 ==> sqrt(x) */
-  /* Split up b^c into exp2(c*log2(b)). Assembler may rejoin later. */
-  rb = emitir(IRTN(IR_FPMATH), rb, IRFPM_LOG2);
-  rc = emitir(IRTN(IR_MUL), rb, rc);
-  return emitir(IRTN(IR_FPMATH), rc, IRFPM_EXP2);
+  return emitir(IRTN(IR_POW), rb, rc);
 }
 
 /* -- Predictive narrowing of induction variables ------------------------- */

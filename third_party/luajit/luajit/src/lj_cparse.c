@@ -1,6 +1,6 @@
 /*
 ** C declaration parser.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include "lj_obj.h"
@@ -27,6 +27,24 @@
 ** Also, it shows rather generic error messages to avoid unnecessary bloat.
 ** If in doubt, please check the input against your favorite C compiler.
 */
+
+/* -- Miscellaneous ------------------------------------------------------- */
+
+/* Match string against a C literal. */
+#define cp_str_is(str, k) \
+  ((str)->len == sizeof(k)-1 && !memcmp(strdata(str), k, sizeof(k)-1))
+
+/* Check string against a linear list of matches. */
+int lj_cparse_case(GCstr *str, const char *match)
+{
+  MSize len;
+  int n;
+  for  (n = 0; (len = (MSize)*match++); n++, match += len) {
+    if (str->len == len && !memcmp(match, strdata(str), len))
+      return n;
+  }
+  return -1;
+}
 
 /* -- C lexer ------------------------------------------------------------- */
 
@@ -151,7 +169,8 @@ static CPToken cp_number(CPState *cp)
   TValue o;
   do { cp_save(cp, cp->c); } while (lj_char_isident(cp_get(cp)));
   cp_save(cp, '\0');
-  fmt = lj_strscan_scan((const uint8_t *)sbufB(&cp->sb), &o, STRSCAN_OPT_C);
+  fmt = lj_strscan_scan((const uint8_t *)sbufB(&cp->sb), sbuflen(&cp->sb)-1,
+			&o, STRSCAN_OPT_C);
   if (fmt == STRSCAN_INT) cp->val.id = CTID_INT32;
   else if (fmt == STRSCAN_U32) cp->val.id = CTID_UINT32;
   else if (!(cp->mode & CPARSE_MODE_SKIP))
@@ -939,8 +958,6 @@ static CTypeID cp_decl_intern(CPState *cp, CPDecl *decl)
 
 /* -- C declaration parser ------------------------------------------------ */
 
-#define H_(le, be)	LJ_ENDIAN_SELECT(0x##le, 0x##be)
-
 /* Reset declaration state to declaration specifier. */
 static void cp_decl_reset(CPDecl *decl)
 {
@@ -1069,44 +1086,57 @@ static void cp_decl_gccattribute(CPState *cp, CPDecl *decl)
     if (cp->tok == CTOK_IDENT) {
       GCstr *attrstr = cp->str;
       cp_next(cp);
-      switch (attrstr->hash) {
-      case H_(64a9208e,8ce14319): case H_(8e6331b2,95a282af):  /* aligned */
+      switch (lj_cparse_case(attrstr,
+		"\007aligned" "\013__aligned__"
+		"\006packed" "\012__packed__"
+		"\004mode" "\010__mode__"
+		"\013vector_size" "\017__vector_size__"
+#if LJ_TARGET_X86
+		"\007regparm" "\013__regparm__"
+		"\005cdecl"  "\011__cdecl__"
+		"\010thiscall" "\014__thiscall__"
+		"\010fastcall" "\014__fastcall__"
+		"\007stdcall" "\013__stdcall__"
+		"\012sseregparm" "\016__sseregparm__"
+#endif
+	      )) {
+      case 0: case 1: /* aligned */
 	cp_decl_align(cp, decl);
 	break;
-      case H_(42eb47de,f0ede26c): case H_(29f48a09,cf383e0c):  /* packed */
+      case 2: case 3: /* packed */
 	decl->attr |= CTFP_PACKED;
 	break;
-      case H_(0a84eef6,8dfab04c): case H_(995cf92c,d5696591):  /* mode */
+      case 4: case 5: /* mode */
 	cp_decl_mode(cp, decl);
 	break;
-      case H_(0ab31997,2d5213fa): case H_(bf875611,200e9990):  /* vector_size */
+      case 6: case 7: /* vector_size */
 	{
 	  CTSize vsize = cp_decl_sizeattr(cp);
 	  if (vsize) CTF_INSERT(decl->attr, VSIZEP, lj_fls(vsize));
 	}
 	break;
 #if LJ_TARGET_X86
-      case H_(5ad22db8,c689b848): case H_(439150fa,65ea78cb):  /* regparm */
+      case 8: case 9: /* regparm */
 	CTF_INSERT(decl->fattr, REGPARM, cp_decl_sizeattr(cp));
 	decl->fattr |= CTFP_CCONV;
 	break;
-      case H_(18fc0b98,7ff4c074): case H_(4e62abed,0a747424):  /* cdecl */
+      case 10: case 11: /* cdecl */
 	CTF_INSERT(decl->fattr, CCONV, CTCC_CDECL);
 	decl->fattr |= CTFP_CCONV;
 	break;
-      case H_(72b2e41b,494c5a44): case H_(f2356d59,f25fc9bd):  /* thiscall */
+      case 12: case 13: /* thiscall */
 	CTF_INSERT(decl->fattr, CCONV, CTCC_THISCALL);
 	decl->fattr |= CTFP_CCONV;
 	break;
-      case H_(0d0ffc42,ab746f88): case H_(21c54ba1,7f0ca7e3):  /* fastcall */
+      case 14: case 15: /* fastcall */
 	CTF_INSERT(decl->fattr, CCONV, CTCC_FASTCALL);
 	decl->fattr |= CTFP_CCONV;
 	break;
-      case H_(ef76b040,9412e06a): case H_(de56697b,c750e6e1):  /* stdcall */
+      case 16: case 17: /* stdcall */
 	CTF_INSERT(decl->fattr, CCONV, CTCC_STDCALL);
 	decl->fattr |= CTFP_CCONV;
 	break;
-      case H_(ea78b622,f234bd8e): case H_(252ffb06,8d50f34b):  /* sseregparm */
+      case 18: case 19: /* sseregparm */
 	decl->fattr |= CTF_SSEREGPARM;
 	decl->fattr |= CTFP_CCONV;
 	break;
@@ -1138,16 +1168,13 @@ static void cp_decl_msvcattribute(CPState *cp, CPDecl *decl)
   while (cp->tok == CTOK_IDENT) {
     GCstr *attrstr = cp->str;
     cp_next(cp);
-    switch (attrstr->hash) {
-    case H_(bc2395fa,98f267f8):  /* align */
+    if (cp_str_is(attrstr, "align")) {
       cp_decl_align(cp, decl);
-      break;
-    default:  /* Ignore all other attributes. */
+    } else {  /* Ignore all other attributes. */
       if (cp_opt(cp, '(')) {
 	while (cp->tok != ')' && cp->tok != CTOK_EOF) cp_next(cp);
 	cp_check(cp, ')');
       }
-      break;
     }
   }
   cp_check(cp, ')');
@@ -1727,17 +1754,16 @@ static CTypeID cp_decl_abstract(CPState *cp)
 static void cp_pragma(CPState *cp, BCLine pragmaline)
 {
   cp_next(cp);
-  if (cp->tok == CTOK_IDENT &&
-      cp->str->hash == H_(e79b999f,42ca3e85))  {  /* pack */
+  if (cp->tok == CTOK_IDENT && cp_str_is(cp->str, "pack"))  {
     cp_next(cp);
     cp_check(cp, '(');
     if (cp->tok == CTOK_IDENT) {
-      if (cp->str->hash == H_(738e923c,a1b65954)) {  /* push */
+      if (cp_str_is(cp->str, "push")) {
 	if (cp->curpack < CPARSE_MAX_PACKSTACK) {
 	  cp->packstack[cp->curpack+1] = cp->packstack[cp->curpack];
 	  cp->curpack++;
 	}
-      } else if (cp->str->hash == H_(6c71cf27,6c71cf27)) {  /* pop */
+      } else if (cp_str_is(cp->str, "pop")) {
 	if (cp->curpack > 0) cp->curpack--;
       } else {
 	cp_errmsg(cp, cp->tok, LJ_ERR_XSYMBOL);
@@ -1786,13 +1812,11 @@ static void cp_decl_multi(CPState *cp)
       if (tok == CTOK_INTEGER) {
 	cp_line(cp, hashline);
 	continue;
-      } else if (tok == CTOK_IDENT &&
-		 cp->str->hash == H_(187aab88,fcb60b42)) { /* line */
+      } else if (tok == CTOK_IDENT && cp_str_is(cp->str, "line")) {
 	if (cp_next(cp) != CTOK_INTEGER) cp_err_token(cp, tok);
 	cp_line(cp, hashline);
 	continue;
-      } else if (tok == CTOK_IDENT &&
-	  cp->str->hash == H_(f5e6b4f8,1d509107)) { /* pragma */
+      } else if (tok == CTOK_IDENT && cp_str_is(cp->str, "pragma")) {
 	cp_pragma(cp, hashline);
 	continue;
       } else {
@@ -1862,8 +1886,6 @@ static void cp_decl_single(CPState *cp)
   cp->val.id = cp_decl_intern(cp, &decl);
   if (cp->tok != CTOK_EOF) cp_err_token(cp, CTOK_EOF);
 }
-
-#undef H_
 
 /* ------------------------------------------------------------------------ */
 

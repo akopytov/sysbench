@@ -1,6 +1,6 @@
 /*
 ** x86/x64 instruction emitter.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Emit basic instructions --------------------------------------------- */
@@ -559,10 +559,7 @@ static void emit_storeofs(ASMState *as, IRIns *ir, Reg r, Reg base, int32_t ofs)
 static void emit_addptr(ASMState *as, Reg r, int32_t ofs)
 {
   if (ofs) {
-    if ((as->flags & JIT_F_LEA_AGU))
-      emit_rmro(as, XO_LEA, r|REX_GC64, r, ofs);
-    else
-      emit_gri(as, XG_ARITHi(XOg_ADD), r|REX_GC64, ofs);
+    emit_gri(as, XG_ARITHi(XOg_ADD), r|REX_GC64, ofs);
   }
 }
 

@@ -1,6 +1,6 @@
 |// Low-level VM code for MIPS CPUs.
 |// Bytecode interpreter, fast functions and helper functions.
-|// Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+|// Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 |//
 |// MIPS soft-float support contributed by Djordje Kovacevic and
 |// Stefan Pejic from RT-RK.com, sponsored by Cisco Systems, Inc.
@@ -399,7 +399,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  xori AT, TMP0, FRAME_C
   |   and TMP2, PC, TMP2
   |  bnez AT, ->vm_returnp
-  |   subu TMP2, BASE, TMP2		// TMP2 = previous base.
+  |.  subu TMP2, BASE, TMP2		// TMP2 = previous base.
   |
   |  addiu TMP1, RD, -8
   |   sw TMP2, L->base
@@ -1768,7 +1768,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  b ->fff_res
   |.  li RD, (2+1)*8
   |
-  |.macro math_minmax, name, intins, fpins
+  |.macro math_minmax, name, intins, ismax
   |  .ffunc_1 name
   |  addu TMP3, BASE, NARGS8:RC
   |  bne SFARG1HI, TISNUM, >5
@@ -1822,13 +1822,21 @@ static void build_subroutines(BuildCtx *ctx)
   |.endif
   |7:
   |.if FPU
+  |.if ismax
+  |  c.olt.d FARG1, FRET1
+  |.else
   |  c.olt.d FRET1, FARG1
-  |  fpins FRET1, FARG1
+  |.endif
+  |  movf.d FRET1, FARG1
+  |.else
+  |.if ismax
+  |  bal ->vm_sfcmpogt
   |.else
   |  bal ->vm_sfcmpolt
+  |.endif
   |.  nop
-  |  intins SFARG1LO, SFARG2LO, CRET1
-  |  intins SFARG1HI, SFARG2HI, CRET1
+  |  movz SFARG1LO, SFARG2LO, CRET1
+  |  movz SFARG1HI, SFARG2HI, CRET1
   |.endif
   |  b <6
   |.  addiu TMP2, TMP2, 8
@@ -1849,8 +1857,8 @@ static void build_subroutines(BuildCtx *ctx)
   |
   |.endmacro
   |
-  |  math_minmax math_min, movz, movf.d
-  |  math_minmax math_max, movn, movt.d
+  |  math_minmax math_min, movz, 0
+  |  math_minmax math_max, movn, 1
   |
   |//-- String library -----------------------------------------------------
   |
@@ -2692,6 +2700,43 @@ static void build_subroutines(BuildCtx *ctx)
   |.  move CRET1, CRET2
   |.endif
   |
+  |->vm_sfcmpogt:
+  |.if not FPU
+  |  sll AT, SFARG2HI, 1
+  |  sll TMP0, SFARG1HI, 1
+  |  or CRET1, SFARG2LO, SFARG1LO
+  |  or TMP1, AT, TMP0
+  |  or TMP1, TMP1, CRET1
+  |  beqz TMP1, >8			// Both args +-0: return 0.
+  |.  sltu CRET1, r0, SFARG2LO
+  |  lui TMP1, 0xffe0
+  |  addu AT, AT, CRET1
+  |   sltu CRET1, r0, SFARG1LO
+  |  sltu AT, TMP1, AT
+  |   addu TMP0, TMP0, CRET1
+  |   sltu TMP0, TMP1, TMP0
+  |  or TMP1, AT, TMP0
+  |  bnez TMP1, >9			// Either arg is NaN: return 0 or 1;
+  |.  and AT, SFARG2HI, SFARG1HI
+  |  bltz AT, >5			// Both args negative?
+  |.  nop
+  |  beq SFARG2HI, SFARG1HI, >8
+  |.  sltu CRET1, SFARG2LO, SFARG1LO
+  |  jr ra
+  |.  slt CRET1, SFARG2HI, SFARG1HI
+  |5:  // Swap conditions if both operands are negative.
+  |  beq SFARG2HI, SFARG1HI, >8
+  |.  sltu CRET1, SFARG1LO, SFARG2LO
+  |  jr ra
+  |.  slt CRET1, SFARG1HI, SFARG2HI
+  |8:
+  |  jr ra
+  |.  nop
+  |9:
+  |  jr ra
+  |.  li CRET1, 0
+  |.endif
+  |
   |// Soft-float comparison. Equivalent to c.ole.d a, b or c.ole.d b, a.
   |// Input: SFARG*, TMP3. Output: CRET1. Temporaries: AT, TMP0, TMP1.
   |->vm_sfcmpolex:
@@ -2734,24 +2779,24 @@ static void build_subroutines(BuildCtx *ctx)
   |.  li CRET1, 0
   |.endif
   |
-  |.macro sfmin_max, name, intins
+  |.macro sfmin_max, name, fpcall
   |->vm_sf .. name:
   |.if JIT and not FPU
   |  move TMP2, ra
-  |  bal ->vm_sfcmpolt
+  |  bal ->fpcall
   |.  nop
   |  move TMP0, CRET1
   |  move SFRETHI, SFARG1HI
   |   move SFRETLO, SFARG1LO
   |  move ra, TMP2
-  |  intins SFRETHI, SFARG2HI, TMP0
+  |  movz SFRETHI, SFARG2HI, TMP0
   |  jr ra
-  |.  intins SFRETLO, SFARG2LO, TMP0
+  |.  movz SFRETLO, SFARG2LO, TMP0
   |.endif
   |.endmacro
   |
-  |  sfmin_max min, movz
-  |  sfmin_max max, movn
+  |  sfmin_max min, vm_sfcmpolt
+  |  sfmin_max max, vm_sfcmpogt
   |
   |//-----------------------------------------------------------------------
   |//-- Miscellaneous functions --------------------------------------------

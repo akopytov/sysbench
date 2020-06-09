@@ -1,6 +1,6 @@
 /*
 ** x86/x64 IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Guard handling ------------------------------------------------------ */
@@ -1214,13 +1214,8 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
     emit_rmro(as, XO_MOV, dest|REX_GC64, tab, offsetof(GCtab, node));
   } else {
     emit_rmro(as, XO_ARITH(XOg_ADD), dest|REX_GC64, tab, offsetof(GCtab,node));
-    if ((as->flags & JIT_F_PREFER_IMUL)) {
-      emit_i8(as, sizeof(Node));
-      emit_rr(as, XO_IMULi8, dest, dest);
-    } else {
-      emit_shifti(as, XOg_SHL, dest, 3);
-      emit_rmrxo(as, XO_LEA, dest, dest, dest, XM_SCALE2, 0);
-    }
+    emit_shifti(as, XOg_SHL, dest, 3);
+    emit_rmrxo(as, XO_LEA, dest, dest, dest, XM_SCALE2, 0);
     if (isk) {
       emit_gri(as, XG_ARITHi(XOg_AND), dest, (int32_t)khash);
       emit_rmro(as, XO_MOV, dest, tab, offsetof(GCtab, hmask));
@@ -1279,7 +1274,7 @@ static void asm_hrefk(ASMState *as, IRIns *ir)
   lua_assert(ofs % sizeof(Node) == 0);
   if (ra_hasreg(dest)) {
     if (ofs != 0) {
-      if (dest == node && !(as->flags & JIT_F_LEA_AGU))
+      if (dest == node)
 	emit_gri(as, XG_ARITHi(XOg_ADD), dest|REX_GC64, ofs);
       else
 	emit_rmro(as, XO_LEA, dest|REX_GC64, node, ofs);
@@ -1848,8 +1843,6 @@ static void asm_cnew(ASMState *as, IRIns *ir)
   asm_gencall(as, ci, args);
   emit_loadi(as, ra_releasetmp(as, ASMREF_TMP1), (int32_t)(sz+sizeof(GCcdata)));
 }
-#else
-#define asm_cnew(as, ir)	((void)0)
 #endif
 
 /* -- Write barriers ------------------------------------------------------ */
@@ -1955,14 +1948,10 @@ static void asm_fpmath(ASMState *as, IRIns *ir)
 		    fpm == IRFPM_CEIL ? lj_vm_ceil_sse : lj_vm_trunc_sse);
       ra_left(as, RID_XMM0, ir->op1);
     }
-  } else if (fpm == IRFPM_EXP2 && asm_fpjoin_pow(as, ir)) {
-    /* Rejoined to pow(). */
   } else {
     asm_callid(as, ir, IRCALL_lj_vm_floor + fpm);
   }
 }
-
-#define asm_atan2(as, ir)	asm_callid(as, ir, IRCALL_atan2)
 
 static void asm_ldexp(ASMState *as, IRIns *ir)
 {
@@ -1991,17 +1980,6 @@ static void asm_fppowi(ASMState *as, IRIns *ir)
   emit_call(as, lj_vm_powi_sse);
   ra_left(as, RID_XMM0, ir->op1);
   ra_left(as, RID_EAX, ir->op2);
-}
-
-static void asm_pow(ASMState *as, IRIns *ir)
-{
-#if LJ_64 && LJ_HASFFI
-  if (!irt_isnum(ir->t))
-    asm_callid(as, ir, irt_isi64(ir->t) ? IRCALL_lj_carith_powi64 :
-					  IRCALL_lj_carith_powu64);
-  else
-#endif
-    asm_fppowi(as, ir);
 }
 
 static int asm_swapops(ASMState *as, IRIns *ir)
@@ -2061,8 +2039,9 @@ static void asm_intarith(ASMState *as, IRIns *ir, x86Arith xa)
   int32_t k = 0;
   if (as->flagmcp == as->mcp) {  /* Drop test r,r instruction. */
     MCode *p = as->mcp + ((LJ_64 && *as->mcp < XI_TESTb) ? 3 : 2);
-    if ((p[1] & 15) < 14) {
-      if ((p[1] & 15) >= 12) p[1] -= 4;  /* L <->S, NL <-> NS */
+    MCode *q = p[0] == 0x0f ? p+1 : p;
+    if ((*q & 15) < 14) {
+      if ((*q & 15) >= 12) *q -= 4;  /* L <->S, NL <-> NS */
       as->flagmcp = NULL;
       as->mcp = p;
     }  /* else: cannot transform LE/NLE to cc without use of OF. */
@@ -2179,8 +2158,7 @@ static void asm_add(ASMState *as, IRIns *ir)
 {
   if (irt_isnum(ir->t))
     asm_fparith(as, ir, XO_ADDSD);
-  else if ((as->flags & JIT_F_LEA_AGU) || as->flagmcp == as->mcp ||
-	   irt_is64(ir->t) || !asm_lea(as, ir))
+  else if (as->flagmcp == as->mcp || irt_is64(ir->t) || !asm_lea(as, ir))
     asm_intarith(as, ir, XOg_ADD);
 }
 
@@ -2200,27 +2178,7 @@ static void asm_mul(ASMState *as, IRIns *ir)
     asm_intarith(as, ir, XOg_X_IMUL);
 }
 
-static void asm_div(ASMState *as, IRIns *ir)
-{
-#if LJ_64 && LJ_HASFFI
-  if (!irt_isnum(ir->t))
-    asm_callid(as, ir, irt_isi64(ir->t) ? IRCALL_lj_carith_divi64 :
-					  IRCALL_lj_carith_divu64);
-  else
-#endif
-    asm_fparith(as, ir, XO_DIVSD);
-}
-
-static void asm_mod(ASMState *as, IRIns *ir)
-{
-#if LJ_64 && LJ_HASFFI
-  if (!irt_isint(ir->t))
-    asm_callid(as, ir, irt_isi64(ir->t) ? IRCALL_lj_carith_modi64 :
-					  IRCALL_lj_carith_modu64);
-  else
-#endif
-    asm_callid(as, ir, IRCALL_lj_vm_modi);
-}
+#define asm_fpdiv(as, ir)	asm_fparith(as, ir, XO_DIVSD)
 
 static void asm_neg_not(ASMState *as, IRIns *ir, x86Group3 xg)
 {
@@ -2902,7 +2860,7 @@ static void asm_tail_fixup(ASMState *as, TraceNo lnk)
   MCode *target, *q;
   int32_t spadj = as->T->spadjust;
   if (spadj == 0) {
-    p -= ((as->flags & JIT_F_LEA_AGU) ? 7 : 6) + (LJ_64 ? 1 : 0);
+    p -= LJ_64 ? 7 : 6;
   } else {
     MCode *p1;
     /* Patch stack adjustment. */
@@ -2914,20 +2872,11 @@ static void asm_tail_fixup(ASMState *as, TraceNo lnk)
       p1 = p-9;
       *(int32_t *)p1 = spadj;
     }
-    if ((as->flags & JIT_F_LEA_AGU)) {
 #if LJ_64
-      p1[-4] = 0x48;
+    p1[-3] = 0x48;
 #endif
-      p1[-3] = (MCode)XI_LEA;
-      p1[-2] = MODRM(checki8(spadj) ? XM_OFS8 : XM_OFS32, RID_ESP, RID_ESP);
-      p1[-1] = MODRM(XM_SCALE1, RID_ESP, RID_ESP);
-    } else {
-#if LJ_64
-      p1[-3] = 0x48;
-#endif
-      p1[-2] = (MCode)(checki8(spadj) ? XI_ARITHi8 : XI_ARITHi);
-      p1[-1] = MODRM(XM_REG, XOg_ADD, RID_ESP);
-    }
+    p1[-2] = (MCode)(checki8(spadj) ? XI_ARITHi8 : XI_ARITHi);
+    p1[-1] = MODRM(XM_REG, XOg_ADD, RID_ESP);
   }
   /* Patch exit branch. */
   target = lnk ? traceref(as->J, lnk)->mcode : (MCode *)lj_vm_exit_interp;
@@ -2958,7 +2907,7 @@ static void asm_tail_prep(ASMState *as)
     as->invmcp = as->mcp = p;
   } else {
     /* Leave room for ESP adjustment: add esp, imm or lea esp, [esp+imm] */
-    as->mcp = p - (((as->flags & JIT_F_LEA_AGU) ? 7 : 6)  + (LJ_64 ? 1 : 0));
+    as->mcp = p - (LJ_64 ? 7 : 6);
     as->invmcp = NULL;
   }
 }

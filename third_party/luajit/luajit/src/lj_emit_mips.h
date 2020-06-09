@@ -1,6 +1,6 @@
 /*
 ** MIPS instruction emitter.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #if LJ_64
@@ -138,6 +138,7 @@ static void emit_loadu64(ASMState *as, Reg r, uint64_t u64)
     } else if (emit_kdelta1(as, r, (intptr_t)u64)) {
       return;
     } else {
+      /* TODO MIPSR6: Use DAHI & DATI. Caveat: sign-extension. */
       if ((u64 & 0xffff)) {
 	emit_tsi(as, MIPSI_ORI, r, r, u64 & 0xffff);
       }
@@ -236,10 +237,22 @@ static void emit_jmp(ASMState *as, MCode *target)
 static void emit_call(ASMState *as, void *target, int needcfa)
 {
   MCode *p = as->mcp;
-  *--p = MIPSI_NOP;
+#if LJ_TARGET_MIPSR6
+  ptrdiff_t delta = (char *)target - (char *)p;
+  if ((((delta>>2) + 0x02000000) >> 26) == 0) {  /* Try compact call first. */
+    *--p = MIPSI_BALC | (((uintptr_t)delta >>2) & 0x03ffffffu);
+    as->mcp = p;
+    return;
+  }
+#endif
+  *--p = MIPSI_NOP;  /* Delay slot. */
   if ((((uintptr_t)target ^ (uintptr_t)p) >> 28) == 0) {
+#if !LJ_TARGET_MIPSR6
     *--p = (((uintptr_t)target & 1) ? MIPSI_JALX : MIPSI_JAL) |
 	   (((uintptr_t)target >>2) & 0x03ffffffu);
+#else
+    *--p = MIPSI_JAL | (((uintptr_t)target >>2) & 0x03ffffffu);
+#endif
   } else {  /* Target out of range: need indirect call. */
     *--p = MIPSI_JALR | MIPSF_S(RID_CFUNCADDR);
     needcfa = 1;

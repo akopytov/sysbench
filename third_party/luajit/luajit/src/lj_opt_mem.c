@@ -3,7 +3,7 @@
 ** AA: Alias Analysis using high-level semantic disambiguation.
 ** FWD: Load Forwarding (L2L) + Store Forwarding (S2L).
 ** DSE: Dead-Store Elimination.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_opt_mem_c
@@ -180,7 +180,8 @@ static TRef fwd_ahload(jit_State *J, IRRef xref)
 	}
 	ref = store->prev;
       }
-      lua_assert(ir->o != IR_TNEW || irt_isnil(fins->t));
+      if (ir->o == IR_TNEW && !irt_isnil(fins->t))
+	return 0;  /* Type instability in loop-carried dependency. */
       if (irt_ispri(fins->t)) {
 	return TREF_PRI(irt_type(fins->t));
       } else if (irt_isnum(fins->t) || (LJ_DUALNUM && irt_isint(fins->t)) ||
@@ -362,7 +363,7 @@ TRef LJ_FASTCALL lj_opt_dse_ahstore(jit_State *J)
 	IRIns *ir;
 	/* Check for any intervening guards (includes conflicting loads). */
 	for (ir = IR(J->cur.nins-1); ir > store; ir--)
-	  if (irt_isguard(ir->t) || ir->o == IR_CALLL)
+	  if (irt_isguard(ir->t) || ir->o == IR_ALEN)
 	    goto doemit;  /* No elimination possible. */
 	/* Remove redundant store from chain and replace with NOP. */
 	*refp = store->prev;
@@ -378,6 +379,67 @@ TRef LJ_FASTCALL lj_opt_dse_ahstore(jit_State *J)
   }
 doemit:
   return EMITFOLD;  /* Otherwise we have a conflict or simply no match. */
+}
+
+/* ALEN forwarding. */
+TRef LJ_FASTCALL lj_opt_fwd_alen(jit_State *J)
+{
+  IRRef tab = fins->op1;  /* Table reference. */
+  IRRef lim = tab;  /* Search limit. */
+  IRRef ref;
+
+  /* Search for conflicting HSTORE with numeric key. */
+  ref = J->chain[IR_HSTORE];
+  while (ref > lim) {
+    IRIns *store = IR(ref);
+    IRIns *href = IR(store->op1);
+    IRIns *key = IR(href->op2);
+    if (irt_isnum(key->o == IR_KSLOT ? IR(key->op1)->t : key->t)) {
+      lim = ref;  /* Conflicting store found, limits search for ALEN. */
+      break;
+    }
+    ref = store->prev;
+  }
+
+  /* Try to find a matching ALEN. */
+  ref = J->chain[IR_ALEN];
+  while (ref > lim) {
+    /* CSE for ALEN only depends on the table, not the hint. */
+    if (IR(ref)->op1 == tab) {
+      IRRef sref;
+
+      /* Search for aliasing table.clear. */
+      if (!fwd_aa_tab_clear(J, ref, tab))
+	break;
+
+      /* Search for hint-forwarding or conflicting store. */
+      sref = J->chain[IR_ASTORE];
+      while (sref > ref) {
+	IRIns *store = IR(sref);
+	IRIns *aref = IR(store->op1);
+	IRIns *fref = IR(aref->op1);
+	if (tab == fref->op1) {  /* ASTORE to the same table. */
+	  /* Detect t[#t+1] = x idiom for push. */
+	  IRIns *idx = IR(aref->op2);
+	  if (!irt_isnil(store->t) &&
+	      idx->o == IR_ADD && idx->op1 == ref &&
+	      IR(idx->op2)->o == IR_KINT && IR(idx->op2)->i == 1) {
+	    /* Note: this requires an extra PHI check in loop unroll. */
+	    fins->op2 = aref->op2;  /* Set ALEN hint. */
+	  }
+	  goto doemit;  /* Conflicting store, possibly giving a hint. */
+	} else if (aa_table(J, tab, fref->op1) == ALIAS_NO) {
+	  goto doemit;  /* Conflicting store. */
+	}
+	sref = store->prev;
+      }
+
+      return ref;  /* Plain ALEN forwarding. */
+    }
+    ref = IR(ref)->prev;
+  }
+doemit:
+  return EMITFOLD;
 }
 
 /* -- ULOAD forwarding ---------------------------------------------------- */
@@ -429,7 +491,6 @@ TRef LJ_FASTCALL lj_opt_fwd_uload(jit_State *J)
 
 cselim:
   /* Try to find a matching load. Below the conflicting store, if any. */
-
   ref = J->chain[IR_ULOAD];
   while (ref > lim) {
     IRIns *ir = IR(ref);
@@ -842,39 +903,6 @@ TRef LJ_FASTCALL lj_opt_dse_xstore(jit_State *J)
   }
 doemit:
   return EMITFOLD;  /* Otherwise we have a conflict or simply no match. */
-}
-
-/* -- Forwarding of lj_tab_len -------------------------------------------- */
-
-/* This is rather simplistic right now, but better than nothing. */
-TRef LJ_FASTCALL lj_opt_fwd_tab_len(jit_State *J)
-{
-  IRRef tab = fins->op1;  /* Table reference. */
-  IRRef lim = tab;  /* Search limit. */
-  IRRef ref;
-
-  /* Any ASTORE is a conflict and limits the search. */
-  if (J->chain[IR_ASTORE] > lim) lim = J->chain[IR_ASTORE];
-
-  /* Search for conflicting HSTORE with numeric key. */
-  ref = J->chain[IR_HSTORE];
-  while (ref > lim) {
-    IRIns *store = IR(ref);
-    IRIns *href = IR(store->op1);
-    IRIns *key = IR(href->op2);
-    if (irt_isnum(key->o == IR_KSLOT ? IR(key->op1)->t : key->t)) {
-      lim = ref;  /* Conflicting store found, limits search for TLEN. */
-      break;
-    }
-    ref = store->prev;
-  }
-
-  /* Search for aliasing table.clear. */
-  if (!fwd_aa_tab_clear(J, lim, tab))
-    return lj_ir_emit(J);
-
-  /* Try to find a matching load. Below the conflicting store, if any. */
-  return lj_opt_cselim(J, lim);
 }
 
 /* -- ASTORE/HSTORE previous type analysis -------------------------------- */

@@ -1,6 +1,6 @@
 /*
 ** IR CALL* instruction definitions.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_IRCALL_H
@@ -21,6 +21,7 @@ typedef struct CCallInfo {
 
 #define CCI_OTSHIFT		16
 #define CCI_OPTYPE(ci)		((ci)->flags >> CCI_OTSHIFT)  /* Get op/type. */
+#define CCI_TYPE(ci)		(((ci)->flags>>CCI_OTSHIFT) & IRT_TYPE)
 #define CCI_OPSHIFT		24
 #define CCI_OP(ci)		((ci)->flags >> CCI_OPSHIFT)  /* Get op. */
 
@@ -167,11 +168,20 @@ typedef struct CCallInfo {
   _(ANY,	lj_tab_clear,		1,  FS, NIL, 0) \
   _(ANY,	lj_tab_newkey,		3,   S, PGC, CCI_L) \
   _(ANY,	lj_tab_len,		1,  FL, INT, 0) \
+  _(ANY,	lj_tab_len_hint,	2,  FL, INT, 0) \
   _(ANY,	lj_gc_step_jit,		2,  FS, NIL, CCI_L) \
   _(ANY,	lj_gc_barrieruv,	2,  FS, NIL, 0) \
   _(ANY,	lj_mem_newgco,		2,  FS, PGC, CCI_L) \
   _(ANY,	lj_math_random_step, 1, FS, NUM, CCI_CASTU64) \
   _(ANY,	lj_vm_modi,		2,  FN, INT, 0) \
+  _(ANY,	log10,			1,   N, NUM, XA_FP) \
+  _(ANY,	exp,			1,   N, NUM, XA_FP) \
+  _(ANY,	sin,			1,   N, NUM, XA_FP) \
+  _(ANY,	cos,			1,   N, NUM, XA_FP) \
+  _(ANY,	tan,			1,   N, NUM, XA_FP) \
+  _(ANY,	asin,			1,   N, NUM, XA_FP) \
+  _(ANY,	acos,			1,   N, NUM, XA_FP) \
+  _(ANY,	atan,			1,   N, NUM, XA_FP) \
   _(ANY,	sinh,			1,   N, NUM, XA_FP) \
   _(ANY,	cosh,			1,   N, NUM, XA_FP) \
   _(ANY,	tanh,			1,   N, NUM, XA_FP) \
@@ -183,14 +193,8 @@ typedef struct CCallInfo {
   _(FPMATH,	lj_vm_ceil,		1,   N, NUM, XA_FP) \
   _(FPMATH,	lj_vm_trunc,		1,   N, NUM, XA_FP) \
   _(FPMATH,	sqrt,			1,   N, NUM, XA_FP) \
-  _(ANY,	exp,			1,   N, NUM, XA_FP) \
-  _(ANY,	lj_vm_exp2,		1,   N, NUM, XA_FP) \
   _(ANY,	log,			1,   N, NUM, XA_FP) \
   _(ANY,	lj_vm_log2,		1,   N, NUM, XA_FP) \
-  _(ANY,	log10,			1,   N, NUM, XA_FP) \
-  _(ANY,	sin,			1,   N, NUM, XA_FP) \
-  _(ANY,	cos,			1,   N, NUM, XA_FP) \
-  _(ANY,	tan,			1,   N, NUM, XA_FP) \
   _(ANY,	lj_vm_powi,		2,   N, NUM, XA_FP) \
   _(ANY,	pow,			2,   N, NUM, XA2_FP) \
   _(ANY,	atan2,			2,   N, NUM, XA2_FP) \

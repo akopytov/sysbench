@@ -1,6 +1,6 @@
 /*
 ** Snapshot handling.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_snap_c
@@ -688,7 +688,7 @@ static void snap_restoredata(GCtrace *T, ExitState *ex,
   int32_t *src;
   uint64_t tmp;
   if (irref_isk(ref)) {
-    if (ir->o == IR_KNUM || ir->o == IR_KINT64) {
+    if (ir_isk64(ir)) {
       src = (int32_t *)&ir[1];
     } else if (sz == 8) {
       tmp = (uint64_t)(uint32_t)ir->i;

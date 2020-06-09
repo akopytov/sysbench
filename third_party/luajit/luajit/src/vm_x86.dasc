@@ -1,6 +1,6 @@
 |// Low-level VM code for x86 CPUs.
 |// Bytecode interpreter, fast functions and helper functions.
-|// Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+|// Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 |
 |.if P64
 |.arch x64
@@ -2233,7 +2233,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  xorps xmm4, xmm4; jmp <1			// Return +-Inf and +-0.
   |
   |.macro math_minmax, name, cmovop, sseop
-  |  .ffunc name
+  |  .ffunc_1 name
   |  mov RA, 2
   |  cmp dword [BASE+4], LJ_TISNUM
   |.if DUALNUM

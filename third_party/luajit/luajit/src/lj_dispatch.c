@@ -1,6 +1,6 @@
 /*
 ** Instruction dispatch handling.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_dispatch_c
@@ -252,15 +252,8 @@ int luaJIT_setmode(lua_State *L, int idx, int mode)
     } else {
       if (!(mode & LUAJIT_MODE_ON))
 	G2J(g)->flags &= ~(uint32_t)JIT_F_ON;
-#if LJ_TARGET_X86ORX64
-      else if ((G2J(g)->flags & JIT_F_SSE2))
-	G2J(g)->flags |= (uint32_t)JIT_F_ON;
-      else
-	return 0;  /* Don't turn on JIT compiler without SSE2 support. */
-#else
       else
 	G2J(g)->flags |= (uint32_t)JIT_F_ON;
-#endif
       lj_dispatch_update(g);
     }
     break;

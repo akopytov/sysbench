@@ -1,6 +1,6 @@
 /*
 ** FFI C call handling.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include "lj_obj.h"
@@ -337,7 +337,8 @@
   if (LJ_TARGET_IOS && isva) { \
     /* IOS: All variadic arguments are on the stack. */ \
   } else if (isfp) {  /* Try to pass argument in FPRs. */ \
-    int n2 = ctype_isvector(d->info) ? 1 : n*isfp; \
+    int n2 = ctype_isvector(d->info) ? 1 : \
+	     isfp == 1 ? n : (d->size >> (4-isfp)); \
     if (nfpr + n2 <= CCALL_NARG_FPR) { \
       dp = &cc->fpr[nfpr]; \
       nfpr += n2; \

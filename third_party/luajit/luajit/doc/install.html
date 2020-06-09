@@ -3,7 +3,7 @@
 <head>
 <title>Installation</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<meta name="Copyright" content="Copyright (C) 2005-2018">
+<meta name="Copyright" content="Copyright (C) 2005-2020">
 <meta name="Language" content="en">
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
@@ -38,7 +38,7 @@ td.compatno {
 </head>
 <body>
 <div id="site">
-<a href="http://luajit.org"><span>Lua<span id="logo">JIT</span></span></a>
+<a href="https://luajit.org"><span>Lua<span id="logo">JIT</span></span></a>
 </div>
 <div id="head">
 <h1>Installation</h1>
@@ -47,7 +47,7 @@ td.compatno {
 <ul><li>
 <a href="luajit.html">LuaJIT</a>
 <ul><li>
-<a href="http://luajit.org/download.html">Download <span class="ext">&raquo;</span></a>
+<a href="https://luajit.org/download.html">Download <span class="ext">&raquo;</span></a>
 </li><li>
 <a class="current" href="install.html">Installation</a>
 </li><li>
@@ -73,17 +73,12 @@ td.compatno {
 </li></ul>
 </li><li>
 <a href="status.html">Status</a>
-<ul><li>
-<a href="changes.html">Changes</a>
-</li></ul>
 </li><li>
 <a href="faq.html">FAQ</a>
 </li><li>
-<a href="http://luajit.org/performance.html">Performance <span class="ext">&raquo;</span></a>
-</li><li>
 <a href="http://wiki.luajit.org/">Wiki <span class="ext">&raquo;</span></a>
 </li><li>
-<a href="http://luajit.org/list.html">Mailing List <span class="ext">&raquo;</span></a>
+<a href="https://luajit.org/list.html">Mailing List <span class="ext">&raquo;</span></a>
 </li></ul>
 </div>
 <div id="main">
@@ -116,14 +111,14 @@ operating systems, CPUs and compilers:
 <td class="compatos">GCC 4.2+</td>
 <td class="compatos">GCC 4.2+</td>
 <td class="compatos">XCode 5.0+<br>Clang</td>
-<td class="compatos">MSVC, MSVC/EE<br>WinSDK<br>MinGW, Cygwin</td>
+<td class="compatos">MSVC<br>MinGW, Cygwin</td>
 </tr>
 <tr class="even">
 <td class="compatcpu">x64 (64 bit)</td>
 <td class="compatos">GCC 4.2+</td>
 <td class="compatos">GCC 4.2+<br>ORBIS (<a href="#ps4">PS4</a>)</td>
 <td class="compatos">XCode 5.0+<br>Clang</td>
-<td class="compatos">MSVC + SDK v7.0<br>WinSDK v7.0<br>Durango (<a href="#xboxone">Xbox One</a>)</td>
+<td class="compatos">MSVC<br>Durango (<a href="#xboxone">Xbox One</a>)</td>
 </tr>
 <tr class="odd">
 <td class="compatcpu"><a href="#cross2">ARMv5+<br>ARM9E+</a></td>
@@ -168,19 +163,18 @@ only).</li>
 <li><tt>src/Makefile</tt> has settings for <b>compiling</b> LuaJIT
 under POSIX, MinGW or Cygwin.</li>
 <li><tt>src/msvcbuild.bat</tt> has settings for compiling LuaJIT with
-MSVC or WinSDK.</li>
+MSVC (Visual Studio).</li>
 </ul>
 <p>
 Please read the instructions given in these files, before changing
 any settings.
 </p>
 <p>
-LuaJIT on x64 currently uses 32 bit GC objects by default.
-<tt>LJ_GC64</tt> mode may be explicitly enabled:
-add <tt>XCFLAGS=-DLUAJIT_ENABLE_GC64</tt> to the make command or run
-<tt>msvcbuild gc64</tt> for MSVC/WinSDK. Please check the note
-about the <a href="extensions.html#string_dump">bytecode format</a>
-differences, too.
+All LuaJIT 64 bit ports use 64 bit GC objects by default (<tt>LJ_GC64</tt>).
+For x64, you can select the old 32-on-64 bit mode by adding
+<tt>XCFLAGS=-DLUAJIT_DISABLE_GC64</tt> to the make command.
+Please check the note about the
+<a href="extensions.html#string_dump">bytecode format</a> differences, too.
 </p>
 
 <h2 id="posix">POSIX Systems (Linux, OSX, *BSD etc.)</h2>
@@ -222,8 +216,8 @@ You can add an extra prefix to the search paths by appending the
 make PREFIX=/home/myself/lj2
 </pre>
 <p>
-Note for OSX: if the <tt>MACOSX_DEPLOYMENT_TARGET</tt> environment
-variable is not set, then it's forced to <tt>10.4</tt>.
+Note for OSX: you must set the <tt>MACOSX_DEPLOYMENT_TARGET</tt>
+environment variable to a value supported by your toolchain.
 </p>
 <h3>Installing LuaJIT</h3>
 <p>
@@ -251,19 +245,9 @@ Obviously the prefixes given during build and installation need to be the same.
 <p>
 Either install one of the open source SDKs
 (<a href="http://mingw.org/"><span class="ext">&raquo;</span>&nbsp;MinGW</a> or
-<a href="http://www.cygwin.com/"><span class="ext">&raquo;</span>&nbsp;Cygwin</a>), which come with a modified
+<a href="https://www.cygwin.com/">Cygwin</a>), which come with a modified
 GCC plus the required development headers.
-</p>
-<p>
-Or install Microsoft's Visual C++ (MSVC). The freely downloadable
-<a href="http://www.microsoft.com/Express/VC/"><span class="ext">&raquo;</span>&nbsp;Express Edition</a>
-works just fine, but only contains an x86 compiler.
-</p>
-<p>
-The freely downloadable
-<a href="http://msdn.microsoft.com/en-us/windowsserver/bb980924.aspx"><span class="ext">&raquo;</span>&nbsp;Windows SDK</a>
-only comes with command line tools, but this is all you need to build LuaJIT.
-It contains x86 and x64 compilers.
+Or install Microsoft's Visual Studio (MSVC).
 </p>
 <p>
 Next, download the source package and unpack it using an archive manager
@@ -271,7 +255,7 @@ Next, download the source package and unpack it using an archive manager
 </p>
 <h3>Building with MSVC</h3>
 <p>
-Open a "Visual Studio .NET Command Prompt", <tt>cd</tt> to the
+Open a "Visual Studio Command Prompt" (either x86 or x64), <tt>cd</tt> to the
 directory where you've unpacked the sources and run these commands:
 </p>
 <pre class="code">
@@ -279,30 +263,7 @@ cd src
 msvcbuild
 </pre>
 <p>
-Then follow the installation instructions below.
-</p>
-<h3>Building with the Windows SDK</h3>
-<p>
-Open a "Windows SDK Command Shell" and select the x86 compiler:
-</p>
-<pre class="code">
-setenv /release /x86
-</pre>
-<p>
-Or select the x64 compiler:
-</p>
-<pre class="code">
-setenv /release /x64
-</pre>
-<p>
-Then <tt>cd</tt> to the directory where you've unpacked the sources
-and run these commands:
-</p>
-<pre class="code">
-cd src
-msvcbuild
-</pre>
-<p>
+Check the <tt>msvcbuild.bat</tt> file for more options.
 Then follow the installation instructions below.
 </p>
 <h3>Building with MinGW or Cygwin</h3>
@@ -427,52 +388,31 @@ make CROSS=mips-linux- TARGET_CFLAGS="-mips64r2 -mabi=64"
 make CROSS=mipsel-linux- TARGET_CFLAGS="-mips64r2 -mabi=64"
 </pre>
 <p>
-You can cross-compile for <b id="android">Android</b> using the <a href="https://developer.android.com/ndk/index.html">Android NDK</a>.
-The environment variables need to match the install locations and the
-desired target platform. E.g. Android&nbsp;4.0 corresponds to ABI level&nbsp;14.
-For details check the folder <tt>docs</tt> in the NDK directory.
-</p>
-<p>
-Only a few common variations for the different CPUs, ABIs and platforms
-are listed. Please use your own judgement for which combination you want
-to build/deploy or which lowest common denominator you want to pick:
+You can cross-compile for <b id="android">Android</b> using the <a href="https://developer.android.com/ndk/">Android NDK</a>.
+Please adapt the environment variables to match the install locations and the
+desired target platform. E.g. Android&nbsp;4.1 corresponds to ABI level&nbsp;16.
 </p>
 <pre class="code">
-# Android/ARM, armeabi (ARMv5TE soft-float), Android 2.2+ (Froyo)
-NDK=/opt/android/ndk
-NDKABI=8
-NDKVER=$NDK/toolchains/arm-linux-androideabi-4.9
-NDKP=$NDKVER/prebuilt/linux-x86/bin/arm-linux-androideabi-
-NDKF="--sysroot $NDK/platforms/android-$NDKABI/arch-arm"
-make HOST_CC="gcc -m32" CROSS=$NDKP TARGET_FLAGS="$NDKF"
+# Android/ARM64, aarch64, Android 5.0+ (L)
+NDKDIR=/opt/android/ndk
+NDKBIN=$NDKDIR/toolchains/llvm/prebuilt/linux-x86_64/bin
+NDKCROSS=$NDKBIN/aarch64-linux-android-
+NDKCC=$NDKBIN/aarch64-linux-android21-clang
+make CROSS=$NDKCROSS \
+     STATIC_CC=$NDKCC DYNAMIC_CC="$NDKCC -fPIC" \
+     TARGET_LD=$NDKCC
 
-# Android/ARM, armeabi-v7a (ARMv7 VFP), Android 4.0+ (ICS)
-NDK=/opt/android/ndk
-NDKABI=14
-NDKVER=$NDK/toolchains/arm-linux-androideabi-4.9
-NDKP=$NDKVER/prebuilt/linux-x86/bin/arm-linux-androideabi-
-NDKF="--sysroot $NDK/platforms/android-$NDKABI/arch-arm"
-NDKARCH="-march=armv7-a -mfloat-abi=softfp -Wl,--fix-cortex-a8"
-make HOST_CC="gcc -m32" CROSS=$NDKP TARGET_FLAGS="$NDKF $NDKARCH"
-
-# Android/MIPS, mipsel (MIPS32R1 hard-float), Android 4.0+ (ICS)
-NDK=/opt/android/ndk
-NDKABI=14
-NDKVER=$NDK/toolchains/mipsel-linux-android-4.9
-NDKP=$NDKVER/prebuilt/linux-x86/bin/mipsel-linux-android-
-NDKF="--sysroot $NDK/platforms/android-$NDKABI/arch-mips"
-make HOST_CC="gcc -m32" CROSS=$NDKP TARGET_FLAGS="$NDKF"
-
-# Android/x86, x86 (i686 SSE3), Android 4.0+ (ICS)
-NDK=/opt/android/ndk
-NDKABI=14
-NDKVER=$NDK/toolchains/x86-4.9
-NDKP=$NDKVER/prebuilt/linux-x86/bin/i686-linux-android-
-NDKF="--sysroot $NDK/platforms/android-$NDKABI/arch-x86"
-make HOST_CC="gcc -m32" CROSS=$NDKP TARGET_FLAGS="$NDKF"
+# Android/ARM, armeabi-v7a (ARMv7 VFP), Android 4.1+ (JB)
+NDKDIR=/opt/android/ndk
+NDKBIN=$NDKDIR/toolchains/llvm/prebuilt/linux-x86_64/bin
+NDKCROSS=$NDKBIN/arm-linux-androideabi-
+NDKCC=$NDKBIN/armv7a-linux-androideabi16-clang
+make HOST_CC="gcc -m32" CROSS=$NDKCROSS \
+     STATIC_CC=$NDKCC DYNAMIC_CC="$NDKCC -fPIC" \
+     TARGET_LD=$NDKCC
 </pre>
 <p>
-You can cross-compile for <b id="ios">iOS 3.0+</b> (iPhone/iPad) using the <a href="http://developer.apple.com/devcenter/ios/index.action"><span class="ext">&raquo;</span>&nbsp;iOS SDK</a>:
+You can cross-compile for <b id="ios">iOS 3.0+</b> (iPhone/iPad) using the <a href="https://developer.apple.com/ios/">iOS SDK</a>:
 </p>
 <p style="font-size: 8pt;">
 Note: <b>the JIT compiler is disabled for iOS</b>, because regular iOS Apps
@@ -482,13 +422,6 @@ much slower than the JIT compiler. Please complain to Apple, not me.
 Or use Android. :-p
 </p>
 <pre class="code">
-# iOS/ARM (32 bit)
-ISDKP=$(xcrun --sdk iphoneos --show-sdk-path)
-ICC=$(xcrun --sdk iphoneos --find clang)
-ISDKF="-arch armv7 -isysroot $ISDKP"
-make DEFAULT_CC=clang HOST_CC="clang -m32 -arch i386" \
-     CROSS="$(dirname $ICC)/" TARGET_FLAGS="$ISDKF" TARGET_SYS=iOS
-
 # iOS/ARM64
 ISDKP=$(xcrun --sdk iphoneos --show-sdk-path)
 ICC=$(xcrun --sdk iphoneos --find clang)
@@ -614,7 +547,7 @@ Make sure the <tt>jit</tt> library is loaded or the JIT compiler
 will not be activated.</li>
 <li>The <tt>bit.*</tt> module for bitwise operations
 is already built-in. There's no need to statically link
-<a href="http://bitop.luajit.org/"><span class="ext">&raquo;</span>&nbsp;Lua BitOp</a> to your application.</li>
+<a href="https://bitop.luajit.org/">Lua BitOp</a> to your application.</li>
 </ul>
 
 <h2 id="distro">Hints for Distribution Maintainers</h2>
@@ -681,7 +614,7 @@ to me (the upstream) and not you (the package maintainer), anyway.
 </div>
 <div id="foot">
 <hr class="hide">
-Copyright &copy; 2005-2018
+Copyright &copy; 2005-2020
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

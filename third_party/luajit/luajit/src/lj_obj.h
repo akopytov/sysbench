@@ -1,6 +1,6 @@
 /*
 ** LuaJIT VM tags, values and objects.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -638,7 +638,8 @@ typedef struct global_State {
 #define HOOK_PROFILE		0x80
 #define hook_active(g)		((g)->hookmask & HOOK_ACTIVE)
 #define hook_enter(g)		((g)->hookmask |= HOOK_ACTIVE)
-#define hook_entergc(g)		((g)->hookmask |= (HOOK_ACTIVE|HOOK_GC))
+#define hook_entergc(g) \
+  ((g)->hookmask = ((g)->hookmask | (HOOK_ACTIVE|HOOK_GC)) & ~HOOK_PROFILE)
 #define hook_vmevent(g)		((g)->hookmask |= (HOOK_ACTIVE|HOOK_VMEVENT))
 #define hook_leave(g)		((g)->hookmask &= ~HOOK_ACTIVE)
 #define hook_save(g)		((g)->hookmask & ~HOOK_EVENTMASK)

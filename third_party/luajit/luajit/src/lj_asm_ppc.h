@@ -1,6 +1,6 @@
 /*
 ** PPC IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Register allocator extensions --------------------------------------- */
@@ -1174,8 +1174,6 @@ static void asm_cnew(ASMState *as, IRIns *ir)
   ra_allockreg(as, (int32_t)(sz+sizeof(GCcdata)),
 	       ra_releasetmp(as, ASMREF_TMP1));
 }
-#else
-#define asm_cnew(as, ir)	((void)0)
 #endif
 
 /* -- Write barriers ------------------------------------------------------ */
@@ -1246,8 +1244,6 @@ static void asm_fpunary(ASMState *as, IRIns *ir, PPCIns pi)
 
 static void asm_fpmath(ASMState *as, IRIns *ir)
 {
-  if (ir->op2 == IRFPM_EXP2 && asm_fpjoin_pow(as, ir))
-    return;
   if (ir->op2 == IRFPM_SQRT && (as->flags & JIT_F_SQRT))
     asm_fpunary(as, ir, PPCI_FSQRT);
   else
@@ -1361,9 +1357,7 @@ static void asm_mul(ASMState *as, IRIns *ir)
   }
 }
 
-#define asm_div(as, ir)		asm_fparith(as, ir, PPCI_FDIV)
-#define asm_mod(as, ir)		asm_callid(as, ir, IRCALL_lj_vm_modi)
-#define asm_pow(as, ir)		asm_callid(as, ir, IRCALL_lj_vm_powi)
+#define asm_fpdiv(as, ir)	asm_fparith(as, ir, PPCI_FDIV)
 
 static void asm_neg(ASMState *as, IRIns *ir)
 {
@@ -1387,8 +1381,6 @@ static void asm_neg(ASMState *as, IRIns *ir)
 }
 
 #define asm_abs(as, ir)		asm_fpunary(as, ir, PPCI_FABS)
-#define asm_atan2(as, ir)	asm_callid(as, ir, IRCALL_atan2)
-#define asm_ldexp(as, ir)	asm_callid(as, ir, IRCALL_ldexp)
 
 static void asm_arithov(ASMState *as, IRIns *ir, PPCIns pi)
 {
@@ -1724,9 +1716,8 @@ static void asm_min_max(ASMState *as, IRIns *ir, int ismax)
     if (tmp == left || tmp == right)
       tmp = ra_scratch(as, rset_exclude(rset_exclude(rset_exclude(RSET_FPR,
 					dest), left), right));
-    emit_facb(as, PPCI_FSEL, dest, tmp,
-	      ismax ? left : right, ismax ? right : left);
-    emit_fab(as, PPCI_FSUB, tmp, left, right);
+    emit_facb(as, PPCI_FSEL, dest, tmp, left, right);
+    emit_fab(as, PPCI_FSUB, tmp, ismax ? left : right, ismax ? right : left);
   } else {
     Reg dest = ra_dest(as, ir, RSET_GPR);
     Reg tmp1 = RID_TMP, tmp2 = dest;

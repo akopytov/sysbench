@@ -1,6 +1,6 @@
 /*
 ** Math helper functions for assembler VM.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_vmmath_c
@@ -48,10 +48,9 @@ double lj_vm_foldarith(double x, double y, int op)
   case IR_NEG - IR_ADD: return -x; break;
   case IR_ABS - IR_ADD: return fabs(x); break;
 #if LJ_HASJIT
-  case IR_ATAN2 - IR_ADD: return atan2(x, y); break;
   case IR_LDEXP - IR_ADD: return ldexp(x, (int)y); break;
-  case IR_MIN - IR_ADD: return x > y ? y : x; break;
-  case IR_MAX - IR_ADD: return x < y ? y : x; break;
+  case IR_MIN - IR_ADD: return x < y ? x : y; break;
+  case IR_MAX - IR_ADD: return x > y ? x : y; break;
 #endif
   default: return x;
   }
@@ -77,13 +76,6 @@ int32_t LJ_FASTCALL lj_vm_modi(int32_t a, int32_t b)
 double lj_vm_log2(double a)
 {
   return log(a) * 1.4426950408889634074;
-}
-#endif
-
-#ifdef LUAJIT_NO_EXP2
-double lj_vm_exp2(double a)
-{
-  return exp(a * 0.6931471805599453);
 }
 #endif
 
@@ -129,14 +121,8 @@ double lj_vm_foldfpm(double x, int fpm)
   case IRFPM_CEIL: return lj_vm_ceil(x);
   case IRFPM_TRUNC: return lj_vm_trunc(x);
   case IRFPM_SQRT: return sqrt(x);
-  case IRFPM_EXP: return exp(x);
-  case IRFPM_EXP2: return lj_vm_exp2(x);
   case IRFPM_LOG: return log(x);
   case IRFPM_LOG2: return lj_vm_log2(x);
-  case IRFPM_LOG10: return log10(x);
-  case IRFPM_SIN: return sin(x);
-  case IRFPM_COS: return cos(x);
-  case IRFPM_TAN: return tan(x);
   default: lua_assert(0);
   }
   return 0;

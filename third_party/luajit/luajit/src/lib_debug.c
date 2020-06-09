@@ -1,6 +1,6 @@
 /*
 ** Debug library.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -369,7 +369,8 @@ LJLIB_CF(debug_debug)
       return 0;
     if (luaL_loadbuffer(L, buffer, strlen(buffer), "=(debug command)") ||
 	lua_pcall(L, 0, 0, 0)) {
-      fputs(lua_tostring(L, -1), stderr);
+      const char *s = lua_tostring(L, -1);
+      fputs(s ? s : "(error object is not a string)", stderr);
       fputs("\n", stderr);
     }
     lua_settop(L, 0);  /* remove eventual returns */

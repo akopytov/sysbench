@@ -1,6 +1,6 @@
 /*
 ** C data arithmetic.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include "lj_obj.h"
@@ -265,22 +265,13 @@ int lj_carith_op(lua_State *L, MMS mm)
 {
   CTState *cts = ctype_cts(L);
   CDArith ca;
-  if (carith_checkarg(L, cts, &ca)) {
+  if (carith_checkarg(L, cts, &ca) && mm != MM_len && mm != MM_concat) {
     if (carith_int64(L, cts, &ca, mm) || carith_ptr(L, cts, &ca, mm)) {
       copyTV(L, &G(L)->tmptv2, L->top-1);  /* Remember for trace recorder. */
       return 1;
     }
   }
   return lj_carith_meta(L, cts, &ca, mm);
-}
-
-/* No built-in functionality for length of cdata. */
-int lj_carith_len(lua_State *L)
-{
-  CTState *cts = ctype_cts(L);
-  CDArith ca;
-  carith_checkarg(L, cts, &ca);
-  return lj_carith_meta(L, cts, &ca, MM_len);
 }
 
 /* -- 64 bit bit operations helpers --------------------------------------- */

@@ -1,6 +1,6 @@
 /*
 ** Bytecode reader.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_bcread_c
@@ -73,6 +73,7 @@ static LJ_NOINLINE void bcread_fill(LexState *ls, MSize len, int need)
       ls->c = -1;  /* Only bad if we get called again. */
       break;
     }
+    if (sz >= LJ_MAX_BUF - n) lj_err_mem(ls->L);
     if (n) {  /* Append to buffer. */
       n += (MSize)sz;
       p = lj_buf_need(&ls->sb, n < len ? len : n);
@@ -84,20 +85,20 @@ static LJ_NOINLINE void bcread_fill(LexState *ls, MSize len, int need)
       ls->p = buf;
       ls->pe = buf + sz;
     }
-  } while (ls->p + len > ls->pe);
+  } while ((MSize)(ls->pe - ls->p) < len);
 }
 
 /* Need a certain number of bytes. */
 static LJ_AINLINE void bcread_need(LexState *ls, MSize len)
 {
-  if (LJ_UNLIKELY(ls->p + len > ls->pe))
+  if (LJ_UNLIKELY((MSize)(ls->pe - ls->p) < len))
     bcread_fill(ls, len, 1);
 }
 
 /* Want to read up to a certain number of bytes, but may need less. */
 static LJ_AINLINE void bcread_want(LexState *ls, MSize len)
 {
-  if (LJ_UNLIKELY(ls->p + len > ls->pe))
+  if (LJ_UNLIKELY((MSize)(ls->pe - ls->p) < len))
     bcread_fill(ls, len, 0);
 }
 
@@ -447,8 +448,7 @@ GCproto *lj_bcread(LexState *ls)
     setprotoV(L, L->top, pt);
     incr_top(L);
   }
-  if ((int32_t)(2*(uint32_t)(ls->pe - ls->p)) > 0 ||
-      L->top-1 != bcread_oldtop(L, ls))
+  if ((ls->pe != ls->p && !ls->endmark) || L->top-1 != bcread_oldtop(L, ls))
     bcread_error(ls, LJ_ERR_BCBAD);
   /* Pop off last prototype. */
   L->top--;

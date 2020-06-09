@@ -1,6 +1,6 @@
 /*
 ** Math library.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include <math.h>
@@ -33,19 +33,19 @@ LJLIB_ASM(math_sqrt)		LJLIB_REC(math_unary IRFPM_SQRT)
   lj_lib_checknum(L, 1);
   return FFH_RETRY;
 }
-LJLIB_ASM_(math_log10)		LJLIB_REC(math_unary IRFPM_LOG10)
-LJLIB_ASM_(math_exp)		LJLIB_REC(math_unary IRFPM_EXP)
-LJLIB_ASM_(math_sin)		LJLIB_REC(math_unary IRFPM_SIN)
-LJLIB_ASM_(math_cos)		LJLIB_REC(math_unary IRFPM_COS)
-LJLIB_ASM_(math_tan)		LJLIB_REC(math_unary IRFPM_TAN)
-LJLIB_ASM_(math_asin)		LJLIB_REC(math_atrig FF_math_asin)
-LJLIB_ASM_(math_acos)		LJLIB_REC(math_atrig FF_math_acos)
-LJLIB_ASM_(math_atan)		LJLIB_REC(math_atrig FF_math_atan)
-LJLIB_ASM_(math_sinh)		LJLIB_REC(math_htrig IRCALL_sinh)
-LJLIB_ASM_(math_cosh)		LJLIB_REC(math_htrig IRCALL_cosh)
-LJLIB_ASM_(math_tanh)		LJLIB_REC(math_htrig IRCALL_tanh)
+LJLIB_ASM_(math_log10)		LJLIB_REC(math_call IRCALL_log10)
+LJLIB_ASM_(math_exp)		LJLIB_REC(math_call IRCALL_exp)
+LJLIB_ASM_(math_sin)		LJLIB_REC(math_call IRCALL_sin)
+LJLIB_ASM_(math_cos)		LJLIB_REC(math_call IRCALL_cos)
+LJLIB_ASM_(math_tan)		LJLIB_REC(math_call IRCALL_tan)
+LJLIB_ASM_(math_asin)		LJLIB_REC(math_call IRCALL_asin)
+LJLIB_ASM_(math_acos)		LJLIB_REC(math_call IRCALL_acos)
+LJLIB_ASM_(math_atan)		LJLIB_REC(math_call IRCALL_atan)
+LJLIB_ASM_(math_sinh)		LJLIB_REC(math_call IRCALL_sinh)
+LJLIB_ASM_(math_cosh)		LJLIB_REC(math_call IRCALL_cosh)
+LJLIB_ASM_(math_tanh)		LJLIB_REC(math_call IRCALL_tanh)
 LJLIB_ASM_(math_frexp)
-LJLIB_ASM_(math_modf)		LJLIB_REC(.)
+LJLIB_ASM_(math_modf)
 
 LJLIB_ASM(math_log)		LJLIB_REC(math_log)
 {

@@ -1,6 +1,6 @@
 /*
 ** Common header for IR emitter and optimizations.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_IROPT_H
@@ -120,7 +120,7 @@ LJ_FUNC TRef LJ_FASTCALL lj_opt_fwd_hload(jit_State *J);
 LJ_FUNC TRef LJ_FASTCALL lj_opt_fwd_uload(jit_State *J);
 LJ_FUNC TRef LJ_FASTCALL lj_opt_fwd_fload(jit_State *J);
 LJ_FUNC TRef LJ_FASTCALL lj_opt_fwd_xload(jit_State *J);
-LJ_FUNC TRef LJ_FASTCALL lj_opt_fwd_tab_len(jit_State *J);
+LJ_FUNC TRef LJ_FASTCALL lj_opt_fwd_alen(jit_State *J);
 LJ_FUNC TRef LJ_FASTCALL lj_opt_fwd_hrefk(jit_State *J);
 LJ_FUNC int LJ_FASTCALL lj_opt_fwd_href_nokey(jit_State *J);
 LJ_FUNC int LJ_FASTCALL lj_opt_fwd_tptr(jit_State *J, IRRef lim);

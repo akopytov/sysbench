@@ -1,6 +1,6 @@
 /*
 ** Debugging and introspection.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_debug_c
@@ -221,19 +221,22 @@ const char *lj_debug_uvname(GCproto *pt, uint32_t idx)
 }
 
 /* Get name and value of upvalue. */
-const char *lj_debug_uvnamev(cTValue *o, uint32_t idx, TValue **tvp)
+const char *lj_debug_uvnamev(cTValue *o, uint32_t idx, TValue **tvp, GCobj **op)
 {
   if (tvisfunc(o)) {
     GCfunc *fn = funcV(o);
     if (isluafunc(fn)) {
       GCproto *pt = funcproto(fn);
       if (idx < pt->sizeuv) {
-	*tvp = uvval(&gcref(fn->l.uvptr[idx])->uv);
+	GCobj *uvo = gcref(fn->l.uvptr[idx]);
+	*tvp = uvval(&uvo->uv);
+	*op = uvo;
 	return lj_debug_uvname(pt, idx);
       }
     } else {
       if (idx < fn->c.nupvalues) {
 	*tvp = &fn->c.upvalue[idx];
+	*op = obj2gco(fn);
 	return "";
       }
     }
@@ -429,7 +432,7 @@ int lj_debug_getinfo(lua_State *L, const char *what, lj_Debug *ar, int ext)
   GCfunc *fn;
   if (*what == '>') {
     TValue *func = L->top - 1;
-    api_check(L, tvisfunc(func));
+    if (!tvisfunc(func)) return 0;
     fn = funcV(func);
     L->top--;
     what++;

@@ -1,6 +1,6 @@
 /*
 ** ARM IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Register allocator extensions --------------------------------------- */
@@ -979,7 +979,7 @@ static ARMIns asm_fxloadins(IRIns *ir)
   case IRT_I16: return ARMI_LDRSH;
   case IRT_U16: return ARMI_LDRH;
   case IRT_NUM: lua_assert(!LJ_SOFTFP); return ARMI_VLDR_D;
-  case IRT_FLOAT: if (!LJ_SOFTFP) return ARMI_VLDR_S;
+  case IRT_FLOAT: if (!LJ_SOFTFP) return ARMI_VLDR_S;  /* fallthrough */
   default: return ARMI_LDR;
   }
 }
@@ -990,7 +990,7 @@ static ARMIns asm_fxstoreins(IRIns *ir)
   case IRT_I8: case IRT_U8: return ARMI_STRB;
   case IRT_I16: case IRT_U16: return ARMI_STRH;
   case IRT_NUM: lua_assert(!LJ_SOFTFP); return ARMI_VSTR_D;
-  case IRT_FLOAT: if (!LJ_SOFTFP) return ARMI_VSTR_S;
+  case IRT_FLOAT: if (!LJ_SOFTFP) return ARMI_VSTR_S;  /* fallthrough */
   default: return ARMI_STR;
   }
 }
@@ -1268,8 +1268,6 @@ static void asm_cnew(ASMState *as, IRIns *ir)
   ra_allockreg(as, (int32_t)(sz+sizeof(GCcdata)),
 	       ra_releasetmp(as, ASMREF_TMP1));
 }
-#else
-#define asm_cnew(as, ir)	((void)0)
 #endif
 
 /* -- Write barriers ------------------------------------------------------ */
@@ -1364,8 +1362,6 @@ static void asm_callround(ASMState *as, IRIns *ir, int id)
 
 static void asm_fpmath(ASMState *as, IRIns *ir)
 {
-  if (ir->op2 == IRFPM_EXP2 && asm_fpjoin_pow(as, ir))
-    return;
   if (ir->op2 <= IRFPM_TRUNC)
     asm_callround(as, ir, ir->op2);
   else if (ir->op2 == IRFPM_SQRT)
@@ -1412,14 +1408,29 @@ static void asm_intop(ASMState *as, IRIns *ir, ARMIns ai)
   emit_dn(as, ai^m, dest, left);
 }
 
+/* Try to drop cmp r, #0. */
+static ARMIns asm_drop_cmp0(ASMState *as, ARMIns ai)
+{
+  if (as->flagmcp == as->mcp) {
+    uint32_t cc = (as->mcp[1] >> 28);
+    as->flagmcp = NULL;
+    if (cc <= CC_NE) {
+      as->mcp++;
+      ai |= ARMI_S;
+    } else if (cc == CC_GE) {
+      *++as->mcp ^= ((CC_GE^CC_PL) << 28);
+      ai |= ARMI_S;
+    } else if (cc == CC_LT) {
+      *++as->mcp ^= ((CC_LT^CC_MI) << 28);
+      ai |= ARMI_S;
+    }  /* else: other conds don't work in general. */
+  }
+  return ai;
+}
+
 static void asm_intop_s(ASMState *as, IRIns *ir, ARMIns ai)
 {
-  if (as->flagmcp == as->mcp) {  /* Drop cmp r, #0. */
-    as->flagmcp = NULL;
-    as->mcp++;
-    ai |= ARMI_S;
-  }
-  asm_intop(as, ir, ai);
+  asm_intop(as, ir, asm_drop_cmp0(as, ai));
 }
 
 static void asm_intneg(ASMState *as, IRIns *ir, ARMIns ai)
@@ -1492,14 +1503,9 @@ static void asm_mul(ASMState *as, IRIns *ir)
 #define asm_mulov(as, ir)	asm_mul(as, ir)
 
 #if !LJ_SOFTFP
-#define asm_div(as, ir)		asm_fparith(as, ir, ARMI_VDIV_D)
-#define asm_pow(as, ir)		asm_callid(as, ir, IRCALL_lj_vm_powi)
+#define asm_fpdiv(as, ir)	asm_fparith(as, ir, ARMI_VDIV_D)
 #define asm_abs(as, ir)		asm_fpunary(as, ir, ARMI_VABS_D)
-#define asm_atan2(as, ir)	asm_callid(as, ir, IRCALL_atan2)
-#define asm_ldexp(as, ir)	asm_callid(as, ir, IRCALL_ldexp)
 #endif
-
-#define asm_mod(as, ir)		asm_callid(as, ir, IRCALL_lj_vm_modi)
 
 static void asm_neg(ASMState *as, IRIns *ir)
 {
@@ -1514,20 +1520,7 @@ static void asm_neg(ASMState *as, IRIns *ir)
 
 static void asm_bitop(ASMState *as, IRIns *ir, ARMIns ai)
 {
-  if (as->flagmcp == as->mcp) {  /* Try to drop cmp r, #0. */
-    uint32_t cc = (as->mcp[1] >> 28);
-    as->flagmcp = NULL;
-    if (cc <= CC_NE) {
-      as->mcp++;
-      ai |= ARMI_S;
-    } else if (cc == CC_GE) {
-      *++as->mcp ^= ((CC_GE^CC_PL) << 28);
-      ai |= ARMI_S;
-    } else if (cc == CC_LT) {
-      *++as->mcp ^= ((CC_LT^CC_MI) << 28);
-      ai |= ARMI_S;
-    }  /* else: other conds don't work with bit ops. */
-  }
+  ai = asm_drop_cmp0(as, ai);
   if (ir->op2 == 0) {
     Reg dest = ra_dest(as, ir, RSET_GPR);
     uint32_t m = asm_fuseopm(as, ai, ir->op1, RSET_GPR);
@@ -1657,8 +1650,8 @@ static void asm_min_max(ASMState *as, IRIns *ir, int cc, int fcc)
     asm_intmin_max(as, ir, cc);
 }
 
-#define asm_min(as, ir)		asm_min_max(as, ir, CC_GT, CC_HI)
-#define asm_max(as, ir)		asm_min_max(as, ir, CC_LT, CC_LO)
+#define asm_min(as, ir)		asm_min_max(as, ir, CC_GT, CC_PL)
+#define asm_max(as, ir)		asm_min_max(as, ir, CC_LT, CC_LE)
 
 /* -- Comparisons --------------------------------------------------------- */
 
@@ -1850,7 +1843,7 @@ static void asm_hiop(ASMState *as, IRIns *ir)
   } else if ((ir-1)->o == IR_MIN || (ir-1)->o == IR_MAX) {
     as->curins--;  /* Always skip the loword min/max. */
     if (uselo || usehi)
-      asm_sfpmin_max(as, ir-1, (ir-1)->o == IR_MIN ? CC_HI : CC_LO);
+      asm_sfpmin_max(as, ir-1, (ir-1)->o == IR_MIN ? CC_PL : CC_LE);
     return;
 #elif LJ_HASFFI
   } else if ((ir-1)->o == IR_CONV) {
