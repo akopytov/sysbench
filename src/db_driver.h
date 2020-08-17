@@ -200,6 +200,7 @@ typedef struct db_result
   struct db_stmt *statement;    /* Pointer to prepared statement (if used) */
   void           *ptr;          /* Pointer to driver-specific data */
   db_row_t       row;           /* Last fetched row */
+  uint64_t       cpu_util;      /* Integer - Percentage 0.5 -> 50 */
 } db_result_t;
 
 typedef enum {

@@ -488,6 +488,7 @@ db_result_t *db_execute(db_stmt_t *stmt)
   con->error = con->driver->ops.execute(stmt, rs);
 
   sb_counter_inc(con->thread_id, rs->counter);
+  sb_counter_add(con->thread_id, SB_CNT_CPU_UTIL_SUM, rs->cpu_util);
 
   if (SB_LIKELY(con->error == DB_ERROR_NONE))
   {
@@ -973,22 +974,26 @@ void db_report_intermediate(sb_stat_t *stat)
   }
 
   const double seconds = stat->time_interval;
+  const uint64_t total_queries = stat->reads + stat->writes + stat->other;
 
   log_timestamp(LOG_NOTICE, stat->time_total,
                 "thds: %u tps: %4.2f "
                 "qps: %4.2f (r/w/o: %4.2f/%4.2f/%4.2f) "
                 "lat (ms,%u%%): %4.2f err/s: %4.2f "
-                "reconn/s: %4.2f",
+                "reconn/s: %4.2f "
+                "cpu_util_avg: %4.2f",
                 stat->threads_running,
                 stat->events / seconds,
-                (stat->reads + stat->writes + stat->other) / seconds,
+                total_queries / seconds,
                 stat->reads / seconds,
                 stat->writes / seconds,
                 stat->other / seconds,
                 sb_globals.percentile,
                 SEC2MS(stat->latency_pct),
                 stat->errors / seconds,
-                stat->reconnects / seconds);
+                stat->reconnects / seconds,
+                /* cpu_utilization starts here */
+                stat->cpu_util_sum / (total_queries * 100));
 
   if (sb_globals.tx_rate > 0)
   {

@@ -999,6 +999,30 @@ db_error_t mysql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
     return check_error(sb_conn, "mysql_store_result()", NULL, &rs->counter);
   }
 
+  const char *data;
+  size_t length;
+  bool found = false;
+  float cpu_util = 0;
+  enum enum_session_state_type type = SESSION_TRACK_SYSTEM_VARIABLES;
+  if (mysql_session_track_get_first(con, type, &data, &length) == 0)
+  {
+    if (!strncmp(data, "mysql_proctor_performance_data", length))
+      found = true;
+
+    while (mysql_session_track_get_next(con, type, &data, &length) == 0)
+    {
+      if (found) break;
+      if (!strncmp(data, "mysql_proctor_performance_data", length))
+        found = true;
+    }
+  }
+
+  if (found) {
+    char* pch = strstr(data, "cpu_utilization");
+    sscanf(pch, "cpu_utilization\":\"%f", &cpu_util);
+  }
+  rs->cpu_util = (int)(cpu_util * 100);
+
   rs->counter = SB_CNT_READ;
   rs->ptr = (void *)res;
 

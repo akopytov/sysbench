@@ -110,6 +110,8 @@ typedef struct {
 
   uint64_t queue_length;        /* Event queue length (tx_rate-only) */
   uint64_t concurrency;         /* Number of in-flight events (tx_rate-only) */
+
+  double   cpu_util_sum;        /* Sum of cpu utilization */
 } sb_stat_t;
 
 /* Commands */
