@@ -112,6 +112,7 @@ typedef struct {
   uint64_t concurrency;         /* Number of in-flight events (tx_rate-only) */
 
   double   cpu_util_sum;        /* Sum of cpu utilization */
+  uint64_t guaranteed_capacity_drops; /* Number of guaranteed capacity drops */
 } sb_stat_t;
 
 /* Commands */

@@ -42,6 +42,7 @@ typedef enum {
   SB_CNT_BYTES_READ,    /* bytes read */
   SB_CNT_BYTES_WRITTEN, /* bytes written */
   SB_CNT_CPU_UTIL_SUM,  /* cpu_util sum */
+  SB_CNT_GUARANTEED_CAPACITY_DROP, /* guaranteed capacity plugin drop count */
   SB_CNT_MAX
 } sb_counter_type_t;
 

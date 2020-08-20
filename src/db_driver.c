@@ -489,6 +489,8 @@ db_result_t *db_execute(db_stmt_t *stmt)
 
   sb_counter_inc(con->thread_id, rs->counter);
   sb_counter_add(con->thread_id, SB_CNT_CPU_UTIL_SUM, rs->cpu_util);
+  if (rs->counter == SB_CNT_GUARANTEED_CAPACITY_DROP)
+    sb_counter_inc(con->thread_id, SB_CNT_ERROR);
 
   if (SB_LIKELY(con->error == DB_ERROR_NONE))
   {
@@ -974,11 +976,11 @@ void db_report_intermediate(sb_stat_t *stat)
   }
 
   const double seconds = stat->time_interval;
-  const uint64_t total_queries = stat->reads + stat->writes + stat->other;
+  const uint64_t total_queries = stat->reads + stat->writes + stat->other + stat->guaranteed_capacity_drops;
 
   log_timestamp(LOG_NOTICE, stat->time_total,
                 "thds: %u tps: %4.2f "
-                "qps: %4.2f (r/w/o: %4.2f/%4.2f/%4.2f) "
+                "qps: %4.2f (r/w/o/d: %4.2f/%4.2f/%4.2f/%4.2f) "
                 "lat (ms,%u%%): %4.2f err/s: %4.2f "
                 "reconn/s: %4.2f "
                 "cpu_util_avg: %4.2f",
@@ -988,6 +990,7 @@ void db_report_intermediate(sb_stat_t *stat)
                 stat->reads / seconds,
                 stat->writes / seconds,
                 stat->other / seconds,
+                stat->guaranteed_capacity_drops / seconds,
                 sb_globals.percentile,
                 SEC2MS(stat->latency_pct),
                 stat->errors / seconds,
@@ -1017,7 +1020,7 @@ void db_report_cumulative(sb_stat_t *stat)
   }
 
   const double seconds = stat->time_interval;
-  const uint64_t queries = stat->reads + stat->writes + stat->other;
+  const uint64_t queries = stat->reads + stat->writes + stat->other + stat->guaranteed_capacity_drops;
 
   log_text(LOG_NOTICE, "SQL statistics:");
   log_text(LOG_NOTICE, "    queries performed:");
@@ -1025,6 +1028,8 @@ void db_report_cumulative(sb_stat_t *stat)
            stat->reads);
   log_text(LOG_NOTICE, "        write:                           %" PRIu64,
            stat->writes);
+  log_text(LOG_NOTICE, "        plugin drops:                    %" PRIu64,
+           stat->guaranteed_capacity_drops);
   log_text(LOG_NOTICE, "        other:                           %" PRIu64,
            stat->other);
   log_text(LOG_NOTICE, "        total:                           %" PRIu64,
