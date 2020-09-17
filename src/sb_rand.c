@@ -306,6 +306,32 @@ uint32_t sb_rand_varstr(char *buf, uint32_t min_len, uint32_t max_len)
 }
 
 /*
+  Generates a random string of ASCII characters between '0' and 'f' of a length
+  between min and max. buf should have enough room for max len bytes. Returns
+  the number of characters written into the buffer.
+ */
+
+uint32_t sb_rand_hexadecimal(char *buf, uint32_t min_len, uint32_t max_len)
+{
+  unsigned int i;
+  uint32_t num_chars;
+  if (max_len == 0) {
+    return 0; /* we can't be sure buf is long enough to populate, so be safe */
+  }
+  if (min_len > max_len)
+  {
+    min_len = 1;
+  }
+
+  num_chars = sb_rand_uniform(min_len, max_len);
+  for (i=0; i < num_chars; i++)
+  {
+    buf[i] = sb_rand_uniform('0', 'f');
+  }
+  return num_chars;
+}
+
+/*
   Unique random sequence generator. This is based on public domain code from
   https://github.com/preshing/RandomSequence
 */
