@@ -314,6 +314,7 @@ uint32_t sb_rand_varstr(char *buf, uint32_t min_len, uint32_t max_len)
 uint32_t sb_rand_hexadecimal(char *buf, uint32_t min_len, uint32_t max_len)
 {
   unsigned int i;
+  char charset[] = "abcdef0123456789";
   uint32_t num_chars;
   if (max_len == 0) {
     return 0; /* we can't be sure buf is long enough to populate, so be safe */
@@ -322,11 +323,14 @@ uint32_t sb_rand_hexadecimal(char *buf, uint32_t min_len, uint32_t max_len)
   {
     min_len = 1;
   }
+  int key;
+  int l = (int) (sizeof(charset) -1);
 
   num_chars = sb_rand_uniform(min_len, max_len);
   for (i=0; i < num_chars; i++)
   {
-    buf[i] = sb_rand_uniform('0', 'f');
+    key=rand() % l;
+    buf[i] = charset[key];
   }
   return num_chars;
 }
