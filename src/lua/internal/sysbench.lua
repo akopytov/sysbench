@@ -174,7 +174,7 @@ function sysbench.report_cumulative_csv(stat)
                           "%4.2f,%4.2f,%4.2f," ..
                           "%4.2f",
                        stat.time_total,
-                       stat.threads_running,
+                       sysbench.opt.threads,
                        stat.events,
                        stat.events / seconds,
                        (stat.reads + stat.writes + stat.other),
