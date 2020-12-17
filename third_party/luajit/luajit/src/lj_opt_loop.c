@@ -1,6 +1,6 @@
 /*
 ** LOOP: Loop Optimizations.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_opt_loop_c
@@ -299,7 +299,8 @@ static void loop_unroll(LoopState *lps)
   loopmap = &J->cur.snapmap[loopsnap->mapofs];
   /* The PC of snapshot #0 and the loop snapshot must match. */
   psentinel = &loopmap[loopsnap->nent];
-  lua_assert(*psentinel == J->cur.snapmap[J->cur.snap[0].nent]);
+  lj_assertJ(*psentinel == J->cur.snapmap[J->cur.snap[0].nent],
+	     "mismatched PC for loop snapshot");
   *psentinel = SNAP(255, 0, 0);  /* Replace PC with temporary sentinel. */
 
   /* Start substitution with snapshot #1 (#0 is empty for root traces). */
@@ -352,10 +353,12 @@ static void loop_unroll(LoopState *lps)
 	    irr = IR(ref);
 	    goto phiconv;
 	  }
-	} else if (ref != REF_DROP && irr->o == IR_CONV &&
-		   ref > invar && irr->op1 < invar) {
-	  /* May need an extra PHI for a CONV. */
-	  ref = irr->op1;
+	} else if (ref != REF_DROP && ref > invar &&
+		   ((irr->o == IR_CONV && irr->op1 < invar) ||
+		    (irr->o == IR_ALEN && irr->op2 < invar &&
+					  irr->op2 != REF_NIL))) {
+	  /* May need an extra PHI for a CONV or ALEN hint. */
+	  ref = irr->o == IR_CONV ? irr->op1 : irr->op2;
 	  irr = IR(ref);
 	phiconv:
 	  if (ref < invar && !irref_isk(ref) && !irt_isphi(irr->t)) {
@@ -370,7 +373,7 @@ static void loop_unroll(LoopState *lps)
   }
   if (!irt_isguard(J->guardemit))  /* Drop redundant snapshot. */
     J->cur.nsnapmap = (uint32_t)J->cur.snap[--J->cur.nsnap].mapofs;
-  lua_assert(J->cur.nsnapmap <= J->sizesnapmap);
+  lj_assertJ(J->cur.nsnapmap <= J->sizesnapmap, "bad snapshot map index");
   *psentinel = J->cur.snapmap[J->cur.snap[0].nent];  /* Restore PC. */
 
   loop_emit_phi(J, subst, phi, nphi, onsnap);

@@ -1,6 +1,6 @@
 /*
 ** SINK: Allocation Sinking and Store Sinking.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_opt_sink_c
@@ -78,8 +78,7 @@ static void sink_mark_ins(jit_State *J)
     switch (ir->o) {
     case IR_BASE:
       return;  /* Finished. */
-    case IR_CALLL:  /* IRCALL_lj_tab_len */
-    case IR_ALOAD: case IR_HLOAD: case IR_XLOAD: case IR_TBAR:
+    case IR_ALOAD: case IR_HLOAD: case IR_XLOAD: case IR_TBAR: case IR_ALEN:
       irt_setmark(IR(ir->op1)->t);  /* Mark ref for remaining loads. */
       break;
     case IR_FLOAD:

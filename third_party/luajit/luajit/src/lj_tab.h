@@ -1,6 +1,6 @@
 /*
 ** Table handling.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_TAB_H
@@ -69,5 +69,8 @@ LJ_FUNC TValue *lj_tab_set(lua_State *L, GCtab *t, cTValue *key);
 
 LJ_FUNCA int lj_tab_next(lua_State *L, GCtab *t, TValue *key);
 LJ_FUNCA MSize LJ_FASTCALL lj_tab_len(GCtab *t);
+#if LJ_HASJIT
+LJ_FUNC MSize LJ_FASTCALL lj_tab_len_hint(GCtab *t, size_t hint);
+#endif
 
 #endif

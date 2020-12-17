@@ -1,6 +1,6 @@
 /*
 ** Package library.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2012 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -237,7 +237,12 @@ static const char *mksymname(lua_State *L, const char *modname,
 
 static int ll_loadfunc(lua_State *L, const char *path, const char *name, int r)
 {
-  void **reg = ll_register(L, path);
+  void **reg;
+  if (strlen(path) >= 4096) {
+    lua_pushliteral(L, "path too long");
+    return PACKAGE_ERR_LIB;
+  }
+  reg = ll_register(L, path);
   if (*reg == NULL) *reg = ll_load(L, path, (*name == '*'));
   if (*reg == NULL) {
     return PACKAGE_ERR_LIB;  /* Unable to load library. */
@@ -255,7 +260,7 @@ static int ll_loadfunc(lua_State *L, const char *path, const char *name, int r)
       const char *bcdata = ll_bcsym(*reg, mksymname(L, name, SYMPREFIX_BC));
       lua_pop(L, 1);
       if (bcdata) {
-	if (luaL_loadbuffer(L, bcdata, LJ_MAX_BUF, name) != 0)
+	if (luaL_loadbuffer(L, bcdata, ~(size_t)0, name) != 0)
 	  return PACKAGE_ERR_LOAD;
 	return 0;
       }
@@ -320,23 +325,9 @@ static const char *searchpath (lua_State *L, const char *name,
     const char *filename = luaL_gsub(L, lua_tostring(L, -1),
 				     LUA_PATH_MARK, name);
     lua_remove(L, -2);  /* remove path template */
-    goto check_readable; /* suppress "unused label" warning */
-check_readable:
     if (readable(filename))  /* does file exist and is readable? */
       return filename;  /* return that file name */
     lua_pushfstring(L, "\n\tno file " LUA_QS, filename);
-#if LJ_TARGET_OSX || LJ_TARGET_IOS
-    /* if *.dylib is missing, try *.so */
-    size_t len = strlen(filename);
-    if (len > 6 && strcmp(filename + len - 6, ".dylib") == 0) {
-      luaL_addvalue(&msg);  /* concatenate error msg. entry */
-      lua_pushlstring(L, filename, len - 6);
-      filename = lua_pushfstring(L, "%s.so", lua_tostring(L, -1));
-      lua_insert(L, -3); /* sink new filename below old one */
-      lua_pop(L, 2);
-      goto check_readable;
-    }
-#endif
     lua_remove(L, -2);  /* remove file name */
     luaL_addvalue(&msg);  /* concatenate error msg. entry */
   }
@@ -426,7 +417,7 @@ static int lj_cf_package_loader_preload(lua_State *L)
   if (lua_isnil(L, -1)) {  /* Not found? */
     const char *bcname = mksymname(L, name, SYMPREFIX_BC);
     const char *bcdata = ll_bcsym(NULL, bcname);
-    if (bcdata == NULL || luaL_loadbuffer(L, bcdata, LJ_MAX_BUF, name) != 0)
+    if (bcdata == NULL || luaL_loadbuffer(L, bcdata, ~(size_t)0, name) != 0)
       lua_pushfstring(L, "\n\tno field package.preload['%s']", name);
   }
   return 1;
@@ -434,7 +425,7 @@ static int lj_cf_package_loader_preload(lua_State *L)
 
 /* ------------------------------------------------------------------------ */
 
-#define sentinel	((void *)0x4004)
+#define KEY_SENTINEL	(U64x(80000000,00000000)|'s')
 
 static int lj_cf_package_require(lua_State *L)
 {
@@ -444,7 +435,7 @@ static int lj_cf_package_require(lua_State *L)
   lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
   lua_getfield(L, 2, name);
   if (lua_toboolean(L, -1)) {  /* is it there? */
-    if (lua_touserdata(L, -1) == sentinel)  /* check loops */
+    if ((L->top-1)->u64 == KEY_SENTINEL)  /* check loops */
       luaL_error(L, "loop or previous error loading module " LUA_QS, name);
     return 1;  /* package is already loaded */
   }
@@ -467,14 +458,14 @@ static int lj_cf_package_require(lua_State *L)
     else
       lua_pop(L, 1);
   }
-  lua_pushlightuserdata(L, sentinel);
+  (L->top++)->u64 = KEY_SENTINEL;
   lua_setfield(L, 2, name);  /* _LOADED[name] = sentinel */
   lua_pushstring(L, name);  /* pass name as argument to module */
   lua_call(L, 1, 1);  /* run loaded module */
   if (!lua_isnil(L, -1))  /* non-nil return? */
     lua_setfield(L, 2, name);  /* _LOADED[name] = returned value */
   lua_getfield(L, 2, name);
-  if (lua_touserdata(L, -1) == sentinel) {   /* module did not set a value? */
+  if ((L->top-1)->u64 == KEY_SENTINEL) {   /* module did not set a value? */
     lua_pushboolean(L, 1);  /* use true as result */
     lua_pushvalue(L, -1);  /* extra copy to be returned */
     lua_setfield(L, 2, name);  /* _LOADED[name] = true */

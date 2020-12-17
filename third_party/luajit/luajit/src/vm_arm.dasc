@@ -1,6 +1,6 @@
 |// Low-level VM code for ARM CPUs.
 |// Bytecode interpreter, fast functions and helper functions.
-|// Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+|// Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 |
 |.arch arm
 |.section code_op, code_sub
@@ -699,6 +699,7 @@ static void build_subroutines(BuildCtx *ctx)
   |->vmeta_tsetr:
   |  str BASE, L->base
   |  .IOS mov RC, BASE
+  |  mov CARG1, L
   |  str PC, SAVE_PC
   |  bl extern lj_tab_setinth  // (lua_State *L, GCtab *t, int32_t key)
   |  // Returns TValue *.
@@ -1011,9 +1012,9 @@ static void build_subroutines(BuildCtx *ctx)
   |  cmp TAB:RB, #0
   |  beq ->fff_restv
   |  ldr CARG3, TAB:RB->hmask
-  |   ldr CARG4, STR:RC->hash
+  |   ldr CARG4, STR:RC->sid
   |    ldr NODE:INS, TAB:RB->node
-  |  and CARG3, CARG3, CARG4		// idx = str->hash & tab->hmask
+  |  and CARG3, CARG3, CARG4		// idx = str->sid & tab->hmask
   |  add CARG3, CARG3, CARG3, lsl #1
   |    add NODE:INS, NODE:INS, CARG3, lsl #3	// node = tab->node + idx*3*8
   |3:  // Rearranged logic, because we expect _not_ to find the key.
@@ -1715,8 +1716,8 @@ static void build_subroutines(BuildCtx *ctx)
   |.endif
   |.endmacro
   |
-  |  math_minmax math_min, gt, hi
-  |  math_minmax math_max, lt, lo
+  |  math_minmax math_min, gt, pl
+  |  math_minmax math_max, lt, le
   |
   |//-- String library -----------------------------------------------------
   |
@@ -2244,9 +2245,8 @@ static void build_subroutines(BuildCtx *ctx)
   |  b <2
   |
   |9:  // Rethrow error from the right C frame.
-  |  rsb CARG2, CARG1, #0
   |  mov CARG1, L
-  |  bl extern lj_err_throw		// (lua_State *L, int errcode)
+  |  bl extern lj_err_run		// (lua_State *L)
   |.endif
   |
   |//-----------------------------------------------------------------------
@@ -3499,10 +3499,10 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |->BC_TGETS_Z:
     |  // (TAB:RB =) TAB:CARG1 = GCtab *, STR:RC = GCstr *, RA = dst*8
     |  ldr CARG3, TAB:CARG1->hmask
-    |   ldr CARG4, STR:RC->hash
+    |   ldr CARG4, STR:RC->sid
     |    ldr NODE:INS, TAB:CARG1->node
     |     mov TAB:RB, TAB:CARG1
-    |  and CARG3, CARG3, CARG4			// idx = str->hash & tab->hmask
+    |  and CARG3, CARG3, CARG4			// idx = str->sid & tab->hmask
     |  add CARG3, CARG3, CARG3, lsl #1
     |    add NODE:INS, NODE:INS, CARG3, lsl #3	// node = tab->node + idx*3*8
     |1:
@@ -3646,10 +3646,10 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |->BC_TSETS_Z:
     |  // (TAB:RB =) TAB:CARG1 = GCtab *, STR:RC = GCstr *, RA = dst*8
     |  ldr CARG3, TAB:CARG1->hmask
-    |   ldr CARG4, STR:RC->hash
+    |   ldr CARG4, STR:RC->sid
     |    ldr NODE:INS, TAB:CARG1->node
     |     mov TAB:RB, TAB:CARG1
-    |  and CARG3, CARG3, CARG4			// idx = str->hash & tab->hmask
+    |  and CARG3, CARG3, CARG4			// idx = str->sid & tab->hmask
     |  add CARG3, CARG3, CARG3, lsl #1
     |   mov CARG4, #0
     |    add NODE:INS, NODE:INS, CARG3, lsl #3	// node = tab->node + idx*3*8

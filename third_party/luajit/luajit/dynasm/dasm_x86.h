@@ -1,6 +1,6 @@
 /*
 ** DynASM x86 encoding engine.
-** Copyright (C) 2005-2017 Mike Pall. All rights reserved.
+** Copyright (C) 2005-2020 Mike Pall. All rights reserved.
 ** Released under the MIT license. See dynasm.lua for full copyright notice.
 */
 
@@ -305,11 +305,13 @@ int dasm_link(Dst_DECL, size_t *szp)
 
     while (pos != lastpos) {
       dasm_ActList p = D->actionlist + b[pos++];
+      int op = 0;
       while (1) {
-	int op, action = *p++;
+	int action = *p++;
 	switch (action) {
-	case DASM_REL_LG: p++; op = p[-3]; goto rel_pc;
-	case DASM_REL_PC: op = p[-2]; rel_pc: {
+	case DASM_REL_LG: p++;
+	  /* fallthrough */
+	case DASM_REL_PC: {
 	  int shrink = op == 0xe9 ? 3 : ((op&0xf0) == 0x80 ? 4 : 0);
 	  if (shrink) {  /* Shrinkable branch opcode? */
 	    int lofs, lpos = b[pos];
@@ -341,9 +343,10 @@ int dasm_link(Dst_DECL, size_t *szp)
 	case DASM_LABEL_PC: b[pos++] += ofs; break; /* Fix label offset. */
 	case DASM_ALIGN: ofs -= (b[pos++]+ofs)&*p++; break; /* Adjust ofs. */
 	case DASM_EXTERN: p += 2; break;
-	case DASM_ESC: p++; break;
+	case DASM_ESC: op = *p++; break;
 	case DASM_MARK: break;
 	case DASM_SECTION: case DASM_STOP: goto stop;
+	default: op = action; break;
 	}
       }
       stop: (void)0;

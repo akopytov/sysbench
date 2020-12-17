@@ -1,6 +1,6 @@
 /*
 ** x86/x64 instruction emitter.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Emit basic instructions --------------------------------------------- */
@@ -45,7 +45,7 @@ static LJ_AINLINE MCode *emit_op(x86Op xo, Reg rr, Reg rb, Reg rx,
     *(uint32_t *)(p+delta-5) = (uint32_t)xo;
     return p+delta-5;
   }
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
   if (__builtin_constant_p(xo) && n == -2)
     p[delta-2] = (MCode)(xo >> 24);
   else if (__builtin_constant_p(xo) && n == -3)
@@ -92,7 +92,7 @@ static void emit_rr(ASMState *as, x86Op xo, Reg r1, Reg r2)
 /* [addr] is sign-extended in x64 and must be in lower 2G (not 4G). */
 static int32_t ptr2addr(const void *p)
 {
-  lua_assert((uintptr_t)p < (uintptr_t)0x80000000);
+  lj_assertX((uintptr_t)p < (uintptr_t)0x80000000, "pointer outside 2G range");
   return i32ptr(p);
 }
 #else
@@ -208,7 +208,7 @@ static void emit_mrm(ASMState *as, x86Op xo, Reg rr, Reg rb)
       rb = RID_ESP;
 #endif
     } else if (LJ_GC64 && rb == RID_RIP) {
-      lua_assert(as->mrm.idx == RID_NONE);
+      lj_assertA(as->mrm.idx == RID_NONE, "RIP-rel mrm cannot have index");
       mode = XM_OFS0;
       p -= 4;
       *(int32_t *)p = as->mrm.ofs;
@@ -401,7 +401,8 @@ static void emit_loadk64(ASMState *as, Reg r, IRIns *ir)
     emit_rma(as, xo, r64, k);
   } else {
     if (ir->i) {
-      lua_assert(*k == *(uint64_t*)(as->mctop - ir->i));
+      lj_assertA(*k == *(uint64_t*)(as->mctop - ir->i),
+		 "bad interned 64 bit constant");
     } else if (as->curins <= as->stopins && rset_test(RSET_GPR, r)) {
       emit_loadu64(as, r, *k);
       return;
@@ -433,7 +434,7 @@ static void emit_sjmp(ASMState *as, MCLabel target)
 {
   MCode *p = as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(delta == (int8_t)delta);
+  lj_assertA(delta == (int8_t)delta, "short jump target out of range");
   p[-1] = (MCode)(int8_t)delta;
   p[-2] = XI_JMPs;
   as->mcp = p - 2;
@@ -445,7 +446,7 @@ static void emit_sjcc(ASMState *as, int cc, MCLabel target)
 {
   MCode *p = as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(delta == (int8_t)delta);
+  lj_assertA(delta == (int8_t)delta, "short jump target out of range");
   p[-1] = (MCode)(int8_t)delta;
   p[-2] = (MCode)(XI_JCCs+(cc&15));
   as->mcp = p - 2;
@@ -471,10 +472,11 @@ static void emit_sfixup(ASMState *as, MCLabel source)
 #define emit_label(as)		((as)->mcp)
 
 /* Compute relative 32 bit offset for jump and call instructions. */
-static LJ_AINLINE int32_t jmprel(MCode *p, MCode *target)
+static LJ_AINLINE int32_t jmprel(jit_State *J, MCode *p, MCode *target)
 {
   ptrdiff_t delta = target - p;
-  lua_assert(delta == (int32_t)delta);
+  UNUSED(J);
+  lj_assertJ(delta == (int32_t)delta, "jump target out of range");
   return (int32_t)delta;
 }
 
@@ -482,7 +484,7 @@ static LJ_AINLINE int32_t jmprel(MCode *p, MCode *target)
 static void emit_jcc(ASMState *as, int cc, MCode *target)
 {
   MCode *p = as->mcp;
-  *(int32_t *)(p-4) = jmprel(p, target);
+  *(int32_t *)(p-4) = jmprel(as->J, p, target);
   p[-5] = (MCode)(XI_JCCn+(cc&15));
   p[-6] = 0x0f;
   as->mcp = p - 6;
@@ -492,7 +494,7 @@ static void emit_jcc(ASMState *as, int cc, MCode *target)
 static void emit_jmp(ASMState *as, MCode *target)
 {
   MCode *p = as->mcp;
-  *(int32_t *)(p-4) = jmprel(p, target);
+  *(int32_t *)(p-4) = jmprel(as->J, p, target);
   p[-5] = XI_JMP;
   as->mcp = p - 5;
 }
@@ -509,7 +511,7 @@ static void emit_call_(ASMState *as, MCode *target)
     return;
   }
 #endif
-  *(int32_t *)(p-4) = jmprel(p, target);
+  *(int32_t *)(p-4) = jmprel(as->J, p, target);
   p[-5] = XI_CALL;
   as->mcp = p - 5;
 }
@@ -559,10 +561,7 @@ static void emit_storeofs(ASMState *as, IRIns *ir, Reg r, Reg base, int32_t ofs)
 static void emit_addptr(ASMState *as, Reg r, int32_t ofs)
 {
   if (ofs) {
-    if ((as->flags & JIT_F_LEA_AGU))
-      emit_rmro(as, XO_LEA, r|REX_GC64, r, ofs);
-    else
-      emit_gri(as, XG_ARITHi(XOg_ADD), r|REX_GC64, ofs);
+    emit_gri(as, XG_ARITHi(XOg_ADD), r|REX_GC64, ofs);
   }
 }
 

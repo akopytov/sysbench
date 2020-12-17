@@ -1,6 +1,6 @@
 /*
 ** Instruction dispatch handling.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_DISPATCH_H
@@ -46,7 +46,7 @@ extern double __divdf3(double a, double b);
   _(asin) _(acos) _(atan) _(sinh) _(cosh) _(tanh) _(frexp) _(modf) _(atan2) \
   _(pow) _(fmod) _(ldexp) _(lj_vm_modi) \
   _(lj_dispatch_call) _(lj_dispatch_ins) _(lj_dispatch_stitch) \
-  _(lj_dispatch_profile) _(lj_err_throw) \
+  _(lj_dispatch_profile) _(lj_err_throw) _(lj_err_run) \
   _(lj_ffh_coroutine_wrap_err) _(lj_func_closeuv) _(lj_func_newL_gc) \
   _(lj_gc_barrieruv) _(lj_gc_step) _(lj_gc_step_fixtop) _(lj_meta_arith) \
   _(lj_meta_call) _(lj_meta_cat) _(lj_meta_comp) _(lj_meta_equal) \
@@ -89,12 +89,20 @@ typedef uint16_t HotCount;
 typedef struct GG_State {
   lua_State L;				/* Main thread. */
   global_State g;			/* Global state. */
+#if LJ_TARGET_ARM
+  /* Make g reachable via K12 encoded DISPATCH-relative addressing. */
+  uint8_t align1[(16-sizeof(global_State))&15];
+#endif
 #if LJ_TARGET_MIPS
   ASMFunction got[LJ_GOT__MAX];		/* Global offset table. */
 #endif
 #if LJ_HASJIT
   jit_State J;				/* JIT state. */
   HotCount hotcount[HOTCOUNT_SIZE];	/* Hot counters. */
+#if LJ_TARGET_ARM
+  /* Ditto for J. */
+  uint8_t align2[(16-sizeof(jit_State)-sizeof(HotCount)*HOTCOUNT_SIZE)&15];
+#endif
 #endif
   ASMFunction dispatch[GG_LEN_DISP];	/* Instruction dispatch tables. */
   BCIns bcff[GG_NUM_ASMFF];		/* Bytecode for ASM fast functions. */

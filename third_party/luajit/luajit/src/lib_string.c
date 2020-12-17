@@ -1,6 +1,6 @@
 /*
 ** String library.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -136,7 +136,7 @@ LJLIB_CF(string_dump)
 /* ------------------------------------------------------------------------ */
 
 /* macro to `unsign' a character */
-#define uchar(c)        ((unsigned char)(c))
+#define uchar(c)	((unsigned char)(c))
 
 #define CAP_UNFINISHED	(-1)
 #define CAP_POSITION	(-2)
@@ -645,7 +645,7 @@ static GCstr *string_fmt_tostring(lua_State *L, int arg, int retry)
 {
   TValue *o = L->base+arg-1;
   cTValue *mo;
-  lua_assert(o < L->top);  /* Caller already checks for existence. */
+  lj_assertL(o < L->top, "bad usage");  /* Caller already checks for existence. */
   if (LJ_LIKELY(tvisstr(o)))
     return strV(o);
   if (retry != 2 && !tvisnil(mo = lj_meta_lookup(L, o, MM_tostring))) {
@@ -714,10 +714,10 @@ again:
 	lj_strfmt_putfchar(sb, sf, lj_lib_checkint(L, arg));
 	break;
       case STRFMT_PTR:  /* No formatting. */
-	lj_strfmt_putptr(sb, lj_obj_ptr(L->base+arg-1));
+	lj_strfmt_putptr(sb, lj_obj_ptr(G(L), L->base+arg-1));
 	break;
       default:
-	lua_assert(0);
+	lj_assertL(0, "bad string format type");
 	break;
       }
     }

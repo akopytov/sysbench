@@ -1,6 +1,6 @@
 /*
 ** SSA IR (Intermediate Representation) format.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_IR_H
@@ -75,7 +75,6 @@
   _(NEG,	N , ref, ref) \
   \
   _(ABS,	N , ref, ref) \
-  _(ATAN2,	N , ref, ref) \
   _(LDEXP,	N , ref, ref) \
   _(MIN,	C , ref, ref) \
   _(MAX,	C , ref, ref) \
@@ -107,6 +106,7 @@
   _(XLOAD,	L , ref, lit) \
   _(SLOAD,	L , lit, lit) \
   _(VLOAD,	L , ref, ___) \
+  _(ALEN,	L , ref, ref) \
   \
   _(ASTORE,	S , ref, ref) \
   _(HSTORE,	S , ref, ref) \
@@ -133,7 +133,7 @@
   _(XBAR,	S , ___, ___) \
   \
   /* Type conversions. */ \
-  _(CONV,	NW, ref, lit) \
+  _(CONV,	N , ref, lit) \
   _(TOBIT,	N , ref, ref) \
   _(TOSTR,	N , ref, lit) \
   _(STRTO,	N , ref, ___) \
@@ -178,8 +178,7 @@ LJ_STATIC_ASSERT((int)IR_XLOAD + IRDELTA_L2S == (int)IR_XSTORE);
 /* FPMATH sub-functions. ORDER FPM. */
 #define IRFPMDEF(_) \
   _(FLOOR) _(CEIL) _(TRUNC)  /* Must be first and in this order. */ \
-  _(SQRT) _(EXP) _(EXP2) _(LOG) _(LOG2) _(LOG10) \
-  _(SIN) _(COS) _(TAN) \
+  _(SQRT) _(LOG) _(LOG2) \
   _(OTHER)
 
 typedef enum {
@@ -414,11 +413,12 @@ static LJ_AINLINE IRType itype2irt(const TValue *tv)
 
 static LJ_AINLINE uint32_t irt_toitype_(IRType t)
 {
-  lua_assert(!LJ_64 || LJ_GC64 || t != IRT_LIGHTUD);
+  lj_assertX(!LJ_64 || LJ_GC64 || t != IRT_LIGHTUD,
+	     "no plain type tag for lightuserdata");
   if (LJ_DUALNUM && t > IRT_NUM) {
     return LJ_TISNUM;
   } else {
-    lua_assert(t <= IRT_NUM);
+    lj_assertX(t <= IRT_NUM, "no plain type tag for IR type %d", t);
     return ~(uint32_t)t;
   }
 }
@@ -562,6 +562,11 @@ typedef union IRIns {
   TValue tv;		/* TValue constant (overlaps entire slot). */
 } IRIns;
 
+#define ir_isk64(ir) \
+  ((ir)->o == IR_KNUM || (ir)->o == IR_KINT64 || \
+   (LJ_GC64 && \
+    ((ir)->o == IR_KGC || (ir)->o == IR_KPTR || (ir)->o == IR_KKPTR)))
+
 #define ir_kgc(ir)	check_exp((ir)->o == IR_KGC, gcref((ir)[LJ_GC64].gcr))
 #define ir_kstr(ir)	(gco2str(ir_kgc((ir))))
 #define ir_ktab(ir)	(gco2tab(ir_kgc((ir))))
@@ -569,12 +574,7 @@ typedef union IRIns {
 #define ir_kcdata(ir)	(gco2cd(ir_kgc((ir))))
 #define ir_knum(ir)	check_exp((ir)->o == IR_KNUM, &(ir)[1].tv)
 #define ir_kint64(ir)	check_exp((ir)->o == IR_KINT64, &(ir)[1].tv)
-#define ir_k64(ir) \
-  check_exp((ir)->o == IR_KNUM || (ir)->o == IR_KINT64 || \
-	    (LJ_GC64 && \
-	     ((ir)->o == IR_KGC || \
-	      (ir)->o == IR_KPTR || (ir)->o == IR_KKPTR)), \
-	    &(ir)[1].tv)
+#define ir_k64(ir)	check_exp(ir_isk64(ir), &(ir)[1].tv)
 #define ir_kptr(ir) \
   check_exp((ir)->o == IR_KPTR || (ir)->o == IR_KKPTR, \
     mref((ir)[LJ_GC64].ptr, void))
@@ -586,5 +586,13 @@ static LJ_AINLINE int ir_sideeff(IRIns *ir)
 }
 
 LJ_STATIC_ASSERT((int)IRT_GUARD == (int)IRM_W);
+
+/* Replace IR instruction with NOP. */
+static LJ_AINLINE void lj_ir_nop(IRIns *ir)
+{
+  ir->ot = IRT(IR_NOP, IRT_NIL);
+  ir->op1 = ir->op2 = 0;
+  ir->prev = 0;
+}
 
 #endif

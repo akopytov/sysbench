@@ -1,6 +1,6 @@
 /*
 ** Instruction dispatch handling.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_dispatch_c
@@ -252,15 +252,8 @@ int luaJIT_setmode(lua_State *L, int idx, int mode)
     } else {
       if (!(mode & LUAJIT_MODE_ON))
 	G2J(g)->flags &= ~(uint32_t)JIT_F_ON;
-#if LJ_TARGET_X86ORX64
-      else if ((G2J(g)->flags & JIT_F_SSE2))
-	G2J(g)->flags |= (uint32_t)JIT_F_ON;
-      else
-	return 0;  /* Don't turn on JIT compiler without SSE2 support. */
-#else
       else
 	G2J(g)->flags |= (uint32_t)JIT_F_ON;
-#endif
       lj_dispatch_update(g);
     }
     break;
@@ -302,7 +295,7 @@ int luaJIT_setmode(lua_State *L, int idx, int mode)
       if (idx != 0) {
 	cTValue *tv = idx > 0 ? L->base + (idx-1) : L->top + idx;
 	if (tvislightud(tv))
-	  g->wrapf = (lua_CFunction)lightudV(tv);
+	  g->wrapf = (lua_CFunction)lightudV(g, tv);
 	else
 	  return 0;  /* Failed. */
       } else {
@@ -374,7 +367,7 @@ static void callhook(lua_State *L, int event, BCLine line)
     hook_enter(g);
 #endif
     hookf(L, &ar);
-    lua_assert(hook_active(g));
+    lj_assertG(hook_active(g), "active hook flag removed");
     setgcref(g->cur_L, obj2gco(L));
 #if LJ_HASPROFILE && !LJ_PROFILE_SIGPROF
     lj_profile_hook_leave(g);
@@ -422,7 +415,8 @@ void LJ_FASTCALL lj_dispatch_ins(lua_State *L, const BCIns *pc)
 #endif
       J->L = L;
       lj_trace_ins(J, pc-1);  /* The interpreter bytecode PC is offset by 1. */
-      lua_assert(L->top - L->base == delta);
+      lj_assertG(L->top - L->base == delta,
+		 "unbalanced stack after tracing of instruction");
     }
   }
 #endif
@@ -482,7 +476,8 @@ ASMFunction LJ_FASTCALL lj_dispatch_call(lua_State *L, const BCIns *pc)
 #endif
     pc = (const BCIns *)((uintptr_t)pc & ~(uintptr_t)1);
     lj_trace_hot(J, pc);
-    lua_assert(L->top - L->base == delta);
+    lj_assertG(L->top - L->base == delta,
+	       "unbalanced stack after hot call");
     goto out;
   } else if (J->state != LJ_TRACE_IDLE &&
 	     !(g->hookmask & (HOOK_GC|HOOK_VMEVENT))) {
@@ -491,7 +486,8 @@ ASMFunction LJ_FASTCALL lj_dispatch_call(lua_State *L, const BCIns *pc)
 #endif
     /* Record the FUNC* bytecodes, too. */
     lj_trace_ins(J, pc-1);  /* The interpreter bytecode PC is offset by 1. */
-    lua_assert(L->top - L->base == delta);
+    lj_assertG(L->top - L->base == delta,
+	       "unbalanced stack after hot instruction");
   }
 #endif
   if ((g->hookmask & LUA_MASKCALL)) {

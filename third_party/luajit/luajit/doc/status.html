@@ -3,7 +3,7 @@
 <head>
 <title>Status</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<meta name="Copyright" content="Copyright (C) 2005-2018">
+<meta name="Copyright" content="Copyright (C) 2005-2020">
 <meta name="Language" content="en">
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
@@ -13,7 +13,7 @@ ul li { padding-bottom: 0.3em; }
 </head>
 <body>
 <div id="site">
-<a href="http://luajit.org"><span>Lua<span id="logo">JIT</span></span></a>
+<a href="https://luajit.org"><span>Lua<span id="logo">JIT</span></span></a>
 </div>
 <div id="head">
 <h1>Status</h1>
@@ -22,7 +22,7 @@ ul li { padding-bottom: 0.3em; }
 <ul><li>
 <a href="luajit.html">LuaJIT</a>
 <ul><li>
-<a href="http://luajit.org/download.html">Download <span class="ext">&raquo;</span></a>
+<a href="https://luajit.org/download.html">Download <span class="ext">&raquo;</span></a>
 </li><li>
 <a href="install.html">Installation</a>
 </li><li>
@@ -48,17 +48,12 @@ ul li { padding-bottom: 0.3em; }
 </li></ul>
 </li><li>
 <a class="current" href="status.html">Status</a>
-<ul><li>
-<a href="changes.html">Changes</a>
-</li></ul>
 </li><li>
 <a href="faq.html">FAQ</a>
 </li><li>
-<a href="http://luajit.org/performance.html">Performance <span class="ext">&raquo;</span></a>
-</li><li>
 <a href="http://wiki.luajit.org/">Wiki <span class="ext">&raquo;</span></a>
 </li><li>
-<a href="http://luajit.org/list.html">Mailing List <span class="ext">&raquo;</span></a>
+<a href="https://luajit.org/list.html">Mailing List <span class="ext">&raquo;</span></a>
 </li></ul>
 </div>
 <div id="main">
@@ -96,23 +91,12 @@ handled correctly. The error may fall through an on-trace
 <tt>lua_atpanic</tt> on x64. This issue will be fixed with the new
 garbage collector.
 </li>
-<li>
-LuaJIT on 64 bit systems provides a <b>limited range</b> of 47 bits for the
-<b>legacy <tt>lightuserdata</tt></b> data type.
-This is only relevant on x64 systems which use the negative part of the
-virtual address space in user mode, e.g. Solaris/x64, and on ARM64 systems
-configured with a 48 bit or 52 bit VA.
-Avoid using <tt>lightuserdata</tt> to hold pointers that may point outside
-of that range, e.g. variables on the stack. In general, avoid this data
-type for new code and replace it with (much more performant) FFI bindings.
-FFI cdata pointers can address the full 64 bit range.
-</li>
 </ul>
 <br class="flush">
 </div>
 <div id="foot">
 <hr class="hide">
-Copyright &copy; 2005-2018
+Copyright &copy; 2005-2020
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>
