@@ -1,6 +1,6 @@
 /*
 ** Error handling.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_ERR_H
@@ -23,7 +23,7 @@ LJ_DATA const char *lj_err_allmsg;
 LJ_FUNC GCstr *lj_err_str(lua_State *L, ErrMsg em);
 LJ_FUNCA_NORET void LJ_FASTCALL lj_err_throw(lua_State *L, int errcode);
 LJ_FUNC_NORET void lj_err_mem(lua_State *L);
-LJ_FUNC_NORET void lj_err_run(lua_State *L);
+LJ_FUNCA_NORET void LJ_FASTCALL lj_err_run(lua_State *L);
 LJ_FUNC_NORET void lj_err_msg(lua_State *L, ErrMsg em);
 LJ_FUNC_NORET void lj_err_lex(lua_State *L, GCstr *src, const char *tok,
 			      BCLine line, ErrMsg em, va_list argp);

@@ -1,6 +1,6 @@
 /*
 ** Machine code management.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_mcode_c
@@ -14,6 +14,7 @@
 #include "lj_mcode.h"
 #include "lj_trace.h"
 #include "lj_dispatch.h"
+#include "lj_prng.h"
 #endif
 #if LJ_HASJIT || LJ_HASFFI
 #include "lj_vm.h"
@@ -44,7 +45,7 @@ void lj_mcode_sync(void *start, void *end)
   sys_icache_invalidate(start, (char *)end-(char *)start);
 #elif LJ_TARGET_PPC
   lj_vm_cachesync(start, end);
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || defined(__clang__)
   __clear_cache(start, end);
 #else
 #error "Missing builtin to flush instruction cache"
@@ -118,52 +119,34 @@ static int mcode_setprot(void *p, size_t sz, int prot)
   return mprotect(p, sz, prot);
 }
 
-#elif LJ_64
-
-#error "Missing OS support for explicit placement of executable memory"
-
 #else
 
-/* Fallback allocator. This will fail if memory is not executable by default. */
-#define LUAJIT_UNPROTECT_MCODE
-#define MCPROT_RW	0
-#define MCPROT_RX	0
-#define MCPROT_RWX	0
-
-static void *mcode_alloc_at(jit_State *J, uintptr_t hint, size_t sz, int prot)
-{
-  UNUSED(hint); UNUSED(prot);
-  return lj_mem_new(J->L, sz);
-}
-
-static void mcode_free(jit_State *J, void *p, size_t sz)
-{
-  lj_mem_free(J2G(J), p, sz);
-}
+#error "Missing OS support for explicit placement of executable memory"
 
 #endif
 
 /* -- MCode area protection ----------------------------------------------- */
 
-/* Define this ONLY if page protection twiddling becomes a bottleneck. */
-#ifdef LUAJIT_UNPROTECT_MCODE
+#if LUAJIT_SECURITY_MCODE == 0
 
-/* It's generally considered to be a potential security risk to have
+/* Define this ONLY if page protection twiddling becomes a bottleneck.
+**
+** It's generally considered to be a potential security risk to have
 ** pages with simultaneous write *and* execute access in a process.
 **
 ** Do not even think about using this mode for server processes or
-** apps handling untrusted external data (such as a browser).
+** apps handling untrusted external data.
 **
 ** The security risk is not in LuaJIT itself -- but if an adversary finds
-** any *other* flaw in your C application logic, then any RWX memory page
-** simplifies writing an exploit considerably.
+** any *other* flaw in your C application logic, then any RWX memory pages
+** simplify writing an exploit considerably.
 */
 #define MCPROT_GEN	MCPROT_RWX
 #define MCPROT_RUN	MCPROT_RWX
 
 static void mcode_protect(jit_State *J, int prot)
 {
-  UNUSED(J); UNUSED(prot);
+  UNUSED(J); UNUSED(prot); UNUSED(mcode_setprot);
 }
 
 #else
@@ -216,8 +199,18 @@ static void mcode_protect(jit_State *J, int prot)
 static void *mcode_alloc(jit_State *J, size_t sz)
 {
   /* Target an address in the static assembler code (64K aligned).
-  ** Try addresses within a distance of J->allocbase..J->allocbase+J->range.
-  ** First try a contiguous area below the last one. */
+  ** Try addresses within a distance of target-range/2+1MB..target+range/2-1MB.
+  ** Use half the jump range so every address in the range can reach any other.
+  */
+#if LJ_TARGET_MIPS
+  /* Use the middle of the 256MB-aligned region. */
+  uintptr_t target = ((uintptr_t)(void *)lj_vm_exit_handler &
+		      ~(uintptr_t)0x0fffffffu) + 0x08000000u;
+#else
+  uintptr_t target = (uintptr_t)(void *)lj_vm_exit_handler & ~(uintptr_t)0xffff;
+#endif
+  const uintptr_t range = (1u << (LJ_TARGET_JUMPRANGE-1)) - (1u << 21);
+  /* First try a contiguous area below the last one. */
   uintptr_t hint = J->mcarea ? (uintptr_t)J->mcarea - sz : 0;
   int i;
   /* Limit probing iterations, depending on the available pool size. */
@@ -226,16 +219,15 @@ static void *mcode_alloc(jit_State *J, size_t sz)
       void *p = mcode_alloc_at(J, hint, sz, MCPROT_GEN);
 
       if (mcode_validptr(p) &&
-          ((uintptr_t)p + sz - J->target < J->range ||
-           J->target - (uintptr_t)p < J->range))
+	  ((uintptr_t)p + sz - target < range || target - (uintptr_t)p < range))
 	return p;
       if (p) mcode_free(J, p, sz);  /* Free badly placed area. */
     }
     /* Next try probing 64K-aligned pseudo-random addresses. */
     do {
-      hint = LJ_PRNG_BITS(J, LJ_TARGET_JUMPRANGE-16) << 16;
-    } while (!(hint + sz < J->range));
-    hint = J->allocbase + hint;
+      hint = lj_prng_u64(&J2G(J)->prng) & ((1u<<LJ_TARGET_JUMPRANGE)-0x10000);
+    } while (!(hint + sz < range+range));
+    hint = target + hint - range;
   }
   lj_trace_err(J, LJ_TRERR_MCODEAL);  /* Give up. OS probably ignores hints? */
   return NULL;
@@ -322,7 +314,7 @@ void lj_mcode_abort(jit_State *J)
 /* Set/reset protection to allow patching of MCode areas. */
 MCode *lj_mcode_patch(jit_State *J, MCode *ptr, int finish)
 {
-#ifdef LUAJIT_UNPROTECT_MCODE
+#if LUAJIT_SECURITY_MCODE == 0
   UNUSED(J); UNUSED(ptr); UNUSED(finish);
   return NULL;
 #else
@@ -342,7 +334,7 @@ MCode *lj_mcode_patch(jit_State *J, MCode *ptr, int finish)
     /* Otherwise search through the list of MCode areas. */
     for (;;) {
       mc = ((MCLink *)mc)->next;
-      lua_assert(mc != NULL);
+      lj_assertJ(mc != NULL, "broken MCode area chain");
       if (ptr >= mc && ptr < (MCode *)((char *)mc + ((MCLink *)mc)->size)) {
 	if (LJ_UNLIKELY(mcode_setprot(mc, ((MCLink *)mc)->size, MCPROT_GEN)))
 	  mcode_protfail(J);

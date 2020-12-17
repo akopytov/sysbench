@@ -1,6 +1,6 @@
 |// Low-level VM code for PowerPC 32 bit or 32on64 bit mode.
 |// Bytecode interpreter, fast functions and helper functions.
-|// Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+|// Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 |
 |.arch ppc
 |.section code_op, code_sub
@@ -18,7 +18,6 @@
 |// DynASM defines used by the PPC port:
 |//
 |// P64     64 bit pointers (only for GPR64 testing).
-|//         Note: see vm_ppc64.dasc for a full PPC64 _LP64 port.
 |// GPR64   64 bit registers (but possibly 32 bit pointers, e.g. PS3).
 |//         Affects reg saves, stack layout, carry/overflow/dot flags etc.
 |// FRAME32 Use 32 bit frame layout, even with GPR64 (Xbox 360).
@@ -1084,6 +1083,7 @@ static void build_subroutines(BuildCtx *ctx)
   |
   |->vmeta_tsetr:
   |  stp BASE, L->base
+  |  mr CARG1, L
   |  stw PC, SAVE_PC
   |  bl extern lj_tab_setinth  // (lua_State *L, GCtab *t, int32_t key)
   |  // Returns TValue *.
@@ -1447,9 +1447,9 @@ static void build_subroutines(BuildCtx *ctx)
   |   beq ->fff_restv
   |  lwz TMP0, TAB:CARG1->hmask
   |   li CARG3, LJ_TTAB			// Use metatable as default result.
-  |  lwz TMP1, STR:RC->hash
+  |  lwz TMP1, STR:RC->sid
   |  lwz NODE:TMP2, TAB:CARG1->node
-  |  and TMP1, TMP1, TMP0		// idx = str->hash & tab->hmask
+  |  and TMP1, TMP1, TMP0		// idx = str->sid & tab->hmask
   |  slwi TMP0, TMP1, 5
   |  slwi TMP1, TMP1, 3
   |  sub TMP1, TMP0, TMP1
@@ -2309,12 +2309,12 @@ static void build_subroutines(BuildCtx *ctx)
   |6:
   |   addi SAVE0, SAVE0, 8
   |.if FPU
-  |  fsub f0, FARG1, FARG2
   |.if ismax
-  |  fsel FARG1, f0, FARG1, FARG2
+  |  fsub f0, FARG1, FARG2
   |.else
-  |  fsel FARG1, f0, FARG2, FARG1
+  |  fsub f0, FARG2, FARG1
   |.endif
+  |  fsel FARG1, f0, FARG1, FARG2
   |.else
   |  stw CARG1, SFSAVE_1
   |  stw CARG2, SFSAVE_2
@@ -2354,13 +2354,13 @@ static void build_subroutines(BuildCtx *ctx)
   |   checknum CARG2
   |  bge cr1, ->fff_resn
   |   bge ->fff_fallback
-  |  fsub f0, FARG1, FARG2
-  |   addi TMP1, TMP1, 8
   |.if ismax
-  |  fsel FARG1, f0, FARG1, FARG2
+  |  fsub f0, FARG1, FARG2
   |.else
-  |  fsel FARG1, f0, FARG2, FARG1
+  |  fsub f0, FARG2, FARG1
   |.endif
+  |   addi TMP1, TMP1, 8
+  |  fsel FARG1, f0, FARG1, FARG2
   |  b <1
   |.endif
   |.endmacro
@@ -3090,9 +3090,8 @@ static void build_subroutines(BuildCtx *ctx)
   |  bctr
   |
   |9:  // Rethrow error from the right C frame.
-  |  neg CARG2, CARG1
   |  mr CARG1, L
-  |  bl extern lj_err_throw		// (lua_State *L, int errcode)
+  |  bl extern lj_err_run		// (lua_State *L)
   |.endif
   |
   |//-----------------------------------------------------------------------
@@ -4588,9 +4587,9 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |->BC_TGETS_Z:
     |  // TAB:RB = GCtab *, STR:RC = GCstr *, RA = dst*8
     |  lwz TMP0, TAB:RB->hmask
-    |  lwz TMP1, STR:RC->hash
+    |  lwz TMP1, STR:RC->sid
     |  lwz NODE:TMP2, TAB:RB->node
-    |  and TMP1, TMP1, TMP0		// idx = str->hash & tab->hmask
+    |  and TMP1, TMP1, TMP0		// idx = str->sid & tab->hmask
     |  slwi TMP0, TMP1, 5
     |  slwi TMP1, TMP1, 3
     |  sub TMP1, TMP0, TMP1
@@ -4784,10 +4783,10 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |->BC_TSETS_Z:
     |  // TAB:RB = GCtab *, STR:RC = GCstr *, RA = src*8
     |  lwz TMP0, TAB:RB->hmask
-    |  lwz TMP1, STR:RC->hash
+    |  lwz TMP1, STR:RC->sid
     |  lwz NODE:TMP2, TAB:RB->node
     |    stb ZERO, TAB:RB->nomm		// Clear metamethod cache.
-    |  and TMP1, TMP1, TMP0		// idx = str->hash & tab->hmask
+    |  and TMP1, TMP1, TMP0		// idx = str->sid & tab->hmask
     |.if FPU
     |    lfdx f14, BASE, RA
     |.else

@@ -1,6 +1,6 @@
 /*
 ** Library function support.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_LIB_H
@@ -106,10 +106,5 @@ LJ_FUNC int lj_lib_postreg(lua_State *L, lua_CFunction cf, int id,
 #define LIBINIT_LASTCL	0xfd
 #define LIBINIT_FFID	0xfe
 #define LIBINIT_END	0xff
-
-/* Exported library functions. */
-
-typedef struct RandomState RandomState;
-LJ_FUNC uint64_t LJ_FASTCALL lj_math_random_step(RandomState *rs);
 
 #endif

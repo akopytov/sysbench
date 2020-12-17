@@ -1,6 +1,6 @@
 /*
 ** VM error messages.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* This file may be included multiple times with different ERRDEF macros. */
@@ -101,11 +101,7 @@ ERRDEF(STRGSRV,	"invalid replacement value (a %s)")
 ERRDEF(BADMODN,	"name conflict for module " LUA_QS)
 #if LJ_HASJIT
 ERRDEF(JITPROT,	"runtime code generation failed, restricted kernel?")
-#if LJ_TARGET_X86ORX64
-ERRDEF(NOJIT,	"JIT compiler disabled, CPU does not support SSE2")
-#else
 ERRDEF(NOJIT,	"JIT compiler disabled")
-#endif
 #elif defined(LJ_ARCH_NOJIT)
 ERRDEF(NOJIT,	"no JIT compiler for this architecture (yet)")
 #else

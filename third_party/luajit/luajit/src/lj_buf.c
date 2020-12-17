@@ -1,6 +1,6 @@
 /*
 ** Buffer handling.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_buf_c
@@ -30,7 +30,7 @@ static void buf_grow(SBuf *sb, MSize sz)
 
 LJ_NOINLINE char *LJ_FASTCALL lj_buf_need2(SBuf *sb, MSize sz)
 {
-  lua_assert(sz > sbufsz(sb));
+  lj_assertG_(G(sbufL(sb)), sz > sbufsz(sb), "SBuf overflow");
   if (LJ_UNLIKELY(sz > LJ_MAX_BUF))
     lj_err_mem(sbufL(sb));
   buf_grow(sb, sz);
@@ -40,7 +40,7 @@ LJ_NOINLINE char *LJ_FASTCALL lj_buf_need2(SBuf *sb, MSize sz)
 LJ_NOINLINE char *LJ_FASTCALL lj_buf_more2(SBuf *sb, MSize sz)
 {
   MSize len = sbuflen(sb);
-  lua_assert(sz > sbufleft(sb));
+  lj_assertG_(G(sbufL(sb)), sz > sbufleft(sb), "SBuf overflow");
   if (LJ_UNLIKELY(sz > LJ_MAX_BUF || len + sz > LJ_MAX_BUF))
     lj_err_mem(sbufL(sb));
   buf_grow(sb, len + sz);

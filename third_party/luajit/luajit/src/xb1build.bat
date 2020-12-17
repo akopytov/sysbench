@@ -9,7 +9,7 @@
 
 @setlocal
 @echo ---- Host compiler ----
-@set LJCOMPILE=cl /nologo /c /MD /O2 /W3 /D_CRT_SECURE_NO_DEPRECATE /DLUAJIT_ENABLE_GC64
+@set LJCOMPILE=cl /nologo /c /MD /O2 /W3 /D_CRT_SECURE_NO_DEPRECATE
 @set LJLINK=link /nologo
 @set LJMT=mt /nologo
 @set DASMDIR=..\dynasm

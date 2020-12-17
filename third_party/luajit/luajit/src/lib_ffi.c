@@ -1,6 +1,6 @@
 /*
 ** FFI library.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lib_ffi_c
@@ -194,7 +194,7 @@ LJLIB_CF(ffi_meta___eq)		LJLIB_REC(cdata_arith MM_eq)
 
 LJLIB_CF(ffi_meta___len)	LJLIB_REC(cdata_arith MM_len)
 {
-  return lj_carith_len(L);
+  return ffi_arith(L);
 }
 
 LJLIB_CF(ffi_meta___lt)		LJLIB_REC(cdata_arith MM_lt)
@@ -720,49 +720,46 @@ LJLIB_CF(ffi_fill)	LJLIB_REC(.)
   return 0;
 }
 
-#define H_(le, be)	LJ_ENDIAN_SELECT(0x##le, 0x##be)
-
 /* Test ABI string. */
 LJLIB_CF(ffi_abi)	LJLIB_REC(.)
 {
   GCstr *s = lj_lib_checkstr(L, 1);
-  int b = 0;
-  switch (s->hash) {
+  int b = lj_cparse_case(s,
 #if LJ_64
-  case H_(849858eb,ad35fd06): b = 1; break;  /* 64bit */
+    "\00564bit"
 #else
-  case H_(662d3c79,d0e22477): b = 1; break;  /* 32bit */
+    "\00532bit"
 #endif
 #if LJ_ARCH_HASFPU
-  case H_(e33ee463,e33ee463): b = 1; break;  /* fpu */
+    "\003fpu"
 #endif
 #if LJ_ABI_SOFTFP
-  case H_(61211a23,c2e8c81c): b = 1; break;  /* softfp */
+    "\006softfp"
 #else
-  case H_(539417a8,8ce0812f): b = 1; break;  /* hardfp */
+    "\006hardfp"
 #endif
 #if LJ_ABI_EABI
-  case H_(2182df8f,f2ed1152): b = 1; break;  /* eabi */
+    "\004eabi"
 #endif
 #if LJ_ABI_WIN
-  case H_(4ab624a8,4ab624a8): b = 1; break;  /* win */
+    "\003win"
 #endif
 #if LJ_TARGET_UWP
-  case H_(a40f0bcb,a40f0bcb): b = 1; break;  /* uwp */
+    "\003uwp"
 #endif
-  case H_(3af93066,1f001464): b = 1; break;  /* le/be */
+#if LJ_LE
+    "\002le"
+#else
+    "\002be"
+#endif
 #if LJ_GC64
-  case H_(9e89d2c9,13c83c92): b = 1; break;  /* gc64 */
+    "\004gc64"
 #endif
-  default:
-    break;
-  }
+  ) >= 0;
   setboolV(L->top-1, b);
   setboolV(&G(L)->tmptv2, b);  /* Remember for trace recorder. */
   return 1;
 }
-
-#undef H_
 
 LJLIB_PUSH(top-8) LJLIB_SET(!)  /* Store reference to miscmap table. */
 
