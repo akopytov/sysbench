@@ -47,21 +47,25 @@ SQL Lua API + MySQL tests
   --
   <sql_param>
   <sql_param>
+  <sql_param>
   Unsupported argument type: 8
   nil
+  <sql_result>
   <sql_result>
   <sql_result>
   ALERT: attempt to free an invalid result set
   db_free_results() failed
   db_free_results() failed
+  db_free_results() failed
+  601\t0987654321\t0.9 (esc)
   --
-  (last message repeated 1 times)
+  (last message repeated 2 times)
   ALERT: attempt to use an already closed connection
   */api_sql.lua:*: SQL API error (glob)
   ALERT: attempt to close an already closed connection
   --
   4
-  301 400 0123456789 0123456789
+  601 700 0987654321 0987654321
   --
   1
   2

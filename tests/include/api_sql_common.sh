@@ -59,25 +59,27 @@ function event()
   print(string.format("%s %s", con:query_row("SELECT b, a FROM t2 ORDER BY b")))
   print('--')
   con:query("DROP TABLE t2")
-  con:query("ALTER TABLE t ADD COLUMN b CHAR(10)")
+  con:query("ALTER TABLE t ADD COLUMN b CHAR(10), ADD COLUMN c FLOAT")
 
   e, m = pcall(con.prepare, con, "SELECT * FROM nonexisting")
   print(m)
   print('--')
 
-  local stmt = con:prepare("UPDATE t SET a = a + ?, b = ?")
+  local stmt = con:prepare("UPDATE t SET a = a + ?, b = ?, c = ?")
   local a = stmt:bind_create(sysbench.sql.type.INT)
   local b = stmt:bind_create(sysbench.sql.type.CHAR, 10)
+  local c = stmt:bind_create(sysbench.sql.type.FLOAT)
 
   print(a)
   print(b)
+  print(c)
 
   e, m = pcall(stmt.bind_create, stmt, sysbench.sql.type.DATE)
   print(m)
 
   print(stmt:bind_param())
 
-  stmt:bind_param(a, b)
+  stmt:bind_param(a, b, c)
   a:set(100)
   rs1 = stmt:execute()
   print(rs1)
@@ -85,12 +87,23 @@ function event()
   b:set("01234567890")
   rs2 = stmt:execute()
   print(rs2)
+  a:set(300)
+  b:set("09876543210")
+  c:set(0.9)
+  rs3 = stmt:execute()
+  print(rs3)
+
+  e, m = pcall(rs3.free, rs)
+  print(m)
 
   e, m = pcall(rs2.free, rs)
   print(m)
 
   e, m = pcall(rs1.free, rs)
   print(m)
+
+  rs = con:query("SELECT a, b, c FROM t")
+  print(unpack(rs:fetch_row(), 1, rs.nfields))
 
   stmt:close()
 
