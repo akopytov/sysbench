@@ -40,7 +40,6 @@ env:
       - OS=fedora DIST=31
       - OS=ubuntu DIST=xenial
       - OS=ubuntu DIST=bionic
-      - OS=ubuntu DIST=eoan
       - OS=ubuntu DIST=focal
       - OS=debian DIST=jessie
       - OS=debian DIST=stretch
@@ -48,7 +47,6 @@ env:
       - OS=debian DIST=sid
       - OS=ubuntu DIST=xenial ARCH=i386
       - OS=ubuntu DIST=bionic ARCH=i386
-      - OS=ubuntu DIST=eoan ARCH=i386
       - OS=debian DIST=jessie ARCH=i386
       - OS=debian DIST=stretch ARCH=i386
       - OS=debian DIST=buster ARCH=i386
@@ -74,8 +72,6 @@ matrix:
       compiler: clang
     - env: OS=ubuntu DIST=disco
       compiler: clang
-    - env: OS=ubuntu DIST=eoan
-      compiler: clang
     - env: OS=ubuntu DIST=focal
       compiler: clang
     - env: OS=debian DIST=jessie
@@ -92,8 +88,6 @@ matrix:
       compiler: clang
     - env: OS=ubuntu DIST=disco ARCH=i386
       compiler: clang
-    - env: OS=ubuntu DIST=eoan ARCH=i386
-      compiler: clang
     - env: OS=debian DIST=jessie ARCH=i386
       compiler: clang
     - env: OS=debian DIST=stretch ARCH=i386
@@ -107,8 +101,6 @@ matrix:
     - env: OS=ubuntu DIST=bionic ARCH=i386
       arch: arm64
     - env: OS=ubuntu DIST=disco ARCH=i386
-      arch: arm64
-    - env: OS=ubuntu DIST=eoan ARCH=i386
       arch: arm64
     - env: OS=debian DIST=jessie ARCH=i386
       arch: arm64
@@ -137,8 +129,6 @@ matrix:
     - env: OS=ubuntu DIST=bionic
       os: osx
     - env: OS=ubuntu DIST=disco
-      os: osx
-    - env: OS=ubuntu DIST=eoan
       os: osx
     - env: OS=ubuntu DIST=focal
       os: osx
