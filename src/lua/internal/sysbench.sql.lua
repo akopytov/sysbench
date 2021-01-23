@@ -332,13 +332,11 @@ function sql_param.set(self, value)
    if btype == sql_type.TINYINT or
       btype == sql_type.SMALLINT or
       btype == sql_type.INT or
-      btype == sql_type.BIGINT
-   then
-      self.buffer[0] = value
-   elseif btype == sql_type.FLOAT or
+      btype == sql_type.BIGINT or
+      btype == sql_type.FLOAT or
       btype == sql_type.DOUBLE
    then
-      self.buffer[1] = value
+      self.buffer[0] = value
    elseif btype == sql_type.CHAR or
       btype == sql_type.VARCHAR
    then
