@@ -175,6 +175,9 @@ before_install:
         # OS X requires servers to be started explicitly
         brew services start mysql
 
+        cat /usr/local/var/mysql/*.err
+        lsof -c mysql
+
         brew postgresql-upgrade-database
         brew services start postgresql
 
