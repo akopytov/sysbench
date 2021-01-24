@@ -47,7 +47,6 @@ PACKAGECLOUD_EXTRA_ARGS=${PACKAGECLOUD_EXTRA_ARGS:-}
 PACKPACK_REPO=${PACKPACK_REPO:-akopytov/packpack}
 
 distros_x86_64=(
-    "el 6 x86_64"
     "el 7 x86_64"
     "el 8 x86_64"
     "fedora 32 x86_64"
