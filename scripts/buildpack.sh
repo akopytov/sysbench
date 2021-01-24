@@ -50,9 +50,6 @@ distros_x86_64=(
     "el 6 x86_64"
     "el 7 x86_64"
     "el 8 x86_64"
-    "fedora 29 x86_64"
-    "fedora 30 x86_64"
-    "fedora 31 x86_64"
     "fedora 32 x86_64"
     "fedora 33 x86_64"
     "ubuntu xenial x86_64"
@@ -74,9 +71,6 @@ distros_i386=(
 
 distros_aarch64=(
     "el 7 aarch64"
-    "fedora 29 aarch64"
-    "fedora 30 aarch64"
-    "fedora 31 aarch64"
     "fedora 32 aarch64"
     "fedora 33 aarch64"
     "ubuntu bionic aarch64"
