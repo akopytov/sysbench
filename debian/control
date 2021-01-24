@@ -2,7 +2,7 @@ Source: sysbench
 Section: misc
 Priority: extra
 Maintainer: Alexey Kopytov <akopytov@gmail.com>
-Build-Depends: debhelper, autoconf, automake, libaio-dev, libtool, libmysqlclient-dev | default-libmysqlclient-dev, libpq-dev, pkg-config, python, libssl-dev
+Build-Depends: debhelper, autoconf, automake, libaio-dev, libtool, libmysqlclient-dev | default-libmysqlclient-dev, libpq-dev, pkg-config, python, libssl-dev, libzstd-dev
 Standards-Version: 3.9.5
 Homepage: https://github.com/akopytov/sysbench
 
