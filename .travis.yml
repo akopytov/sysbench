@@ -41,7 +41,8 @@ env:
       - OS=ubuntu DIST=xenial
       - OS=ubuntu DIST=bionic
       - OS=ubuntu DIST=focal
-      - OS=ubuntu DIST=groovy
+# Currently unsupported by packagecloud
+#      - OS=ubuntu DIST=groovy
       - OS=debian DIST=stretch
       - OS=debian DIST=buster
       - OS=debian DIST=sid
