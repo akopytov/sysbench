@@ -1,3 +1,9 @@
+sysbench (1.0.21-1) unstable; urgency=low
+
+  * add libzstd-dev to build dependencies
+
+ -- Alexey Kopytov <akopytov@gmail.com>  Sun, 24 Jan 2021 13:16:04 +0300
+
 sysbench (1.0.18-1) unstable; urgency=low
 
   * add libssl-dev to build dependencies
