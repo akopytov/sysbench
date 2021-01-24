@@ -23,6 +23,8 @@ os:
   - linux
   - osx
 
+osx_image: xcode12.2
+
 compiler:
   - gcc
   - clang
