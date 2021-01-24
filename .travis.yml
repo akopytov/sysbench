@@ -38,6 +38,8 @@ env:
       - OS=fedora DIST=29
       - OS=fedora DIST=30
       - OS=fedora DIST=31
+      - OS=fedora DIST=32
+      - OS=fedora DIST=33
       - OS=ubuntu DIST=xenial
       - OS=ubuntu DIST=bionic
       - OS=ubuntu DIST=focal
@@ -66,6 +68,10 @@ matrix:
     - env: OS=fedora DIST=30
       compiler: clang
     - env: OS=fedora DIST=31
+      compiler: clang
+    - env: OS=fedora DIST=32
+      compiler: clang
+    - env: OS=fedora DIST=33
       compiler: clang
     - env: OS=ubuntu DIST=xenial
       compiler: clang
@@ -126,6 +132,10 @@ matrix:
     - env: OS=fedora DIST=30
       os: osx
     - env: OS=fedora DIST=31
+      os: osx
+    - env: OS=fedora DIST=32
+      os: osx
+    - env: OS=fedora DIST=33
       os: osx
     - env: OS=ubuntu DIST=xenial
       os: osx
