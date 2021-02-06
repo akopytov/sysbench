@@ -37,7 +37,8 @@ env:
       - OS=el DIST=7
       - OS=el DIST=8
       - OS=fedora DIST=32
-      - OS=fedora DIST=33
+# Currently unsupported by packagecloud
+#      - OS=fedora DIST=33
       - OS=ubuntu DIST=xenial
       - OS=ubuntu DIST=bionic
       - OS=ubuntu DIST=focal
