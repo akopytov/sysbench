@@ -22,7 +22,7 @@ require("internal/thread_groups")
 require("internal/index_stat")
 
 function init()
-   assert(sysbench.version >= '1.1.0', "There is a bug with preparing float values in" ..
+   assert(sysbench.version >= '1.1.1', "There is a bug with preparing float values in" ..
     " sysbench versions under 1.1.1. Please use iibench with newer sysbench version.")
 
    assert(event ~= nil,
