@@ -147,8 +147,11 @@ sql_statement *db_prepare(sql_connection *con, const char *query, size_t len);
 int db_bind_param(sql_statement *stmt, sql_bind *params, size_t len);
 int db_bind_result(sql_statement *stmt, sql_bind *results, size_t len);
 sql_result *db_execute(sql_statement *stmt);
+sql_result *db_stmt_next_result(sql_statement *stmt);
 int db_close(sql_statement *stmt);
 
+bool db_more_results(sql_connection *con);
+sql_result *db_next_result(sql_connection *con);
 int db_free_results(sql_result *);
 ]]
 
@@ -270,6 +273,15 @@ end
 function connection_methods.query(self, query)
    local rs = ffi.C.db_query(self, query, #query)
    return self:check_error(rs, query)
+end
+
+function connection_methods.more_results(self)
+   return ffi.C.db_more_results(self)
+end
+
+function connection_methods.next_result(self)
+   local rs = ffi.C.db_next_result(self)
+   return self:check_error(rs, "");
 end
 
 function connection_methods.bulk_insert_init(self, query)
@@ -426,6 +438,11 @@ end
 
 function statement_methods.execute(self)
    local rs = ffi.C.db_execute(self)
+   return self.connection:check_error(rs, '<prepared statement>')
+end
+
+function statement_methods.next_result(self)
+   local rs = ffi.C.db_stmt_next_result(self)
    return self.connection:check_error(rs, '<prepared statement>')
 end
 

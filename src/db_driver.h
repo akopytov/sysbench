@@ -131,10 +131,14 @@ typedef int drv_op_prepare(struct db_stmt *, const char *, size_t);
 typedef int drv_op_bind_param(struct db_stmt *, db_bind_t *, size_t);
 typedef int drv_op_bind_result(struct db_stmt *, db_bind_t *, size_t);
 typedef db_error_t drv_op_execute(struct db_stmt *, struct db_result *);
+typedef db_error_t drv_op_stmt_next_result(struct db_stmt *,
+                                           struct db_result *);
 typedef int drv_op_fetch(struct db_result *);
 typedef int drv_op_fetch_row(struct db_result *, struct db_row *);
 typedef db_error_t drv_op_query(struct db_conn *, const char *, size_t,
                                 struct db_result *);
+typedef bool drv_op_more_results(struct db_conn *);
+typedef db_error_t drv_op_next_result(struct db_conn *, struct db_result *);
 typedef int drv_op_free_results(struct db_result *);
 typedef int drv_op_close(struct db_stmt *);
 typedef int drv_op_thread_done(int);
@@ -152,9 +156,14 @@ typedef struct
   drv_op_bind_param      *bind_param;     /* bind params for prepared statement */
   drv_op_bind_result     *bind_result;    /* bind results for prepared statement */
   drv_op_execute         *execute;        /* execute prepared statement */
+  /* retrieve the next result of a prepared statement */
+  drv_op_stmt_next_result *stmt_next_result;
   drv_op_fetch           *fetch;          /* fetch row for prepared statement */
   drv_op_fetch_row       *fetch_row;      /* fetch row for queries */
   drv_op_free_results    *free_results;   /* free result set */
+  drv_op_more_results    *more_results;   /* check if more result sets are
+                                             available */
+  drv_op_next_result     *next_result;    /* retrieve the next result set */
   drv_op_close           *close;          /* close prepared statement */
   drv_op_query           *query;          /* execute non-prepared statement */
   drv_op_thread_done     *thread_done;    /* thread-local driver deinitialization */
@@ -256,7 +265,6 @@ typedef struct db_stmt
   db_bind_t       *bound_res;      /* Array of bound results for emulated PS */ 
   db_bind_t       *bound_res_len;  /* Length of the bound_res array */
   char            emulated;        /* Should this statement be emulated? */
-  sb_counter_type_t  counter;       /* Query type */
   void            *ptr;            /* Pointer to driver-specific data structure */
 } db_stmt_t;
 
@@ -290,11 +298,17 @@ int db_bind_result(db_stmt_t *, db_bind_t *, size_t);
 
 db_result_t *db_execute(db_stmt_t *);
 
+db_result_t *db_stmt_next_result(db_stmt_t *);
+
 db_row_t *db_fetch_row(db_result_t *);
 
 db_result_t *db_query(db_conn_t *, const char *, size_t len);
 
 int db_free_results(db_result_t *);
+
+bool db_more_results(db_conn_t *);
+
+db_result_t *db_next_result(db_conn_t *);
 
 int db_store_results(db_result_t *);
 

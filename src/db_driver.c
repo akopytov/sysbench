@@ -504,6 +504,52 @@ db_result_t *db_execute(db_stmt_t *stmt)
   return NULL;
 }
 
+/* Retrieve the next result of a prepared statement */
+
+db_result_t *db_stmt_next_result(db_stmt_t *stmt)
+{
+  db_conn_t       *con = stmt->connection;
+  db_result_t     *rs = &con->rs;
+  int             rc;
+
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
+    return NULL;
+  }
+  else if (con->state == DB_CONN_RESULT_SET &&
+           (rc = db_free_results_int(con)) != 0)
+  {
+    return NULL;
+  }
+
+  rs->statement = stmt;
+
+  if (con->driver->ops.stmt_next_result == NULL)
+  {
+    con->error = DB_ERROR_NONE;
+    return NULL;
+  }
+
+  con->error = con->driver->ops.stmt_next_result(stmt, rs);
+
+  sb_counter_inc(con->thread_id, rs->counter);
+
+  if (SB_LIKELY(con->error == DB_ERROR_NONE))
+  {
+    if (rs->counter == SB_CNT_READ)
+    {
+      con->state = DB_CONN_RESULT_SET;
+      return rs;
+    }
+    con->state = DB_CONN_READY;
+
+    return NULL;
+  }
+
+  return NULL;
+}
+
 
 /* Fetch row from result set of a query */
 
@@ -588,6 +634,66 @@ db_result_t *db_query(db_conn_t *con, const char *query, size_t len)
   return NULL;
 }
 
+/* Check if more result sets are available */
+
+bool db_more_results(db_conn_t *con)
+{
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
+    return false;
+  }
+
+  if (con->state != DB_CONN_RESULT_SET ||
+      con->driver->ops.more_results == NULL ||
+      con->driver->ops.more_results(con) == false)
+    return false;
+
+  return true;
+}
+
+/* Retrieve the next result set */
+
+db_result_t *db_next_result(db_conn_t *con)
+{
+  db_result_t *rs = &con->rs;
+  int         rc;
+
+  if (con->state == DB_CONN_INVALID)
+  {
+    log_text(LOG_ALERT, "attempt to use an already closed connection");
+    con->error = DB_ERROR_FATAL;
+    return NULL;
+  }
+  else if (con->state == DB_CONN_RESULT_SET &&
+           (rc = db_free_results_int(con)) != 0)
+  {
+    con->error = DB_ERROR_FATAL;
+    return NULL;
+  }
+
+  if (con->driver->ops.next_result == NULL)
+  {
+    con->error = DB_ERROR_NONE;
+    return NULL;
+  }
+
+  con->error = con->driver->ops.next_result(con, rs);
+
+  sb_counter_inc(con->thread_id, rs->counter);
+
+  if (SB_LIKELY(con->error == DB_ERROR_NONE))
+  {
+    if (rs->counter == SB_CNT_READ)
+    {
+      con->state = DB_CONN_RESULT_SET;
+      return rs;
+    }
+    con->state = DB_CONN_READY;
+  }
+
+  return NULL;
+}
 
 /* Free result set */
 
