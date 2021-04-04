@@ -24,7 +24,8 @@ typedef enum
 {
   SB_MEM_OP_NONE,
   SB_MEM_OP_READ,
-  SB_MEM_OP_WRITE
+  SB_MEM_OP_WRITE,
+  SB_MEM_OP_LATENCY
 } sb_mem_op_t;
 
 

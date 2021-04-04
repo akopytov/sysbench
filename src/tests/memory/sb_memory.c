@@ -45,7 +45,7 @@ static sb_arg_t memory_args[] =
 #ifdef HAVE_LARGE_PAGES
   SB_OPT("memory-hugetlb", "allocate memory from HugeTLB pool", "off", BOOL),
 #endif
-  SB_OPT("memory-oper", "type of memory operations {read, write, none}",
+  SB_OPT("memory-oper", "type of memory operations {read, write, latency, none}",
          "write", STRING),
   SB_OPT("memory-access-mode", "memory access mode {seq,rnd}", "seq", STRING),
 
@@ -62,6 +62,7 @@ static int event_rnd_write(sb_event_t *, int);
 static int event_seq_none(sb_event_t *, int);
 static int event_seq_read(sb_event_t *, int);
 static int event_seq_write(sb_event_t *, int);
+static int event_latency(sb_event_t *, int);
 static void memory_report_intermediate(sb_stat_t *);
 static void memory_report_cumulative(sb_stat_t *);
 
@@ -79,6 +80,14 @@ static sb_test_t memory_test =
   .args = memory_args
 };
 
+/* A struct that aligns to cache lines */
+struct Node {
+  union {
+    struct Node *next;
+    char padding[64]; /* 64 = cache line size */
+  };
+};
+
 /* Test arguments */
 
 static ssize_t memory_block_size;
@@ -86,6 +95,7 @@ static long long    memory_total_size;
 static unsigned int memory_scope;
 static unsigned int memory_oper;
 static unsigned int memory_access_rnd;
+static struct Node *nodes; /* only used for measuring latency */
 #ifdef HAVE_LARGE_PAGES
 static unsigned int memory_hugetlb;
 #endif
@@ -114,8 +124,25 @@ int memory_init(void)
   char         *s;
   size_t       *buffer;
 
+  s = sb_get_value_string("memory-oper");
+  if (!strcmp(s, "write"))
+    memory_oper = SB_MEM_OP_WRITE;
+  else if (!strcmp(s, "read"))
+    memory_oper = SB_MEM_OP_READ;
+  else if (!strcmp(s, "latency"))
+    memory_oper = SB_MEM_OP_LATENCY;
+  else if (!strcmp(s, "none"))
+    memory_oper = SB_MEM_OP_NONE;
+  else
+  {
+    log_text(LOG_FATAL, "Invalid value for memory-oper: %s", s);
+    return 1;
+  }
+
+
   memory_block_size = sb_get_value_size("memory-block-size");
-  if (memory_block_size < SIZEOF_SIZE_T ||
+  if ((memory_oper != SB_MEM_OP_LATENCY && memory_block_size < SIZEOF_SIZE_T) ||
+      (memory_oper == SB_MEM_OP_LATENCY && memory_block_size < 64) ||
       /* Must be a power of 2 */
       (memory_block_size & (memory_block_size - 1)) != 0)
   {
@@ -124,7 +151,8 @@ int memory_init(void)
     return 1;
   }
 
-  max_offset = memory_block_size / SIZEOF_SIZE_T - 1;
+  const ssize_t testing_struct_size = SB_MEM_OP_LATENCY ? 64 : SIZEOF_SIZE_T;
+  max_offset = memory_block_size / testing_struct_size - 1;
 
   memory_total_size = sb_get_value_size("memory-total-size");
 
@@ -142,19 +170,6 @@ int memory_init(void)
 #ifdef HAVE_LARGE_PAGES
     memory_hugetlb = sb_get_value_flag("memory-hugetlb");
 #endif  
-
-  s = sb_get_value_string("memory-oper");
-  if (!strcmp(s, "write"))
-    memory_oper = SB_MEM_OP_WRITE;
-  else if (!strcmp(s, "read"))
-    memory_oper = SB_MEM_OP_READ;
-  else if (!strcmp(s, "none"))
-    memory_oper = SB_MEM_OP_NONE;
-  else
-  {
-    log_text(LOG_FATAL, "Invalid value for memory-oper: %s", s);
-    return 1;
-  }
 
   s = sb_get_value_string("memory-access-mode");
   if (!strcmp(s, "seq"))
@@ -182,7 +197,24 @@ int memory_init(void)
       return 1;
     }
 
-    memset(buffer, 0, memory_block_size);
+    if (memory_oper == SB_MEM_OP_LATENCY)
+    {
+      /* Generate a random circle link list */
+      nodes = (struct Node*)buffer;
+      nodes[0].next = nodes;
+      for (int i = 1; i <= max_offset; ++i)
+      {
+        struct Node *cur = nodes + sb_rand_default(0, i-1);
+        struct Node *nxt = cur->next;
+        struct Node *tail = nodes + i;
+        cur->next = tail;
+        tail->next = nxt;
+      }
+    }
+    else
+    {
+      memset(buffer, 0, memory_block_size);
+    }
   }
 
   thread_counters = malloc(sb_globals.threads * sizeof(uint64_t));
@@ -215,8 +247,9 @@ int memory_init(void)
       memset(buffers[i], 0, memory_block_size);
     }
 
+    const ssize_t one_pass = memory_oper == SB_MEM_OP_LATENCY ? (((ssize_t)1)<<20) : memory_block_size;
     thread_counters[i] =
-      memory_total_size / memory_block_size / sb_globals.threads;
+      memory_total_size / one_pass / sb_globals.threads;
   }
 
   switch (memory_oper) {
@@ -233,6 +266,14 @@ int memory_init(void)
   case SB_MEM_OP_WRITE:
     memory_test.ops.execute_event =
       memory_access_rnd ? event_rnd_write : event_seq_write;
+    break;
+
+  case SB_MEM_OP_LATENCY:
+    if (sb_globals.threads != 1 || memory_scope != SB_MEM_SCOPE_GLOBAL) {
+      log_text(LOG_FATAL, "Memory latency accepts only --memory-scope=global and --threads=1!");
+      return 1;
+    }
+    memory_test.ops.execute_event = event_latency;
     break;
 
   default:
@@ -363,6 +404,27 @@ int event_seq_write(sb_event_t *req, int tid)
 }
 
 
+int event_latency(sb_event_t *req, int tid)
+{
+  (void) req; /* unused */
+  (void) tid; /* unused */
+  struct Node *nodes_tmp = nodes;
+  /* totally 1M times */
+  for (size_t i = 0; i < (1<<17); ++i)
+  {
+    nodes_tmp = nodes_tmp->next;
+    nodes_tmp = nodes_tmp->next;
+    nodes_tmp = nodes_tmp->next;
+    nodes_tmp = nodes_tmp->next;
+    nodes_tmp = nodes_tmp->next;
+    nodes_tmp = nodes_tmp->next;
+    nodes_tmp = nodes_tmp->next;
+    nodes_tmp = nodes_tmp->next;
+  }
+  nodes = nodes_tmp;
+  return 0;
+}
+
 void memory_print_mode(void)
 {
   char *str;
@@ -379,6 +441,9 @@ void memory_print_mode(void)
       break;
     case SB_MEM_OP_WRITE:
       str = "write";
+      break;
+    case SB_MEM_OP_LATENCY:
+      str = "latency";
       break;
     case SB_MEM_OP_NONE:
       str = "none";
@@ -429,8 +494,14 @@ void memory_report_cumulative(sb_stat_t *stat)
   log_text(LOG_NOTICE, "Total operations: %" PRIu64 " (%8.2f per second)\n",
            stat->events, stat->events / stat->time_interval);
 
-  if (memory_oper != SB_MEM_OP_NONE)
+  if (memory_oper == SB_MEM_OP_LATENCY)
   {
+    const double unit = 1e9 / (1<<20); // convert second to nanosecond + events to operation count
+    log_text(LOG_NOTICE, "Memory latency %5.2f ns\n", stat->time_interval / stat->events * unit);
+  }
+  else if (memory_oper != SB_MEM_OP_NONE)
+  {
+    // read or write
     const double mb = stat->events * memory_block_size / megabyte;
     log_text(LOG_NOTICE, "%4.2f MiB transferred (%4.2f MiB/sec)\n",
              mb, mb / stat->time_interval);
