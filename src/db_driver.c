@@ -881,7 +881,7 @@ int db_print_value(db_bind_t *var, char *buf, int buflen)
       break;
     case DB_TYPE_CHAR:
     case DB_TYPE_VARCHAR:
-      n = snprintf(buf, buflen, "'%s'", (char *)var->buffer);
+      n = snprintf(buf, buflen, "'%.*s'", *var->data_len, (char *)var->buffer);
       break;
     case DB_TYPE_DATE:
       tm = (db_time_t *)var->buffer;
