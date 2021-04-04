@@ -233,17 +233,27 @@ static void empty_notice_processor(void *arg, const char *msg)
 
 /* Connect to database */
 
-int pgsql_drv_connect(db_conn_t *sb_conn)
+int pgsql_drv_connect(db_conn_t *sb_conn, db_conn_setting_t *sb_conn_setting)
 {
   PGconn *con;
 
-  con = PQsetdbLogin(args.host,
-                     args.port,
-                     NULL,
-                     NULL,
-                     args.db,
-                     args.user,
-                     args.password);
+  if (sb_conn_setting != NULL) {
+    con = PQsetdbLogin(sb_conn_setting->host,
+                      sb_conn_setting->port,
+                      NULL,
+                      NULL,
+                      sb_conn_setting->db,
+                      sb_conn_setting->user,
+                      sb_conn_setting->password);
+  } else {
+    con = PQsetdbLogin(args.host,
+                      args.port,
+                      NULL,
+                      NULL,
+                      args.db,
+                      args.user,
+                      args.password);
+  }
   if (PQstatus(con) != CONNECTION_OK)
   {
     log_text(LOG_FATAL, "Connection to database failed: %s",

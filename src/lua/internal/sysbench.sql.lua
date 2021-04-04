@@ -48,6 +48,15 @@ typedef struct {
   const char      *ptr;        /* Value string */
 } sql_value;
 
+typedef struct {
+  char *socket;
+  const char *host;
+  uint32_t port;
+  const char *user;
+  const char *password;
+  const char *db;
+} sql_conn_setting;
+
 /* Result set row definition */
 
 typedef struct
@@ -130,7 +139,7 @@ typedef struct
 sql_driver *db_create(const char *);
 int db_destroy(sql_driver *drv);
 
-sql_connection *db_connection_create(sql_driver * drv);
+sql_connection *db_connection_create(sql_driver * drv, sql_conn_setting * setting);
 int db_connection_close(sql_connection *con);
 int db_connection_reconnect(sql_connection *con);
 void db_connection_free(sql_connection *con);
@@ -191,11 +200,64 @@ function sysbench.sql.driver(driver_name)
    return ffi.gc(drv, ffi.C.db_destroy)
 end
 
+--[[
+  create new setting from setting object.
+  setting = {
+    socket: string
+    host: string
+    port: number
+    user: string
+    password: string
+    db: string
+  }
+  note that returned object has raw object and anchor of char pointers. 
+  {
+    raw: cdata (type of sql_conn_setting)
+    anchor: {
+      socket, host, user, password, db: cdata (char[?])
+    }
+  }
+  to avoid GC. see https://luajit.org/ext_ffi_semantics.html#gc
+]]--
+local function to_cstr(str)
+   local cstr = ffi.new('char[?]', #str + 1)
+   ffi.copy(cstr, str)
+   return cstr
+end
+local function make_setting(setting)
+   local st = ffi.new('sql_conn_setting')
+   local anchor = {}
+   if setting.socket then
+      anchor.socket = to_cstr(setting.socket)
+      st.socket = anchor.socket
+      st.host = nil
+      st.port = 0
+   elseif setting.host and setting.port > 0 then
+      anchor.host = to_cstr(setting.host)
+      st.socket = nil
+      st.host = anchor.host
+      st.port = setting.port
+   else
+      error("neither socket nor host specified", 2)
+   end
+   anchor.user = to_cstr(setting.user)
+   anchor.password = to_cstr(setting.password)
+   anchor.db = to_cstr(setting.db)
+   st.user = anchor.user
+   st.password = anchor.password
+   st.db = anchor.db
+   return {
+      raw = st,
+      anchor = anchor
+   }
+end
+
 -- sql_driver methods
 local driver_methods = {}
 
-function driver_methods.connect(self)
-   local con = ffi.C.db_connection_create(self)
+function driver_methods.connect(self, setting)
+   local con = ffi.C.db_connection_create(self, 
+      setting and make_setting(setting).raw or nil)
    if con == nil then
       error("connection creation failed", 2)
    end
