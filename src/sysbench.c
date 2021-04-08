@@ -147,6 +147,7 @@ static ck_ring_buffer_t   queue_ring_buffer[MAX_QUEUE_LEN] CK_CC_CACHELINE;
 static ck_ring_t          queue_ring CK_CC_CACHELINE;
 
 static int report_thread_created CK_CC_CACHELINE;
+static bool report_thread_canceled = false;
 static int checkpoints_thread_created;
 static int eventgen_thread_created;
 
@@ -962,6 +963,9 @@ static void *report_thread_proc(void *arg)
 
   for (;;)
   {
+    if (report_thread_canceled)
+      break;
+
     sb_nanosleep(pause_ns);
 
     report_intermediate();
@@ -1220,7 +1224,9 @@ static int run_test(sb_test_t *test)
 
   if (report_thread_created)
   {
-    if (sb_thread_cancel(report_thread) || sb_thread_join(report_thread, NULL))
+    report_thread_canceled = 1;
+
+    if (sb_thread_join(report_thread, NULL))
       log_errno(LOG_FATAL, "Terminating the reporting thread failed.");
   }
 
