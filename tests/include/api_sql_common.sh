@@ -272,3 +272,40 @@ end
 EOF
 
 sysbench $SB_ARGS
+
+cat <<EOF
+########################################################################
+# Client prepare with string parameter is broken
+########################################################################
+EOF
+
+cat >$CRAMTMP/api_sql.lua <<EOF
+con = sysbench.sql.driver():connect()
+con:query("create table t (a char(8))")
+
+function print_result(query)
+  print('--')
+  local rs = con:query(query)
+  for i = 1, rs.nrows do
+    local a = unpack(rs:fetch_row(), 1, rs.nfields)
+    print(a)
+  end
+end
+
+local v = '12345678'
+
+con:query(("insert into t (a) values ('%s')"):format(v))
+print_result("select a from t")
+
+local stmt = con:prepare("insert into t (a) values (?)")
+local p = stmt:bind_create(sysbench.sql.type.CHAR, 8)
+stmt:bind_param(p)
+
+p:set(v)
+stmt:execute()
+print_result("select a from t")
+
+con:query("drop table t")
+EOF
+
+sysbench --db-ps-mode=disable $SB_ARGS
