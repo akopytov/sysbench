@@ -156,9 +156,7 @@ end
 EOF
 # Reset --mysql-socket if it's specified on the command line, otherwise sysbench
 # will assume --mysql-host=localhost
-sysbench $SB_ARGS --mysql-host="non-existing" --pgsql-host="non-existing" \
-         --mysql-socket= \
-         run
+sysbench $SB_ARGS $DB_NON_EXISTING run
 
 # Error hooks
 cat >$CRAMTMP/api_sql.lua <<EOF
