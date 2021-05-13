@@ -23,4 +23,8 @@ if USE_PGSQL
 PGSQL_DIR = pgsql
 endif
 
+if USE_SQLSERVER
+SQLSERVER_DIR = sqlserver
+endif
+
 SUBDIRS = $(MYSQL_DIR) $(PGSQL_DIR)
