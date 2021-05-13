@@ -30,6 +30,10 @@ if USE_PGSQL
 pgsql_ldadd = drivers/pgsql/libsbpgsql.a $(PGSQL_LIBS)
 endif
 
+if USE_SQLSERVER
+sqlserver_ldadd = drivers/sqlserver/libsbsqlserver.a $(SQLSERVER_LIBS)
+endif
+
 sysbench_SOURCES = sysbench.c sysbench.h sb_timer.c sb_timer.h \
 sb_options.c sb_options.h sb_logger.c sb_logger.h sb_list.h db_driver.h \
 db_driver.c sb_histogram.c sb_histogram.h sb_rand.c sb_rand.h \
@@ -44,8 +48,8 @@ xoroshiro128plus.h
 sysbench_LDADD = tests/fileio/libsbfileio.a tests/threads/libsbthreads.a \
     tests/memory/libsbmemory.a tests/cpu/libsbcpu.a \
     tests/mutex/libsbmutex.a \
-    $(mysql_ldadd) $(pgsql_ldadd) \
+    $(mysql_ldadd) $(pgsql_ldadd) $(sqlserver_ldadd) \
     $(LUAJIT_LIBS) $(CK_LIBS)
 
-sysbench_LDFLAGS = $(mysql_ldflags) \
+sysbench_LDFLAGS = $(mysql_ldflags) $(sqlserver_ldflags) \
     $(pgsql_ldflags) $(LUAJIT_LDFLAGS)
