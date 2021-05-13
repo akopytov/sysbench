@@ -613,6 +613,7 @@ db_error_t sqlserver_drv_execute(db_stmt_t *stmt, db_result_t *rs)
       rs->nrows = num_rows;
     } else {
       rs->counter = stmt->counter;
+     //rs->counter = NULL;
 
       // TODO: The below three lines are responsible for fetching data. For perf reasons,
       // I'm leaving this in. But in the future I need to store the results somewhere.

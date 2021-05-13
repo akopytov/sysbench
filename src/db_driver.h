@@ -265,6 +265,7 @@ typedef struct db_stmt
   db_bind_t       *bound_res;      /* Array of bound results for emulated PS */ 
   db_bind_t       *bound_res_len;  /* Length of the bound_res array */
   char            emulated;        /* Should this statement be emulated? */
+  sb_counter_type_t  counter;       /* Query type */
   void            *ptr;            /* Pointer to driver-specific data structure */
 } db_stmt_t;
 
