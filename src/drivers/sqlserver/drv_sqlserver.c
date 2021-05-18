@@ -174,7 +174,7 @@ static db_error_t check_error(char *fn, SQLHANDLE handle, SQLSMALLINT type)
               SQLState, (long) i, (long) NativeError, MessageText);
     }
   } while (ret == SQL_SUCCESS);
-
+  
   return DB_ERROR_FATAL;
 }
 
@@ -248,9 +248,8 @@ static db_error_t check_conn_error(db_conn_t *sb_con, char *fn,
  */
 int check_transaction(const char *query)
 {
-  //log_text(LOG_DEBUG, "Transaction: %s\n", query);
-  if (!strncmp(query, "BEGIN", 7)) {
-    // SQL Server ODBC should not use BEGIN TRAN
+    if (!strncmp(query, "BEGIN T", 7)) {
+      // SQL Server ODBC should not use BEGIN TRAN
     // Completely ignore this query, but we must turn off
     // auto commit to support batch statements
     return DRV_BEGIN;
@@ -259,7 +258,6 @@ int check_transaction(const char *query)
   } else if (!strcmp(query, "ROLLBACK")) {
     return DRV_ROLLBACK;
   }
-
   return 0;
 }
 
@@ -275,6 +273,7 @@ SQLRETURN drv_transact(SQLHDBC hdbc, int type)
   switch (type) {
   case DRV_BEGIN:
     // Do nothing
+    
     ret = SQL_SUCCESS;
     break;
   case DRV_COMMIT:
@@ -295,7 +294,6 @@ SQLRETURN drv_transact(SQLHDBC hdbc, int type)
 int register_driver_sqlserver(sb_list_t *drivers)
 {
   SB_LIST_ADD_TAIL(&sqlserver_driver.listitem, drivers);
-
   return 0;
 }
 
@@ -313,7 +311,7 @@ int sqlserver_drv_init(void)
   sqlserver_drv_caps.prepared_statements = 1;
   if (db_globals.ps_mode != DB_PS_MODE_DISABLE)
     use_ps = 1;
-
+   
   return 0;
 }
 
@@ -387,9 +385,7 @@ int sqlserver_drv_connect(db_conn_t *sb_conn)
     "Server=%s,%s;Uid=%s;Pwd=%s;database=%s;", 
     args.host, args.port, args.user, args.password, args.db);
 
-//log_text(LOG_DEBUG, "Just before SQLDriverConnect.");
-
-  ret = SQLDriverConnect(conn->hdbc, NULL, (SQLCHAR *)conn_str, SQL_NTS, 
+   ret = SQLDriverConnect(conn->hdbc, NULL, (SQLCHAR *)conn_str, SQL_NTS, 
     NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
 
   if (!SQL_SUCCEEDED(ret)) {
@@ -458,27 +454,23 @@ int sqlserver_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
 {
   if (args.dry_run)
     return 0;
-
   db_sqlserv_conn_t *conn = (db_sqlserv_conn_t *)stmt->connection->ptr;
   SQLHSTMT hstmt = SQL_NULL_HSTMT;
   SQLRETURN ret;
-  
-  if (use_ps)
+    if (use_ps)
   {
-    //log_text(LOG_DEBUG, "Preparing statement \"%s\"", query);
-
-    // Ignore BEGIN TRAN, COMMIT, and ROLLBACK queries
+     // Ignore BEGIN TRAN, COMMIT, and ROLLBACK queries
     if (check_transaction(query)) {
       stmt->query = strdup(query);
       stmt->counter = SB_CNT_OTHER;
       return 0;
     }
-
+  
     SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &hstmt);
     ret = SQLPrepare(hstmt, (SQLCHAR *)query, len);
     if (!SQL_SUCCEEDED(ret))
       return check_error("sqlserver_drv_prepare", hstmt, SQL_HANDLE_STMT);
-
+ 
     SQLSMALLINT cols;
     SQLNumResultCols(hstmt, &cols);
     
@@ -487,9 +479,10 @@ int sqlserver_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
     stmt->query = strdup(query);
     return 0;
   }
-
   // Use client-side PS
-  
+  stmt->emulated = 1;
+  stmt->query = strdup(query);
+  return 0;
 }
 
 /*
@@ -586,8 +579,8 @@ db_error_t sqlserver_drv_execute(db_stmt_t *stmt, db_result_t *rs)
     hstmt = stmt->ptr;
     char *query = stmt->query;
 
-    //log_text(LOG_DEBUG, "ExecuteQuery: %s\n", query);
-
+    //log_text(LOG_DEBUG, "ExecuteFirstQuery: %s\n", query);
+    
     if ((tran_type = check_transaction(query))) {
       ret = drv_transact(db_conn->hdbc, tran_type);
       if (!SQL_SUCCEEDED(ret)) {
@@ -602,7 +595,6 @@ db_error_t sqlserver_drv_execute(db_stmt_t *stmt, db_result_t *rs)
     // that does not affect any rows at the data source, the call to 
     // SQLExecute returns SQL_NO_DATA. We will consider this a success.
     if (ret == SQL_NO_DATA) ret = SQL_SUCCESS;
-
     else if (!SQL_SUCCEEDED(ret)) {
       return check_conn_error(stmt->connection, "sqlserver_drv_execute", 
         hstmt, &rs->counter);
@@ -669,7 +661,7 @@ db_error_t sqlserver_drv_execute(db_stmt_t *stmt, db_result_t *rs)
   }
   buf[j] = '\0';
 
-  db_error_t rc = sqlserver_drv_query(stmt->connection, buf, j, rs);
+    db_error_t rc = sqlserver_drv_query(stmt->connection, buf, j, rs);
 
   xfree(buf);
 
@@ -709,13 +701,13 @@ db_error_t sqlserver_drv_query(db_conn_t *sb_conn, const char *query,
   SQLRETURN ret;
   (void)len; // Unused
   
-  if ((tran_type = check_transaction(query))) {
+    if ((tran_type = check_transaction(query))) {
     ret = drv_transact(conn->hdbc, tran_type);
     if (!SQL_SUCCEEDED(ret)) {
       return check_error("drv_transact", conn->hdbc, SQL_HANDLE_DBC);
-    }
-    rs->counter = SB_CNT_OTHER;
-    return DB_ERROR_NONE;
+   }
+   rs->counter = SB_CNT_OTHER;
+   return DB_ERROR_NONE;
   }
 
   SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &statement);

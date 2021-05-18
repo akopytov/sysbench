@@ -236,7 +236,7 @@ static void empty_notice_processor(void *arg, const char *msg)
 int pgsql_drv_connect(db_conn_t *sb_conn)
 {
   PGconn *con;
-
+  
   con = PQsetdbLogin(args.host,
                      args.port,
                      NULL,
