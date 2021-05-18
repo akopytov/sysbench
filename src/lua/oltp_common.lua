@@ -185,16 +185,11 @@ function create_table(drv, con, table_num)
       end
    elseif drv:name() == "sqlserver"
    then
-       if sysbench.opt.auto_inc then
-         print("SQL Server driver detected! Turning off auto_inc...\n")
-         --sysbench.opt.auto_inc = false
+      if not sysbench.opt.auto_inc then
+         id_def = "INT NOT NULL"
+      else
+         id_def = "INT NOT NULL IDENTITY(1,1)"      
       end
-      id_def = "INT NOT NULL"
-      -- if sysbench.opt.auto_inc then
-      --    id_def = "INT NOT NULL IDENTITY(1,1)"
-      -- else
-      --    id_def = "INT NOT NULL"
-      -- end
    else
       error("Unsupported database driver:" .. drv:name())
    end

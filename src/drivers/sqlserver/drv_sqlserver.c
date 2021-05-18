@@ -248,7 +248,8 @@ static db_error_t check_conn_error(db_conn_t *sb_con, char *fn,
  */
 int check_transaction(const char *query)
 {
-  if (!strncmp(query, "BEGIN T", 7)) {
+  //log_text(LOG_DEBUG, "Transaction: %s\n", query);
+  if (!strncmp(query, "BEGIN", 7)) {
     // SQL Server ODBC should not use BEGIN TRAN
     // Completely ignore this query, but we must turn off
     // auto commit to support batch statements
@@ -385,7 +386,9 @@ int sqlserver_drv_connect(db_conn_t *sb_conn)
     "Driver=" DRIVER_NAME ";"
     "Server=%s,%s;Uid=%s;Pwd=%s;database=%s;", 
     args.host, args.port, args.user, args.password, args.db);
-    
+
+//log_text(LOG_DEBUG, "Just before SQLDriverConnect.");
+
   ret = SQLDriverConnect(conn->hdbc, NULL, (SQLCHAR *)conn_str, SQL_NTS, 
     NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
 
@@ -400,9 +403,8 @@ int sqlserver_drv_connect(db_conn_t *sb_conn)
   sb_conn->ptr = conn;
   sb_conn->sql_errmsg = NULL;
   sb_conn->sql_state = NULL;
-  log_text(LOG_DEBUG, "Connected!");
-  
-  return 0;
+  //log_text(LOG_DEBUG, "Connected!");
+    return 0;
 }
 
 /*
@@ -444,7 +446,7 @@ int sqlserver_drv_reconnect(db_conn_t *sb_conn)
     usleep(1000);
   }
 
-  log_text(LOG_DEBUG, "Reconnected");
+  //log_text(LOG_DEBUG, "Reconnected");
 
   return DB_ERROR_IGNORABLE;
 }
@@ -463,7 +465,7 @@ int sqlserver_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
   
   if (use_ps)
   {
-    log_text(LOG_DEBUG, "Preparing statement \"%s\"", query);
+    //log_text(LOG_DEBUG, "Preparing statement \"%s\"", query);
 
     // Ignore BEGIN TRAN, COMMIT, and ROLLBACK queries
     if (check_transaction(query)) {
@@ -487,9 +489,7 @@ int sqlserver_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
   }
 
   // Use client-side PS
-  stmt->emulated = 1;
-  stmt->query = strdup(query);
-  return 0;
+  
 }
 
 /*
@@ -584,8 +584,9 @@ db_error_t sqlserver_drv_execute(db_stmt_t *stmt, db_result_t *rs)
 
   if (!stmt->emulated) {
     hstmt = stmt->ptr;
-    // log_text(LOG_DEBUG, "Executing \"%s\"", stmt->query);
     char *query = stmt->query;
+
+    //log_text(LOG_DEBUG, "ExecuteQuery: %s\n", query);
 
     if ((tran_type = check_transaction(query))) {
       ret = drv_transact(db_conn->hdbc, tran_type);
