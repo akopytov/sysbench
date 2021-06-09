@@ -31,6 +31,19 @@
 # include <sys/shm.h>
 #endif
 
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+# include <sys/types.h>
+#endif
+
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>
+#endif
+
 #include <inttypes.h>
 
 #define LARGE_PAGE_SIZE (4UL * 1024 * 1024)
@@ -38,7 +51,8 @@
 /* Memory test arguments */
 static sb_arg_t memory_args[] =
 {
-  SB_OPT("memory-block-size", "size of memory block for test", "1K", SIZE),
+  /* A typical size of a morden CPU, Ex Intel(R) Xeon(R) Platinum 8260 has 36608K */
+  SB_OPT("memory-block-size", "size of memory block for test. If 0, auto-detect CPU L3 cache and apply", "65536K", SIZE),
   SB_OPT("memory-total-size", "total size of data to transfer", "100G", SIZE),
   SB_OPT("memory-scope", "memory access scope {global,local}", "global",
          STRING),
@@ -107,6 +121,35 @@ int register_test_memory(sb_list_t *tests)
   return 0;
 }
 
+static size_t memory_detect_l3_size(void)
+{
+  int file;
+  char *l3cache_path = "/sys/devices/system/cpu/cpu0/cache/index3/size";
+  char buf[16] = {0};
+  size_t buflen;
+  size_t sizekb;
+  size_t alignkb = 1;
+
+  file = open(l3cache_path, O_RDONLY, 0);
+  if (file < 0)
+    return -1;
+
+  if (read(file, buf, sizeof(buf)) > 0) {
+    buflen = strlen(buf);
+    /* try to strip last '\n' */
+    if (buf[buflen - 1] == '\n')
+      buf[buflen - 1] = '\0';
+
+    /* to make sure memory block size is larger than L3 cache size */
+    sizekb = atol(buf);
+    while (alignkb < sizekb)
+      alignkb <<= 1;
+  }
+
+  close(file);
+
+  return alignkb * 1024;
+}
 
 int memory_init(void)
 {
@@ -115,12 +158,29 @@ int memory_init(void)
   size_t       *buffer;
 
   memory_block_size = sb_get_value_size("memory-block-size");
-  if (memory_block_size < SIZEOF_SIZE_T ||
-      /* Must be a power of 2 */
-      (memory_block_size & (memory_block_size - 1)) != 0)
+  if (memory_block_size && (memory_block_size < SIZEOF_SIZE_T))
   {
-    log_text(LOG_FATAL, "Invalid value for memory-block-size: %s",
-             sb_get_value_string("memory-block-size"));
+    log_text(LOG_FATAL, "Invalid value for memory-block-size: %s, "
+             "should not less than %d, or specify 0 to auto-detect CPU L3 cache size",
+             sb_get_value_string("memory-block-size"), SIZEOF_SIZE_T);
+    return 1;
+  }
+
+  if (!memory_block_size)
+  {
+    /* auto detect L3 cache size */
+    memory_block_size = memory_detect_l3_size();
+    if (memory_block_size < 0)
+    {
+      log_text(LOG_FATAL, "Auto-detect memory-block-size failed");
+      return 1;
+    }
+  }
+
+  /* Must be a power of 2 */
+  if ((memory_block_size & (memory_block_size - 1)) != 0)
+  {
+    log_text(LOG_FATAL, "Invalid value for memory-block-size: %ld, should be a power of 2", memory_block_size);
     return 1;
   }
 

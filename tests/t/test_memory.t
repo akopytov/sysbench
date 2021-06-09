@@ -19,7 +19,7 @@ help' only on Linux.
   sysbench * (glob)
   
   memory options:
-    --memory-block-size=SIZE    size of memory block for test [1K]
+    --memory-block-size=SIZE    size of memory block for test. If 0, auto-detect CPU L3 cache and apply [65536K]
     --memory-total-size=SIZE    total size of data to transfer [100G]
     --memory-scope=STRING       memory access scope {global,local} [global]
     --memory-oper=STRING        type of memory operations {read, write, none} [write]
@@ -31,28 +31,16 @@ help' only on Linux.
   'memory' test does not implement the 'prepare' command.
   [1]
 
-  $ sysbench $args --memory-block-size=-1 run
-  sysbench * (glob)
-  
-  FATAL: Invalid value for memory-block-size: -1
-  [1]
-
-  $ sysbench $args --memory-block-size=0 run
-  sysbench * (glob)
-  
-  FATAL: Invalid value for memory-block-size: 0
-  [1]
-
   $ sysbench $args --memory-block-size=3 run
   sysbench * (glob)
   
-  FATAL: Invalid value for memory-block-size: 3
+  FATAL: Invalid value for memory-block-size: 3, should not less than 8, or specify 0 to auto-detect CPU L3 cache size
   [1]
 
   $ sysbench $args --memory-block-size=9 run
   sysbench * (glob)
   
-  FATAL: Invalid value for memory-block-size: 9
+  FATAL: Invalid value for memory-block-size: 9, should be a power of 2
   [1]
 
 ########################################################################
