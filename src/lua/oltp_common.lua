@@ -37,6 +37,8 @@ sysbench.cmdline.options = {
       {"Range size for range SELECT queries", 100},
    tables =
       {"Number of tables", 1},
+   from_table =
+      {"prepare from this table number", 0},      
    point_selects =
       {"Number of point SELECT queries per transaction", 10},
    simple_ranges =
@@ -90,7 +92,7 @@ function cmd_prepare()
    local drv = sysbench.sql.driver()
    local con = drv:connect()
 
-   for i = sysbench.tid % sysbench.opt.threads + 1, sysbench.opt.tables,
+   for i = (sysbench.tid % sysbench.opt.threads + 1) + sysbench.opt.from_table, sysbench.opt.tables,
    sysbench.opt.threads do
      create_table(drv, con, i)
    end
