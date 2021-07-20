@@ -246,6 +246,7 @@ Obviously the prefixes given during build and installation need to be the same.
 Either install one of the open source SDKs
 (<a href="http://mingw.org/"><span class="ext">&raquo;</span>&nbsp;MinGW</a> or
 <a href="https://www.cygwin.com/"><span class="ext">&raquo;</span>&nbsp;Cygwin</a>), which come with a modified
+<a href="https://www.cygwin.com/">Cygwin</a>), which come with a modified
 GCC plus the required development headers.
 Or install Microsoft's Visual Studio (MSVC).
 </p>
@@ -389,6 +390,7 @@ make CROSS=mipsel-linux- TARGET_CFLAGS="-mips64r2 -mabi=64"
 </pre>
 <p>
 You can cross-compile for <b id="android">Android</b> using the <a href="https://developer.android.com/ndk/"><span class="ext">&raquo;</span>&nbsp;Android NDK</a>.
+You can cross-compile for <b id="android">Android</b> using the <a href="https://developer.android.com/ndk/">Android NDK</a>.
 Please adapt the environment variables to match the install locations and the
 desired target platform. E.g. Android&nbsp;4.1 corresponds to ABI level&nbsp;16.
 </p>
@@ -413,6 +415,7 @@ make HOST_CC="gcc -m32" CROSS=$NDKCROSS \
 </pre>
 <p>
 You can cross-compile for <b id="ios">iOS 3.0+</b> (iPhone/iPad) using the <a href="https://developer.apple.com/ios/"><span class="ext">&raquo;</span>&nbsp;iOS SDK</a>:
+You can cross-compile for <b id="ios">iOS 3.0+</b> (iPhone/iPad) using the <a href="https://developer.apple.com/ios/">iOS SDK</a>:
 </p>
 <p style="font-size: 8pt;">
 Note: <b>the JIT compiler is disabled for iOS</b>, because regular iOS Apps
@@ -548,6 +551,7 @@ will not be activated.</li>
 <li>The <tt>bit.*</tt> module for bitwise operations
 is already built-in. There's no need to statically link
 <a href="https://bitop.luajit.org/"><span class="ext">&raquo;</span>&nbsp;Lua BitOp</a> to your application.</li>
+<a href="https://bitop.luajit.org/">Lua BitOp</a> to your application.</li>
 </ul>
 
 <h2 id="distro">Hints for Distribution Maintainers</h2>

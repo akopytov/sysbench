@@ -47,21 +47,25 @@ SQL Lua API + MySQL tests
   --
   <sql_param>
   <sql_param>
+  <sql_param>
   Unsupported argument type: 8
   nil
+  <sql_result>
   <sql_result>
   <sql_result>
   ALERT: attempt to free an invalid result set
   db_free_results() failed
   db_free_results() failed
+  db_free_results() failed
+  601\t0987654321\t0.9 (esc)
   --
-  (last message repeated 1 times)
+  (last message repeated 2 times)
   ALERT: attempt to use an already closed connection
   */api_sql.lua:*: SQL API error (glob)
   ALERT: attempt to close an already closed connection
   --
   4
-  301 400 0123456789 0123456789
+  601 700 0987654321 0987654321
   --
   1
   2
@@ -129,3 +133,61 @@ SQL Lua API + MySQL tests
   ########################################################################
   1
   2
+########################################################################
+# GH-304: Benchmark Stored Procedure with sysbench
+########################################################################
+  $ cat >api_sql.lua <<EOF
+  >   con = sysbench.sql.driver():connect()
+  >  
+  >   con:query([[
+  > CREATE PROCEDURE p1 (IN txt VARCHAR(255))
+  > BEGIN
+  >   SELECT 'begin:', txt;
+  >   INSERT INTO t1 VALUES(1);
+  >   SELECT * FROM t1;
+  >   DELETE FROM t1 WHERE a = 1;
+  >   SELECT 'done';
+  > END
+  >   ]])
+  >  
+  >   con:query("CREATE TABLE t1(a INT)")
+  >  
+  >   stmt = con:prepare("CALL p1(?)")
+  >   param = stmt:bind_create(sysbench.sql.type.CHAR, 10)
+  >   stmt:bind_param(param)
+  >  
+  >   function print_rs(rs)
+  >      if rs == nil then return end
+  >      print(rs.nrows)
+  >      print(rs.nfields)
+  >      for i = 1, rs.nrows do
+  >         print(unpack(rs:fetch_row(), 1, rs.nfields))
+  >      end
+  >   end
+  >  
+  >   local rs = con:query([[CALL p1("foo")]])
+  >   while rs ~= nil do
+  >      print_rs(rs)
+  >      rs = con:next_result()
+  >   end
+  >  
+  >   param:set("bar")
+  >   rs = stmt:execute()
+  >   while rs ~= nil do
+  >      rs = stmt:next_result()
+  >   end
+  >  
+  >   con:query("DROP PROCEDURE IF EXISTS p1");
+  >   con:query("DROP TABLE IF EXISTS t1");
+  > EOF
+
+  $ sysbench $DB_DRIVER_ARGS --verbosity=1 api_sql.lua
+  1
+  2
+  begin:\tfoo (esc)
+  1
+  1
+  1
+  1
+  1
+  done

@@ -25,7 +25,6 @@ PRNG Lua API tests
   >   print([[sysbench.rand.varstring(1, 23) = ]] .. sysbench.rand.varstring(1, 23))
   >   print("sysbench.rand.uniform(0, 99) = " .. sysbench.rand.uniform(0, 99))
   >   print("sysbench.rand.gaussian(0, 99) = " .. sysbench.rand.gaussian(0, 99))
-  >   print("sysbench.rand.special(0, 99) = " .. sysbench.rand.special(0, 99))
   >   print("sysbench.rand.pareto(0, 99) = " .. sysbench.rand.pareto(0, 99))
   >   print("sysbench.rand.zipfian(0, 99) = " .. sysbench.rand.zipfian(0, 99))
   > end
@@ -35,7 +34,6 @@ PRNG Lua API tests
   sysbench.rand.default
   sysbench.rand.gaussian
   sysbench.rand.pareto
-  sysbench.rand.special
   sysbench.rand.string
   sysbench.rand.uniform
   sysbench.rand.uniform_double
@@ -50,7 +48,6 @@ PRNG Lua API tests
   sysbench.rand.varstring\(1, 23\) = [0-z]{1,23} (re)
   sysbench.rand.uniform\(0, 99\) = [0-9]{1,2} (re)
   sysbench.rand.gaussian\(0, 99\) = [0-9]{1,2} (re)
-  sysbench.rand.special\(0, 99\) = [0-9]{1,2} (re)
   sysbench.rand.pareto\(0, 99\) = [0-9]{1,2} (re)
   sysbench.rand.zipfian\(0, 99\) = [0-9]{1,2} (re)
 

@@ -1720,6 +1720,7 @@ static void asm_ir(ASMState *as, IRIns *ir)
     /* Unused for LJ_SOFTFP32. */
     lj_assertA(0, "IR %04d with unused op %d",
 		  (int)(ir - as->ir) - REF_BIAS, ir->o);
+    lua_assert(0);  /* Unused for LJ_SOFTFP32. */
     break;
 #else
   case IR_DIV: asm_div(as, ir); break;
@@ -1770,6 +1771,7 @@ static void asm_ir(ASMState *as, IRIns *ir)
 #else
     lj_assertA(0, "IR %04d with unused op %d",
 		  (int)(ir - as->ir) - REF_BIAS, ir->o);
+    lua_assert(0);
 #endif
     break;
 

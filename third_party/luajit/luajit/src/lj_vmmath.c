@@ -125,6 +125,7 @@ double lj_vm_foldfpm(double x, int fpm)
   case IRFPM_LOG: return log(x);
   case IRFPM_LOG2: return lj_vm_log2(x);
   default: lj_assertX(0, "bad fpm %d", fpm);
+  default: lua_assert(0);
   }
   return 0;
 }

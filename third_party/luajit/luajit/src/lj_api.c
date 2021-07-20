@@ -1119,6 +1119,7 @@ LUA_API const char *lua_setupvalue(lua_State *L, int idx, int n)
   GCobj *o;
   const char *name;
   lj_checkapi_slot(1);
+  api_checknelems(L, 1);
   name = lj_debug_uvnamev(f, (uint32_t)(n-1), &val, &o);
   if (name) {
     L->top--;

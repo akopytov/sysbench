@@ -30,11 +30,8 @@ separately.
     --luajit-cmd=STRING             perform LuaJIT control command. This option is equivalent to 'luajit -j'. See LuaJIT documentation for more information
   
   Pseudo-Random Numbers Generator options:
-    --rand-type=STRING   random numbers distribution {uniform, gaussian, special, pareto, zipfian} to use by default [special]
+    --rand-type=STRING   random numbers distribution {uniform, gaussian, pareto, zipfian} to use by default [uniform]
     --rand-seed=N        seed for random number generator. When 0, the current time is used as an RNG seed. [0]
-    --rand-spec-iter=N   number of iterations for the special distribution [12]
-    --rand-spec-pct=N    percentage of the entire range where 'special' values will fall in the special distribution [1]
-    --rand-spec-res=N    percentage of 'special' values to use for the special distribution [75]
     --rand-pareto-h=N    shape parameter for the Pareto distribution [0.2]
     --rand-zipfian-exp=N shape parameter (exponent, theta) for the Zipfian distribution [0.8]
   

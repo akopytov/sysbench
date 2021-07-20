@@ -49,21 +49,25 @@ SQL Lua API + PostgreSQL tests
   --
   <sql_param>
   <sql_param>
+  <sql_param>
   Unsupported argument type: 8
   nil
+  <sql_result>
   <sql_result>
   <sql_result>
   ALERT: attempt to free an invalid result set
   db_free_results() failed
   db_free_results() failed
+  db_free_results() failed
+  601\t0987654321\t0.9 (esc)
   --
-  (last message repeated 1 times)
+  (last message repeated 2 times)
   ALERT: attempt to use an already closed connection
   */api_sql.lua:*: SQL API error (glob)
   ALERT: attempt to close an already closed connection
   --
   4
-  301 400 0123456789 0123456789
+  601 700 0987654321 0987654321
   --
   1
   2
@@ -73,17 +77,17 @@ SQL Lua API + PostgreSQL tests
   
   connection creation failed
   --
-  FATAL: PQexec() failed: 7 null value in column "a" violates not-null constraint
+  FATAL: PQexec() failed: 7 null value in column "a" *violates not-null constraint (glob)
   FATAL: failed query was: INSERT INTO t VALUES (NULL)
   Got an error descriptor:
   {
     connection = <sql_connection>,
     query = "INSERT INTO t VALUES (NULL)",
-    sql_errmsg = 'null value in column "a" violates not-null constraint',
+    sql_errmsg = 'null value in column "a" *violates not-null constraint', (glob)
     sql_errno = 0,
     sql_state = "23502"
   }
-  */api_sql.lua:*: SQL error, errno = 0, state = '23502': null value in column "a" violates not-null constraint (glob)
+  */api_sql.lua:*: SQL error, errno = 0, state = '23502': null value in column "a" *violates not-null constraint (glob)
   FATAL: PQexec() failed: 7 value too long for type character(1)
   FATAL: failed query was: INSERT INTO t VALUES ('test')
   Got an error descriptor:

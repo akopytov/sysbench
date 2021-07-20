@@ -216,10 +216,13 @@ static int mysql_drv_prepare(db_stmt_t *, const char *, size_t);
 static int mysql_drv_bind_param(db_stmt_t *, db_bind_t *, size_t);
 static int mysql_drv_bind_result(db_stmt_t *, db_bind_t *, size_t);
 static db_error_t mysql_drv_execute(db_stmt_t *, db_result_t *);
+static db_error_t mysql_drv_stmt_next_result(db_stmt_t *, db_result_t *);
 static int mysql_drv_fetch(db_result_t *);
 static int mysql_drv_fetch_row(db_result_t *, db_row_t *);
 static db_error_t mysql_drv_query(db_conn_t *, const char *, size_t,
                            db_result_t *);
+static bool mysql_drv_more_results(db_conn_t *);
+static db_error_t mysql_drv_next_result(db_conn_t *, db_result_t *);
 static int mysql_drv_free_results(db_result_t *);
 static int mysql_drv_close(db_stmt_t *);
 static int mysql_drv_thread_done(int);
@@ -243,8 +246,11 @@ static db_driver_t mysql_driver =
     .bind_param = mysql_drv_bind_param,
     .bind_result = mysql_drv_bind_result,
     .execute = mysql_drv_execute,
+    .stmt_next_result = mysql_drv_stmt_next_result,
     .fetch = mysql_drv_fetch,
     .fetch_row = mysql_drv_fetch_row,
+    .more_results = mysql_drv_more_results,
+    .next_result = mysql_drv_next_result,
     .free_results = mysql_drv_free_results,
     .close = mysql_drv_close,
     .query = mysql_drv_query,
@@ -603,8 +609,6 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
     }
 
     stmt->query = strdup(query);
-    stmt->counter = (mysql_stmt_field_count(mystmt) > 0) ?
-      SB_CNT_READ : SB_CNT_WRITE;
 
     return 0;
   }
@@ -879,7 +883,14 @@ db_error_t mysql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
       return check_error(con, "mysql_stmt_execute()", stmt->query,
                          &rs->counter);
 
-    if (stmt->counter != SB_CNT_READ)
+    err = mysql_stmt_store_result(stmt->ptr);
+    DEBUG("mysql_stmt_store_result(%p) = %d", stmt->ptr, err);
+
+    if (err)
+      return check_error(con, "mysql_stmt_store_result()", NULL, &rs->counter);
+
+    if (mysql_stmt_errno(stmt->ptr) == 0 &&
+        mysql_stmt_field_count(stmt->ptr) == 0)
     {
       rs->nrows = (uint32_t) mysql_stmt_affected_rows(stmt->ptr);
       DEBUG("mysql_stmt_affected_rows(%p) = %u", stmt->ptr,
@@ -890,18 +901,15 @@ db_error_t mysql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
       return DB_ERROR_NONE;
     }
 
-    err = mysql_stmt_store_result(stmt->ptr);
-    DEBUG("mysql_stmt_store_result(%p) = %d", stmt->ptr, err);
-    if (err)
-    {
-      return check_error(con, "mysql_stmt_store_result()", NULL,
-                         &rs->counter);
-    }
+    rs->counter = SB_CNT_READ;
 
-    rs->counter = stmt->counter;
     rs->nrows = (uint32_t) mysql_stmt_num_rows(stmt->ptr);
     DEBUG("mysql_stmt_num_rows(%p) = %u", rs->statement->ptr,
           (unsigned) (rs->nrows));
+
+    rs->nfields = (uint32_t) mysql_stmt_field_count(stmt->ptr);
+    DEBUG("mysql_stmt_field_count(%p) = %u", rs->statement->ptr,
+          (unsigned) (rs->nfields));
 
     return DB_ERROR_NONE;
   }
@@ -947,6 +955,74 @@ db_error_t mysql_drv_execute(db_stmt_t *stmt, db_result_t *rs)
   free(buf);
 
   return rc;
+}
+
+/* Retrieve the next result of a prepared statement */
+
+db_error_t mysql_drv_stmt_next_result(db_stmt_t *stmt, db_result_t *rs)
+{
+  db_conn_t       *con = stmt->connection;
+
+  if (args.dry_run)
+    return DB_ERROR_NONE;
+
+  con->sql_errno = 0;
+  con->sql_state = NULL;
+  con->sql_errmsg = NULL;
+
+  if (stmt->emulated)
+    return mysql_drv_next_result(con, rs);
+
+  if (stmt->ptr == NULL)
+    {
+      log_text(LOG_DEBUG,
+               "ERROR: exiting mysql_drv_stmt_next_result(), "
+               "uninitialized statement");
+      return DB_ERROR_FATAL;
+    }
+
+  int err = mysql_stmt_next_result(stmt->ptr);
+  DEBUG("mysql_stmt_next_result(%p) = %d", stmt->ptr, err);
+
+  if (SB_UNLIKELY(err > 0))
+    return check_error(con, "mysql_drv_stmt_next_result()", stmt->query,
+                       &rs->counter);
+
+  if (err == -1)
+  {
+    rs->counter = SB_CNT_OTHER;
+    return DB_ERROR_NONE;
+  }
+
+  err = mysql_stmt_store_result(stmt->ptr);
+  DEBUG("mysql_stmt_store_result(%p) = %d", stmt->ptr, err);
+
+  if (err)
+    return check_error(con, "mysql_stmt_store_result()", NULL, &rs->counter);
+
+  if (mysql_stmt_errno(stmt->ptr) == 0 &&
+      mysql_stmt_field_count(stmt->ptr) == 0)
+  {
+    rs->nrows = (uint32_t) mysql_stmt_affected_rows(stmt->ptr);
+    DEBUG("mysql_stmt_affected_rows(%p) = %u", stmt->ptr,
+          (unsigned) rs->nrows);
+
+    rs->counter = (rs->nrows > 0) ? SB_CNT_WRITE : SB_CNT_OTHER;
+
+    return DB_ERROR_NONE;
+  }
+
+  rs->counter = SB_CNT_READ;
+
+  rs->nrows = (uint32_t) mysql_stmt_num_rows(stmt->ptr);
+  DEBUG("mysql_stmt_num_rows(%p) = %u", rs->statement->ptr,
+        (unsigned) (rs->nrows));
+
+  rs->nfields = (uint32_t) mysql_stmt_field_count(stmt->ptr);
+  DEBUG("mysql_stmt_field_count(%p) = %u", rs->statement->ptr,
+        (unsigned) (rs->nfields));
+
+  return DB_ERROR_NONE;
 }
 
 
@@ -1049,6 +1125,90 @@ int mysql_drv_fetch_row(db_result_t *rs, db_row_t *row)
     row->values[i].len = lengths[i];
     row->values[i].ptr = my_row[i];
   }
+
+  return DB_ERROR_NONE;
+}
+
+/* Check if more result sets are available */
+
+bool mysql_drv_more_results(db_conn_t *sb_conn)
+{
+  db_mysql_conn_t *db_mysql_con;
+  MYSQL *con;
+
+  if (args.dry_run)
+    return false;
+
+  db_mysql_con = (db_mysql_conn_t *)sb_conn->ptr;
+  con = db_mysql_con->mysql;
+
+  bool res = mysql_more_results(con);
+  DEBUG("mysql_more_results(%p) = %d", con, res);
+
+  return res;
+}
+
+/* Retrieve the next result set */
+
+db_error_t mysql_drv_next_result(db_conn_t *sb_conn, db_result_t *rs)
+{
+  db_mysql_conn_t *db_mysql_con;
+  MYSQL *con;
+
+  if (args.dry_run)
+    return DB_ERROR_NONE;
+
+  sb_conn->sql_errno = 0;
+  sb_conn->sql_state = NULL;
+  sb_conn->sql_errmsg = NULL;
+
+  db_mysql_con = (db_mysql_conn_t *)sb_conn->ptr;
+  con = db_mysql_con->mysql;
+
+  int err = mysql_next_result(con);
+  DEBUG("mysql_next_result(%p) = %d", con, err);
+
+  if (SB_UNLIKELY(err > 0))
+    return check_error(sb_conn, "mysql_drv_next_result()", NULL, &rs->counter);
+
+  if (err == -1)
+  {
+    rs->counter = SB_CNT_OTHER;
+    return DB_ERROR_NONE;
+  }
+
+  /* Store results and get query type */
+  MYSQL_RES *res = mysql_store_result(con);
+  DEBUG("mysql_store_result(%p) = %p", con, res);
+
+  if (res == NULL)
+  {
+    if (mysql_errno(con) == 0 && mysql_field_count(con) == 0)
+    {
+      /* Not a select. Check if it was a DML */
+      uint32_t nrows = (uint32_t) mysql_affected_rows(con);
+      if (nrows > 0)
+      {
+        rs->counter = SB_CNT_WRITE;
+        rs->nrows = nrows;
+      }
+      else
+        rs->counter = SB_CNT_OTHER;
+
+      return DB_ERROR_NONE;
+    }
+
+    return check_error(sb_conn, "mysql_store_result()", NULL, &rs->counter);
+  }
+
+  rs->counter = SB_CNT_READ;
+  rs->ptr = (void *)res;
+
+  rs->nrows = mysql_num_rows(res);
+  DEBUG("mysql_num_rows(%p) = %u", res, (unsigned int) rs->nrows);
+
+  rs->nfields = mysql_num_fields(res);
+  DEBUG("mysql_num_fields(%p) = %u", res, (unsigned int) rs->nfields);
 
   return DB_ERROR_NONE;
 }

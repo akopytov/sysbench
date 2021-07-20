@@ -1,3 +1,13 @@
+2020-04-24  Alexey Kopytov  <akopytov@gmail.com>
+
+	* version 1.0.20
+	* build/CI/packaging: Add arm64 to Travis CI matrix (#358)
+	* build/CI/packaging: add Ubuntu Focal
+	* build/CI/packaging: remove Fedora Rawhide from CI matrix
+	* build/CI/packaging: fix regression tests to work with MySQL 8.0.19+
+	* build/CI/packaging: fix macOS builds in Travis
+	* build/CI/packaging: remove Ubuntu Disco (EOL)
+
 2019-12-08  Alexey Kopytov  <akopytov@gmail.com>
 
 	* version 1.0.19
