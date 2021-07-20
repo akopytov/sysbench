@@ -91,11 +91,6 @@ Quick install instructions:
   sudo dnf -y install sysbench
   ```
 
-- Arch Linux:
-  ``` shell
-  sudo pacman -Suy sysbench
-  ```
-
 ## macOS
 
 On macOS, up-to-date sysbench packages are available from Homebrew:

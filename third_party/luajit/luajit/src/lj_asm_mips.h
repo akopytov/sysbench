@@ -1243,7 +1243,6 @@ static MIPSIns asm_fxloadins(ASMState *as, IRIns *ir)
   case IRT_NUM:
     lj_assertA(!LJ_SOFTFP32, "unsplit FP op");
     if (!LJ_SOFTFP) return MIPSI_LDC1;
-  case IRT_NUM: lua_assert(!LJ_SOFTFP32); if (!LJ_SOFTFP) return MIPSI_LDC1;
   /* fallthrough */
   case IRT_FLOAT: if (!LJ_SOFTFP) return MIPSI_LWC1;
   /* fallthrough */
@@ -1260,7 +1259,6 @@ static MIPSIns asm_fxstoreins(ASMState *as, IRIns *ir)
   case IRT_NUM:
     lj_assertA(!LJ_SOFTFP32, "unsplit FP op");
     if (!LJ_SOFTFP) return MIPSI_SDC1;
-  case IRT_NUM: lua_assert(!LJ_SOFTFP32); if (!LJ_SOFTFP) return MIPSI_SDC1;
   /* fallthrough */
   case IRT_FLOAT: if (!LJ_SOFTFP) return MIPSI_SWC1;
   /* fallthrough */
@@ -1312,8 +1310,6 @@ static void asm_xload(ASMState *as, IRIns *ir)
   lj_assertA(LJ_TARGET_UNALIGNED || !(ir->op2 & IRXLOAD_UNALIGNED),
 	     "unaligned XLOAD");
   asm_fusexref(as, asm_fxloadins(as, ir), dest, ir->op1, RSET_GPR, 0);
-  lua_assert(LJ_TARGET_UNALIGNED || !(ir->op2 & IRXLOAD_UNALIGNED));
-  asm_fusexref(as, asm_fxloadins(ir), dest, ir->op1, RSET_GPR, 0);
 }
 
 static void asm_xstore_(ASMState *as, IRIns *ir, int32_t ofs)
@@ -2702,11 +2698,7 @@ void lj_asm_patchexit(jit_State *J, GCtrace *T, ExitNo exitno, MCode *target)
 #else
 	   (p[-1] & 0xff600000u) == MIPSI_BC1EQZ
 #endif
-<<<<<<< HEAD
 	  ) && p[-2] != MIPS_NOPATCH_GC_CHECK) {
-=======
-	  )) {
->>>>>>> ead2689ac6f61c5e7ba7c6e19198b86bd3a51d3c
 	ptrdiff_t delta = target - p;
 	if (((delta + 0x8000) >> 16) == 0) {  /* Patch in-range branch. */
 	patchbranch:

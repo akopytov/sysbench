@@ -66,11 +66,20 @@ int sb_rand_seed; /* optional seed set on the command line */
 static sb_arg_t rand_args[] =
 {
   SB_OPT("rand-type",
-         "random numbers distribution {uniform, gaussian, pareto, zipfian} "
-         "to use by default", "uniform", STRING),
+         "random numbers distribution {uniform, gaussian, special, pareto, "
+         "zipfian} to use by default", "uniform", STRING),
   SB_OPT("rand-seed",
          "seed for random number generator. When 0, the current time is "
          "used as an RNG seed.", "0", INT),
+  SB_OPT("rand-spec-iter",
+         "number of iterations for the special distribution", "12", INT),
+  SB_OPT("rand-spec-pct",
+         "percentage of the entire range where 'special' values will fall "
+         "in the special distribution",
+         "1", INT),
+  SB_OPT("rand-spec-res",
+         "percentage of 'special' values to use for the special distribution",
+         "75", INT),
   SB_OPT("rand-pareto-h", "shape parameter for the Pareto distribution",
          "0.2", DOUBLE),
   SB_OPT("rand-zipfian-exp",
@@ -148,6 +157,11 @@ int sb_rand_init(void)
   {
     rand_type = DIST_TYPE_GAUSSIAN;
     rand_func = &sb_rand_gaussian;
+  }
+  else if (!strcmp(s, "special"))
+  {
+    rand_type = DIST_TYPE_SPECIAL;
+    rand_func = &sb_rand_special;
   }
   else if (!strcmp(s, "pareto"))
   {
@@ -252,6 +266,56 @@ uint32_t sb_rand_gaussian(uint32_t a, uint32_t b)
     sum += sb_rand_uniform_double() * t;
 
   return a + (uint32_t) (sum * rand_iter_mult) ;
+}
+
+/* 'special' distribution */
+
+uint32_t sb_rand_special(uint32_t a, uint32_t b)
+{
+  double       sum;
+  double       t;
+  double       range_size;
+  double       res;
+  double       d;
+  double       rnd;
+  unsigned int i;
+
+  t = b - a;
+
+  /* Increase range size for special values. */
+  range_size = t * rand_res_mult;
+
+  /* Generate uniformly distributed one at this stage  */
+  rnd = sb_rand_uniform_double(); /* Random double in the [0, 1) interval */
+  /* Random integer in the [0, range_size) interval */
+  res = rnd * range_size;
+
+  /*
+    Use gaussian distribution for (100 - rand_res) percent of all generated
+    values.
+  */
+  if (res < t)
+  {
+    sum = 0.0;
+
+    for(i = 0; i < rand_iter; i++)
+      sum += sb_rand_uniform_double();
+
+    return a + sum * t * rand_iter_mult;
+  }
+
+  /*
+    For the remaining rand_res percent of values use the uniform
+    distribution. We map previously generated random double in the [0, 1)
+    interval to the rand_pct percent part of the [a, b] interval. Then we move
+    the resulting value in the [0, (b-a) * (rand_pct / 100)] interval to the
+    center of the original interval [a, b].
+  */
+  d = t * rand_pct_mult;
+  res = rnd * (d + 1);
+  res += t / 2 - t * rand_pct_2_mult;
+
+  return a + (uint32_t) res;
 }
 
 /* Pareto distribution */
