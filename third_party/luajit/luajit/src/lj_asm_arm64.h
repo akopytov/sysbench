@@ -775,7 +775,6 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
     rset_clear(allow, scr);
   } else {
     lj_assertA(irt_ispri(kt) && !irt_isnil(kt), "bad HREF key type");
-    lua_assert(irt_ispri(kt) && !irt_isnil(kt));
     type = ra_allock(as, ~((int64_t)~irt_toitype(ir->t) << 47), allow);
     scr = ra_scratch(as, rset_clear(allow, type));
     rset_clear(allow, scr);

@@ -2,10 +2,6 @@
 #
 # Travis CI configuration
 
-arch:
-  - amd64
-  - arm64
-
 dist: trusty
 sudo: required
 
@@ -23,8 +19,6 @@ os:
   - linux
   - osx
 
-osx_image: xcode12.2
-
 compiler:
   - gcc
   - clang
@@ -34,33 +28,45 @@ env:
       - TARGET=distcheck
       - TARGET=test
       - TARGET=coverage
+      - OS=el DIST=6
       - OS=el DIST=7
       - OS=el DIST=8
-      - OS=fedora DIST=32
-# Currently unsupported by packagecloud
-#      - OS=fedora DIST=33
+      - OS=fedora DIST=29
+      - OS=fedora DIST=30
+      - OS=fedora DIST=31
+      - OS=fedora DIST=rawhide
       - OS=ubuntu DIST=xenial
       - OS=ubuntu DIST=bionic
-      - OS=ubuntu DIST=focal
-      - OS=ubuntu DIST=groovy
+      - OS=ubuntu DIST=disco
+      - OS=ubuntu DIST=eoan
+      - OS=debian DIST=jessie
       - OS=debian DIST=stretch
       - OS=debian DIST=buster
       - OS=debian DIST=sid
       - OS=ubuntu DIST=xenial ARCH=i386
       - OS=ubuntu DIST=bionic ARCH=i386
+      - OS=ubuntu DIST=disco ARCH=i386
+      - OS=ubuntu DIST=eoan ARCH=i386
+      - OS=debian DIST=jessie ARCH=i386
       - OS=debian DIST=stretch ARCH=i386
       - OS=debian DIST=buster ARCH=i386
       - OS=debian DIST=sid ARCH=i386
 
 matrix:
   exclude:
+    - env: OS=el DIST=6
+      compiler: clang
     - env: OS=el DIST=7
       compiler: clang
     - env: OS=el DIST=8
       compiler: clang
-    - env: OS=fedora DIST=32
+    - env: OS=fedora DIST=29
       compiler: clang
-    - env: OS=fedora DIST=33
+    - env: OS=fedora DIST=30
+      compiler: clang
+    - env: OS=fedora DIST=31
+      compiler: clang
+    - env: OS=fedora DIST=rawhide
       compiler: clang
     - env: OS=ubuntu DIST=xenial
       compiler: clang
@@ -68,9 +74,9 @@ matrix:
       compiler: clang
     - env: OS=ubuntu DIST=disco
       compiler: clang
-    - env: OS=ubuntu DIST=focal
+    - env: OS=ubuntu DIST=eoan
       compiler: clang
-    - env: OS=ubuntu DIST=groovy
+    - env: OS=debian DIST=jessie
       compiler: clang
     - env: OS=debian DIST=stretch
       compiler: clang
@@ -84,31 +90,29 @@ matrix:
       compiler: clang
     - env: OS=ubuntu DIST=disco ARCH=i386
       compiler: clang
+    - env: OS=ubuntu DIST=eoan ARCH=i386
+      compiler: clang
+    - env: OS=debian DIST=jessie ARCH=i386
+      compiler: clang
     - env: OS=debian DIST=stretch ARCH=i386
       compiler: clang
     - env: OS=debian DIST=buster ARCH=i386
       compiler: clang
     - env: OS=debian DIST=sid ARCH=i386
       compiler: clang
-    - env: OS=ubuntu DIST=xenial ARCH=i386
-      arch: arm64
-    - env: OS=ubuntu DIST=bionic ARCH=i386
-      arch: arm64
-    - env: OS=ubuntu DIST=disco ARCH=i386
-      arch: arm64
-    - env: OS=debian DIST=stretch ARCH=i386
-      arch: arm64
-    - env: OS=debian DIST=buster ARCH=i386
-      arch: arm64
-    - env: OS=debian DIST=sid ARCH=i386
-      arch: arm64
+    - env: OS=el DIST=6
+      os: osx
     - env: OS=el DIST=7
       os: osx
     - env: OS=el DIST=8
       os: osx
-    - env: OS=fedora DIST=32
+    - env: OS=fedora DIST=29
       os: osx
-    - env: OS=fedora DIST=33
+    - env: OS=fedora DIST=30
+      os: osx
+    - env: OS=fedora DIST=31
+      os: osx
+    - env: OS=fedora DIST=rawhide
       os: osx
     - env: OS=ubuntu DIST=xenial
       os: osx
@@ -116,9 +120,9 @@ matrix:
       os: osx
     - env: OS=ubuntu DIST=disco
       os: osx
-    - env: OS=ubuntu DIST=focal
+    - env: OS=ubuntu DIST=eoan
       os: osx
-    - env: OS=ubuntu DIST=groovy
+    - env: OS=debian DIST=jessie
       os: osx
     - env: OS=debian DIST=stretch
       os: osx
@@ -130,20 +134,12 @@ matrix:
       compiler: clang
     - env: TARGET=distcheck
       os: osx
-    - env: TARGET=distcheck
-      arch: arm64
     - env: TARGET=coverage
       os: osx
     - env: TARGET=coverage
       compiler: clang
-    - env: TARGET=coverage
-      arch: arm64
     - os: osx
       compiler: gcc
-    - os: osx
-      arch: arm64
-    - arch: arm64
-      compiler: clang
 
 addons:
   apt:
@@ -170,16 +166,15 @@ before_install:
       case "${TRAVIS_OS_NAME:-linux}" in
       osx)
         brew update
-        brew install mysql postgresql
+        brew install mysql
 
         # OS X requires servers to be started explicitly
         brew services start mysql
 
-        cat /usr/local/var/mysql/*.err
-        lsof -c mysql
-
-        brew postgresql-upgrade-database
-        brew services start postgresql
+        # Avoid PostgreSQL upgrade woes, just reinstall the database
+        brew uninstall --ignore-dependencies postgresql
+        rm -rf /usr/local/var/postgres
+        brew install postgresql
 
         echo "Starting PostgreSQL"
         pg_ctl -wD /usr/local/var/postgres start
@@ -234,7 +229,7 @@ script:
     else
       # To avoid name conflicts, deploy source packages only for
       # "default", i.e. x86_64 architecture
-      if [[ -z "$ARCH" && "$TRAVIS_CPU_ARCH" == amd64 ]]; then
+      if [[ -z "${ARCH}" ]]; then
         PACKAGECLOUD_GLOB='build/*.{rpm,deb,dsc}'
       else
       # Exclude *.src.rpm and *.dsc

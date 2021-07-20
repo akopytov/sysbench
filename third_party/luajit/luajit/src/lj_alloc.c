@@ -187,7 +187,6 @@ static void *direct_mmap(size_t size)
 
 #define CALL_MMAP(prng, size)	mmap_plain(size)
 #define DIRECT_MMAP(prng, size)	direct_mmap(size)
-#define DIRECT_MMAP(size)	direct_mmap(size)
 
 /* This function supports releasing coalesed segments */
 static int CALL_MUNMAP(void *ptr, size_t size)

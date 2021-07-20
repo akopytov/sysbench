@@ -988,7 +988,6 @@ static ARMIns asm_fxloadins(ASMState *as, IRIns *ir)
   case IRT_I16: return ARMI_LDRSH;
   case IRT_U16: return ARMI_LDRH;
   case IRT_NUM: lj_assertA(!LJ_SOFTFP, "unsplit FP op"); return ARMI_VLDR_D;
-  case IRT_NUM: lua_assert(!LJ_SOFTFP); return ARMI_VLDR_D;
   case IRT_FLOAT: if (!LJ_SOFTFP) return ARMI_VLDR_S;  /* fallthrough */
   default: return ARMI_LDR;
   }
@@ -1001,7 +1000,6 @@ static ARMIns asm_fxstoreins(ASMState *as, IRIns *ir)
   case IRT_I8: case IRT_U8: return ARMI_STRB;
   case IRT_I16: case IRT_U16: return ARMI_STRH;
   case IRT_NUM: lj_assertA(!LJ_SOFTFP, "unsplit FP op"); return ARMI_VSTR_D;
-  case IRT_NUM: lua_assert(!LJ_SOFTFP); return ARMI_VSTR_D;
   case IRT_FLOAT: if (!LJ_SOFTFP) return ARMI_VSTR_S;  /* fallthrough */
   default: return ARMI_STR;
   }
