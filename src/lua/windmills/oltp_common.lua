@@ -313,7 +313,7 @@ local stmt_defs = {
       "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id BETWEEN ? AND ?",
       t.INT, t.INT},
    sum_ranges = {
-      "SELECT SUM(kwatts_s) FROM %s%u WHERE millid BETWEEN ? AND ?  and active=1",
+      "SELECT SUM(kwatts_s) FROM %s%u WHERE id BETWEEN ? AND ?  and active=1",
         t.INT, t.INT},
    order_ranges = {
       "SELECT id, millid, date,active,kwatts_s  FROM %s%u WHERE id BETWEEN ? AND ? ORDER BY millid",
