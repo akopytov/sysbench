@@ -56,7 +56,7 @@ sysbench.cmdline.options = {
    range_selects =
       {"Enable/disable all range SELECT queries", true},
    auto_inc =
-   {"Use AUTO_INCREMENT column as Primary Key (for MySQL), " ..
+      {"Use AUTO_INCREMENT column as Primary Key (for MySQL), " ..
        "or its alternatives in other DBMS. When disabled, use " ..
        "client-generated IDs", true},
    create_table_options =
@@ -78,7 +78,11 @@ sysbench.cmdline.options = {
           "PostgreSQL driver. The only currently supported " ..
           "variant is 'redshift'. When enabled, " ..
           "create_secondary is automatically disabled, and " ..
-          "delete_inserts is set to 0"}
+          "delete_inserts is set to 0"},
+   partitioned =
+      {"Whether the table is partitioned", false},
+   partition_num =
+      {"Number of partitions", 10}
 }
 
 -- Prepare the dataset. This command supports parallel execution, i.e. will
@@ -157,6 +161,7 @@ end
 function create_table(drv, con, table_num)
    local id_index_def, id_def
    local engine_def = ""
+   local partition_def = ""
    local extra_table_options = ""
    local query
 
@@ -174,6 +179,22 @@ function create_table(drv, con, table_num)
          id_def = "INTEGER NOT NULL"
       end
       engine_def = "/*! ENGINE = " .. sysbench.opt.mysql_storage_engine .. " */"
+
+      if sysbench.opt.partitioned then
+         partition_def = "/*!50100 PARTITION BY RANGE (id) ("
+
+         for i = 1, sysbench.opt.partition_num do
+            cur_part_def = string.format("PARTITION p%d VALUES LESS THAN (%d)", i - 1,
+                                         math.floor(sysbench.opt.table_size * i / sysbench.opt.partition_num) + 1)
+            partition_def = partition_def .. cur_part_def
+
+            if i == sysbench.opt.partition_num then
+               partition_def = partition_def .. ") */"
+            else
+               partition_def = partition_def .. ", "
+            end
+         end
+      end
    elseif drv:name() == "pgsql"
    then
       if not sysbench.opt.auto_inc then
@@ -196,9 +217,9 @@ CREATE TABLE sbtest%d(
   c CHAR(120) DEFAULT '' NOT NULL,
   pad CHAR(60) DEFAULT '' NOT NULL,
   %s (id)
-) %s %s]],
+) %s %s %s]],
       table_num, id_def, id_index_def, engine_def,
-      sysbench.opt.create_table_options)
+      sysbench.opt.create_table_options, partition_def)
 
    con:query(query)
 
@@ -400,11 +421,11 @@ function cleanup()
    end
 end
 
-local function get_table_num()
+function get_table_num()
    return sysbench.rand.uniform(1, sysbench.opt.tables)
 end
 
-local function get_id()
+function get_id()
    return sysbench.rand.default(1, sysbench.opt.table_size)
 end
 
