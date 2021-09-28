@@ -507,7 +507,6 @@ static void sb_lua_var_number(lua_State *L, const char *name, lua_Number n)
     lua_settable(L, -3);
 }
 
-
 static void sb_lua_var_string(lua_State *L, const char *name, const char *s)
 {
     lua_pushstring(L, name);
@@ -712,7 +711,6 @@ static lua_State *sb_lua_new_state(void)
 
   luaL_newmetatable(L, "sysbench.stmt");
   luaL_newmetatable(L, "sysbench.rs");
-
 
   if (load_internal_scripts(L))
     return NULL;
