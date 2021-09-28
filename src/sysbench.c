@@ -1324,14 +1324,14 @@ static int init(void)
 
   sb_globals.max_time_ns = SEC2NS(max_time);
 
-    sb_globals.start = sb_get_value_int("start");
+  sb_globals.start = sb_get_value_int("start");
 
-    sb_globals.length = sb_get_value_int("length");
-    if(sb_globals.length == 0)
-    {
-      log_text(LOG_FATAL, "Invalid value for --length: %d.\n", sb_globals.length);
-      return 1;
-    }
+  sb_globals.length = sb_get_value_int("length");
+  if(sb_globals.length == 0)
+  {
+    log_text(LOG_FATAL, "Invalid value for --length: %d.\n", sb_globals.length);
+    return 1;
+  }
 
   if (!sb_globals.max_events && !sb_globals.max_time_ns)
     log_text(LOG_WARNING, "Both event and time limits are disabled, "
@@ -1654,7 +1654,7 @@ void *sb_alloc_per_thread_array(size_t size)
 }
 
 // 此方法生成全局唯一ID，id_start_val起始ID,id_step_val步长
-int sb_global_unique_id()
+int sb_global_unique_id(void)
 {
    return __sync_fetch_and_add( &sb_globals.start, sb_globals.length);
 }
