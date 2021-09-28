@@ -101,7 +101,7 @@ function event()
     elseif (type == "UPDATE") then
         con:query("UPDATE " .. table_name .. " SET k=k+1 WHERE id=" .. incr)
     elseif (type == "SELECT") then
-        con:query("SELECT c FROM " .. table_name .. " WHERE id=" .. incr)
+        con:query("SELECT c FROM " .. table_name .. " WHERE id=" .. sysbench.rand.sb_global_unique_id())
     elseif (type == "ALL") then
         con:query(string.format("INSERT INTO %s (id, k, c, pad) VALUES (%d, %d, '%s', '%s')", table_name, incr, k_val, value, value))
         con:query("SELECT c FROM " .. table_name .. " WHERE id=" .. incr)
