@@ -37,7 +37,7 @@ function create_table(drv, con, table_num)
     -- 1 编写SQL 建表语句
     local query = string.format(string.format([[
 CREATE TABLE sbtest%d(
-  id int(10) unsigned NOT NULL,
+  id int(10) NOT NULL,
   k int(10) unsigned NOT NULL DEFAULT '0',
   c CHAR(120) DEFAULT '' NOT NULL,
   pad CHAR(60) DEFAULT '' NOT NULL,
@@ -61,9 +61,9 @@ CREATE TABLE sbtest%d(
 
     -- 编写多个VALUES
 
-    for i = sysbench.opt.start, sysbench.opt.table_size * sysbench.opt.length, sysbench.opt.length do
+    for i = sysbench.opt.start, sysbench.opt.table_size do
         local k_val = sysbench.rand.default(1, sysbench.opt.table_size)
-        query = string.format("(%d, %d, '%s', '%s')", i, k_val, value, value)
+        query = string.format("(%d, %d, '%s', '%s')", -i, k_val, value, value)
         con:bulk_insert_next(query)
     end
 
@@ -82,18 +82,15 @@ function cleanup()
     con:query("DROP TABLE IF EXISTS sbtest" .. 1)
 end
 
-incr = -1
 
 -- 执行 run 命令 触发的函数(开始压测)，也就是真正开启事务进行压测的函数
 function event()
     local table_name = "sbtest1"
     local value = "test"
-    if (incr == -1)
-    then
-        incr = sysbench.rand.sb_global_unique_id()
-    end
     local k_val = sysbench.rand.default(1, sysbench.opt.table_size)
     local type = string.upper(sysbench.opt.type)
+    local incr = sysbench.rand.sb_global_unique_id();
+
     if (type == "INSERT") then
         con:query(string.format("INSERT INTO %s (id, k, c, pad) VALUES (%d, %d, '%s', '%s')", table_name, incr, k_val, value, value))
     elseif (type == "DELETE") then
@@ -101,7 +98,7 @@ function event()
     elseif (type == "UPDATE") then
         con:query("UPDATE " .. table_name .. " SET k=k+1 WHERE id=" .. incr)
     elseif (type == "SELECT") then
-        con:query("SELECT c FROM " .. table_name .. " WHERE id=" .. sysbench.rand.sb_global_unique_id())
+        con:query("SELECT c FROM " .. table_name .. " WHERE id=" .. incr)
     elseif (type == "ALL") then
         con:query(string.format("INSERT INTO %s (id, k, c, pad) VALUES (%d, %d, '%s', '%s')", table_name, incr, k_val, value, value))
         con:query("SELECT c FROM " .. table_name .. " WHERE id=" .. incr)
