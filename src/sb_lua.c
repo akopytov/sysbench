@@ -720,8 +720,8 @@ static lua_State *sb_lua_new_state(void)
   luaL_newmetatable(L, "sysbench.rs");
 
   // 新增代码片段
-   lua_pushcfunction(state, sb_lua_global_unique_id);
-   lua_setglobal(state, "sb_global_unique_id");
+   lua_pushcfunction(L, sb_lua_global_unique_id);
+   lua_setglobal(L, "sb_global_unique_id");
 
   if (load_internal_scripts(L))
     return NULL;
