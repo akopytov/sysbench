@@ -243,5 +243,6 @@ void sb_report_cumulative(sb_stat_t *stat);
   worker and background ones.
 */
 void *sb_alloc_per_thread_array(size_t size);
+int sb_global_unique_id();
 
 #endif
