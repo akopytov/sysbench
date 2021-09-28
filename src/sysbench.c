@@ -119,7 +119,8 @@ sb_arg_t general_args[] =
   SB_OPT("luajit-cmd", "perform LuaJIT control command. This option is "
          "equivalent to 'luajit -j'. See LuaJIT documentation for more "
          "information", NULL, STRING),
-
+  SB_OPT("start", "generate start value of id", "0", INT),
+  SB_OPT("length", "generate start value of id", "1", INT)
   SB_OPT_END
 };
 
@@ -1323,6 +1324,16 @@ static int init(void)
 
   sb_globals.max_time_ns = SEC2NS(max_time);
 
+   // 增加代码片段
+    sb_globals.start = sb_get_value_int("start");
+
+    sb_globals.length = sb_get_value_int("length");
+    if(sb_globals.length == 0)
+    {
+      log_text(LOG_FATAL, "Invalid value for --length: %d.\n", sb_globals.length);
+      return 1;
+    }
+
   if (!sb_globals.max_events && !sb_globals.max_time_ns)
     log_text(LOG_WARNING, "Both event and time limits are disabled, "
              "running an endless test");
@@ -1641,4 +1652,10 @@ void *sb_alloc_per_thread_array(size_t size)
   memset(ptr, 0, bsize);
 
   return ptr;
+}
+
+// 此方法生成全局唯一ID，id_start_val起始ID,id_step_val步长
+int sb_global_unique_id()
+{
+   return __sync_fetch_and_add( &sb_globals.start, sb_globals.length);
 }

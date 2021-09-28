@@ -507,6 +507,13 @@ static void sb_lua_var_number(lua_State *L, const char *name, lua_Number n)
     lua_settable(L, -3);
 }
 
+int sb_lua_global_unique_id(lua_State *L)
+{
+  lua_pushnumber(L, sb_global_unique_id());
+
+  return 1;
+}
+
 static void sb_lua_var_string(lua_State *L, const char *name, const char *s)
 {
     lua_pushstring(L, name);
@@ -711,6 +718,10 @@ static lua_State *sb_lua_new_state(void)
 
   luaL_newmetatable(L, "sysbench.stmt");
   luaL_newmetatable(L, "sysbench.rs");
+
+  // 新增代码片段
+   lua_pushcfunction(state, sb_lua_global_unique_id);
+   lua_setglobal(state, "sb_global_unique_id");
 
   if (load_internal_scripts(L))
     return NULL;
