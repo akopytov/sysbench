@@ -120,7 +120,7 @@ sb_arg_t general_args[] =
          "equivalent to 'luajit -j'. See LuaJIT documentation for more "
          "information", NULL, STRING),
   SB_OPT("start", "generate start value of id", "0", INT),
-  SB_OPT("length", "generate start value of id", "1", INT)
+  SB_OPT("length", "generate start value of id", "1", INT),
   SB_OPT_END
 };
 
