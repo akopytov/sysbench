@@ -90,7 +90,7 @@ function event()
     local value = "test"
     if (incr == -1)
     then
-        incr = sb_global_unique_id()
+        incr = sysbench.rand.sb_global_unique_id()
     end
     local k_val = sysbench.rand.default(1, sysbench.opt.table_size)
     local type = string.upper(sysbench.opt.type)

@@ -30,6 +30,7 @@ uint32_t sb_rand_gaussian(uint32_t, uint32_t);
 uint32_t sb_rand_pareto(uint32_t, uint32_t);
 uint32_t sb_rand_zipfian(uint32_t, uint32_t);
 uint32_t sb_rand_unique(void);
+uint32_t sb_global_unique_id(void);
 void sb_rand_str(const char *, char *);
 uint32_t sb_rand_varstr(char *, uint32_t, uint32_t);
 double sb_rand_uniform_double(void);
@@ -61,6 +62,10 @@ end
 
 function sysbench.rand.unique()
    return ffi.C.sb_rand_unique()
+end
+
+function sysbench.rand.sb_global_unique_id()
+   return ffi.C.sb_global_unique_id()
 end
 
 function sysbench.rand.string(fmt)
