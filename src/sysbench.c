@@ -1324,7 +1324,6 @@ static int init(void)
 
   sb_globals.max_time_ns = SEC2NS(max_time);
 
-   // 增加代码片段
     sb_globals.start = sb_get_value_int("start");
 
     sb_globals.length = sb_get_value_int("length");
