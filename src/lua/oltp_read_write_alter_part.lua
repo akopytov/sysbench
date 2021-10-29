@@ -21,6 +21,15 @@
 
 require("oltp_common")
 
+sysbench.cmdline.options.ddl_enabled =
+   {"Enable/disable concurrent DDL", true}
+
+sysbench.cmdline.options.read_only =
+   {"Test SELECT command only", false}
+
+sysbench.cmdline.options.hybrid =
+   {"Whether contains hybrid DML requests (explicitly indicate PARTITION or not)", false}
+
 local part_sqls = {
    point_selects =
       "SELECT c FROM sbtest%u PARTITION(%s) WHERE id=%d",
@@ -40,6 +49,27 @@ local part_sqls = {
       "DELETE FROM sbtest%u PARTITION(%s) WHERE id=%d",
    inserts =
       "INSERT INTO sbtest%u PARTITION(%s) (id, k, c, pad) VALUES (%d, %d, '%s', '%s')"
+}
+
+local sqls = {
+   point_selects =
+      "SELECT c FROM sbtest%u WHERE id=%d",
+   simple_ranges =
+      "SELECT c FROM sbtest%u WHERE id BETWEEN %d AND %d",
+   sum_ranges =
+      "SELECT SUM(k) FROM sbtest%u WHERE id BETWEEN %d AND %d",
+   order_ranges =
+      "SELECT c FROM sbtest%u WHERE id BETWEEN %d AND %d ORDER BY c",
+   distinct_ranges =
+      "SELECT DISTINCT c FROM sbtest%u WHERE id BETWEEN %d AND %d ORDER BY c",
+   index_updates =
+      "UPDATE sbtest%u SET k=k+1 WHERE id=%d",
+   non_index_updates =
+      "UPDATE sbtest%u SET c='%s' WHERE id=%d",
+   deletes =
+      "DELETE FROM sbtest%u WHERE id=%d",
+   inserts =
+      "INSERT INTO sbtest%u (id, k, c, pad) VALUES (%d, %d, '%s', '%s')"
 }
 
 local alter_part_ddls = {
@@ -75,6 +105,19 @@ function prepare_statements()
       prepare_begin()
       prepare_commit()
    end
+
+   prepare_point_selects()
+
+   if sysbench.opt.range_selects then
+      prepare_simple_ranges()
+      prepare_sum_ranges()
+      prepare_order_ranges()
+      prepare_distinct_ranges()
+   end
+
+   prepare_index_updates()
+   prepare_non_index_updates()
+   prepare_delete_inserts()
 
    initialize()
 end
@@ -154,7 +197,11 @@ local function execute_part_point_selects()
 
    for i = 1, sysbench.opt.point_selects do
       local id = get_id()
-      con:query(string.format(part_sqls[query_type], tnum, get_part_by_id(id), id))
+      if sysbench.opt.hybrid and sysbench.rand.uniform(0, 1) == 0 then
+        con:query(string.format(sqls[query_type], tnum, id))
+      else
+        con:query(string.format(part_sqls[query_type], tnum, get_part_by_id(id), id))
+      end
    end
 end
 
@@ -164,7 +211,11 @@ local function execute_part_range(key)
    for i = 1, sysbench.opt[key] do
       local id = get_id()
       local max_id = id + sysbench.rand.default(1, sysbench.opt.range_size)
-      con:query(string.format(part_sqls[key], tnum, get_parts_by_range(id, max_id), id, max_id))
+      if sysbench.opt.hybrid and sysbench.rand.uniform(0, 1) == 0 then
+        con:query(string.format(sqls[key], tnum, id, max_id))
+      else
+        con:query(string.format(part_sqls[key], tnum, get_parts_by_range(id, max_id), id, max_id))
+      end
    end
 end
 
@@ -174,7 +225,11 @@ local function execute_part_index_updates()
 
    for i = 1, sysbench.opt.index_updates do
       local id = get_id()
-      con:query(string.format(part_sqls[query_type], tnum, get_part_by_id(id), id))
+      if sysbench.opt.hybrid and sysbench.rand.uniform(0, 1) == 0 then
+        con:query(string.format(sqls[query_type], tnum, id))
+      else
+        con:query(string.format(part_sqls[query_type], tnum, get_part_by_id(id), id))
+      end
    end
 end
 
@@ -184,7 +239,11 @@ local function execute_part_non_index_updates()
 
    for i = 1, sysbench.opt.non_index_updates do
       local id = get_id()
-      con:query(string.format(part_sqls[query_type], tnum, get_part_by_id(id), get_c_value(), id))
+      if sysbench.opt.hybrid and sysbench.rand.uniform(0, 1) == 0 then
+        con:query(string.format(sqls[query_type], tnum, get_c_value(), id))
+      else
+        con:query(string.format(part_sqls[query_type], tnum, get_part_by_id(id), get_c_value(), id))
+      end
    end
 end
 
@@ -195,10 +254,16 @@ local function execute_part_delete_inserts()
       local id = get_id()
       local k = get_id()
 
-      con:query(string.format(part_sqls["deletes"], tnum, get_part_by_id(id), id))
+      if sysbench.opt.hybrid and sysbench.rand.uniform(0, 1) == 0 then
+        con:query(string.format(sqls["deletes"], tnum, id))
 
-      con:query(string.format(part_sqls["inserts"], tnum, get_part_by_id(id), id, k,
+        con:query(string.format(sqls["inserts"], tnum, id, k, get_c_value(), get_pad_value()))
+      else
+        con:query(string.format(part_sqls["deletes"], tnum, get_part_by_id(id), id))
+
+        con:query(string.format(part_sqls["inserts"], tnum, get_part_by_id(id), id, k,
                               get_c_value(), get_pad_value()))
+      end
    end
 end
 
@@ -210,11 +275,20 @@ local function dml_requests()
       execute_part_range("sum_ranges")
       execute_part_range("order_ranges")
       execute_part_range("distinct_ranges")
+      execute_simple_ranges()
+      execute_sum_ranges()
+      execute_order_ranges()
+      execute_distinct_ranges()
    end
 
-   execute_part_index_updates()
-   execute_part_non_index_updates()
-   execute_part_delete_inserts()
+   if not sysbench.opt.read_only then
+      execute_part_index_updates()
+      execute_part_non_index_updates()
+      execute_part_delete_inserts()
+      execute_index_updates()
+      execute_non_index_updates()
+      execute_delete_inserts()
+   end
 end
 
 function ddl_alter_single_part()
@@ -259,14 +333,16 @@ function event()
    end
 
    local luck = sysbench.rand.uniform(1, 10000)
--- release
-   if (luck <= 9999) then
+-- release 10 threads
+--   if (luck <= 9999) then
 -- release asan
 --   if (luck <= 9990) then
 -- debug
 --   if (luck <= 9900) then
+-- release 5 threads
+   if (luck <= 9998) then
       dml_requests()
-   else
+   elseif sysbench.opt.ddl_enabled and not sysbench.opt.read_only then
       ddl_alter_single_part()
    end
 
