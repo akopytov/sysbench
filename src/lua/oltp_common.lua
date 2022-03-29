@@ -280,8 +280,10 @@ CREATE TABLE sbtest%d(
            column_name="id, k, c, pad"
        end        
         
-       query = string.format("LOAD DATA LOCAL INFILE '/%s/sbtest%d' INTO TABLE sbtest%d (%s)",
-                                    sysbench.opt.csv_dir,table_num,table_num,column_name)
+       query = string.format("LOAD DATA LOCAL INFILE '/%s/sbtest%d' " ..
+                                "INTO TABLE sbtest%d FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' " ..
+                                 "(%s)", sysbench.opt.csv_dir,table_num,table_num,column_name)
+       print(query)
        con:query("SET unique_checks = 0")
        con:query("SET foreign_key_checks = 0")
        con:query(query)
