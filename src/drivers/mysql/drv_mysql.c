@@ -111,7 +111,7 @@ typedef struct
   unsigned char      debug;
   sb_list_t          *ignored_errors;
   unsigned int       dry_run;
-  unsigned char      use_local_infile;
+  unsigned int      use_local_infile;
 } mysql_drv_args_t;
 
 typedef struct
@@ -417,8 +417,8 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
  
   if (args.use_local_infile)
   {
-   DEBUG("mysql_options(%p, %s, %s)",con, "MYSQL_OPT_LOCAL_INFILE", "NULL");
-   mysql_options(con, MYSQL_OPT_LOCAL_INFILE, NULL);
+    DEBUG("mysql_options(%p, %s, %d)",con, "MYSQL_OPT_LOCAL_INFILE", args.use_local_infile);
+    mysql_options(con, MYSQL_OPT_LOCAL_INFILE, &args.use_local_infile);
   }
 
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",
