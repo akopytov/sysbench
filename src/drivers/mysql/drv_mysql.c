@@ -111,7 +111,7 @@ typedef struct
   unsigned char      debug;
   sb_list_t          *ignored_errors;
   unsigned int       dry_run;
-  unsigned int      use_local_infile;
+  unsigned int       use_local_infile;
 } mysql_drv_args_t;
 
 typedef struct
