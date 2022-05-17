@@ -84,17 +84,12 @@ static rand_dist_t rand_type;
 /* pointer to the default PRNG as defined by --rand-type */
 static uint32_t (*rand_func)(uint32_t, uint32_t);
 static unsigned int rand_iter;
-static unsigned int rand_pct;
-static unsigned int rand_res;
 
 /*
   Pre-computed FP constants to avoid unnecessary conversions and divisions at
   runtime.
 */
 static double rand_iter_mult;
-static double rand_pct_mult;
-static double rand_pct_2_mult;
-static double rand_res_mult;
 
 /* parameters for Pareto distribution */
 static double pareto_h; /* parameter h */
@@ -165,15 +160,8 @@ int sb_rand_init(void)
     return 1;
   }
 
-  rand_iter = sb_get_value_int("rand-spec-iter");
+  rand_iter = 12;
   rand_iter_mult = 1.0 / rand_iter;
-
-  rand_pct = sb_get_value_int("rand-spec-pct");
-  rand_pct_mult = rand_pct / 100.0;
-  rand_pct_2_mult = rand_pct / 200.0;
-
-  rand_res = sb_get_value_int("rand-spec-res");
-  rand_res_mult = 100.0 / (100.0 - rand_res);
 
   pareto_h  = sb_get_value_double("rand-pareto-h");
   pareto_power = log(pareto_h) / log(1.0-pareto_h);
