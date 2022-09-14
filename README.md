@@ -27,6 +27,7 @@
     - [General Command Line Options](#general-command-line-options)
     - [Random Numbers Options](#random-numbers-options)
 - [Versioning](#versioning)
+- [Test Risingwave](#test-risingwave)
 
 <!-- markdown-toc end -->
 
@@ -308,3 +309,156 @@ For more information on SemVer, please visit [http://semver.org/](http://semver.
 [deb-url]: https://packagecloud.io/akopytov/sysbench?filter=debs
 [rpm-badge]: https://img.shields.io/badge/Packages-RPM-blue.svg?style=flat
 [rpm-url]: https://packagecloud.io/akopytov/sysbench?filter=rpms
+
+# Test RisingWave
+
+## Note
+```
+// We create a covered index and a non-covered index by default. You can change the options if you need.
+// covered index
+--create_covered_secondary=true
+// non-covered index
+--create_secondary=true
+```
+
+## Prepare
+```
+sysbench \
+--db-driver=pgsql \
+--pgsql-host=localhost  \
+--pgsql-port=4566  \
+--pgsql-user=root \
+--pgsql-db=dev \
+--threads=16 \
+--report-interval=1 \
+--events=0 \
+--time=10 \
+--threads=1 \
+--percentile=99 \
+--auto_inc=false \
+--table_size=1000000 \
+--db-ps-mode=disable \
+--skip_trx=true \
+--range_size=1 \
+/usr/local/share/sysbench/oltp_read_only.lua \
+prepare
+```
+
+## Run
+
+### oltp_point_select
+```
+sysbench \
+--db-driver=pgsql \
+--pgsql-host=localhost  \
+--pgsql-port=4566  \
+--pgsql-user=root \
+--pgsql-db=dev \
+--threads=16 \
+--report-interval=1 \
+--events=0 \
+--time=10 \
+--threads=16 \
+--percentile=99 \
+--auto_inc=false \
+--table_size=1000000 \
+--db-ps-mode=disable \
+--skip_trx=true \
+--range_size=1 \
+/usr/local/share/sysbench/oltp_point_select.lua \
+run
+```
+
+### select_random_points
+```
+sysbench \
+--db-driver=pgsql \
+--pgsql-host=localhost  \
+--pgsql-port=4566  \
+--pgsql-user=root \
+--pgsql-db=dev \
+--threads=16 \
+--report-interval=1 \
+--events=0 \
+--time=10 \
+--threads=16 \
+--percentile=99 \
+--auto_inc=false \
+--table_size=1000000 \
+--db-ps-mode=disable \
+--skip_trx=true \
+--range_size=1 \
+--random_points=1 \
+/usr/local/share/sysbench/select_random_points.lua \
+run
+```
+
+### select_random_ranges
+```
+sysbench \
+--db-driver=pgsql \
+--pgsql-host=localhost  \
+--pgsql-port=4566  \
+--pgsql-user=root \
+--pgsql-db=dev \
+--threads=16 \
+--report-interval=1 \
+--events=0 \
+--time=10 \
+--threads=16 \
+--percentile=99 \
+--auto_inc=false \
+--table_size=1000000 \
+--db-ps-mode=disable \
+--skip_trx=true \
+--range_size=1 \
+--number_of_ranges=1 \
+/usr/local/share/sysbench/select_random_ranges.lua \
+run
+```
+
+### oltp_read_only
+```
+sysbench \
+--db-driver=pgsql \
+--pgsql-host=localhost  \
+--pgsql-port=4566  \
+--pgsql-user=root \
+--pgsql-db=dev \
+--threads=16 \
+--report-interval=1 \
+--events=0 \
+--time=10 \
+--threads=16 \
+--percentile=99 \
+--auto_inc=false \
+--table_size=1000000 \
+--db-ps-mode=disable \
+--skip_trx=true \
+--range_size=1 \
+/usr/local/share/sysbench/oltp_read_only.lua \
+run
+```
+
+## CleanUp
+```
+sysbench \
+--db-driver=pgsql \
+--pgsql-host=localhost  \
+--pgsql-port=4566  \
+--pgsql-user=root \
+--pgsql-db=dev \
+--threads=16 \
+--report-interval=1 \
+--events=0 \
+--time=10 \
+--threads=1 \
+--percentile=99 \
+--auto_inc=false \
+--table_size=1000000 \
+--db-ps-mode=disable \
+--skip_trx=true \
+--range_size=1 \
+/usr/local/share/sysbench/oltp_read_only.lua \
+cleanup
+```
