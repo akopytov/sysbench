@@ -333,7 +333,6 @@ sysbench \
 --report-interval=1 \
 --events=0 \
 --time=10 \
---threads=1 \
 --percentile=99 \
 --auto_inc=false \
 --table_size=1000000 \
@@ -358,7 +357,6 @@ sysbench \
 --report-interval=1 \
 --events=0 \
 --time=10 \
---threads=16 \
 --percentile=99 \
 --auto_inc=false \
 --table_size=1000000 \
@@ -381,7 +379,6 @@ sysbench \
 --report-interval=1 \
 --events=0 \
 --time=10 \
---threads=16 \
 --percentile=99 \
 --auto_inc=false \
 --table_size=1000000 \
@@ -405,7 +402,6 @@ sysbench \
 --report-interval=1 \
 --events=0 \
 --time=10 \
---threads=16 \
 --percentile=99 \
 --auto_inc=false \
 --table_size=1000000 \
@@ -429,7 +425,6 @@ sysbench \
 --report-interval=1 \
 --events=0 \
 --time=10 \
---threads=16 \
 --percentile=99 \
 --auto_inc=false \
 --table_size=1000000 \
@@ -448,7 +443,6 @@ sysbench \
 --pgsql-port=4566  \
 --pgsql-user=root \
 --pgsql-db=dev \
---threads=16 \
 --report-interval=1 \
 --events=0 \
 --time=10 \
