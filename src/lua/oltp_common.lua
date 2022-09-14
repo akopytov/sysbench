@@ -68,6 +68,8 @@ sysbench.cmdline.options = {
       {"Use a secondary index in place of the PRIMARY KEY", false},
    create_secondary =
       {"Create a secondary index in addition to the PRIMARY KEY", true},
+   create_covered_secondary =
+      {"Create a covered secondary index in addition to the PRIMARY KEY", true},
    reconnect =
       {"Reconnect after every N events. The default (0) is to not reconnect",
        0},
@@ -177,7 +179,7 @@ function create_table(drv, con, table_num)
    elseif drv:name() == "pgsql"
    then
       if not sysbench.opt.auto_inc then
-         id_def = "INTEGER NOT NULL"
+         id_def = "INTEGER"
       elseif pgsql_variant == 'redshift' then
         id_def = "INTEGER IDENTITY(1,1)"
       else
@@ -192,9 +194,9 @@ function create_table(drv, con, table_num)
    query = string.format([[
 CREATE TABLE sbtest%d(
   id %s,
-  k INTEGER DEFAULT '0' NOT NULL,
-  c CHAR(120) DEFAULT '' NOT NULL,
-  pad CHAR(60) DEFAULT '' NOT NULL,
+  k INTEGER,
+  c VARCHAR,
+  pad VARCHAR,
   %s (id)
 ) %s %s]],
       table_num, id_def, id_index_def, engine_def,
@@ -243,6 +245,12 @@ CREATE TABLE sbtest%d(
       print(string.format("Creating a secondary index on 'sbtest%d'...",
                           table_num))
       con:query(string.format("CREATE INDEX k_%d ON sbtest%d(k)",
+                              table_num, table_num))
+   end
+   if sysbench.opt.create_covered_secondary then
+      print(string.format("Creating a covered secondary index on 'sbtest%d'...",
+                          table_num))
+      con:query(string.format("CREATE INDEX ck_%d ON sbtest%d(k) include(id, c, pad)",
                               table_num, table_num))
    end
 end
@@ -395,6 +403,10 @@ function cleanup()
    local con = drv:connect()
 
    for i = 1, sysbench.opt.tables do
+      print(string.format("Dropping index 'k_%d'...", i))
+      con:query("DROP INDEX IF EXISTS k_" .. i )
+      print(string.format("Dropping index 'ck_%d'...", i))
+      con:query("DROP INDEX IF EXISTS ck_" .. i )
       print(string.format("Dropping table 'sbtest%d'...", i))
       con:query("DROP TABLE IF EXISTS sbtest" .. i )
    end
