@@ -28,6 +28,7 @@
     - [Random Numbers Options](#random-numbers-options)
 - [Versioning](#versioning)
 - [Test Risingwave](#test-risingwave)
+    - [M1 Note](#m1-note)
 
 <!-- markdown-toc end -->
 
@@ -311,6 +312,21 @@ For more information on SemVer, please visit [http://semver.org/](http://semver.
 [rpm-url]: https://packagecloud.io/akopytov/sysbench?filter=rpms
 
 # Test RisingWave
+
+## M1 Note
+In order to build sysbench for m1, we need to install luajit from another repo instead of the self contained luajit in this repo.
+```shell
+git clone https://github.com/LuaJIT/LuaJIT.git
+make -j
+make install
+
+./autogen.sh
+# Add --with-pgsql to build with PostgreSQL support
+# Add --with-system-luajit to use system luajit built above
+./configure --with-pgsql --with-system-luajit
+make -j
+make install
+```
 
 ## Note
 ```
