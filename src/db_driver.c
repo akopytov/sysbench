@@ -40,7 +40,7 @@
 #include "sb_ck_pr.h"
 
 /* Query length limit for bulk insert queries */
-#define BULK_PACKET_SIZE (512*1024)
+#define BULK_PACKET_SIZE (5120*1024)
 
 /* How many rows to insert before COMMITs (used in bulk insert) */
 #define ROWS_BEFORE_COMMIT 1000

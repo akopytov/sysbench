@@ -4,7 +4,7 @@ OLTP usage information test
 
   $ sysbench $SBTEST_SCRIPTDIR/oltp_read_write.lua help
   sysbench * (glob)
-  
+
   oltp_read_write.lua options:
     --auto_inc[=on|off]           Use AUTO_INCREMENT column as Primary Key (for MySQL), or its alternatives in other DBMS. When disabled, use client-generated IDs [on]
     --create_secondary[=on|off]   Create a secondary index in addition to the PRIMARY KEY [on]
@@ -14,6 +14,7 @@ OLTP usage information test
     --index_updates=N             Number of UPDATE index queries per transaction [1]
     --mysql_storage_engine=STRING Storage engine, if MySQL is used [innodb]
     --non_index_updates=N         Number of UPDATE non-index queries per transaction [1]
+    --secondary_ranges=N          Number of secondary range SELECT queries per transaction [1]
     --order_ranges=N              Number of SELECT ORDER BY queries per transaction [1]
     --pgsql_variant=STRING        Use this PostgreSQL variant when running with the PostgreSQL driver. The only currently supported variant is 'redshift'. When enabled, create_secondary is automatically disabled, and delete_inserts is set to 0
     --point_selects=N             Number of point SELECT queries per transaction [10]
@@ -26,4 +27,4 @@ OLTP usage information test
     --sum_ranges=N                Number of SELECT SUM() queries per transaction [1]
     --table_size=N                Number of rows per table [10000]
     --tables=N                    Number of tables [1]
-  
+

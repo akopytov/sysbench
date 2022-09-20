@@ -32,7 +32,7 @@
 # include <strings.h>
 #endif
 
-#ifdef HAVE_UNISTD_H 
+#ifdef HAVE_UNISTD_H
 # include <unistd.h>
 # include <sys/types.h>
 #endif
@@ -119,6 +119,7 @@ sb_arg_t general_args[] =
   SB_OPT("luajit-cmd", "perform LuaJIT control command. This option is "
          "equivalent to 'luajit -j'. See LuaJIT documentation for more "
          "information", NULL, STRING),
+  SB_OPT("filename", "whether to use file as data source", "", STRING),
 
   SB_OPT_END
 };
@@ -471,7 +472,7 @@ void print_help(void)
 {
   sb_list_item_t *pos;
   sb_test_t      *test;
-  
+
   printf("Usage:\n");
   printf("  sysbench [options]... [testname] [command]\n\n");
   printf("Commands implemented by most tests: prepare run cleanup help\n\n");
@@ -657,7 +658,7 @@ void print_run_mode(sb_test_t *test)
 
   if (sb_globals.debug)
     log_text(LOG_NOTICE, "Debug mode enabled.\n");
-  
+
   if (sb_globals.validate)
     log_text(LOG_NOTICE, "Validation checks: on.\n");
 
@@ -678,7 +679,7 @@ void print_run_mode(sb_test_t *test)
   if (sb_globals.force_shutdown)
     log_text(LOG_NOTICE, "Forcing shutdown in %u seconds",
              (unsigned) NS2SEC(sb_globals.max_time_ns) + sb_globals.timeout);
-  
+
   log_text(LOG_NOTICE, "");
 
   if (test->ops.print_mode != NULL)
@@ -1066,7 +1067,7 @@ static int run_test(sb_test_t *test)
   /* initialize test */
   if (test->ops.init != NULL && test->ops.init() != 0)
     return 1;
-  
+
   /* print test mode */
   print_run_mode(test);
 
@@ -1289,7 +1290,6 @@ static int checkpoint_cmp(const void *a_ptr, const void *b_ptr)
   return (int) (a - b);
 }
 
-
 static int init(void)
 {
   option_t *opt;
@@ -1301,7 +1301,7 @@ static int init(void)
   sb_globals.threads = sb_get_value_int("threads");
 
   thread_init_timeout = sb_get_value_int("thread-init-timeout");
-  
+
   if (sb_globals.threads <= 0)
   {
     log_text(LOG_FATAL, "Invalid value for --threads: %d.\n",
@@ -1345,7 +1345,7 @@ static int init(void)
     else if (strcasecmp(tmp, "off"))
     {
       char *endptr;
-    
+
       sb_globals.force_shutdown = 1;
       sb_globals.timeout = (unsigned) strtol(tmp, &endptr, 10);
       if (*endptr == '%')
@@ -1373,7 +1373,7 @@ static int init(void)
     if (opt != NULL)
       set_option(opt->name, "5", opt->type);
   }
-  
+
   sb_globals.validate = sb_get_value_flag("validate");
 
   if (sb_rand_init())
@@ -1382,6 +1382,23 @@ static int init(void)
   }
 
   sb_globals.tx_rate = sb_get_value_int("rate");
+  sb_globals.filename = sb_get_value_string("filename");
+  if (sb_globals.filename)
+  {
+    if (sb_file_init())
+    {
+      return 1;
+    }
+  }
+
+  sb_globals.tx_rate = sb_get_value_int("tx-rate");
+  if (sb_globals.tx_rate > 0)
+  {
+    log_text(LOG_WARNING, "--tx-rate is deprecated, use --rate instead");
+    sb_opt_copy("rate", "tx-rate");
+  }
+  else
+    sb_globals.tx_rate = sb_get_value_int("rate");
 
   sb_globals.report_interval = sb_get_value_int("report-interval");
 
@@ -1473,7 +1490,7 @@ int main(int argc, char *argv[])
     printf("%s\n", VERSION_STRING);
     return EXIT_SUCCESS;
   }
-  
+
   /* Initialize global variables and logger */
   if (init() || log_init() || sb_counters_init())
     return EXIT_FAILURE;
@@ -1597,6 +1614,11 @@ end:
   sb_rand_done();
 
   sb_thread_done();
+
+  if (sb_globals.filename)
+  {
+    sb_file_done();
+  }
 
   free(timers);
   free(timers_copy);
