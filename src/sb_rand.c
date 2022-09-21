@@ -79,6 +79,7 @@ static sb_arg_t rand_args[] =
   SB_OPT("rand-zipfian-exp",
          "shape parameter (exponent, theta) for the Zipfian distribution",
          "0.8", DOUBLE),
+
   SB_OPT_END
 };
 

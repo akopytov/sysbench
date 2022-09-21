@@ -119,7 +119,7 @@ sb_arg_t general_args[] =
   SB_OPT("luajit-cmd", "perform LuaJIT control command. This option is "
          "equivalent to 'luajit -j'. See LuaJIT documentation for more "
          "information", NULL, STRING),
-  SB_OPT("filename", "whether to use file as data source", "", STRING),
+  SB_OPT("filename", "use filename as data source", "", STRING),
 
   SB_OPT_END
 };
@@ -1290,6 +1290,7 @@ static int checkpoint_cmp(const void *a_ptr, const void *b_ptr)
   return (int) (a - b);
 }
 
+
 static int init(void)
 {
   option_t *opt;
@@ -1390,15 +1391,6 @@ static int init(void)
       return 1;
     }
   }
-
-  sb_globals.tx_rate = sb_get_value_int("tx-rate");
-  if (sb_globals.tx_rate > 0)
-  {
-    log_text(LOG_WARNING, "--tx-rate is deprecated, use --rate instead");
-    sb_opt_copy("rate", "tx-rate");
-  }
-  else
-    sb_globals.tx_rate = sb_get_value_int("rate");
 
   sb_globals.report_interval = sb_get_value_int("report-interval");
 
