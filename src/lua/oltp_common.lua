@@ -204,7 +204,7 @@ function create_table(drv, con, table_num)
      c VARCHAR(512) DEFAULT '' NOT NULL,
      pad MEDIUMTEXT,
      %s (id)
-   ) %s %s ROW_FORMAT=COMPRESSED]],
+   ) %s %s]],
          table_num, id_def, id_index_def, engine_def,
          sysbench.opt.create_table_options)
    else
