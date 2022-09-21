@@ -31,7 +31,9 @@ function prepare_statements()
 
    if sysbench.opt.range_selects then
       prepare_simple_ranges()
-      prepare_secondary_ranges()
+      if (sysbench.opt.secondary_ranges > 0) then
+         prepare_secondary_ranges()
+      end
       prepare_sum_ranges()
       prepare_order_ranges()
       prepare_distinct_ranges()
@@ -51,7 +53,9 @@ function event()
 
    if sysbench.opt.range_selects then
       execute_simple_ranges()
-      execute_secondary_ranges()
+      if (sysbench.opt.secondary_ranges > 0) then
+         execute_secondary_ranges()
+      end
       execute_sum_ranges()
       execute_order_ranges()
       execute_distinct_ranges()

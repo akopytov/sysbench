@@ -39,10 +39,17 @@ function thread_init()
                              sysbench.opt.number_of_ranges - 1) ..
       "k BETWEEN ? AND ?"
 
-   stmt = con:prepare(string.format([[
-        SELECT count(k)
-          FROM sbtest1
-          WHERE %s]], ranges))
+   if (sysbench.opt.secondary_ranges == 0)
+      stmt = con:prepare(string.format([[
+         SELECT count(k)
+            FROM sbtest1
+            WHERE %s]], ranges))
+   else
+      stmt = con:prepare(string.format([[
+         SELECT sum(length(c))
+            FROM sbtest1
+            WHERE %s]], ranges))
+   end
 
    params = {}
    for j = 1, sysbench.opt.number_of_ranges*2 do
