@@ -39,7 +39,7 @@ function thread_init()
                              sysbench.opt.number_of_ranges - 1) ..
       "k BETWEEN ? AND ?"
 
-   if (sysbench.opt.secondary_ranges == 0)
+   if (sysbench.opt.secondary_ranges == 0) then
       stmt = con:prepare(string.format([[
          SELECT count(k)
             FROM sbtest1
