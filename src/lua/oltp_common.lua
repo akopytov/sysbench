@@ -302,7 +302,8 @@ local stmt_defs = {
       t.INT},
    inserts = {
       "INSERT INTO sbtest%u (id, k, c, pad) VALUES (?, ?, ?, ?)",
-      t.INT, t.INT, {t.CHAR, 120}, {t.CHAR, 60}},
+      t.INT, t.INT, {t.CHAR, 120},
+      {t.VARCHAR, 4194000}}, --lua bind VARCHAR can be larger than MySQL(65535)
 }
 
 function prepare_begin()
@@ -524,6 +525,7 @@ end
 
 function execute_delete_inserts()
    local tnum = get_table_num()
+   local file_c_val, file_pad_val
 
    for i = 1, sysbench.opt.delete_inserts do
       local id = get_id()
@@ -533,8 +535,14 @@ function execute_delete_inserts()
 
       param[tnum].inserts[1]:set(id)
       param[tnum].inserts[2]:set(k)
-      param[tnum].inserts[3]:set_rand_str(c_value_template)
-      param[tnum].inserts[4]:set_rand_str(pad_value_template)
+      if sysbench.opt.use_file then
+         file_c_val, file_pad_val = get_str_value()
+         param[tnum].inserts[3]:set(file_c_val)
+         param[tnum].inserts[4]:set(file_pad_val)
+      else
+         param[tnum].inserts[3]:set_rand_str(c_value_template)
+         param[tnum].inserts[4]:set_rand_str(pad_value_template)
+      end
 
       stmt[tnum].deletes:execute()
       stmt[tnum].inserts:execute()
