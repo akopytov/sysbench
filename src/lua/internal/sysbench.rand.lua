@@ -33,7 +33,14 @@ uint32_t sb_rand_unique(void);
 void sb_rand_str(const char *, char *);
 uint32_t sb_rand_varstr(char *, uint32_t, uint32_t);
 double sb_rand_uniform_double(void);
-void sb_file_str(char *, char *);
+struct SbKeyVal {
+   size_t cap;
+   size_t klen;
+   size_t vlen;
+   char*  str; // also key
+   char*  val; // ptr after tab char
+};
+struct SbKeyVal* sb_file_str(void);
 ]]
 
 function sysbench.rand.uniform_uint64()
@@ -85,8 +92,6 @@ function sysbench.rand.uniform_double()
 end
 
 function sysbench.rand.filestr()
-   local buf1 = ffi.new("char[?]", 1024)
-   local buf2 = ffi.new("char[?]", 4194304)
-   ffi.C.sb_file_str(buf1, buf2)
-   return ffi.string(buf1), ffi.string(buf2)
+   local ms = ffi.C.sb_file_str()
+   return ffi.string(ms.str, ms.klen), ffi.string(ms.val, ms.vlen)
 end

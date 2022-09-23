@@ -58,7 +58,7 @@
 #include "sb_logger.h"
 
 #include "sb_ck_pr.h"
-#include "pthread.h"
+#include <ctype.h>
 
 TLS sb_rng_state_t sb_rng_state CK_CC_CACHELINE;
 
@@ -460,10 +460,16 @@ uint32_t sb_rand_zipfian(uint32_t a, uint32_t b)
     sb_rand_zipfian_int(b - a + 1, zipf_exp, zipf_s, zipf_hIntegralX1) - 1;
 }
 
+struct SbKeyVal {
+  size_t cap;
+  size_t klen;
+  size_t vlen;
+  char*  str; // also key
+  char*  val; // ptr after tab char
+};
+static __thread struct SbKeyVal* g_kv = NULL;
+
 static FILE* file = NULL;
-static char* str_buf;
-static size_t len;
-static pthread_mutex_t file_mtx;
 
 int sb_file_init()
 {
@@ -475,38 +481,49 @@ int sb_file_init()
     log_text(LOG_FATAL, "Invalid filename: %s", sb_globals.filename);
     return 1;
   }
-  pthread_mutex_init(&file_mtx, NULL);
 
-  len = 4194304 * sizeof(char);
-  str_buf = (char *)malloc(len);
   return 0;
 }
 
-void sb_file_str(char* buf1, char* buf2)
+struct SbKeyVal* sb_file_str()
 {
   assert(file != NULL);
 
-  pthread_mutex_lock(&file_mtx);
-  ssize_t read = getline(&str_buf, &len, file);
-  if (read != -1)
-  {
-    int pos = 0;
-    while (pos < read) {
-      if (str_buf[pos] == '\t') {
-        memcpy(buf1, str_buf, pos);
-        buf1[pos] = 0;
-        memcpy(buf2, str_buf + pos + 1, read - pos - 2);
-        buf2[read - pos - 2] = 0;
-        break;
+  if (NULL == g_kv) {
+    g_kv = (struct SbKeyVal*)malloc(sizeof(struct SbKeyVal));
+    g_kv->klen = 0;
+    g_kv->vlen = 0;
+    g_kv->cap = 4*1024*1024;
+    g_kv->str = (char*)malloc(g_kv->cap);
+    g_kv->val = NULL;
+  }
+  while (true) {
+    ssize_t read = getline(&g_kv->str, &g_kv->cap, file);
+    if (read != -1) {
+      char* str = g_kv->str;
+      while (read > 0 && isspace((unsigned char)str[read])) {
+        str[--read] = '\0'; // trim trailing spaces
       }
-      pos++;
+      char* tab = (char*)memchr(str, '\t', read);
+      if (NULL == tab) {
+        g_kv->val = str + read; // empty c string
+        g_kv->vlen = 0;
+        g_kv->klen = read;
+      }
+      else {
+        tab[0] = '\0';
+        g_kv->klen = tab - str;
+        g_kv->vlen = read - (tab - str) - 1;
+        g_kv->val = tab + 1;
+      }
+      break;
     }
-
-    if (pos >= read) {
-      memcpy(buf2, str_buf, read);
+    else {
+      rewind(file);
+      fprintf(stderr, "sb_file_str: read eof, rewind(%s)\n", sb_globals.filename);
     }
   }
-  pthread_mutex_unlock(&file_mtx);
+  return g_kv;
 }
 
 void sb_file_done()
@@ -515,12 +532,6 @@ void sb_file_done()
   {
     fclose(file);
   }
-
-  if (str_buf)
-  {
-    free(str_buf);
-  }
-  pthread_mutex_destroy(&file_mtx);
 }
 
 

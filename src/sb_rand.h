@@ -72,7 +72,7 @@ void sb_rand_str(const char *, char *);
 uint32_t sb_rand_varstr(char *, uint32_t, uint32_t);
 
 int sb_file_init(void);
-void sb_file_str(char *, char *);
+struct SbKeyVal* sb_file_str(void);
 void sb_file_done(void);
 
 #endif /* SB_RAND_H */
