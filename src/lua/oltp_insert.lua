@@ -43,7 +43,8 @@ end
 function event()
    local table_name = "sbtest" .. sysbench.rand.uniform(1, sysbench.opt.tables)
    local k_val = sysbench.rand.default(1, sysbench.opt.table_size)
-   local c_val, pad_val
+   local c_val
+   local pad_val
 
    if sysbench.opt.use_file then
       c_val, pad_val = get_str_value()

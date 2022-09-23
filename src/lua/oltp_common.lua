@@ -525,7 +525,8 @@ end
 
 function execute_delete_inserts()
    local tnum = get_table_num()
-   local file_c_val, file_pad_val
+   local file_c_val
+   local file_pad_val
 
    for i = 1, sysbench.opt.delete_inserts do
       local id = get_id()
