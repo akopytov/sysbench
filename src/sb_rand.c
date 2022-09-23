@@ -58,6 +58,7 @@
 #include "sb_logger.h"
 
 #include "sb_ck_pr.h"
+#include "pthread.h"
 
 TLS sb_rng_state_t sb_rng_state CK_CC_CACHELINE;
 
@@ -462,6 +463,7 @@ uint32_t sb_rand_zipfian(uint32_t a, uint32_t b)
 static FILE* file = NULL;
 static char* str_buf;
 static size_t len;
+static pthread_mutex_t file_mtx;
 
 int sb_file_init()
 {
@@ -473,6 +475,7 @@ int sb_file_init()
     log_text(LOG_FATAL, "Invalid filename: %s", sb_globals.filename);
     return 1;
   }
+  pthread_mutex_init(&file_mtx, NULL);
 
   len = 4194304 * sizeof(char);
   str_buf = (char *)malloc(len);
@@ -483,6 +486,7 @@ void sb_file_str(char* buf1, char* buf2)
 {
   assert(file != NULL);
 
+  pthread_mutex_lock(&file_mtx);
   ssize_t read = getline(&str_buf, &len, file);
   if (read != -1)
   {
@@ -502,6 +506,7 @@ void sb_file_str(char* buf1, char* buf2)
       memcpy(buf2, str_buf, read);
     }
   }
+  pthread_mutex_unlock(&file_mtx);
 }
 
 void sb_file_done()
@@ -515,6 +520,7 @@ void sb_file_done()
   {
     free(str_buf);
   }
+  pthread_mutex_destroy(&file_mtx);
 }
 
 

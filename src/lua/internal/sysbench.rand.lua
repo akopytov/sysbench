@@ -84,10 +84,9 @@ function sysbench.rand.uniform_double()
    return ffi.C.sb_rand_uniform_double()
 end
 
-buf1 = ffi.new("char[?]", 1024)
-buf2 = ffi.new("char[?]", 4194304)
-
 function sysbench.rand.filestr()
+   local buf1 = ffi.new("char[?]", 1024)
+   local buf2 = ffi.new("char[?]", 4194304)
    ffi.C.sb_file_str(buf1, buf2)
    return ffi.string(buf1), ffi.string(buf2)
 end
