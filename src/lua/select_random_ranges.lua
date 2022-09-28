@@ -44,6 +44,13 @@ function thread_init()
          SELECT count(k)
             FROM sbtest1
             WHERE %s]], ranges))
+   elseif (sysbench.opt.secondary_ranges == 2) then
+      -- MySQL doesn't yet support 'LIMIT & IN/ALL/ANY/SOME subquery,
+      -- So we create an extra nested subquery
+      stmt = con:prepare(string.format([[
+         SELECT count(*), sum(length(c)) FROM sbtest1 WHERE id IN
+        (SELECT * FROM (SELECT id FROM sbtest1 WHERE %s LIMIT %d) as t)]],
+         ranges, sysbench.opt.range_size))
    else
       stmt = con:prepare(string.format([[
          SELECT sum(length(c))
