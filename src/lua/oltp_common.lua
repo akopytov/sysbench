@@ -274,22 +274,22 @@ end
 local t = sysbench.sql.type
 local stmt_defs = {
    point_selects = {
-      "SELECT c FROM sbtest%u WHERE id=?",
+      "SELECT length(c) FROM sbtest%u WHERE id=?",
       t.INT},
    simple_ranges = {
-      "SELECT c FROM sbtest%u WHERE id BETWEEN ? AND ?",
+      "SELECT length(c) FROM sbtest%u WHERE id BETWEEN ? AND ?",
       t.INT, t.INT},
    secondary_ranges = {
-      "SELECT c FROM sbtest%u WHERE k >= ? AND ? >=0 LIMIT %u",
+      "SELECT length(c) FROM sbtest%u WHERE k >= ? AND ? >=0 LIMIT %u",
       t.INT, t.INT},
    sum_ranges = {
       "SELECT SUM(k) FROM sbtest%u WHERE id BETWEEN ? AND ?",
        t.INT, t.INT},
    order_ranges = {
-      "SELECT c FROM sbtest%u WHERE id BETWEEN ? AND ? ORDER BY c",
+      "SELECT length(c) as lenc FROM sbtest%u WHERE id BETWEEN ? AND ? ORDER BY lenc",
        t.INT, t.INT},
    distinct_ranges = {
-      "SELECT DISTINCT c FROM sbtest%u WHERE id BETWEEN ? AND ? ORDER BY c",
+      "SELECT DISTINCT length(c) as lenc FROM sbtest%u WHERE id BETWEEN ? AND ? ORDER BY lenc",
       t.INT, t.INT},
    index_updates = {
       "UPDATE sbtest%u SET k=k+1 WHERE id=?",
