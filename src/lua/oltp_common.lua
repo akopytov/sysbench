@@ -82,7 +82,11 @@ sysbench.cmdline.options = {
    partitioned =
       {"Whether the table is partitioned", false},
    partition_num =
-      {"Number of partitions", 10}
+      {"Number of partitions", 10},
+   subpartitioned =
+      {"Whether the table is subpartitioned", false},
+   subpartition_num =
+      {"Number of subpartitions", 3}
 }
 
 -- Prepare the dataset. This command supports parallel execution, i.e. will
@@ -181,7 +185,14 @@ function create_table(drv, con, table_num)
       engine_def = "/*! ENGINE = " .. sysbench.opt.mysql_storage_engine .. " */"
 
       if sysbench.opt.partitioned then
-         partition_def = "/*!50100 PARTITION BY RANGE (id) ("
+         partition_def = "/*!50100 PARTITION BY RANGE (id) "
+
+         if sysbench.opt.subpartitioned then
+            subpartition_def = "SUBPARTITION BY HASH (id)" .. string.format(" SUBPARTITIONS %d ", sysbench.opt.subpartition_num)
+            partition_def = partition_def .. subpartition_def
+         end
+
+         partition_def = partition_def .. "("
 
          for i = 1, sysbench.opt.partition_num do
             cur_part_def = string.format("PARTITION p%d VALUES LESS THAN (%d)", i - 1,
@@ -189,7 +200,7 @@ function create_table(drv, con, table_num)
             partition_def = partition_def .. cur_part_def
 
             if i == sysbench.opt.partition_num then
-               partition_def = partition_def .. ") */"
+               partition_def = partition_def .. ", PARTITION p_default VALUES LESS THAN MAXVALUE) */"
             else
                partition_def = partition_def .. ", "
             end
@@ -221,6 +232,7 @@ CREATE TABLE sbtest%d(
       table_num, id_def, id_index_def, engine_def,
       sysbench.opt.create_table_options, partition_def)
 
+   print(query)
    con:query(query)
 
    if (sysbench.opt.table_size > 0) then

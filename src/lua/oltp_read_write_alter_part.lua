@@ -76,7 +76,19 @@ local alter_part_ddls = {
   drop_part =
      "ALTER TABLE sbtest%u DROP PARTITION %s",
   add_part =
-     "ALTER TABLE sbtest%u ADD PARTITION %s"
+     "ALTER TABLE sbtest%u ADD PARTITION %s",
+  prepare_exchange_table =
+     "CREATE TABLE IF NOT EXISTS %s LIKE sbtest%u",
+  remove_part =
+     "ALTER TABLE %s REMOVE PARTITIONING",
+  exchang_part =
+     "ALTER TABLE sbtest%u EXCHANGE PARTITION %s WITH TABLE %s",
+  drop_table =
+     "DROP TABLE IF EXISTS %s",
+  rebuild_part =
+     "ALTER TABLE sbtest%u REBUILD PARTITION %s",
+  reorganize_part =
+     "ALTER TABLE sbtest%u REORGANIZE PARTITION %s INTO (%s)"
 }
 
 local part_defs = {}
@@ -115,9 +127,11 @@ function prepare_statements()
       prepare_distinct_ranges()
    end
 
-   prepare_index_updates()
-   prepare_non_index_updates()
-   prepare_delete_inserts()
+   if not sysbench.opt.read_only then
+      prepare_index_updates()
+      prepare_non_index_updates()
+      prepare_delete_inserts()
+   end
 
    initialize()
 end
@@ -324,6 +338,81 @@ function ddl_alter_single_part()
    get_partition_status(true)
 end
 
+function ddl_exchange_part()
+   local tnum = get_table_num()
+
+   local exchange_table_name = string.format("t%u", sysbench.tid)
+
+   local create_temp_table = string.format(alter_part_ddls["prepare_exchange_table"], exchange_table_name, tnum)
+   print(create_temp_table)
+   con:query(create_temp_table)
+
+   local remove_part = string.format(alter_part_ddls["remove_part"], exchange_table_name)
+   print(remove_part)
+   con:query(remove_part)
+
+   local max_exist_part = -1
+   for i = sysbench.opt.partition_num - 1, 0, -1 do
+      if part_defs[get_part_name(i)][part_status_index] then
+         max_exist_part = i
+         break
+      end
+   end
+
+   local part_num = sysbench.rand.uniform(0, max_exist_part)
+   local part_name = get_part_name(part_num)
+   if sysbench.opt.subpartitioned then
+      part_name = part_name .. string.format("sp%d", sysbench.rand.uniform(0, sysbench.opt.subpartition_num - 1))
+   end
+
+   local exchange_part = string.format(alter_part_ddls["exchang_part"], tnum, part_name, exchange_table_name)
+   print(exchange_part)
+   con:query(exchange_part)
+
+   local drop_table = string.format(alter_part_ddls["drop_table"], exchange_table_name)
+   print(drop_table)
+   con:query(drop_table)
+
+   get_partition_status(true)
+end
+
+function ddl_rebuild_part()
+   local tnum = get_table_num()
+
+   local max_exist_part = -1
+   for i = sysbench.opt.partition_num - 1, 0, -1 do
+      if part_defs[get_part_name(i)][part_status_index] then
+         max_exist_part = i
+         break
+      end
+   end
+
+   local part_num = sysbench.rand.uniform(0, max_exist_part)
+   local ddl = string.format(alter_part_ddls["rebuild_part"], tnum, get_part_name(part_num))
+   print(ddl)
+   con:query(ddl)
+   get_partition_status(true)
+end
+
+function ddl_reorganize_part()
+   local tnum = get_table_num()
+
+   local max_exist_part = -1
+   for i = sysbench.opt.partition_num - 1, 0, -1 do
+      if part_defs[get_part_name(i)][part_status_index] then
+         max_exist_part = i
+         break
+      end
+   end
+
+   local part_num = sysbench.rand.uniform(0, max_exist_part)
+   local part_def = string.format("%s", part_defs[get_part_name(part_num)][part_def_index])
+   local ddl = string.format(alter_part_ddls["reorganize_part"], tnum, get_part_name(part_num), part_def)
+   print(ddl)
+   con:query(ddl)
+   get_partition_status(true)
+end
+
 function event()
 -- Get TABLE definition
    get_partition_status(false)
@@ -344,6 +433,9 @@ function event()
       dml_requests()
    elseif sysbench.opt.ddl_enabled and not sysbench.opt.read_only then
       ddl_alter_single_part()
+      ddl_exchange_part()
+      ddl_rebuild_part()
+      ddl_reorganize_part()
    end
 
    if not sysbench.opt.skip_trx then
