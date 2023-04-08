@@ -86,7 +86,9 @@ sysbench.cmdline.options = {
    subpartitioned =
       {"Whether the table is subpartitioned", false},
    subpartition_num =
-      {"Number of subpartitions", 3}
+      {"Number of subpartitions", 3},
+   without_data =
+      {"Whether not insert data when preparing", false},
 }
 
 -- Prepare the dataset. This command supports parallel execution, i.e. will
@@ -234,6 +236,17 @@ CREATE TABLE sbtest%d(
 
    print(query)
    con:query(query)
+
+   if sysbench.opt.without_data then
+      if sysbench.opt.create_secondary then
+         print(string.format("Creating a secondary index on 'sbtest%d'...",
+                             table_num))
+         con:query(string.format("CREATE INDEX k_%d ON sbtest%d(k)",
+                                 table_num, table_num))
+      end
+
+      return
+   end
 
    if (sysbench.opt.table_size > 0) then
       print(string.format("Inserting %d records into 'sbtest%d'",
