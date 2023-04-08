@@ -89,6 +89,8 @@ sysbench.cmdline.options = {
       {"Number of subpartitions", 3},
    without_data =
       {"Whether not insert data when preparing", false},
+   access_table_ratio =
+      {"Ratio of the whole table to access. Test hotspot data access", 1}
 }
 
 -- Prepare the dataset. This command supports parallel execution, i.e. will
@@ -451,7 +453,7 @@ function get_table_num()
 end
 
 function get_id()
-   return sysbench.rand.default(1, sysbench.opt.table_size)
+   return sysbench.rand.default(1, sysbench.opt.table_size * sysbench.opt.access_table_ratio)
 end
 
 function begin()
