@@ -398,6 +398,23 @@ uint32_t sb_rand_varstr_alpha(char *buf, uint32_t min_len, uint32_t max_len) {
     buf[n] = '\0';
     return num_chars;
 }
+/*
+ *A simple function to return a a continent name based on an array and the max index 
+ */
+
+uint32_t sb_rand_continent(char *buf, uint32_t min_len) {
+    char continents[15][20] ={"Europe","Asia","North America", "South America", "Africa","Australia"};
+ 
+    int key;
+    key = rand() % min_len;   // no instantiation, just assignment, no overhead from sizeof
+	if (key > min_len)
+	{
+	   key = min_len;
+	}
+    memset(buf, 0, sizeof buf);
+    strncpy(buf, continents[key], sizeof continents[key] - 1);
+    return sizeof buf;
+}
 
 /*
   Unique random sequence generator. This is based on public domain code from

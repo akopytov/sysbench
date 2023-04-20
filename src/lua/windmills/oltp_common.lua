@@ -209,12 +209,17 @@ function create_table(drv, con, table_num)
   `kwatts_s` int(11) NOT NULL,
   `date` date NOT NULL ,
   `location` varchar(50) NOT NULL,
+  `continent` varchar(50) NOT NULL,
   `active` tinyint(2) NOT NULL DEFAULT '1',
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `strrecordtype` char(3) COLLATE utf8_bin NOT NULL,
   PRIMARY KEY (`id`),
   KEY `IDX_millid` (`millid`,`active`),
-  KEY `IDX_active` (`id`,`active`)
+  KEY `IDX_active` (`id`,`active`),
+  KEY `kuuid_x` (uuid),
+  KEY `kmillid_x` (millid),
+  KEY `kactive_x` (active),
+  KEY `kcontinent_x` (continent,id)
   ) %s ROW_FORMAT=DYNAMIC  %s]],
 sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
    
@@ -229,9 +234,9 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
    end
 
    if sysbench.opt.auto_inc then
-      query = "INSERT INTO " ..  sysbench.opt.table_name .. table_num .. "(uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES"
+      query = "INSERT INTO " ..  sysbench.opt.table_name .. table_num .. "(uuid,millid,kwatts_s,date,location,continent,active,strrecordtype) VALUES"
    else
-      query = "INSERT INTO " ..  sysbench.opt.table_name .. table_num .. "(id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES"
+      query = "INSERT INTO " ..  sysbench.opt.table_name .. table_num .. "(id,uuid,millid,kwatts_s,date,location,continent,active,strrecordtype) VALUES"
    end
 
    con:bulk_insert_init(query)
@@ -245,6 +250,7 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
    local kwatts_s
    local date = "NOW()"
    local location
+   local continent
    local active
    local strrecordtype = "@@@"
    
@@ -257,6 +263,7 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
       c_val = get_c_value()
       strrecordtype =  sysbench.rand.string("@@@")
       location =sysbench.rand.varstringalpha(5, 50)
+      continent =sysbench.rand.continent(6)
       active = sysbench.rand.default(0,1)
       millid = sysbench.rand.default(1,400)
       kwatts_s = sysbench.rand.default(0,4000000)
@@ -264,42 +271,44 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
                                                                                                                                   
       if (sysbench.opt.auto_inc) then
         -- "(uuid,millid,kwatts_s,date,location,active,strrecordtyped)
-         query = string.format("(%s, %d, %d,%s,'%s',%d,'%s')",
+         query = string.format("(%s, %d, %d,%s,'%s','%s',%d,'%s')",
                                uuid,
                                millid,
                                kwatts_s,
                                date,
                                location,
+                               continent,
                                active,
                                strrecordtype
                                )
       else
-         query = string.format("(%d,%s, %d, %d,%s,'%s',%d,'%s')",
+         query = string.format("(%d,%s, %d, %d,%s,'%s','%s',%d,'%s')",
                                i,
                                uuid,
                                millid,
                                kwatts_s,
                                date,
                                location,
+                               continent,
                                active,
                                strrecordtype
                                )
       end
-
+     -- print("DEBUG :" .. continent)
       con:bulk_insert_next(query)
    end
 
    con:bulk_insert_done()
 
    if sysbench.opt.create_secondary then
-      print(string.format("Creating a secondary index on '%s%d'...",
-                          sysbench.opt.table_name,table_num))
-      con:query(string.format("CREATE INDEX kuuid_x ON %s%d(uuid)",
-                              sysbench.opt.table_name,table_num, table_num))
-      con:query(string.format("CREATE INDEX millid_x ON %s%d(millid)",
-                              sysbench.opt.table_name,table_num, table_num))
-      con:query(string.format("CREATE INDEX active_x ON %s%d(active)",
-                              sysbench.opt.table_name,table_num, table_num))
+--      print(string.format("Creating a secondary index on '%s%d'...",
+--                          sysbench.opt.table_name,table_num))
+--      con:query(string.format("CREATE INDEX kuuid_x ON %s%d(uuid)",
+--                              sysbench.opt.table_name,table_num, table_num))
+--      con:query(string.format("CREATE INDEX millid_x ON %s%d(millid)",
+--                              sysbench.opt.table_name,table_num, table_num))
+--      con:query(string.format("CREATE INDEX active_x ON %s%d(active)",
+--                              sysbench.opt.table_name,table_num, table_num))
                               
    end
 end
@@ -307,19 +316,19 @@ end
 local t = sysbench.sql.type
 local stmt_defs = {
    point_selects = {
-      "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id=?",
+      "SELECT id, millid, date,continent,active,kwatts_s FROM %s%u WHERE id=?",
       t.INT},
    simple_ranges = {
-      "SELECT id, millid, date,active,kwatts_s FROM %s%u WHERE id BETWEEN ? AND ?",
+      "SELECT id, millid, date,continent,active,kwatts_s FROM %s%u WHERE id BETWEEN ? AND ?",
       t.INT, t.INT},
    sum_ranges = {
       "SELECT SUM(kwatts_s) FROM %s%u WHERE id BETWEEN ? AND ?  and active=1",
         t.INT, t.INT},
    order_ranges = {
-      "SELECT id, millid, date,active,kwatts_s  FROM %s%u WHERE id BETWEEN ? AND ? ORDER BY millid",
+      "SELECT id, millid, date,continent,active,kwatts_s  FROM %s%u WHERE id BETWEEN ? AND ? ORDER BY millid",
        t.INT, t.INT},
    distinct_ranges = {
-      "SELECT DISTINCT millid,active,kwatts_s   FROM %s%u WHERE id BETWEEN ? AND ? AND active =1 ORDER BY millid",
+      "SELECT DISTINCT millid,continent,active,kwatts_s   FROM %s%u WHERE id BETWEEN ? AND ? AND active =1 ORDER BY millid",
       t.INT, t.INT},
    index_updates = {
       "UPDATE %s%u SET active=? WHERE id=?",
@@ -331,8 +340,8 @@ local stmt_defs = {
       "DELETE FROM %s%u WHERE id=?",
       t.INT},
    inserts = {
-      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?) ON DUPLICATE KEY UPDATE kwatts_s=kwatts_s+1",
-      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
+      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,continent,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?) ON DUPLICATE KEY UPDATE kwatts_s=kwatts_s+1",
+      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},{t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
   
 }
 
@@ -349,6 +358,7 @@ function prepare_for_each_table(key)
 
    
       stmt[t][key] = con:prepare(string.format(stmt_defs[key][1], sysbench.opt.table_name,t))
+-- print("DEBUG: " .. string.format(stmt_defs[key][1], sysbench.opt.table_name,t)
 
       local nparam = #stmt_defs[key] - 1
 
@@ -555,6 +565,7 @@ function execute_delete_inserts()
       millid = sysbench.rand.default(1,400)
       kwatts_s = sysbench.rand.default(0,4000000)
       location =sysbench.rand.varstringalpha(5, 50)
+      continent =sysbench.rand.continent(6)
       active = sysbench.rand.default(0,1)
       strrecordtype =  sysbench.rand.varstringalpha(3, 3)
       
@@ -564,8 +575,9 @@ function execute_delete_inserts()
       param[tnum].inserts[2]:set(millid)
       param[tnum].inserts[3]:set(kwatts_s)
       param[tnum].inserts[4]:set(location)
-      param[tnum].inserts[5]:set(active)
-      param[tnum].inserts[6]:set(strrecordtype)
+      param[tnum].inserts[5]:set(continent)
+      param[tnum].inserts[6]:set(active)
+      param[tnum].inserts[7]:set(strrecordtype)
       
       
       stmt[tnum].deletes:execute()
