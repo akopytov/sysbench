@@ -216,9 +216,6 @@ function create_table(drv, con, table_num)
   PRIMARY KEY (`id`),
   KEY `IDX_millid` (`millid`,`active`),
   KEY `IDX_active` (`id`,`active`),
-  KEY `kuuid_x` (uuid),
-  KEY `kmillid_x` (millid),
-  KEY `kactive_x` (active),
   KEY `kcontinent_x` (continent,id)
   ) %s ROW_FORMAT=DYNAMIC  %s]],
 sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
@@ -301,14 +298,14 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
    con:bulk_insert_done()
 
    if sysbench.opt.create_secondary then
---      print(string.format("Creating a secondary index on '%s%d'...",
---                          sysbench.opt.table_name,table_num))
---      con:query(string.format("CREATE INDEX kuuid_x ON %s%d(uuid)",
---                              sysbench.opt.table_name,table_num, table_num))
---      con:query(string.format("CREATE INDEX millid_x ON %s%d(millid)",
---                              sysbench.opt.table_name,table_num, table_num))
---      con:query(string.format("CREATE INDEX active_x ON %s%d(active)",
---                              sysbench.opt.table_name,table_num, table_num))
+      print(string.format("Creating a secondary index on '%s%d'...",
+                          sysbench.opt.table_name,table_num))
+      con:query(string.format("CREATE INDEX kuuid_x ON %s%d(uuid)",
+                              sysbench.opt.table_name,table_num, table_num))
+      con:query(string.format("CREATE INDEX millid_x ON %s%d(millid)",
+                              sysbench.opt.table_name,table_num, table_num))
+      con:query(string.format("CREATE INDEX active_x ON %s%d(active)",
+                              sysbench.opt.table_name,table_num, table_num))
                               
    end
 end
