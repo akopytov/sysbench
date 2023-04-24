@@ -337,7 +337,7 @@ local stmt_defs = {
       "DELETE FROM %s%u WHERE id=?",
       t.INT},
    inserts = {
-      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,continent,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?) ON DUPLICATE KEY UPDATE kwatts_s=kwatts_s+1",
+      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,continent,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?, ?) ON DUPLICATE KEY UPDATE kwatts_s=kwatts_s+1",
       t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},{t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
   
 }
