@@ -1,6 +1,6 @@
 /*
 ** SPLIT: Split 64 bit IR instructions into 32 bit IR instructions.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_opt_split_c
@@ -235,7 +235,7 @@ static IRRef split_bitshift(jit_State *J, IRRef1 *hisubst,
 	return split_emit(J, IRTI(IR_BOR), t1, t2);
       } else {
 	IRRef t1 = ir->prev, t2;
-	lua_assert(op == IR_BSHR || op == IR_BSAR);
+	lj_assertJ(op == IR_BSHR || op == IR_BSAR, "bad usage");
 	nir->o = IR_BSHR;
 	t2 = split_emit(J, IRTI(IR_BSHL), hi, lj_ir_kint(J, (-k&31)));
 	ir->prev = split_emit(J, IRTI(IR_BOR), t1, t2);
@@ -250,7 +250,7 @@ static IRRef split_bitshift(jit_State *J, IRRef1 *hisubst,
 	ir->prev = lj_ir_kint(J, 0);
 	return lo;
       } else {
-	lua_assert(op == IR_BSHR || op == IR_BSAR);
+	lj_assertJ(op == IR_BSHR || op == IR_BSAR, "bad usage");
 	if (k == 32) {
 	  J->cur.nins--;
 	  ir->prev = hi;
@@ -400,7 +400,7 @@ static void split_ir(jit_State *J)
 	hi = split_call_ll(J, hisubst, oir, ir, IRCALL_softfp_div);
 	break;
       case IR_POW:
-	hi = split_call_li(J, hisubst, oir, ir, IRCALL_lj_vm_powi);
+	hi = split_call_ll(J, hisubst, oir, ir, IRCALL_pow);
 	break;
       case IR_FPMATH:
 	hi = split_call_l(J, hisubst, oir, ir, IRCALL_lj_vm_floor + ir->op2);
@@ -429,7 +429,7 @@ static void split_ir(jit_State *J)
 	hi = split_emit(J, IRT(IR_HIOP, IRT_SOFTFP), nref, nref);
 	break;
       case IR_FLOAD:
-	lua_assert(ir->op1 == REF_NIL);
+	lj_assertJ(ir->op1 == REF_NIL, "expected FLOAD from GG_State");
 	hi = lj_ir_kint(J, *(int32_t*)((char*)J2GG(J) + ir->op2 + LJ_LE*4));
 	nir->op2 += LJ_BE*4;
 	break;
@@ -465,8 +465,9 @@ static void split_ir(jit_State *J)
 	  break;
 	}
 #endif
-	lua_assert(st == IRT_INT ||
-		   (LJ_32 && LJ_HASFFI && (st == IRT_U32 || st == IRT_FLOAT)));
+	lj_assertJ(st == IRT_INT ||
+		   (LJ_32 && LJ_HASFFI && (st == IRT_U32 || st == IRT_FLOAT)),
+		   "bad source type for CONV");
 	nir->o = IR_CALLN;
 #if LJ_32 && LJ_HASFFI
 	nir->op2 = st == IRT_INT ? IRCALL_softfp_i2d :
@@ -496,7 +497,8 @@ static void split_ir(jit_State *J)
 	hi = nir->op2;
 	break;
       default:
-	lua_assert(ir->o <= IR_NE || ir->o == IR_MIN || ir->o == IR_MAX);
+	lj_assertJ(ir->o <= IR_NE || ir->o == IR_MIN || ir->o == IR_MAX,
+		   "bad IR op %d", ir->o);
 	hi = split_emit(J, IRTG(IR_HIOP, IRT_SOFTFP),
 			hisubst[ir->op1], hisubst[ir->op2]);
 	break;
@@ -553,7 +555,7 @@ static void split_ir(jit_State *J)
 	hi = split_bitshift(J, hisubst, oir, nir, ir);
 	break;
       case IR_FLOAD:
-	lua_assert(ir->op2 == IRFL_CDATA_INT64);
+	lj_assertJ(ir->op2 == IRFL_CDATA_INT64, "only INT64 supported");
 	hi = split_emit(J, IRTI(IR_FLOAD), nir->op1, IRFL_CDATA_INT64_4);
 #if LJ_BE
 	ir->prev = hi; hi = nref;
@@ -619,7 +621,7 @@ static void split_ir(jit_State *J)
 	hi = nir->op2;
 	break;
       default:
-	lua_assert(ir->o <= IR_NE);  /* Comparisons. */
+	lj_assertJ(ir->o <= IR_NE, "bad IR op %d", ir->o);  /* Comparisons. */
 	split_emit(J, IRTGI(IR_HIOP), hiref, hisubst[ir->op2]);
 	break;
       }
@@ -643,7 +645,7 @@ static void split_ir(jit_State *J)
       tmp = split_emit(J, IRT(IR_CARG, IRT_NIL), hisubst[op1], oir[op1].prev);
 #endif
       ir->prev = split_emit(J, IRTI(IR_CALLN), tmp, IRCALL_lj_vm_tobit);
-    } else if (ir->o == IR_TOSTR) {
+    } else if (ir->o == IR_TOSTR || ir->o == IR_TMPREF) {
       if (hisubst[ir->op1]) {
 	if (irref_isk(ir->op1))
 	  nir->op1 = ir->op1;
@@ -697,7 +699,7 @@ static void split_ir(jit_State *J)
 #if LJ_SOFTFP
       if (st == IRT_NUM || (LJ_32 && LJ_HASFFI && st == IRT_FLOAT)) {
 	if (irt_isguard(ir->t)) {
-	  lua_assert(st == IRT_NUM && irt_isint(ir->t));
+	  lj_assertJ(st == IRT_NUM && irt_isint(ir->t), "bad CONV types");
 	  J->cur.nins--;
 	  ir->prev = split_num2int(J, nir->op1, hisubst[ir->op1], 1);
 	} else {
@@ -828,7 +830,7 @@ void lj_opt_split(jit_State *J)
   if (!J->needsplit)
     J->needsplit = split_needsplit(J);
 #else
-  lua_assert(J->needsplit >= split_needsplit(J));  /* Verify flag. */
+  lj_assertJ(J->needsplit >= split_needsplit(J), "bad SPLIT state");
 #endif
   if (J->needsplit) {
     int errcode = lj_vm_cpcall(J->L, NULL, J, cpsplit);

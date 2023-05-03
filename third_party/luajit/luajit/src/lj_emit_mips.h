@@ -1,11 +1,12 @@
 /*
 ** MIPS instruction emitter.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #if LJ_64
-static intptr_t get_k64val(IRIns *ir)
+static intptr_t get_k64val(ASMState *as, IRRef ref)
 {
+  IRIns *ir = IR(ref);
   if (ir->o == IR_KINT64) {
     return (intptr_t)ir_kint64(ir)->u64;
   } else if (ir->o == IR_KGC) {
@@ -15,16 +16,17 @@ static intptr_t get_k64val(IRIns *ir)
   } else if (LJ_SOFTFP && ir->o == IR_KNUM) {
     return (intptr_t)ir_knum(ir)->u64;
   } else {
-    lua_assert(ir->o == IR_KINT || ir->o == IR_KNULL);
+    lj_assertA(ir->o == IR_KINT || ir->o == IR_KNULL,
+	       "bad 64 bit const IR op %d", ir->o);
     return ir->i;  /* Sign-extended. */
   }
 }
 #endif
 
 #if LJ_64
-#define get_kval(ir)		get_k64val(ir)
+#define get_kval(as, ref)	get_k64val(as, ref)
 #else
-#define get_kval(ir)		((ir)->i)
+#define get_kval(as, ref)	(IR((ref))->i)
 #endif
 
 /* -- Emit basic instructions --------------------------------------------- */
@@ -68,7 +70,7 @@ static void emit_rotr(ASMState *as, Reg dest, Reg src, Reg tmp, uint32_t shift)
   }
 }
 
-#if LJ_64
+#if LJ_64 || LJ_HASBUFFER
 static void emit_tsml(ASMState *as, MIPSIns mi, Reg rt, Reg rs, uint32_t msb,
 		      uint32_t lsb)
 {
@@ -82,18 +84,18 @@ static void emit_tsml(ASMState *as, MIPSIns mi, Reg rt, Reg rs, uint32_t msb,
 #define emit_canremat(ref)	((ref) <= REF_BASE)
 
 /* Try to find a one step delta relative to another constant. */
-static int emit_kdelta1(ASMState *as, Reg t, intptr_t i)
+static int emit_kdelta1(ASMState *as, Reg rd, intptr_t i)
 {
   RegSet work = ~as->freeset & RSET_GPR;
   while (work) {
     Reg r = rset_picktop(work);
     IRRef ref = regcost_ref(as->cost[r]);
-    lua_assert(r != t);
+    lj_assertA(r != rd, "dest reg %d not free", rd);
     if (ref < ASMREF_L) {
       intptr_t delta = (intptr_t)((uintptr_t)i -
-	(uintptr_t)(ra_iskref(ref) ? ra_krefk(as, ref) : get_kval(IR(ref))));
+	(uintptr_t)(ra_iskref(ref) ? ra_krefk(as, ref) : get_kval(as, ref)));
       if (checki16(delta)) {
-	emit_tsi(as, MIPSI_AADDIU, t, r, delta);
+	emit_tsi(as, MIPSI_AADDIU, rd, r, delta);
 	return 1;
       }
     }
@@ -223,7 +225,7 @@ static void emit_branch(ASMState *as, MIPSIns mi, Reg rs, Reg rt, MCode *target)
 {
   MCode *p = as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(((delta + 0x8000) >> 16) == 0);
+  lj_assertA(((delta + 0x8000) >> 16) == 0, "branch target out of range");
   *--p = mi | MIPSF_S(rs) | MIPSF_T(rt) | ((uint32_t)delta & 0xffffu);
   as->mcp = p;
 }
@@ -299,7 +301,7 @@ static void emit_storeofs(ASMState *as, IRIns *ir, Reg r, Reg base, int32_t ofs)
 static void emit_addptr(ASMState *as, Reg r, int32_t ofs)
 {
   if (ofs) {
-    lua_assert(checki16(ofs));
+    lj_assertA(checki16(ofs), "offset %d out of range", ofs);
     emit_tsi(as, MIPSI_AADDIU, r, r, ofs);
   }
 }

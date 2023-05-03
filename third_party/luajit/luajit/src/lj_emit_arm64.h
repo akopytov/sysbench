@@ -1,6 +1,6 @@
 /*
 ** ARM64 instruction emitter.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Contributed by Djordje Kovacevic and Stefan Pejic from RT-RK.com.
 ** Sponsored by Cisco Systems, Inc.
@@ -8,8 +8,9 @@
 
 /* -- Constant encoding --------------------------------------------------- */
 
-static uint64_t get_k64val(IRIns *ir)
+static uint64_t get_k64val(ASMState *as, IRRef ref)
 {
+  IRIns *ir = IR(ref);
   if (ir->o == IR_KINT64) {
     return ir_kint64(ir)->u64;
   } else if (ir->o == IR_KGC) {
@@ -17,7 +18,8 @@ static uint64_t get_k64val(IRIns *ir)
   } else if (ir->o == IR_KPTR || ir->o == IR_KKPTR) {
     return (uint64_t)ir_kptr(ir);
   } else {
-    lua_assert(ir->o == IR_KINT || ir->o == IR_KNULL);
+    lj_assertA(ir->o == IR_KINT || ir->o == IR_KNULL,
+	       "bad 64 bit const IR op %d", ir->o);
     return ir->i;  /* Sign-extended. */
   }
 }
@@ -25,8 +27,8 @@ static uint64_t get_k64val(IRIns *ir)
 /* Encode constant in K12 format for data processing instructions. */
 static uint32_t emit_isk12(int64_t n)
 {
-  uint64_t k = (n < 0) ? -n : n;
-  uint32_t m = (n < 0) ? 0x40000000 : 0;
+  uint64_t k = n < 0 ? ~(uint64_t)n+1u : (uint64_t)n;
+  uint32_t m = n < 0 ? 0x40000000 : 0;
   if (k < 0x1000) {
     return A64I_K12|m|A64F_U12(k);
   } else if ((k & 0xfff000) == k) {
@@ -122,7 +124,7 @@ static int emit_checkofs(A64Ins ai, int64_t ofs)
 static void emit_lso(ASMState *as, A64Ins ai, Reg rd, Reg rn, int64_t ofs)
 {
   int ot = emit_checkofs(ai, ofs), sc = (ai >> 30) & 3;
-  lua_assert(ot);
+  lj_assertA(ot, "load/store offset %d out of range", ofs);
   /* Combine LDR/STR pairs to LDP/STP. */
   if ((sc == 2 || sc == 3) &&
       (!(ai & 0x400000) || rd != rn) &&
@@ -161,21 +163,21 @@ nopair:
 /* Try to find an N-step delta relative to other consts with N < lim. */
 static int emit_kdelta(ASMState *as, Reg rd, uint64_t k, int lim)
 {
-  RegSet work = ~as->freeset & RSET_GPR;
+  RegSet work = (~as->freeset & RSET_GPR) | RID2RSET(RID_GL);
   if (lim <= 1) return 0;  /* Can't beat that. */
   while (work) {
     Reg r = rset_picktop(work);
     IRRef ref = regcost_ref(as->cost[r]);
-    lua_assert(r != rd);
+    lj_assertA(r != rd, "dest reg %d not free", rd);
     if (ref < REF_TRUE) {
       uint64_t kx = ra_iskref(ref) ? (uint64_t)ra_krefk(as, ref) :
-				     get_k64val(IR(ref));
+				     get_k64val(as, ref);
       int64_t delta = (int64_t)(k - kx);
       if (delta == 0) {
 	emit_dm(as, A64I_MOVx, rd, r);
 	return 1;
       } else {
-	uint32_t k12 = emit_isk12(delta < 0 ? -delta : delta);
+	uint32_t k12 = emit_isk12(delta < 0 ? (int64_t)(~(uint64_t)delta+1u) : delta);
 	if (k12) {
 	  emit_dn(as, (delta < 0 ? A64I_SUBx : A64I_ADDx)^k12, rd, r);
 	  return 1;
@@ -192,39 +194,41 @@ static int emit_kdelta(ASMState *as, Reg rd, uint64_t k, int lim)
 
 static void emit_loadk(ASMState *as, Reg rd, uint64_t u64, int is64)
 {
-  uint32_t k13 = emit_isk13(u64, is64);
-  if (k13) {  /* Can the constant be represented as a bitmask immediate? */
-    emit_dn(as, (is64|A64I_ORRw)^k13, rd, RID_ZERO);
-  } else {
-    int i, zeros = 0, ones = 0, neg;
-    if (!is64) u64 = (int64_t)(int32_t)u64;  /* Sign-extend. */
-    /* Count homogeneous 16 bit fragments. */
-    for (i = 0; i < 4; i++) {
-      uint64_t frag = (u64 >> i*16) & 0xffff;
-      zeros += (frag == 0);
-      ones += (frag == 0xffff);
+  int i, zeros = 0, ones = 0, neg;
+  if (!is64) u64 = (int64_t)(int32_t)u64;  /* Sign-extend. */
+  /* Count homogeneous 16 bit fragments. */
+  for (i = 0; i < 4; i++) {
+    uint64_t frag = (u64 >> i*16) & 0xffff;
+    zeros += (frag == 0);
+    ones += (frag == 0xffff);
+  }
+  neg = ones > zeros;  /* Use MOVN if it pays off. */
+  if ((neg ? ones : zeros) < 3) {  /* Need 2+ ins. Try shorter K13 encoding. */
+    uint32_t k13 = emit_isk13(u64, is64);
+    if (k13) {
+      emit_dn(as, (is64|A64I_ORRw)^k13, rd, RID_ZERO);
+      return;
     }
-    neg = ones > zeros;  /* Use MOVN if it pays off. */
-    if (!emit_kdelta(as, rd, u64, 4 - (neg ? ones : zeros))) {
-      int shift = 0, lshift = 0;
-      uint64_t n64 = neg ? ~u64 : u64;
-      if (n64 != 0) {
-	/* Find first/last fragment to be filled. */
-	shift = (63-emit_clz64(n64)) & ~15;
-	lshift = emit_ctz64(n64) & ~15;
-      }
-      /* MOVK requires the original value (u64). */
-      while (shift > lshift) {
-	uint32_t u16 = (u64 >> shift) & 0xffff;
-	/* Skip fragments that are correctly filled by MOVN/MOVZ. */
-	if (u16 != (neg ? 0xffff : 0))
-	  emit_d(as, is64 | A64I_MOVKw | A64F_U16(u16) | A64F_LSL16(shift), rd);
-	shift -= 16;
-      }
-      /* But MOVN needs an inverted value (n64). */
-      emit_d(as, (neg ? A64I_MOVNx : A64I_MOVZx) |
-		 A64F_U16((n64 >> lshift) & 0xffff) | A64F_LSL16(lshift), rd);
+  }
+  if (!emit_kdelta(as, rd, u64, 4 - (neg ? ones : zeros))) {
+    int shift = 0, lshift = 0;
+    uint64_t n64 = neg ? ~u64 : u64;
+    if (n64 != 0) {
+      /* Find first/last fragment to be filled. */
+      shift = (63-emit_clz64(n64)) & ~15;
+      lshift = emit_ctz64(n64) & ~15;
     }
+    /* MOVK requires the original value (u64). */
+    while (shift > lshift) {
+      uint32_t u16 = (u64 >> shift) & 0xffff;
+      /* Skip fragments that are correctly filled by MOVN/MOVZ. */
+      if (u16 != (neg ? 0xffff : 0))
+	emit_d(as, is64 | A64I_MOVKw | A64F_U16(u16) | A64F_LSL16(shift), rd);
+      shift -= 16;
+    }
+    /* But MOVN needs an inverted value (n64). */
+    emit_d(as, (neg ? A64I_MOVNx : A64I_MOVZx) |
+	       A64F_U16((n64 >> lshift) & 0xffff) | A64F_LSL16(lshift), rd);
   }
 }
 
@@ -312,7 +316,7 @@ static void emit_cond_branch(ASMState *as, A64CC cond, MCode *target)
 {
   MCode *p = --as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(A64F_S_OK(delta, 19));
+  lj_assertA(A64F_S_OK(delta, 19), "branch target out of range");
   *p = A64I_BCC | A64F_S19(delta) | cond;
 }
 
@@ -320,7 +324,7 @@ static void emit_branch(ASMState *as, A64Ins ai, MCode *target)
 {
   MCode *p = --as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(A64F_S_OK(delta, 26));
+  lj_assertA(A64F_S_OK(delta, 26), "branch target out of range");
   *p = ai | A64F_S26(delta);
 }
 
@@ -328,7 +332,8 @@ static void emit_tnb(ASMState *as, A64Ins ai, Reg r, uint32_t bit, MCode *target
 {
   MCode *p = --as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(bit < 63 && A64F_S_OK(delta, 14));
+  lj_assertA(bit < 63, "bit number out of range");
+  lj_assertA(A64F_S_OK(delta, 14), "branch target out of range");
   if (bit > 31) ai |= A64I_X;
   *p = ai | A64F_BIT(bit & 31) | A64F_S14(delta) | r;
 }
@@ -337,7 +342,7 @@ static void emit_cnb(ASMState *as, A64Ins ai, Reg r, MCode *target)
 {
   MCode *p = --as->mcp;
   ptrdiff_t delta = target - p;
-  lua_assert(A64F_S_OK(delta, 19));
+  lj_assertA(A64F_S_OK(delta, 19), "branch target out of range");
   *p = ai | A64F_S19(delta) | r;
 }
 
@@ -412,7 +417,8 @@ static void emit_addptr(ASMState *as, Reg r, int32_t ofs)
 {
   if (ofs)
     emit_opk(as, ofs < 0 ? A64I_SUBx : A64I_ADDx, r, r,
-		 ofs < 0 ? -ofs : ofs, rset_exclude(RSET_GPR, r));
+		 ofs < 0 ? (int32_t)(~(uint32_t)ofs+1u) : ofs,
+		 rset_exclude(RSET_GPR, r));
 }
 
 #define emit_spsub(as, ofs)	emit_addptr(as, RID_SP, -(ofs))

@@ -1,6 +1,6 @@
 /*
 ** Definitions for ARM64 CPUs.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_TARGET_ARM64_H
@@ -31,6 +31,8 @@ enum {
 
   /* Calling conventions. */
   RID_RET = RID_X0,
+  RID_RETLO = RID_X0,
+  RID_RETHI = RID_X1,
   RID_FPRET = RID_D0,
 
   /* These definitions must match with the *.dasc file(s): */
@@ -210,6 +212,8 @@ typedef enum A64Ins {
 
   A64I_EXTRw = 0x13800000,
   A64I_EXTRx = 0x93c00000,
+  A64I_BFMw = 0x33000000,
+  A64I_BFMx = 0xb3400000,
   A64I_SBFMw = 0x13000000,
   A64I_SBFMx = 0x93400000,
   A64I_SXTBw = 0x13001c00,

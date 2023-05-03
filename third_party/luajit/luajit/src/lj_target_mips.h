@@ -1,6 +1,6 @@
 /*
 ** Definitions for MIPS CPUs.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_TARGET_MIPS_H
@@ -255,6 +255,8 @@ typedef enum MIPSIns {
   MIPSI_SRAV = 0x00000007,
   MIPSI_ROTRV = 0x00000046,	/* MIPSXXR2 */
   MIPSI_DROTRV = 0x00000056,
+
+  MIPSI_INS = 0x7c000004,	/* MIPSXXR2 */
 
   MIPSI_SEB = 0x7c000420,	/* MIPSXXR2 */
   MIPSI_SEH = 0x7c000620,	/* MIPSXXR2 */

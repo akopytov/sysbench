@@ -1,6 +1,6 @@
 /*
-** Definitions for PPC/PPC64 CPUs.
-** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
+** Definitions for PPC CPUs.
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_TARGET_PPC_H
@@ -131,8 +131,6 @@ static LJ_AINLINE uint32_t *exitstub_trace_addr_(uint32_t *p, uint32_t exitno)
 #define PPCF_C(r)	((r) << 6)
 #define PPCF_MB(n)	((n) << 6)
 #define PPCF_ME(n)	((n) << 1)
-#define PPCF_SH(n)	((((n) & 31) << (11+1)) | (((n) & 32) >> (5-1)))
-#define PPCF_M6(n)	((((n) & 31) << (5+1)) | (((n) & 32) << (11-5)))
 #define PPCF_Y		0x00200000
 #define PPCF_DOT	0x00000001
 
@@ -201,13 +199,6 @@ typedef enum PPCIns {
   PPCI_RLWNM = 0x5c000000,
   PPCI_RLWINM = 0x54000000,
   PPCI_RLWIMI = 0x50000000,
-
-  PPCI_RLDICL = 0x78000000,
-  PPCI_RLDICR = 0x78000004,
-  PPCI_RLDIC = 0x78000008,
-  PPCI_RLDIMI = 0x7800000c,
-  PPCI_RLDCL = 0x78000010,
-  PPCI_RLDCR = 0x78000012,
 
   PPCI_B = 0x48000000,
   PPCI_BL = 0x48000001,

@@ -1,6 +1,6 @@
 /*
 ** Definitions for x86 and x64 CPUs.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_TARGET_X86_H
@@ -38,10 +38,9 @@ enum {
   RID_RET = RID_EAX,
 #if LJ_64
   RID_FPRET = RID_XMM0,
-#else
+#endif
   RID_RETLO = RID_EAX,
   RID_RETHI = RID_EDX,
-#endif
 
   /* These definitions must match with the *.dasc file(s): */
   RID_BASE = RID_EDX,		/* Interpreter BASE. */
@@ -164,6 +163,8 @@ typedef struct {
 /* Limited by the range of a short fwd jump (127): (2+2)*(32-1)-2 = 122. */
 #define EXITSTUB_SPACING	(2+2)
 #define EXITSTUBS_PER_GROUP	32
+
+#define EXITTRACE_VMSTATE	1	/* g->vmstate has traceno on exit. */
 
 /* -- x86 ModRM operand encoding ------------------------------------------ */
 

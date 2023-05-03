@@ -1,6 +1,6 @@
 /*
 ** Base and coroutine library.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2011 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -19,6 +19,7 @@
 #include "lj_gc.h"
 #include "lj_err.h"
 #include "lj_debug.h"
+#include "lj_buf.h"
 #include "lj_str.h"
 #include "lj_tab.h"
 #include "lj_meta.h"
@@ -75,9 +76,10 @@ LJLIB_ASM_(type)		LJLIB_REC(.)
 /* This solves a circular dependency problem -- change FF_next_N as needed. */
 LJ_STATIC_ASSERT((int)FF_next == FF_next_N);
 
-LJLIB_ASM(next)
+LJLIB_ASM(next)			LJLIB_REC(.)
 {
   lj_lib_checktab(L, 1);
+  lj_err_msg(L, LJ_ERR_NEXTIDX);
   return FFH_UNREACHABLE;
 }
 
@@ -301,7 +303,7 @@ LJLIB_ASM(tonumber)		LJLIB_REC(.)
 	while (lj_char_isspace((unsigned char)(*ep))) ep++;
 	if (*ep == '\0') {
 	  if (LJ_DUALNUM && LJ_LIKELY(ul < 0x80000000u+neg)) {
-	    if (neg) ul = -ul;
+	    if (neg) ul = ~ul+1u;
 	    setintV(L->base-1-LJ_FR2, (int32_t)ul);
 	  } else {
 	    lua_Number n = (lua_Number)ul;
@@ -406,10 +408,22 @@ LJLIB_CF(load)
   GCstr *name = lj_lib_optstr(L, 2);
   GCstr *mode = lj_lib_optstr(L, 3);
   int status;
-  if (L->base < L->top && (tvisstr(L->base) || tvisnumber(L->base))) {
-    GCstr *s = lj_lib_checkstr(L, 1);
+  if (L->base < L->top &&
+      (tvisstr(L->base) || tvisnumber(L->base) || tvisbuf(L->base))) {
+    const char *s;
+    MSize len;
+    if (tvisbuf(L->base)) {
+      SBufExt *sbx = bufV(L->base);
+      s = sbx->r;
+      len = sbufxlen(sbx);
+      if (!name) name = &G(L)->strempty;  /* Buffers are not NUL-terminated. */
+    } else {
+      GCstr *str = lj_lib_checkstr(L, 1);
+      s = strdata(str);
+      len = str->len;
+    }
     lua_settop(L, 4);  /* Ensure env arg exists. */
-    status = luaL_loadbufferx(L, strdata(s), s->len, strdata(name ? name : s),
+    status = luaL_loadbufferx(L, s, len, name ? strdata(name) : s,
 			      mode ? strdata(mode) : NULL);
   } else {
     lj_lib_checkfunc(L, 1);
@@ -504,8 +518,8 @@ LJLIB_CF(print)
     lua_gettable(L, LUA_GLOBALSINDEX);
     tv = L->top-1;
   }
-  shortcut = (tvisfunc(tv) && funcV(tv)->c.ffid == FF_tostring)
-	      && !gcrefu(basemt_it(G(L), LJ_TNUMX));
+  shortcut = (tvisfunc(tv) && funcV(tv)->c.ffid == FF_tostring) &&
+	     !gcrefu(basemt_it(G(L), LJ_TNUMX));
   for (i = 0; i < nargs; i++) {
     cTValue *o = &L->base[i];
     const char *str;

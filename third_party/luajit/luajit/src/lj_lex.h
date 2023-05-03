@@ -1,6 +1,6 @@
 /*
 ** Lexical analyzer.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_LEX_H
@@ -83,5 +83,11 @@ LJ_FUNC LexToken lj_lex_lookahead(LexState *ls);
 LJ_FUNC const char *lj_lex_token2str(LexState *ls, LexToken tok);
 LJ_FUNC_NORET void lj_lex_error(LexState *ls, LexToken tok, ErrMsg em, ...);
 LJ_FUNC void lj_lex_init(lua_State *L);
+
+#ifdef LUA_USE_ASSERT
+#define lj_assertLS(c, ...)	(lj_assertG_(G(ls->L), (c), __VA_ARGS__))
+#else
+#define lj_assertLS(c, ...)	((void)ls)
+#endif
 
 #endif
