@@ -78,7 +78,11 @@ sysbench.cmdline.options = {
           "PostgreSQL driver. The only currently supported " ..
           "variant is 'redshift'. When enabled, " ..
           "create_secondary is automatically disabled, and " ..
-          "delete_inserts is set to 0"}
+          "delete_inserts is set to 0"},
+   fast =
+      {"Use LOAD DATA LOCAL to import data, only works with MySQL",false},
+   csv_dir =
+      {"The directory to save CSV file","/tmp"}
 }
 
 -- Prepare the dataset. This command supports parallel execution, i.e. will
@@ -176,6 +180,9 @@ function create_table(drv, con, table_num)
       engine_def = "/*! ENGINE = " .. sysbench.opt.mysql_storage_engine .. " */"
    elseif drv:name() == "pgsql"
    then
+      if sysbench.opt.fast then
+         error("--fast is not supported for pgsql")
+      end
       if not sysbench.opt.auto_inc then
          id_def = "INTEGER NOT NULL"
       elseif pgsql_variant == 'redshift' then
@@ -207,16 +214,23 @@ CREATE TABLE sbtest%d(
                           sysbench.opt.table_size, table_num))
    end
 
-   if sysbench.opt.auto_inc then
-      query = "INSERT INTO sbtest" .. table_num .. "(k, c, pad) VALUES"
-   else
-      query = "INSERT INTO sbtest" .. table_num .. "(id, k, c, pad) VALUES"
+   if not (sysbench.opt.fast) then
+      if sysbench.opt.auto_inc then
+         query = "INSERT INTO sbtest" .. table_num .. "(k, c, pad) VALUES"
+      else
+         query = "INSERT INTO sbtest" .. table_num .. "(id, k, c, pad) VALUES"
+      end
+      con:bulk_insert_init(query)
    end
 
-   con:bulk_insert_init(query)
 
    local c_val
    local pad_val
+
+   local f
+   if (sysbench.opt.fast) then
+       f = assert(io.open(string.format("/%s/sbtest%d",sysbench.opt.csv_dir,table_num),'w'))
+   end
 
    for i = 1, sysbench.opt.table_size do
 
@@ -224,20 +238,57 @@ CREATE TABLE sbtest%d(
       pad_val = get_pad_value()
 
       if (sysbench.opt.auto_inc) then
-         query = string.format("(%d, '%s', '%s')",
+         if (sysbench.opt.fast) then
+            query = string.format("%d,%s,%s\n",
                                sysbench.rand.default(1, sysbench.opt.table_size),
                                c_val, pad_val)
+         else
+            query = string.format("(%d, '%s', '%s')",
+                               sysbench.rand.default(1, sysbench.opt.table_size),
+                               c_val, pad_val)
+            
+         end
       else
-         query = string.format("(%d, %d, '%s', '%s')",
+         if (sysbench.opt.fast) then
+            query = string.format("%d,%d,%s,%s\n",
                                i,
                                sysbench.rand.default(1, sysbench.opt.table_size),
                                c_val, pad_val)
+         else
+            query = string.format("(%d, %d, '%s', '%s')",
+                               i,
+                               sysbench.rand.default(1, sysbench.opt.table_size),
+                               c_val, pad_val)
+         end    
       end
 
-      con:bulk_insert_next(query)
+      if (sysbench.opt.fast) then
+          f:write(query)
+      else
+         con:bulk_insert_next(query)
+      end 
+
    end
 
-   con:bulk_insert_done()
+   if (sysbench.opt.fast) then
+
+       f:close()
+       local column_name
+       if (sysbench.opt.auto_inc) then
+           column_name="k, c, pad"
+       else
+           column_name="id, k, c, pad"
+       end        
+        
+       query = string.format("LOAD DATA LOCAL INFILE '/%s/sbtest%d' " ..
+                                "INTO TABLE sbtest%d FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' " ..
+                                 "(%s)", sysbench.opt.csv_dir,table_num,table_num,column_name)
+       con:query("SET unique_checks = 0")
+       con:query("SET foreign_key_checks = 0")
+       con:query(query)
+   else
+       con:bulk_insert_done()
+   end
 
    if sysbench.opt.create_secondary then
       print(string.format("Creating a secondary index on 'sbtest%d'...",
