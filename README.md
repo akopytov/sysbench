@@ -1,5 +1,5 @@
 [![Latest Release][release-badge]][release-url]
-[![Build Status][travis-badge]][travis-url]
+[![Build Status][action-badge]][action-url]
 [![Debian Packages][deb-badge]][deb-url]
 [![RPM Packages][rpm-badge]][rpm-url]
 [![Coverage Status][coveralls-badge]][coveralls-url]
@@ -298,8 +298,8 @@ For more information on SemVer, please visit [http://semver.org/](http://semver.
 
 [coveralls-badge]: https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/akopytov/sysbench?branch=master
-[travis-badge]: https://travis-ci.org/akopytov/sysbench.svg?branch=master
-[travis-url]: https://travis-ci.org/akopytov/sysbench?branch=master
+[action-url]: https://github.com/akopytov/sysbench/actions/workflows/ci.yml
+[action-badge]: https://github.com/akopytov/sysbench/actions/workflows/ci.yml/badge.svg
 [license-badge]: https://img.shields.io/badge/license-GPLv2-blue.svg
 [license-url]: COPYING
 [release-badge]: https://img.shields.io/github/release/akopytov/sysbench.svg
