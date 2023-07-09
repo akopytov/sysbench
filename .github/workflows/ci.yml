@@ -14,7 +14,7 @@ jobs:
       - name: Autogen
         run: ./autogen.sh
       - name: Configure
-        run: ./configure
+        run: ./configure --with-mysql --with-pgsql
       - name: Build
         run: make
       - name: MySQL version
