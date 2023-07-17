@@ -451,7 +451,7 @@ int pgsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
     return 1;
   }
 
-  pgstmt->ptypes = (Oid *)malloc(len * sizeof(int));
+  pgstmt->ptypes = (Oid *)malloc(len * sizeof(Oid));
   if (pgstmt->ptypes == NULL)
     return 1;
 
