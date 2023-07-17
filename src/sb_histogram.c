@@ -326,6 +326,11 @@ void sb_histogram_print(sb_histogram_t *h)
            (unsigned long) array[i]);                /* count */
   }
 
+  printf("       50th percentile: %35.2f\n", get_pct_cumulative(h, 50));
+  printf("       90th percentile: %35.2f\n", get_pct_cumulative(h, 90));
+  printf("       95th percentile: %35.2f\n", get_pct_cumulative(h, 95));
+  printf("       99th percentile: %35.2f\n", get_pct_cumulative(h, 99));
+
   pthread_rwlock_unlock(&h->lock);
 }
 
