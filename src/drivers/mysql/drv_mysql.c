@@ -415,9 +415,10 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
   {
     DEBUG("mysql_options(%p, %s, %s)",con, "MYSQL_OPT_COMPRESS", "NULL");
     mysql_options(con, MYSQL_OPT_COMPRESS, NULL);
-
+#ifdef MYSQL_OPT_COMPRESSION_ALGORITHMS
     DEBUG("mysql_options(%p, %s, %s)",con, "MYSQL_OPT_COMPRESSION_ALGORITHMS", args.compression_alg);
     mysql_options(con, MYSQL_OPT_COMPRESSION_ALGORITHMS, args.compression_alg);
+#endif
   }
 
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",
