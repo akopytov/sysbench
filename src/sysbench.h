@@ -91,12 +91,12 @@ typedef struct {
   double   time_interval;       /* Time elapsed since the last report */
   double   time_total;          /* Time elapsed since the benchmark start */
 
-  double   latency_pct;         /* Latency percentile */
-
   double   latency_min;         /* Minimum latency (cumulative reports only) */
   double   latency_max;         /* Maximum latency (cumulative reports only) */
   double   latency_avg;         /* Average latency (cumulative reports only) */
   double   latency_sum;         /* Sum latency (cumulative reports only) */
+
+  double   *latency_pcts;       /* Latency percentiles */
 
   uint64_t events;              /* Number of executed events */
   uint64_t reads;               /* Number of read operations */
@@ -191,7 +191,8 @@ typedef struct
   unsigned int    threads CK_CC_CACHELINE;  /* number of threads to use */
   unsigned int    threads_running;  /* number of threads currently active */
   unsigned int    report_interval;  /* intermediate reports interval */
-  unsigned int    percentile;   /* percentile rank for latency stats */
+  double          *percentiles;   /* percentile ranks for latency stats */
+  size_t          npercentiles;   /* number of percentile ranks for latency stats */
   unsigned int    histogram;    /* show histogram in latency stats */
   /* array of report checkpoints */
   unsigned int    checkpoints[MAX_CHECKPOINTS];

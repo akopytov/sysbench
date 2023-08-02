@@ -1009,13 +1009,20 @@ static void stat_to_lua_table(lua_State *L, sb_stat_t *stat)
   stat_to_number(threads_running);
   stat_to_number(time_interval);
   stat_to_number(time_total);
-  stat_to_number(latency_pct);
   stat_to_number(events);
   stat_to_number(reads);
   stat_to_number(writes);
   stat_to_number(other);
   stat_to_number(errors);
   stat_to_number(reconnects);
+
+  for(size_t i = 0; i < sb_globals.npercentiles; i++){
+    char *format_str = "%4.2fth percentile";
+    char *percentile = malloc((strlen(format_str) + 6 + 1) * sizeof(char)); //6 is the maximum number of chars for 100.00 to be formatted
+    sprintf(percentile, format_str, *(sb_globals.percentiles + i));
+    sb_lua_var_number(L, percentile, *(stat->latency_pcts + i));
+    free(percentile);
+  }
 }
 
 /* Call sysbench.hooks.report_intermediate */
