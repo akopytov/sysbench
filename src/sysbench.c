@@ -1439,6 +1439,7 @@ int main(int argc, char *argv[])
 {
   sb_test_t *test = NULL;
   int rc;
+  char * filename;
 
   sb_globals.argc = argc;
   sb_globals.argv = malloc(argc * sizeof(char *));
@@ -1522,6 +1523,12 @@ int main(int argc, char *argv[])
   /* Load and parse test-specific options */
   if (parse_test_arguments(test, argc, argv))
     return EXIT_FAILURE;
+
+  /* If a config file was used, re-read it to pickup the test-specific options */
+  if ((filename = sb_get_value_string("config-file")) != NULL) {
+    read_config_file(filename);
+  }
+
 
   if (sb_lua_loaded() && sb_lua_custom_command_defined(sb_globals.cmdname))
   {
