@@ -68,6 +68,9 @@ sysbench.cmdline.options = {
       {"Use a secondary index in place of the PRIMARY KEY", false},
    create_secondary =
       {"Create a secondary index in addition to the PRIMARY KEY", true},
+   skip_existing_tables = 
+      {"If a table already exists during prepare, " ..
+          "skip and assume it has enough rows", true},
    reconnect =
       {"Reconnect after every N events. The default (0) is to not reconnect",
        0},
@@ -159,6 +162,14 @@ function create_table(drv, con, table_num)
    local engine_def = ""
    local extra_table_options = ""
    local query
+
+   if sysbench.opt.skip_existing_tables then
+      rs = con:query("SHOW TABLE STATUS like 'sbtest" .. table_num .. "'")
+      if rs.nrows >= 1 then
+         print(string.format("Skipping create table 'sbtest%d'...", table_num))
+         return
+      end
+   end
 
    if sysbench.opt.secondary then
      id_index_def = "KEY xid"
