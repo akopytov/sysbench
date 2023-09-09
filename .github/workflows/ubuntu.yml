@@ -1,0 +1,23 @@
+name: ubuntu-CMake
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    name: Build on ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: configure
+        run: cmake . -DWITH_PGSQL=1
+      - name: Build
+        run: cmake --build .
+      - name: MySQL version
+        run: mysql_config --version
+      - name: Sysbench version
+        run: ./src/sysbench --version
+      - name: test
+        run: cmake --build . --target test
