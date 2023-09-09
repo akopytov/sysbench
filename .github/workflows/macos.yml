@@ -27,7 +27,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
       - name: configure
-        run: cmake -B build_dir -S . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_PGSQL=1
+        run: cmake -B build_dir -S . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_PGSQL=1 -DCMAKE_COMPILE_WARNING_AS_ERROR=1
       - name: build
         run: cmake --build build_dir --config RelWithDebInfo -j4
       - name: test_install

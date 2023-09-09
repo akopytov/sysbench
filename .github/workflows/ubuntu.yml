@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: configure
-        run: cmake . -DWITH_PGSQL=1
+        run: cmake . -DWITH_PGSQL=1 -DCMAKE_COMPILE_WARNING_AS_ERROR=1
       - name: Build
         run: cmake --build .
       - name: MySQL version
