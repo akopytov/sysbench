@@ -274,10 +274,10 @@ static int file_wait(int, long);
 #ifdef HAVE_MMAP
 static int file_mmap_prepare(void);
 static int file_mmap_done(void);
+static size_t sb_get_allocation_granularity(void);
 #endif
 
 /* Portability wrappers */
-static size_t sb_get_allocation_granularity(void);
 static FILE_DESCRIPTOR sb_open(const char *);
 static int sb_create(const char *);
 
