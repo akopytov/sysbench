@@ -61,7 +61,7 @@
 #define REPORT_INTERMEDIATE_HOOK "report_intermediate"
 #define REPORT_CUMULATIVE_HOOK "report_cumulative"
 
-#define xfree(ptr) ({ if ((ptr) != NULL) free((void *) ptr); ptr = NULL; })
+#define xfree(ptr) do{ if ((ptr) != NULL) free((void *) ptr); ptr = NULL; }while(0)
 
 /* Interpreter context */
 

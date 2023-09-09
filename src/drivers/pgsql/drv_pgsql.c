@@ -33,7 +33,7 @@
 #include "db_driver.h"
 #include "sb_rand.h"
 
-#define xfree(ptr) ({ if (ptr) free((void *)ptr); ptr = NULL; })
+#define xfree(ptr) do{ if (ptr) free((void *)ptr); ptr = NULL; }while(0)
 
 /* Maximum length of text representation of bind parameters */
 #define MAX_PARAM_LENGTH 256UL

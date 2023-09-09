@@ -70,17 +70,17 @@ static void db_reset_stats(void);
 static int db_free_results_int(db_conn_t *con);
 
 /* DB layer arguments */
+#ifdef USE_MYSQL
+#define DEFAULT_DB_DRIVER "mysql"
+#else
+#define DEFAULT_DB_DRIVER NULL
+#endif
 
 static sb_arg_t db_args[] =
 {
   SB_OPT("db-driver", "specifies database driver to use "
          "('help' to get list of available drivers)",
-#ifdef USE_MYSQL
-         "mysql",
-#else
-         NULL,
-#endif
-         STRING),
+         DEFAULT_DB_DRIVER, STRING),
   SB_OPT("db-ps-mode", "prepared statements usage mode {auto, disable}", "auto",
          STRING),
   SB_OPT("db-debug", "print database-specific debug information", "off", BOOL),
