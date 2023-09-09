@@ -117,6 +117,9 @@
 */
 void *sb_memalign(size_t size, size_t alignment);
 
+/* Free memory allocated with sb_memalign() */
+void sb_free_memaligned(void* p);
+
 /* Get OS page size */
 size_t sb_getpagesize(void);
 

@@ -1598,8 +1598,8 @@ end:
 
   sb_thread_done();
 
-  free(timers);
-  free(timers_copy);
+  sb_free_memaligned(timers);
+  sb_free_memaligned(timers_copy);
 
   free(sb_globals.argv);
 

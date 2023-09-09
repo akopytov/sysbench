@@ -45,7 +45,7 @@ void sb_counters_done(void)
 {
   if (sb_counters != NULL)
   {
-    free(sb_counters);
+    sb_free_memaligned(sb_counters);
     sb_counters = NULL;
   }
 }

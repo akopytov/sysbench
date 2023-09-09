@@ -268,7 +268,6 @@ static int file_mmap_done(void);
 
 /* Portability wrappers */
 static size_t sb_get_allocation_granularity(void);
-static void sb_free_memaligned(void *buf);
 static FILE_DESCRIPTOR sb_open(const char *);
 static int sb_create(const char *);
 
@@ -1730,7 +1729,7 @@ void check_seq_req(sb_file_request_t *prev_req, sb_file_request_t *r)
   }    
 } 
 
-
+#ifdef HAVE_MMAP
 /*
   Alignment requirement for mmap(). The same as page size, except on Windows
   (on Windows it has to be 64KB, even if pagesize is only 4 or 8KB)
@@ -1739,11 +1738,7 @@ size_t sb_get_allocation_granularity(void)
 {
   return sb_getpagesize();
 }
-
-static void sb_free_memaligned(void *buf)
-{
-  free(buf);
-}
+#endif
 
 static FILE_DESCRIPTOR sb_open(const char *name)
 {

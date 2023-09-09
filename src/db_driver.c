@@ -799,8 +799,8 @@ void db_done(void)
 
   if (db_globals.debug)
   {
-    free(exec_timers);
-    free(fetch_timers);
+    sb_free_memaligned(exec_timers);
+    sb_free_memaligned(fetch_timers);
 
     exec_timers = fetch_timers = NULL;
   }

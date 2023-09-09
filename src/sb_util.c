@@ -40,8 +40,9 @@
 void *sb_memalign(size_t size, size_t alignment)
 {
   void *buf;
-
-#ifdef HAVE_POSIX_MEMALIGN
+#if defined(_WIN32)
+  buf = _aligned_malloc(size, alignment);
+#elif defined(HAVE_POSIX_MEMALIGN)
   int ret= posix_memalign(&buf, alignment, size);
   if (ret != 0)
     buf = NULL;
@@ -50,12 +51,20 @@ void *sb_memalign(size_t size, size_t alignment)
 #elif defined(HAVE_VALLOC)
   /* Allocate on page boundary */
   (void) alignment; /* unused */
-  buffer = valloc(size);
+  buf = valloc(size);
 #else
 # error Cannot find an aligned allocation library function!
 #endif
-
   return buf;
+}
+/* Free memory allocated with sb_memalign() */
+void sb_free_memaligned(void* p)
+{
+#if defined(WIN32)
+  _aligned_free(p);
+#else
+  free(p);
+#endif
 }
 
 /* Get OS page size */
