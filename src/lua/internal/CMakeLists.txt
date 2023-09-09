@@ -26,3 +26,19 @@ foreach(f ${LUA_INTERNAL_FILES})
   string(REPLACE "." "_" name ${f})
   create_lua_h(${f} ${name} ${CMAKE_CURRENT_BINARY_DIR}/${f}.h)
 endforeach()
+
+if(WIN32)
+  # prepare list of functions to be exported from sysbench.exe
+  set(sysbench_def ${CMAKE_CURRENT_BINARY_DIR}/sysbench.def)
+  execute_process(
+    COMMAND
+      powershell.exe -noprofile -ExecutionPolicy Bypass
+      -File ${PROJECT_SOURCE_DIR}/src/win/extract_c_functions.ps1
+      ${LUA_INTERNAL_FILES}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_FILE ${sysbench_def}.tmp
+    COMMAND_ERROR_IS_FATAL ANY)
+  configure_file(${sysbench_def}.tmp ${sysbench_def} COPYONLY)
+  file(REMOVE ${sysbench_def}.tmp)
+  target_sources(sysbench PRIVATE ${sysbench_def})
+endif()
