@@ -46,7 +46,9 @@
 # define SB_ATTRIBUTE_UNUSED
 #endif
 
-#if defined(__MACH__)
+#ifdef _WIN32
+#define DLEXT ".dll"
+#elif defined(__MACH__)
 # define DLEXT ".dylib"
 #else
 # define DLEXT ".so"
