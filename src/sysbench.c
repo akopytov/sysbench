@@ -1435,10 +1435,24 @@ static int init(void)
 }
 
 
+/* OS specific initialization */
+static inline void os_init(void)
+{
+#ifdef _WIN32
+  /*
+    lua is using C runtime, and is opens multiple files simultaneously
+    in different threads. Allow maximum possible number of open files.
+  */
+  _setmaxstdio(8192);
+#endif
+}
+
 int main(int argc, char *argv[])
 {
   sb_test_t *test = NULL;
   int rc;
+
+  os_init();
 
   sb_globals.argc = argc;
   sb_globals.argv = malloc(argc * sizeof(char *));
