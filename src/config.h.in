@@ -65,3 +65,9 @@
 # endif
 #endif
 #define TLS thread_local
+
+#ifdef _WIN32
+#define SB_WIN_POSIX_NAMES
+/*  Windows fixups for ssize_t, strcasecmp etc */
+#include "sb_win_posix.h"
+#endif
