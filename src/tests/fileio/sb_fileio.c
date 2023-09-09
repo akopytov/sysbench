@@ -1681,6 +1681,11 @@ int parse_arguments(void)
   }
 
   per_thread = malloc(sizeof(*per_thread) * sb_globals.threads);
+  if(per_thread == NULL)
+  {
+    log_text(LOG_FATAL, "Failed to allocate per-thread data");
+    return 1;
+  }
   for (i = 0; i < sb_globals.threads; i++)
   {
     per_thread[i].buffer = sb_memalign(file_request_size, sb_getpagesize());

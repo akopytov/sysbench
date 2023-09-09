@@ -572,6 +572,7 @@ db_row_t *db_fetch_row(db_result_t *rs)
   if (con->driver->ops.fetch_row == NULL)
   {
     log_text(LOG_ALERT, "fetching rows is not supported by the driver");
+    return NULL;
   }
 
   if (rs->nrows == 0 || rs->nfields == 0)
