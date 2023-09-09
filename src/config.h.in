@@ -1,0 +1,67 @@
+#pragma once
+
+#cmakedefine PACKAGE_VERSION "@PACKAGE_VERSION@"
+#cmakedefine PACKAGE "@PACKAGE@"
+#define PACKAGE_NAME PACKAGE
+#define DATADIR "@DATADIR@"
+#define LIBDIR  "@LIBDIR@"
+#define SB_WITH_LUAJIT "@SB_WITH_LUAJIT@"
+#define SB_GIT_SHA "@SB_GIT_SHA@"
+#define STDC_HEADERS
+
+
+#cmakedefine HAVE_ALARM
+#cmakedefine HAVE_CLOCK_GETTIME
+#cmakedefine HAVE_DIRECTIO
+#cmakedefine HAVE_ERRNO_H
+#cmakedefine HAVE_FCNTL_H
+#cmakedefine HAVE_FDATASYNC
+#cmakedefine HAVE_FUNC_ATTRIBUTE_FORMAT
+#cmakedefine HAVE_FUNC_ATTRIBUTE_UNUSED
+#define HAVE_ISATTY 1
+#cmakedefine HAVE_LARGE_PAGES
+#cmakedefine HAVE_LIBAIO
+#cmakedefine HAVE_LIBGEN_H
+#cmakedefine HAVE_LIMITS_H
+#cmakedefine HAVE_MATH_H
+#cmakedefine HAVE_MMAP
+#cmakedefine HAVE_MYSQL_OPT_SSL_MODE
+#cmakedefine HAVE_OLD_GETEVENTS
+#cmakedefine HAVE_POSIX_MEMALIGN
+#cmakedefine HAVE_PTHREAD_CANCEL
+#cmakedefine HAVE_PTHREAD_H
+#cmakedefine HAVE_PTHREAD_YIELD
+#cmakedefine HAVE_SCHED_H
+#cmakedefine HAVE_SETVBUF
+#cmakedefine HAVE_SIGNAL_H
+#cmakedefine HAVE_STRERROR_R
+#cmakedefine HAVE_STRINGS_H
+#cmakedefine HAVE_STRING_H
+#cmakedefine HAVE_SYS_IPC_H
+#cmakedefine HAVE_SYS_MMAN_H
+#cmakedefine HAVE_SYS_SHM_H
+#cmakedefine HAVE_SYS_STAT_H
+#cmakedefine HAVE_SYS_TIME_H
+#cmakedefine HAVE_THREAD_H
+#cmakedefine HAVE_THR_SETCONCURRENCY
+#cmakedefine HAVE_UNISTD_H
+#cmakedefine HAVE_MEMALIGN
+#cmakedefine SIZEOF_SIZE_T @SIZEOF_SIZE_T@
+#cmakedefine SIZEOF_BOOL   @SIZEOF_BOOL@
+#cmakedefine HAVE_VALLOC
+
+/*
+  Thread_local is standardized C99 but only if  __STDC_NO_THREADS__
+  is not defined. MSVC defines  __STDC_NO_THREADS__ atm
+*/
+#ifndef thread_local
+# if __STDC_VERSION__ >= 201112 && !defined __STDC_NO_THREADS__
+#  define thread_local _Thread_local
+/* note that ICC (linux) and Clang are covered by __GNUC__ */
+# elif defined __GNUC__ || defined __SUNPRO_C || defined __xlC__
+#  define thread_local __thread
+# else
+#  error "Cannot define thread_local"
+# endif
+#endif
+#define TLS thread_local
