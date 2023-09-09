@@ -447,6 +447,16 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
                             ) == NULL;
 }
 
+/*
+ Hostname to pass to client library, if --socket parameter is given
+ On Windows, --socket is interpreted as named pipe name and host must
+ be "." Elsewhere, it is unix domain socket, and host is "localhost"
+*/
+#ifdef _WIN32
+#define LOCAL_SOCKET_MYSQL_HOST "."
+#else
+#define LOCAL_SOCKET_MYSQL_HOST "localhost"
+#endif
 
 /* Connect to MySQL database */
 
@@ -497,7 +507,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   }
   else
   {
-    db_mysql_con->host = "localhost";
+    db_mysql_con->host = LOCAL_SOCKET_MYSQL_HOST;
 
     /*
        The sockets list may be empty. So unlike hosts/ports the loop invariant
