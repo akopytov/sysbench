@@ -1444,6 +1444,8 @@ static inline void os_init(void)
     in different threads. Allow maximum possible number of open files.
   */
   _setmaxstdio(8192);
+  /* improve timer resolution for Sleep() */
+  timeBeginPeriod(1);
 #endif
 }
 

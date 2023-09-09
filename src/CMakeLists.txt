@@ -154,6 +154,9 @@ add_dependencies(sysbench ConcurrencyKit)
 target_link_libraries(sysbench PRIVATE ConcurrencyKit)
 
 if(WIN32)
+  # Need winmm for timeBeginPeriod()
+  target_link_libraries(sysbench PRIVATE winmm)
+
   # Add location of sb_win_posix.h include file
   target_include_directories(sysbench SYSTEM BEFORE
                              PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win)
