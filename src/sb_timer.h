@@ -23,6 +23,9 @@
 # include "config.h"
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #ifdef TIME_WITH_SYS_TIME
 # include <sys/time.h>
 # include <time.h>
@@ -98,9 +101,19 @@ typedef struct
 
 static inline int sb_nanosleep(uint64_t ns)
 {
+#ifdef _WIN32
+  pthread_testcancel();
+  Sleep((DWORD)(ns / NS_PER_MS));
+  return 0;
+#else
   struct timespec ts = { ns / NS_PER_SEC, ns % NS_PER_SEC };
   return nanosleep(&ts, NULL);
+#endif
 }
+
+#ifdef _WIN32
+#define usleep(x) sb_nanosleep(1000ULL*(x))
+#endif
 
 /* timer control functions */
 
