@@ -1,0 +1,78 @@
+name: Windows
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest]
+    runs-on: ${{ matrix.os }}
+    name: Build on ${{ matrix.os }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/cache@v3
+        id: vcpkg_cache
+        with:
+          path: ~\AppData\Local\vcpkg
+          key: ${{ runner.os }}-vcpkg-libpq-zlib
+      - name: vcpkg install
+        run: vcpkg install libpq zlib --triplet=x64-windows-release
+      - name: configure
+        run: cmake -B build_dir -DCMAKE_COMPILE_WARNING_AS_ERROR=1 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-release -DWITH_PGSQL=1
+      - name: build
+        run: cmake --build build_dir --config RelWithDebInfo --target package -j 4
+      - name: upload package
+        uses: actions/upload-artifact@v3
+        with:
+          name: package
+          path: build_dir/*.zip
+      - name: test_install
+        run: |
+          cmake --install build_dir --prefix install_dir  --config RelWithDebInfo
+          echo "$pwd\install_dir\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          cat $env:GITHUB_PATH
+      - name: sysbench version
+        run: sysbench --version
+      - name: sysbench help
+        run: sysbench --help
+      - name: actions-setup-mysql
+        uses: shogo82148/actions-setup-mysql@v1.17.0
+        env:
+          TMPDIR: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+        with:
+          mysql-version: 'mariadb-10.9'
+          my-cnf: |
+            innodb_log_file_size=1G
+            innodb_buffer_pool_size=512MB
+            max_allowed_packet=16MB
+            max_connections=500
+            named-pipe=1
+            socket=MySQL
+      - name: actions-setup-pgsql
+        uses: ikalnytskyi/action-setup-postgres@v4
+        with:
+          username: sbtest
+          password: sbtest
+          database: sbtest
+      - name: create database sbtest
+        run: mysql -uroot -e "create database sbtest"
+      - name: sysbench oltp_update_index prepare
+        run: sysbench oltp_update_index --mysql-user=root --table-size=100000 prepare
+      - name: sysbench oltp_point_select run
+        run: sysbench oltp_point_select --mysql-user=root --mysql-host=. --time=30 --table-size=100000 --threads=1  --report-interval=1 --histogram run
+      - name: sysbench oltp_update_index run ssl
+        run: sysbench oltp_update_index --mysql-user=root --time=30 --mysql-ssl=on --table-size=100000 --threads=1  --report-interval=1 --histogram run
+      - name: sysbench oltp_update_index cleanup
+        run: sysbench oltp_update_index --mysql-user=root cleanup
+      - name: sysbench pgsql oltp_update_index prepare
+        run: sysbench oltp_update_index --db-driver=pgsql --pgsql-password=sbtest --table-size=100000 prepare
+      - name: sysbench pgsql oltp_point_select run
+        run: sysbench oltp_point_select --db-driver=pgsql --pgsql-password=sbtest --time=30 --table-size=100000 --threads=1  --report-interval=1  --histogram run
+      - name: sysbench pgsql oltp_update_index run
+        run: sysbench oltp_update_index --db-driver=pgsql --pgsql-password=sbtest --time=30 --table-size=100000 --threads=1  --report-interval=1 --histogram run
+      - name: sysbench oltp_update_index cleanup
+        run: sysbench oltp_update_index --db-driver=pgsql --pgsql-password=sbtest cleanup
