@@ -71,7 +71,11 @@ void sb_free_memaligned(void* p)
 
 size_t sb_getpagesize(void)
 {
-#ifdef _SC_PAGESIZE
+#ifdef _WIN32
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  return si.dwPageSize;
+#elif defined _SC_PAGESIZE
   return sysconf(_SC_PAGESIZE);
 #else
   return getpagesize();
