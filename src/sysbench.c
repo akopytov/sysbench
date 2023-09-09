@@ -142,11 +142,11 @@ static sb_barrier_t report_barrier;
 /* structures to handle queue of events, needed for tx_rate mode */
 static pthread_mutex_t    queue_mutex;
 static pthread_cond_t     queue_cond;
-static uint64_t           queue_array[MAX_QUEUE_LEN] CK_CC_CACHELINE;
-static ck_ring_buffer_t   queue_ring_buffer[MAX_QUEUE_LEN] CK_CC_CACHELINE;
-static ck_ring_t          queue_ring CK_CC_CACHELINE;
+static CK_CC_CACHELINE uint64_t queue_array[MAX_QUEUE_LEN];
+static CK_CC_CACHELINE ck_ring_buffer_t   queue_ring_buffer[MAX_QUEUE_LEN];
+static CK_CC_CACHELINE ck_ring_t          queue_ring ;
 
-static int report_thread_created CK_CC_CACHELINE;
+static CK_CC_CACHELINE int report_thread_created;
 static int checkpoints_thread_created;
 static int eventgen_thread_created;
 
@@ -157,11 +157,11 @@ static sb_timer_t *timers;
 static sb_timer_t *timers_copy;
 
 /* Global execution timer */
-sb_timer_t      sb_exec_timer CK_CC_CACHELINE;
+CK_CC_CACHELINE sb_timer_t      sb_exec_timer;
 
 /* timers for intermediate/checkpoint reports */
-sb_timer_t sb_intermediate_timer CK_CC_CACHELINE;
-sb_timer_t sb_checkpoint_timer   CK_CC_CACHELINE;
+CK_CC_CACHELINE sb_timer_t sb_intermediate_timer;
+CK_CC_CACHELINE sb_timer_t sb_checkpoint_timer;
 
 TLS int sb_tls_thread_id;
 

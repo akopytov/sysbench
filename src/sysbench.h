@@ -179,16 +179,16 @@ typedef struct sb_test
 
 typedef struct
 {
-  int             error CK_CC_CACHELINE;        /* global error flag */
+  CK_CC_CACHELINE int error ;/* global error flag */
   int             argc;         /* command line arguments count */
   char            **argv;      /* command line arguments */
   unsigned int    tx_rate;      /* target transaction rate */
   uint64_t        max_events;   /* maximum number of events to execute */
   uint64_t        max_time_ns;  /* total execution time limit */
-  pthread_mutex_t exec_mutex CK_CC_CACHELINE;   /* execution mutex */
+  CK_CC_CACHELINE pthread_mutex_t exec_mutex ;   /* execution mutex */
   const char      *testname;    /* test name or script path to execute */
   const char      *cmdname;     /* command passed from command line */
-  unsigned int    threads CK_CC_CACHELINE;  /* number of threads to use */
+  CK_CC_CACHELINE unsigned int  threads ;  /* number of threads to use */
   unsigned int    threads_running;  /* number of threads currently active */
   unsigned int    report_interval;  /* intermediate reports interval */
   unsigned int    percentile;   /* percentile rank for latency stats */
@@ -199,22 +199,22 @@ typedef struct
   unsigned char   debug;        /* debug flag */
   unsigned int    timeout;      /* forced shutdown timeout */
   unsigned char   validate;     /* validation flag */
-  unsigned char   verbosity CK_CC_CACHELINE;    /* log verbosity */
-  int             concurrency CK_CC_CACHELINE;  /* number of concurrent requests
+  CK_CC_CACHELINE unsigned char   verbosity;    /* log verbosity */
+  CK_CC_CACHELINE int concurrency;  /* number of concurrent requests
                                                 when tx-rate is used */
-  int             force_shutdown CK_CC_CACHELINE; /* whether we must force test
+  CK_CC_CACHELINE int force_shutdown; /* whether we must force test
                                                   shutdown */
   int             forced_shutdown_in_progress;
   int             warmup_time;  /* warmup time */
-  uint64_t        nevents CK_CC_CACHELINE; /* event counter */
+  CK_CC_CACHELINE uint64_t        nevents; /* event counter */
   const char      *luajit_cmd; /* LuaJIT command */
 } sb_globals_t;
 
-extern sb_globals_t sb_globals CK_CC_CACHELINE;
-extern pthread_mutex_t event_queue_mutex CK_CC_CACHELINE;
+extern CK_CC_CACHELINE sb_globals_t sb_globals;
+extern CK_CC_CACHELINE pthread_mutex_t event_queue_mutex;
 
 /* Global execution timer */
-extern sb_timer_t      sb_exec_timer CK_CC_CACHELINE;
+extern CK_CC_CACHELINE sb_timer_t sb_exec_timer;
 
 /* timers for checkpoint reports */
 extern sb_timer_t      sb_intermediate_timer;

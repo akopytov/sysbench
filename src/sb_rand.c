@@ -56,7 +56,7 @@
 
 #include "sb_ck_pr.h"
 
-TLS sb_rng_state_t sb_rng_state CK_CC_CACHELINE;
+TLS CK_CC_CACHELINE sb_rng_state_t sb_rng_state;
 
 /* Exported variables */
 int sb_rand_seed; /* optional seed set on the command line */
@@ -106,7 +106,7 @@ static double zipf_s;
 static double zipf_hIntegralX1;
 
 /* Unique sequence generator state */
-static uint32_t rand_unique_index CK_CC_CACHELINE;
+static CK_CC_CACHELINE uint32_t rand_unique_index;
 static uint32_t rand_unique_offset;
 
 extern inline uint64_t sb_rand_uniform_uint64(void);

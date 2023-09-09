@@ -25,7 +25,7 @@
 #include "sb_util.h"
 #include "sb_ck_pr.h"
 
-sb_counters_t *sb_counters CK_CC_CACHELINE;
+CK_CC_CACHELINE sb_counters_t *sb_counters ;
 
 static sb_counters_t last_intermediate_counters;
 static sb_counters_t last_cumulative_counters;

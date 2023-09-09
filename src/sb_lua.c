@@ -96,11 +96,11 @@ int sb_lua_set_test_args(sb_arg_t *, size_t);
 
 /* Lua interpreter states */
 
-static lua_State **states CK_CC_CACHELINE;
+static CK_CC_CACHELINE lua_State **states;
 
-static sb_test_t sbtest CK_CC_CACHELINE;
+static CK_CC_CACHELINE sb_test_t sbtest;
 
-static TLS sb_lua_ctxt_t tls_lua_ctxt CK_CC_CACHELINE;
+static CK_CC_CACHELINE TLS sb_lua_ctxt_t tls_lua_ctxt;
 
 /* List of pre-loaded internal scripts */
 static internal_script_t internal_scripts[] = {

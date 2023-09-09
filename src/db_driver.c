@@ -46,7 +46,7 @@
 #define ROWS_BEFORE_COMMIT 1000
 
 /* Global variables */
-db_globals_t db_globals CK_CC_CACHELINE;
+CK_CC_CACHELINE db_globals_t db_globals;
 
 static sb_list_t        drivers;          /* list of available DB drivers */
 

@@ -48,7 +48,7 @@
 #define SB_HISTOGRAM_NSLOTS 128
 
 /* Global latency histogram */
-sb_histogram_t sb_latency_histogram CK_CC_CACHELINE;
+CK_CC_CACHELINE sb_histogram_t sb_latency_histogram;
 
 
 int sb_histogram_init(sb_histogram_t *h, size_t size,
