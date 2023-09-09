@@ -130,7 +130,7 @@ endif()
 set(WITH_SYSTEM_CONCURRENCY_KIT
     OFF
     CACHE BOOL "Use concurrency kit library provided by system")
-if(WITH_SYSTEM_CONCURRENCY_KIT)
+if(WITH_SYSTEM_CONCURRENCY_KIT OR WIN32)
   find_package(ConcurrencyKit REQUIRED)
 else()
   include(BuildConcurrencyKit)

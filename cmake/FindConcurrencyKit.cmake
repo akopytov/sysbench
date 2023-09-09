@@ -1,3 +1,15 @@
+if(WIN32)
+  # On Windows, we just use own header-only library
+  if(NOT TARGET ConcurrencyKit)
+    add_library(ConcurrencyKit INTERFACE)
+    target_include_directories(
+      ConcurrencyKit INTERFACE ${PROJECT_SOURCE_DIR}/src/win/ck
+                               ${PROJECT_SOURCE_DIR}/src/win/pthread)
+  endif()
+  set(ConcurrencyKit_FOUND TRUE)
+  return()
+endif()
+
 find_package(PkgConfig)
 if(PKG_CONFIG_FOUND)
   pkg_check_modules(PC_CK QUIET ck)
