@@ -1805,7 +1805,7 @@ void file_fill_buffer(unsigned char *buf, unsigned int len,
   *(int *)(void *)(buf + i) = (int)crc32(0, (unsigned char *)buf, len -
                                  (FILE_CHECKSUM_LENGTH + FILE_OFFSET_LENGTH));
   /* Store the offset */
-  *(long *)(void *)(buf + i + FILE_CHECKSUM_LENGTH) = offset;
+  *(size_t *)(void *)(buf + i + FILE_CHECKSUM_LENGTH) = offset;
 }
 
 
