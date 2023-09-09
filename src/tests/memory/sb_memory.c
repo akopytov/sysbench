@@ -112,7 +112,7 @@ int memory_init(void)
 {
   unsigned int i;
   char         *s;
-  size_t       *buffer;
+  size_t       *buffer = NULL;
 
   memory_block_size = sb_get_value_size("memory-block-size");
   if (memory_block_size < SIZEOF_SIZE_T ||
