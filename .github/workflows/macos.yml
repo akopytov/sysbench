@@ -1,0 +1,50 @@
+name: macOS-CMake
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest]
+    runs-on: ${{ matrix.os }}
+    name: Build on ${{ matrix.os }}
+    steps:
+      - name: actions-setup-mysql
+        uses: shogo82148/actions-setup-mysql@v1.17.0
+        with:
+          mysql-version: 'mysql-8.0'
+          my-cnf: |
+            innodb_log_file_size=256MB
+            innodb_buffer_pool_size=512MB
+            max_allowed_packet=16MB
+            max_connections=500
+      - name: show variables
+        run: mysql -uroot --host=127.0.0.1 -e "show variables"
+      - name: install client drivers
+        run : |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install mysql-client libpq
+          brew link --force mysql-client
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: configure
+        run: cmake -B build_dir -S . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_PGSQL=1
+      - name: build
+        run: cmake --build build_dir --config RelWithDebInfo -j4
+      - name: test_install
+        run: |
+          cmake --install build_dir --prefix install_dir --config RelWithDebInfo
+          echo "$GITHUB_WORKSPACE/install_dir/bin" >> $GITHUB_PATH
+      - name: which sysbench
+        run: which sysbench
+      - name: sysbench version
+        run: sysbench --version
+      - name: create database sbtest
+        run: mysql -uroot --host=127.0.0.1 -e "create database sbtest"
+      - name: sysbench oltp_read_write prepare
+        run: sysbench oltp_read_write --mysql-user=root --mysql-host=127.0.0.1 --table-size=100000 prepare
+      - name: sysbench oltp_read_write run
+        run: sysbench oltp_read_write --mysql-user=root --mysql-host=127.0.0.1 --time=30 --table-size=100000 --threads=4  --report-interval=1 run
+      - name: sysbench oltp_read_write run ssl
+        run: sysbench oltp_read_write --mysql-user=root --mysql-host=127.0.0.1 --time=30 --mysql-ssl=preferred --table-size=100000 --threads=4  --report-interval=1 run
+      - name: sysbench oltp_read_write cleanup
+        run: sysbench oltp_read_write --mysql-user=root --mysql-host=127.0.0.1 cleanup
