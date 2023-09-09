@@ -885,7 +885,7 @@ static int convert_extra_flags(file_flags_t extra_flags, int *open_flags)
 #endif
     }
 
-    if (extra_flags > SB_FILE_FLAG_DIRECTIO)
+    if (extra_flags > (SB_FILE_FLAG_SYNC|SB_FILE_FLAG_DSYNC|SB_FILE_FLAG_DIRECTIO))
     {
       log_text(LOG_FATAL, "Unknown extra flags value: %d", (int) extra_flags);
       return 1;
