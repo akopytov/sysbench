@@ -72,7 +72,7 @@ SQL Lua API + MySQL tests
   --
   reconnects = 1
   FATAL: unable to connect to MySQL server on host 'non-existing', port 3306, aborting...
-  FATAL: error 2005: Unknown MySQL server host 'non-existing' (0)
+  FATAL: error 2005: Unknown MySQL server host 'non-existing' (*) (glob)
   connection creation failed
   --
   FATAL: mysql_drv_query() returned error 1048 (Column 'a' cannot be null) for query 'INSERT INTO t VALUES (NULL)'
