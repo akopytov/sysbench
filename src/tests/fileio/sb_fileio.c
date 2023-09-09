@@ -53,6 +53,16 @@
 #include "sb_util.h"
 #include "sb_counter.h"
 
+
+#ifdef _WIN32
+
+/* use portability wrapper that understands O_DIRECT and O_SYNC */
+#ifdef open
+#undef open
+#endif
+#define open(a, b, c) sb_win_open(a, b)
+#endif
+
 /* Lengths of the checksum and the offset fields in a block */
 #define FILE_CHECKSUM_LENGTH sizeof(int)
 #define FILE_OFFSET_LENGTH sizeof(long)
