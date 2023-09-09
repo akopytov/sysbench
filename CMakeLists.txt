@@ -1,4 +1,9 @@
-cmake_minimum_required(VERSION 3.12..3.26)
+if(WIN32)
+  # new-ish cmake features, install(runtime_dependencies etc)
+  cmake_minimum_required(VERSION 3.21..3.26)
+else()
+  cmake_minimum_required(VERSION 3.12..3.26)
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 if(APPLE)

@@ -153,6 +153,29 @@ endif()
 add_dependencies(sysbench ConcurrencyKit)
 target_link_libraries(sysbench PRIVATE ConcurrencyKit)
 
+if(WIN32)
+  # Add location of sb_win_posix.h include file
+  target_include_directories(sysbench SYSTEM BEFORE
+                             PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win)
+
+  # Copy dlls next to exe, so that sysbench can run after compilation without
+  # setting PATH
+  add_custom_command(
+    TARGET sysbench
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:luajit::libluajit> $<TARGET_FILE_DIR:sysbench>
+    COMMENT "Copy luajit dll")
+  if(TARGET mariadbclient)
+    add_custom_command(
+      TARGET sysbench
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:mariadbclient>
+              $<TARGET_FILE_DIR:sysbench>
+      COMMENT "Copy libmariadb dll")
+  endif()
+endif()
+
 # Find git hash, if built from git
 include(githash)
 githash(SB_GIT_SHA)
@@ -165,42 +188,71 @@ configure_file(config.h.in config.h @ONLY)
 # Installation related stuff
 add_subdirectory(lua)
 
+if(NOT WIN32)
+  # Install tests
+  if(WITH_MYSQL)
+    set(USE_MYSQL 1)
+  endif()
+  if(WITH_PGSQL)
+    set(USE_MYSQL 1)
+  endif()
 
-# Install tests
-if(WITH_MYSQL)
-  set(USE_MYSQL 1)
+  configure_file(${PROJECT_SOURCE_DIR}/tests/include/config.sh.in
+                 ${PROJECT_BINARY_DIR}/tests/include/config.sh @ONLY)
+  install(
+    FILES ${PROJECT_BINARY_DIR}/tests/include/config.sh
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}/tests/include)
+
+  install(
+    DIRECTORY ${PROJECT_SOURCE_DIR}/tests
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}
+    USE_SOURCE_PERMISSIONS FILES_MATCHING
+    PATTERN "*.t"
+    PATTERN "*.sh"
+    PATTERN "*.md"
+    PATTERN "*.lua")
+
+  if(${PROJECT_SOURCE_DIR} STREQUAL ${PROJECT_BINARY_DIR})
+    # make test is broken on out-of-source
+    add_custom_target(
+      test
+      COMMAND sh -c ./test_run.sh
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests)
+  endif()
 endif()
-if(WITH_PGSQL)
-  set(USE_MYSQL 1)
+
+if(WIN32)
+  if(TARGET MySQL::MySQL)
+    set(mysqlclientlib MySQL::MySQL)
+  elseif(TARGET mariadbclient)
+    set(mysqlclientlib mariadbclient)
+  endif()
+  cmake_path(GET CMAKE_C_COMPILER PARENT_PATH compiler_dir)
+  # Install .dll dependencies next to the executable
+  install(
+    TARGETS sysbench
+    EXPORT sysbenchTargets
+    RUNTIME_DEPENDENCIES
+    PRE_EXCLUDE_REGEXES
+    "api-ms-"
+    "ext-ms-" # magic to exclude MS .dlls
+    POST_EXCLUDE_REGEXES
+    ".*system32/.*\\.dll"
+    DIRECTORIES
+    $<TARGET_FILE_DIR:sysbench>
+    $<TARGET_FILE_DIR:luajit::libluajit>
+    $<$<BOOL:${mysqlclientlib}>:$<TARGET_FILE_DIR:${mysqlclientlib}>>
+    ${PostgreSQL_LIBRARY_DIRS}
+    $<$<BOOL:${PostgreSQL_LIBRARY_DIR}>:${PostgreSQL_LIBRARY_DIR}/../bin>
+    $<$<TARGET_EXISTS:ZLIB::ZLIB>:$<TARGET_FILE_DIR:ZLIB::ZLIB>/../bin>
+    ${compiler_dir}
+  )
+else()
+  install(
+    TARGETS sysbench
+    EXPORT sysbenchTargets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
-
-configure_file(${PROJECT_SOURCE_DIR}/tests/include/config.sh.in
-               ${PROJECT_BINARY_DIR}/tests/include/config.sh @ONLY)
-install(
-  FILES ${PROJECT_BINARY_DIR}/tests/include/config.sh
-  DESTINATION ${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}/tests/include)
-
-install(
-  DIRECTORY ${PROJECT_SOURCE_DIR}/tests
-  DESTINATION ${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}
-  USE_SOURCE_PERMISSIONS FILES_MATCHING
-  PATTERN "*.t"
-  PATTERN "*.sh"
-  PATTERN "*.md"
-  PATTERN "*.lua")
-
-if(${PROJECT_SOURCE_DIR} STREQUAL ${PROJECT_BINARY_DIR})
-  # make test is broken on out-of-source
-  add_custom_target(
-    test
-    COMMAND sh -c ./test_run.sh
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests)
-endif()
-
-install(
-  TARGETS sysbench
-  EXPORT sysbenchTargets
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(
   EXPORT sysbenchTargets
@@ -221,4 +273,8 @@ write_basic_package_version_file(
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sysbenchConfig.cmake
               ${CMAKE_CURRENT_BINARY_DIR}/sysbenchConfigVersion.cmake
         DESTINATION share/sysbench/cmake)
+if(WIN32)
+  # A more reasonable choice of default package on Windows than NSIS
+  set(CPACK_GENERATOR ZIP)
+endif()
 include(CPack)
