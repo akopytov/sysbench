@@ -672,7 +672,7 @@ void print_run_mode(sb_test_t *test)
   {
     log_text(LOG_NOTICE,
              "Initializing random number generator from current time\n");
-    srandom(time(NULL));
+    srandom((unsigned int)time(NULL));
   }
 
   if (sb_globals.force_shutdown)
@@ -849,9 +849,9 @@ static void *worker_thread(void *arg)
 
 /* Generate exponentially distributed number with a given Lambda */
 
-static inline double sb_rand_exp(double lambda)
+static inline uint64_t sb_rand_exp(double lambda)
 {
-  return -lambda * log(1 - sb_rand_uniform_double());
+  return (uint64_t)(-lambda * log(1 - sb_rand_uniform_double()));
 }
 
 static void *eventgen_thread_proc(void *arg)
@@ -1172,7 +1172,7 @@ static int run_test(sb_test_t *test)
     /* Set the alarm to force shutdown */
     signal(SIGALRM, sigalrm_forced_shutdown_handler);
 
-    alarm(NS2SEC(sb_globals.max_time_ns) + sb_globals.timeout);
+    alarm((unsigned int)NS2SEC(sb_globals.max_time_ns) + sb_globals.timeout);
   }
 #endif
 
@@ -1340,7 +1340,7 @@ static int init(void)
     if (tmp == NULL)
     {
       sb_globals.force_shutdown = 1;
-      sb_globals.timeout = NS2SEC(sb_globals.max_time_ns) / 20;
+      sb_globals.timeout = (unsigned int)NS2SEC(sb_globals.max_time_ns) / 20;
     }
     else if (strcasecmp(tmp, "off"))
     {

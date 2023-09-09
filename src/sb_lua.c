@@ -230,7 +230,7 @@ static int do_export_options(lua_State *L, bool global)
         lua_pushnumber(L, sb_opt_to_double(opt));
         break;
       case SB_ARG_TYPE_SIZE:
-        lua_pushnumber(L, sb_opt_to_size(opt));
+        lua_pushinteger(L, sb_opt_to_size(opt));
         break;
       case SB_ARG_TYPE_STRING:
         tmp = sb_opt_to_string(opt);
@@ -1040,7 +1040,7 @@ int sb_lua_call_custom_command(const char *name)
   return call_custom_command(gstate);
 }
 
-#define stat_to_number(name) sb_lua_var_number(L, #name, stat->name)
+#define stat_to_number(name) sb_lua_var_number(L, #name, (lua_Number)stat->name)
 
 static void stat_to_lua_table(lua_State *L, sb_stat_t *stat)
 {

@@ -196,9 +196,9 @@ void sb_print_options(sb_arg_t *opts)
   /* Count the maximum name length */
   for (i = 0, maxlen = 0; opts[i].name != NULL; i++)
   {
-    len = strlen(opts[i].name);
+    len = (unsigned int)strlen(opts[i].name);
     len += (opts[i].type < SB_ARG_TYPE_MAX) ?
-      strlen(opt_formats[opts[i].type]) : 8 /* =UNKNOWN */;
+      (unsigned int)strlen(opt_formats[opts[i].type]) : 8 /* =UNKNOWN */;
     if (len > maxlen)
       maxlen = len;
   }

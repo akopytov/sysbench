@@ -40,6 +40,14 @@
 
 #include "sb_util.h"
 
+#ifdef _MSC_VER
+/*
+  Allow floor() to be converted to an integer without an explicit cast
+  (the case causes GCC bad-cast warning)
+*/
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
 
 /*
    Number of slots for current histogram array. TODO: replace this constant with
@@ -368,3 +376,8 @@ void sb_histogram_delete(sb_histogram_t *h)
   sb_histogram_done(h);
   free(h);
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+

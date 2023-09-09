@@ -604,7 +604,7 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
     stmt->ptr = (void *)mystmt;
     DEBUG("mysql_stmt_prepare(%p, \"%s\", %u) = %p", mystmt, query,
           (unsigned int) len, stmt->ptr);
-    if (mysql_stmt_prepare(mystmt, query, len))
+    if (mysql_stmt_prepare(mystmt, query, (unsigned long)len))
     {
       /* Check if this statement in not supported */
       rc = mysql_errno(con);
@@ -723,7 +723,7 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
   if (stmt->bound_param == NULL)
     return 1;
   memcpy(stmt->bound_param, params, len * sizeof(db_bind_t));
-  stmt->bound_param_len = len;
+  stmt->bound_param_len = (unsigned int)len;
 
   return 0;
 
@@ -1064,7 +1064,7 @@ db_error_t mysql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
   db_mysql_con = (db_mysql_conn_t *)sb_conn->ptr;
   con = db_mysql_con->mysql;
 
-  int err = mysql_real_query(con, query, len);
+  int err = mysql_real_query(con, query, (unsigned long)len);
   DEBUG("mysql_real_query(%p, \"%s\", %zd) = %d", con, query, len, err);
 
   if (SB_UNLIKELY(err != 0))
@@ -1097,7 +1097,7 @@ db_error_t mysql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
   rs->counter = SB_CNT_READ;
   rs->ptr = (void *)res;
 
-  rs->nrows = mysql_num_rows(res);
+  rs->nrows = (uint32_t)mysql_num_rows(res);
   DEBUG("mysql_num_rows(%p) = %u", res, (unsigned int) rs->nrows);
 
   rs->nfields = mysql_num_fields(res);
@@ -1223,7 +1223,7 @@ db_error_t mysql_drv_next_result(db_conn_t *sb_conn, db_result_t *rs)
   rs->counter = SB_CNT_READ;
   rs->ptr = (void *)res;
 
-  rs->nrows = mysql_num_rows(res);
+  rs->nrows = (uint32_t)mysql_num_rows(res);
   DEBUG("mysql_num_rows(%p) = %u", res, (unsigned int) rs->nrows);
 
   rs->nfields = mysql_num_fields(res);

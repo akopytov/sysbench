@@ -285,8 +285,7 @@ int event_rnd_none(sb_event_t *req, int tid)
 
   for (ssize_t i = 0; i <= max_offset; i++)
   {
-    size_t offset = (volatile size_t) sb_rand_default(0, max_offset);
-    (void) offset; /* unused */
+    (void)sb_rand_default(0, (uint32_t)max_offset);
   }
 
   return 0;
@@ -299,7 +298,7 @@ int event_rnd_read(sb_event_t *req, int tid)
 
   for (ssize_t i = 0; i <= max_offset; i++)
   {
-    size_t offset = (size_t) sb_rand_default(0, max_offset);
+    size_t offset = (size_t) sb_rand_default(0, (uint32_t)max_offset);
     size_t val = SIZE_T_LOAD(buffers[tid] + offset);
     (void) val; /* unused */
   }
@@ -314,7 +313,7 @@ int event_rnd_write(sb_event_t *req, int tid)
 
   for (ssize_t i = 0; i <= max_offset; i++)
   {
-    size_t offset = (size_t) sb_rand_default(0, max_offset);
+    size_t offset = (size_t) sb_rand_default(0, (uint32_t)max_offset);
     SIZE_T_STORE(buffers[tid] + offset, i);
   }
 

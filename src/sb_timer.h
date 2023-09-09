@@ -50,7 +50,7 @@
 
 /* Convert nanoseconds to seconds and vice versa */
 #define NS2SEC(nsec) ((nsec) / (double) NS_PER_SEC)
-#define SEC2NS(sec)  ((uint64_t) (sec) * NS_PER_SEC)
+#define SEC2NS(sec)  (((uint64_t) (sec)) * NS_PER_SEC)
 
 /* Convert nanoseconds to milliseconds and vice versa */
 #define NS2MS(nsec) ((nsec) / (double) NS_PER_MS)

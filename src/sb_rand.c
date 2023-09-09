@@ -236,7 +236,7 @@ uint32_t sb_rand_default(uint32_t a, uint32_t b)
 
 uint32_t sb_rand_uniform(uint32_t a, uint32_t b)
 {
-  return a + sb_rand_uniform_double() * (b - a + 1);
+  return (uint32_t)(a + sb_rand_uniform_double() * (b - a + 1));
 }
 
 /* gaussian distribution */

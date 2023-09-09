@@ -960,8 +960,8 @@ int db_bulk_insert_init(db_conn_t *con, const char *query, size_t query_len)
   con->bulk_commit_max = driver_caps.needs_commit ? ROWS_BEFORE_COMMIT : 0;
   con->bulk_commit_cnt = 0;
   strcpy(con->bulk_buffer, query);
-  con->bulk_ptr = query_len;
-  con->bulk_values = query_len;
+  con->bulk_ptr = (unsigned int)query_len;
+  con->bulk_values = (unsigned int)query_len;
   con->bulk_cnt = 0;
 
   return 0;
@@ -1015,7 +1015,7 @@ int db_bulk_insert_next(db_conn_t *con, const char *query, size_t query_len)
   }
   else
     strcpy(con->bulk_buffer + con->bulk_ptr, query);
-  con->bulk_ptr += query_len + (con->bulk_cnt > 0);
+  con->bulk_ptr += (unsigned int)query_len + (con->bulk_cnt > 0);
 
   con->bulk_cnt++;
 
