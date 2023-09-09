@@ -514,6 +514,40 @@ static void sb_lua_var_string(lua_State *L, const char *name, const char *s)
     lua_settable(L, -3);
 }
 
+#ifdef _WIN32
+/*
+  Path relative to current executable, in the same way luajit is doing it.
+*/
+static void sb_setprogdir_path(lua_State * L)
+{
+  char path[MAX_PATH + 1];
+  char* lb;
+  DWORD nsize = sizeof(path);
+  DWORD n = GetModuleFileNameA(NULL, path, nsize);
+  if (n == 0 || n == nsize || (lb = strrchr(path, '\\')) == NULL) {
+    luaL_error(L, "unable to get ModuleFileName");
+  }
+  else
+  {
+    *lb = '\0';
+    lua_pushstring(L, path);
+    lua_pushliteral(L, "\\?.lua;");
+    lua_pushstring(L, path);
+    lua_pushliteral(L, "\\lua\\?.lua;");
+    /* Resolve path */
+    lb = strrchr(path, '\\');
+    if (lb)
+    {
+      *lb = '\0';
+      lua_pushstring(L, path);
+      lua_pushliteral(L, "\\share\\sysbench\\?.lua;");
+    }
+  }
+}
+#else
+#define sb_setprogdir_path(L) (void)0
+#endif
+
 /*
   Set package.path and package.cpath in a given environment. Also honor
   LUA_PATH/LUA_CPATH to mimic the default Lua behavior.
@@ -526,6 +560,7 @@ static void sb_lua_set_paths(lua_State *L)
 
   lua_pushliteral(L, "./?.lua;");
   lua_pushliteral(L, "./?/init.lua;");
+  sb_setprogdir_path(L);
   lua_pushliteral(L, "./src/lua/?.lua;");
 
   const char *home = getenv("HOME");
@@ -541,8 +576,10 @@ static void sb_lua_set_paths(lua_State *L)
     lua_pushliteral(L, "/.luarocks/share/lua/?/init.lua;");
   }
 
+#ifndef _WIN32
   lua_pushliteral(L, "/usr/local/share/lua/5.1/?.lua;");
   lua_pushliteral(L, "/usr/share/lua/5.1/?.lua;");
+#endif
   lua_pushliteral(L, DATADIR "/?.lua;");
 
   lua_concat(L, lua_gettop(L) - top);
@@ -567,9 +604,11 @@ static void sb_lua_set_paths(lua_State *L)
     lua_pushliteral(L, "/.luarocks/lib/lua/?" DLEXT ";");
   }
 
+#ifndef _WIN32
   lua_pushliteral(L, "/usr/local/lib/lua/5.1/?" DLEXT ";");
   lua_pushliteral(L, "/usr/lib/lua/5.1/?" DLEXT ";");
-  lua_pushliteral(L, LIBDIR ";");
+  lua_pushliteral(L, LIBDIR "/?" DLEXT ";");
+#endif
 
   lua_concat(L, lua_gettop(L) - top);
 
