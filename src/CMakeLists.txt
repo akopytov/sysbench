@@ -90,11 +90,26 @@ else()
 endif()
 target_link_libraries(sysbench PRIVATE luajit::libluajit)
 
+# On Windows, we prefer libmariadb built from source (as external project) to
+# provide better named pipe support On *nix, we prefer system
+# libmysql/libmariadb
+if(WIN32)
+  set(_WITH_LIBMARIADB_DEFAULT ON)
+else()
+  set(_WITH_LIBMARIADB_DEFAULT OFF)
+endif()
+set(WITH_LIBMARIADB
+    ${_WITH_LIBMARIADB_DEFAULT}
+    CACHE BOOL "Build libmariadb from source (as external project)")
+if(WITH_LIBMARIADB)
+  include(BuildLibmariadb)
+  target_link_libraries(sysbench PRIVATE mariadbclient)
+endif()
 
 set(WITH_MYSQL
     ON
     CACHE BOOL "Enable mysql support for database tests")
-if(WITH_MYSQL)
+if(WITH_MYSQL AND (NOT WITH_LIBMARIADB))
   find_package(MySQL REQUIRED)
   target_link_libraries(sysbench PRIVATE MySQL::MySQL)
   set(CMAKE_REQUIRED_INCLUDES ${MySQL_INCLUDE_DIRS})
@@ -109,7 +124,7 @@ if(WITH_MYSQL)
     HAVE_MYSQL_OPT_SSL_MODE)
 endif()
 
-if(WITH_MYSQL)
+if(WITH_MYSQL OR WITH_LIBMARIADB)
   target_compile_definitions(sysbench PRIVATE -DUSE_MYSQL)
   target_sources(sysbench PRIVATE drivers/mysql/drv_mysql.c)
 endif()
