@@ -33,6 +33,14 @@ end
 sysbench.cmdline.options = {
    table_size =
       {"Number of rows per table", 10000},
+   start_id =
+      {"Start id of rows for prepare insert into table, " ..
+       "used for parallel prepare data into one table, " ..
+       "users can run multiple sysbench process with different start_id concurrently. " ..
+       "in this case, range_size is the number of rows to be inserted, id of inserted " ..
+       "rows are {start_id, start_id + 1, ..., start_id + range_size - 1}. " ..
+       "this option should not be used with auto_inc. " ..
+       "default is 0 to conform origin sysbench", 0},
    range_size =
       {"Range size for range SELECT queries", 100},
    tables =
@@ -198,7 +206,7 @@ function create_table(drv, con, table_num)
 
    if sysbench.opt.use_file then
       query = string.format([[
-   CREATE TABLE sbtest%d(
+   CREATE TABLE IF NOT EXISTS sbtest%d(
      id %s,
      k INTEGER DEFAULT '0' NOT NULL,
      c VARCHAR(512) DEFAULT '' NOT NULL,
@@ -209,7 +217,7 @@ function create_table(drv, con, table_num)
          sysbench.opt.create_table_options)
    else
       query = string.format([[
-   CREATE TABLE sbtest%d(
+   CREATE TABLE IF NOT EXISTS sbtest%d(
      id %s,
      k INTEGER DEFAULT '0' NOT NULL,
      c CHAR(120) DEFAULT '' NOT NULL,
@@ -237,8 +245,18 @@ function create_table(drv, con, table_num)
 
    local c_val
    local pad_val
+   local start_id;
+   local finish_id;
 
-   for i = 1, sysbench.opt.table_size do
+   if sysbench.opt.start_id == 0 then
+      start_id = 1;
+      finish_id = sysbench.opt.table_size;
+   else
+      start_id = sysbench.opt.start_id;
+      finish_id = start_id + sysbench.opt.range_size - 1;
+   end
+
+   for i = start_id, finish_id do
 
       if sysbench.opt.use_file then
          c_val, pad_val = get_str_value()
