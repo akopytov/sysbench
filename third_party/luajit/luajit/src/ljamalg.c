@@ -1,6 +1,6 @@
 /*
 ** LuaJIT core and libraries amalgamation.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define ljamalg_c
@@ -88,4 +88,3 @@
 #include "lib_ffi.c"
 #include "lib_buffer.c"
 #include "lib_init.c"
-

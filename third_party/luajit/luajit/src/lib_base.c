@@ -1,6 +1,6 @@
 /*
 ** Base and coroutine library.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2011 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -36,6 +36,7 @@
 #include "lj_strscan.h"
 #include "lj_strfmt.h"
 #include "lj_lib.h"
+#include "lj_cdata.h"
 
 /* -- Base library: checks ------------------------------------------------ */
 
@@ -616,7 +617,10 @@ static int ffh_resume(lua_State *L, lua_State *co, int wrap)
     setstrV(L, L->base-LJ_FR2, lj_err_str(L, em));
     return FFH_RES(2);
   }
-  lj_state_growstack(co, (MSize)(L->top - L->base));
+  if (lj_state_cpgrowstack(co, (MSize)(L->top - L->base)) != LUA_OK) {
+    cTValue *msg = --co->top;
+    lj_err_callermsg(L, strVdata(msg));
+  }
   return FFH_RETRY;
 }
 
@@ -669,6 +673,52 @@ static void setpc_wrap_aux(lua_State *L, GCfunc *fn)
   setmref(fn->c.pc, &L2GG(L)->bcff[lj_lib_init_coroutine[1]+2]);
 }
 
+#if LJ_HASFFI
+LJLIB_NOREG LJLIB_CF(thread_exdata) LJLIB_REC(.)
+{
+  ptrdiff_t nargs = L->top - L->base;
+  GCcdata *cd;
+
+  if (nargs == 0) {
+    CTState *cts = ctype_ctsG(G(L));
+    if (cts == NULL)
+      lj_err_caller(L, LJ_ERR_FFI_NOTLOAD);
+    cts->L = L;  /* Save L for errors and allocations. */
+
+    cd = lj_cdata_new(cts, CTID_P_VOID, CTSIZE_PTR);
+    cdata_setptr(cdataptr(cd), CTSIZE_PTR, L->exdata);
+    setcdataV(L, L->top++, cd);
+    return 1;
+  }
+
+  cd = lj_lib_checkcdata(L, 1);
+  L->exdata = cdata_getptr(cdataptr(cd), CTSIZE_PTR);
+  return 0;
+}
+
+LJLIB_NOREG LJLIB_CF(thread_exdata2) LJLIB_REC(.)
+{
+  ptrdiff_t nargs = L->top - L->base;
+  GCcdata *cd;
+
+  if (nargs == 0) {
+    CTState *cts = ctype_ctsG(G(L));
+    if (cts == NULL)
+      lj_err_caller(L, LJ_ERR_FFI_NOTLOAD);
+    cts->L = L;  /* Save L for errors and allocations. */
+
+    cd = lj_cdata_new(cts, CTID_P_VOID, CTSIZE_PTR);
+    cdata_setptr(cdataptr(cd), CTSIZE_PTR, L->exdata2);
+    setcdataV(L, L->top++, cd);
+    return 1;
+  }
+
+  cd = lj_lib_checkcdata(L, 1);
+  L->exdata2 = cdata_getptr(cdataptr(cd), CTSIZE_PTR);
+  return 0;
+}
+#endif
+
 /* ------------------------------------------------------------------------ */
 
 static void newproxy_weaktable(lua_State *L)
@@ -682,6 +732,18 @@ static void newproxy_weaktable(lua_State *L)
   t->nomm = (uint8_t)(~(1u<<MM_mode));
 }
 
+#if LJ_HASFFI
+static int luaopen_thread_exdata(lua_State *L)
+{
+  return lj_lib_postreg(L, lj_cf_thread_exdata, FF_thread_exdata, "exdata");
+}
+
+static int luaopen_thread_exdata2(lua_State *L)
+{
+  return lj_lib_postreg(L, lj_cf_thread_exdata2, FF_thread_exdata2, "exdata2");
+}
+#endif
+
 LUALIB_API int luaopen_base(lua_State *L)
 {
   /* NOBARRIER: Table and value are the same. */
@@ -691,6 +753,12 @@ LUALIB_API int luaopen_base(lua_State *L)
   newproxy_weaktable(L);  /* top-2. */
   LJ_LIB_REG(L, "_G", base);
   LJ_LIB_REG(L, LUA_COLIBNAME, coroutine);
+
+#if LJ_HASFFI
+  lj_lib_prereg(L, LUA_THRLIBNAME ".exdata", luaopen_thread_exdata, env);
+  lj_lib_prereg(L, LUA_THRLIBNAME ".exdata2", luaopen_thread_exdata2, env);
+#endif
+
   return 2;
 }
 

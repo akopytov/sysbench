@@ -1,6 +1,6 @@
 /*
 ** Table handling.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -13,6 +13,8 @@
 #include "lj_gc.h"
 #include "lj_err.h"
 #include "lj_tab.h"
+
+#include <math.h>
 
 /* -- Object hashing ------------------------------------------------------ */
 
@@ -691,3 +693,85 @@ MSize LJ_FASTCALL lj_tab_len_hint(GCtab *t, size_t hint)
 }
 #endif
 
+
+GCtab * LJ_FASTCALL lj_tab_clone(lua_State *L, const GCtab *src)
+{
+  return lj_tab_dup(L, src);
+}
+
+int LJ_FASTCALL lj_tab_isarray(const GCtab *src)
+{
+  Node *node;
+  cTValue *o;
+  ptrdiff_t i;
+
+  node = noderef(src->node);
+  for (i = (ptrdiff_t)src->hmask; i >= 0; i--)
+    if (!tvisnil(&node[i].val)) {
+      o = &node[i].key;
+      if (LJ_UNLIKELY(tvisint(o))) {
+        continue;
+      }
+      if (LJ_UNLIKELY(tvisnum(o))) {
+        lua_Number n = numberVnum(o);
+        if (LJ_LIKELY(rint((double) n) == n)) {
+          continue;
+        }
+      }
+      return 0;
+    }
+
+  return 1;
+}
+
+MSize LJ_FASTCALL lj_tab_nkeys(const GCtab *t)
+{
+  MSize narr = (MSize)t->asize;
+  cTValue *e;
+  Node *node;
+  MSize i, cnt = 0;
+
+  e = tvref(t->array);
+  for (i = 0; i < narr; i++)
+    if (LJ_LIKELY(!tvisnil(&e[i])))
+      cnt++;
+
+  if (t->hmask <= 0)
+    return cnt;
+
+  node = noderef(t->node);
+  for (i = 0; i <= (MSize)t->hmask; i++) {
+    Node *n = &node[i];
+    if (LJ_LIKELY(!tvisnil(&n->val))) {
+      cnt++;
+    }
+  }
+
+  return cnt;
+}
+
+int LJ_FASTCALL lj_tab_isempty(const GCtab *t)
+{
+  MSize narr = (MSize)t->asize;
+  cTValue *e;
+  Node *node;
+  MSize i;
+
+  e = tvref(t->array);
+  for (i = 0; i < narr; i++)
+    if (LJ_LIKELY(!tvisnil(&e[i])))
+      return 0;
+
+  if (t->hmask <= 0)
+    return 1;
+
+  node = noderef(t->node);
+  for (i = 0; i <= (MSize)t->hmask; i++) {
+    Node *n = &node[i];
+    if (LJ_LIKELY(!tvisnil(&n->val))) {
+      return 0;
+    }
+  }
+
+  return 1;
+}

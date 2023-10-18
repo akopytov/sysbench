@@ -1,6 +1,6 @@
 /*
 ** x86/x64 IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Guard handling ------------------------------------------------------ */
@@ -140,7 +140,8 @@ static IRRef asm_fuseabase(ASMState *as, IRRef ref)
     }
   } else if (irb->o == IR_ADD && irref_isk(irb->op2)) {
     /* Fuse base offset (vararg load). */
-    as->mrm.ofs = IR(irb->op2)->i;
+    IRIns *irk = IR(irb->op2);
+    as->mrm.ofs = irk->o == IR_KINT ? irk->i : (int32_t)ir_kint64(irk)->u64;
     return irb->op1;
   }
   return ref;  /* Otherwise use the given array base. */
@@ -1299,7 +1300,7 @@ static void asm_hrefk(ASMState *as, IRIns *ir)
   int32_t ofs = (int32_t)(kslot->op2 * sizeof(Node));
   Reg dest = ra_used(ir) ? ra_dest(as, ir, RSET_GPR) : RID_NONE;
   Reg node = ra_alloc1(as, ir->op1, RSET_GPR);
-#if !LJ_64
+#if !LJ_64 || (defined(LUAJIT_USE_VALGRIND) && !LJ_GC64)
   MCLabel l_exit;
 #endif
   lj_assertA(ofs % sizeof(Node) == 0, "unaligned HREFK slot");
@@ -1314,7 +1315,7 @@ static void asm_hrefk(ASMState *as, IRIns *ir)
     }
   }
   asm_guardcc(as, CC_NE);
-#if LJ_64
+#if LJ_64 && (!defined(LUAJIT_USE_VALGRIND) || LJ_GC64)
   if (!irt_ispri(irkey->t)) {
     Reg key = ra_scratch(as, rset_exclude(RSET_GPR, node));
     emit_rmro(as, XO_CMP, key|REX_64, node,
@@ -2877,7 +2878,7 @@ static void asm_head_root_base(ASMState *as)
 }
 
 /* Coalesce or reload BASE register for a side trace. */
-static RegSet asm_head_side_base(ASMState *as, IRIns *irp, RegSet allow)
+static Reg asm_head_side_base(ASMState *as, IRIns *irp)
 {
   IRIns *ir = IR(REF_BASE);
   Reg r = ir->r;
@@ -2886,16 +2887,16 @@ static RegSet asm_head_side_base(ASMState *as, IRIns *irp, RegSet allow)
     if (rset_test(as->modset, r) || irt_ismarked(ir->t))
       ir->r = RID_INIT;  /* No inheritance for modified BASE register. */
     if (irp->r == r) {
-      rset_clear(allow, r);  /* Mark same BASE register as coalesced. */
+      return r;  /* Same BASE register already coalesced. */
     } else if (ra_hasreg(irp->r) && rset_test(as->freeset, irp->r)) {
       /* Move from coalesced parent reg. */
-      rset_clear(allow, irp->r);
       emit_rr(as, XO_MOV, r|REX_GC64, irp->r);
+      return irp->r;
     } else {
       emit_getgl(as, r, jit_base);  /* Otherwise reload BASE. */
     }
   }
-  return allow;
+  return RID_NONE;
 }
 
 /* -- Tail of trace ------------------------------------------------------- */

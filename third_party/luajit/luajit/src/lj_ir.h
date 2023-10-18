@@ -1,6 +1,6 @@
 /*
 ** SSA IR (Intermediate Representation) format.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_IR_H
@@ -76,8 +76,8 @@
   \
   _(ABS,	N , ref, ref) \
   _(LDEXP,	N , ref, ref) \
-  _(MIN,	C , ref, ref) \
-  _(MAX,	C , ref, ref) \
+  _(MIN,	N , ref, ref) \
+  _(MAX,	N , ref, ref) \
   _(FPMATH,	N , ref, lit) \
   \
   /* Overflow-checking arithmetic ops. */ \
@@ -196,6 +196,8 @@ IRFPMDEF(FPMENUM)
   _(FUNC_PC,	offsetof(GCfunc, l.pc)) \
   _(FUNC_FFID,	offsetof(GCfunc, l.ffid)) \
   _(THREAD_ENV,	offsetof(lua_State, env)) \
+  _(THREAD_EXDATA,	offsetof(lua_State, exdata)) \
+  _(THREAD_EXDATA2,	offsetof(lua_State, exdata2)) \
   _(TAB_META,	offsetof(GCtab, metatable)) \
   _(TAB_ARRAY,	offsetof(GCtab, array)) \
   _(TAB_NODE,	offsetof(GCtab, node)) \

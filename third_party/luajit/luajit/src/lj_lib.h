@@ -1,6 +1,6 @@
 /*
 ** Library function support.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_LIB_H
@@ -45,6 +45,7 @@ LJ_FUNC GCfunc *lj_lib_checkfunc(lua_State *L, int narg);
 LJ_FUNC GCtab *lj_lib_checktab(lua_State *L, int narg);
 LJ_FUNC GCtab *lj_lib_checktabornil(lua_State *L, int narg);
 LJ_FUNC int lj_lib_checkopt(lua_State *L, int narg, int def, const char *lst);
+LJ_FUNC GCcdata *lj_lib_checkcdata(lua_State *L, int narg);
 
 #if LJ_HASBUFFER
 LJ_FUNC GCstr *lj_lib_checkstrx(lua_State *L, int narg);

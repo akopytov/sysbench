@@ -1,6 +1,6 @@
 /*
 ** OS library.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -185,6 +185,7 @@ LJLIB_CF(os_date)
 #endif
   } else {
 #if LJ_TARGET_POSIX
+    tzset();
     stm = localtime_r(&t, &rtm);
 #else
     stm = localtime(&t);

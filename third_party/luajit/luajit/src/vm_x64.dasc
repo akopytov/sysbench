@@ -1,6 +1,6 @@
 |// Low-level VM code for x64 CPUs in LJ_GC64 mode.
 |// Bytecode interpreter, fast functions and helper functions.
-|// Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+|// Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 |
 |.arch x64
 |.section code_op, code_sub
@@ -2452,8 +2452,21 @@ static void build_subroutines(BuildCtx *ctx)
   |  mov r13, [RA-8]
   |  mov r12, [RA]
   |  mov rsp, RA			// Reposition stack to C frame.
+#ifdef LUA_USE_TRACE_LOGS
+  |  mov CARG1, SAVE_L
+  |  mov L:CARG1->base, BASE
+  |  mov RB, RD     // Save RD
+  |  mov TMP1, PC  // Save PC
+  |  mov CARG3, PC   // CARG3 == BASE
+  |  mov CARG2d, dword [DISPATCH+DISPATCH_GL(vmstate)]
+  |  call extern lj_log_trace_direct_exit@8
+  |  mov PC, TMP1
+  |  mov RD, RB
+  |  mov RB, SAVE_L
+  |  mov BASE, L:RB->base
+#endif
   |.endif
-  |  test RDd, RDd; js >9		// Check for error from exit.
+  |  cmp RDd, -LUA_ERRERR; jae >9	// Check for error from exit.
   |  mov L:RB, SAVE_L
   |  mov MULTRES, RDd
   |  mov LFUNC:KBASE, [BASE-16]
@@ -2469,6 +2482,8 @@ static void build_subroutines(BuildCtx *ctx)
   |  movzx OP, RCL
   |  add PC, 4
   |  shr RCd, 16
+  |  cmp MULTRES, -17			// Static dispatch?
+  |  je >5
   |  cmp OP, BC_FUNCF			// Function header?
   |  jb >3
   |  cmp OP, BC_FUNCC+2			// Fast function?
@@ -2490,6 +2505,15 @@ static void build_subroutines(BuildCtx *ctx)
   |  mov KBASE, LFUNC:KBASE->pc
   |  mov KBASE, [KBASE+PC2PROTO(k)]
   |  jmp <2
+  |
+  |5:  // Dispatch to static entry of original ins replaced by BC_JLOOP.
+  |  mov RA, [DISPATCH+DISPATCH_J(trace)]
+  |  mov TRACE:RA, [RA+RD*8]
+  |  mov RCd, TRACE:RA->startins
+  |  movzx RAd, RCH
+  |  movzx OP, RCL
+  |  shr RCd, 16
+  |  jmp aword [DISPATCH+OP*8+GG_DISP2STATIC]
   |
   |9:  // Rethrow error from the right C frame.
   |  mov CARG2d, RDd
@@ -2744,12 +2768,12 @@ static void build_subroutines(BuildCtx *ctx)
   |
   |  // Copy stack slots.
   |  movzx ecx, byte CCSTATE->nsp
-  |  sub ecx, 1
+  |  sub ecx, 8
   |  js >2
   |1:
-  |  mov rax, [CCSTATE+rcx*8+offsetof(CCallState, stack)]
-  |  mov [rsp+rcx*8+CCALL_SPS_EXTRA*8], rax
-  |  sub ecx, 1
+  |  mov rax, [CCSTATE+rcx+offsetof(CCallState, stack)]
+  |  mov [rsp+rcx+CCALL_SPS_EXTRA*8], rax
+  |  sub ecx, 8
   |  jns <1
   |2:
   |
@@ -4511,6 +4535,19 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
   case BC_JLOOP:
     |.if JIT
     |  ins_AD	// RA = base (ignored), RD = traceno
+#ifdef LUA_USE_TRACE_LOGS
+    |.if not X64WIN
+    |  mov L:RB, SAVE_L
+    |  mov L:RB->base, BASE  // Save BASE
+    |  mov TMP1, RD     // Save RD
+    |  mov CARG3, PC  // CARG3 == BASE
+    |  mov CARG2, RD
+    |  mov CARG1, RB
+    |  call extern lj_log_trace_entry@8
+    |  mov RD, TMP1
+    |  mov BASE, L:RB->base
+    |.endif
+#endif
     |  mov RA, [DISPATCH+DISPATCH_J(trace)]
     |  mov TRACE:RD, [RA+RD*8]
     |  mov RD, TRACE:RD->mcode

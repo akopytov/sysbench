@@ -55,7 +55,7 @@ lj_asm.o: lj_asm.c lj_obj.h lua.h luaconf.h lj_def.h lj_arch.h lj_gc.h \
  lj_buf.h lj_str.h lj_tab.h lj_frame.h lj_bc.h lj_ctype.h lj_ir.h \
  lj_jit.h lj_ircall.h lj_iropt.h lj_mcode.h lj_trace.h lj_dispatch.h \
  lj_traceerr.h lj_snap.h lj_asm.h lj_vm.h lj_target.h lj_target_*.h \
- lj_emit_*.h lj_asm_*.h
+ lj_prng.h lj_emit_*.h lj_asm_*.h
 lj_assert.o: lj_assert.c lj_obj.h lua.h luaconf.h lj_def.h lj_arch.h
 lj_bc.o: lj_bc.c lj_obj.h lua.h luaconf.h lj_def.h lj_arch.h lj_bc.h \
  lj_bcdef.h

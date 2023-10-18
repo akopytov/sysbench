@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------
 -- LuaJIT bytecode listing module.
 --
--- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2023 Mike Pall. All rights reserved.
 -- Released under the MIT license. See Copyright Notice in luajit.h
 ----------------------------------------------------------------------------
 --
@@ -41,7 +41,6 @@
 
 -- Cache some library functions and objects.
 local jit = require("jit")
-assert(jit.version_num == 20100, "LuaJIT core/library version mismatch")
 local jutil = require("jit.util")
 local vmdef = require("jit.vmdef")
 local bit = require("bit")
@@ -63,15 +62,21 @@ local function ctlsub(c)
 end
 
 -- Return one bytecode line.
-local function bcline(func, pc, prefix)
-  local ins, m = funcbc(func, pc)
+local function bcline(func, pc, prefix, lineinfo)
+  local ins, m, l = funcbc(func, pc, lineinfo and 1 or 0)
   if not ins then return end
   local ma, mb, mc = band(m, 7), band(m, 15*8), band(m, 15*128)
   local a = band(shr(ins, 8), 0xff)
   local oidx = 6*band(ins, 0xff)
   local op = sub(bcnames, oidx+1, oidx+6)
-  local s = format("%04d %s %-6s %3s ",
-    pc, prefix or "  ", op, ma == 0 and "" or a)
+  local s
+  if lineinfo then
+    s = format("%04d %7s %s %-6s %3s ",
+      pc, "["..l.."]", prefix or "  ", op, ma == 0 and "" or a)
+  else
+    s = format("%04d %s %-6s %3s ",
+      pc, prefix or "  ", op, ma == 0 and "" or a)
+  end
   local d = shr(ins, 16)
   if mc == 13*128 then -- BCMjump
     return format("%s=> %04d\n", s, pc+d-0x7fff)
@@ -124,20 +129,52 @@ local function bctargets(func)
 end
 
 -- Dump bytecode instructions of a function.
-local function bcdump(func, out, all)
+local function bcdump(func, out, all, lineinfo)
   if not out then out = stdout end
   local fi = funcinfo(func)
   if all and fi.children then
     for n=-1,-1000000000,-1 do
       local k = funck(func, n)
       if not k then break end
-      if type(k) == "proto" then bcdump(k, out, true) end
+      if type(k) == "proto" then bcdump(k, out, true, lineinfo) end
     end
   end
   out:write(format("-- BYTECODE -- %s-%d\n", fi.loc, fi.lastlinedefined))
+
+  for n=-1,-1000000000,-1 do
+    local kc = funck(func, n)
+    if not kc then break end
+
+    local typ = type(kc)
+    if typ == "string" then
+      kc = format(#kc > 40 and '"%.40s"~' or '"%s"', gsub(kc, "%c", ctlsub))
+      out:write(format("KGC    %d    %s\n", -(n + 1), kc))
+    elseif typ == "proto" then
+      local fi = funcinfo(kc)
+      if fi.ffid then
+	kc = vmdef.ffnames[fi.ffid]
+      else
+	kc = fi.loc
+      end
+      out:write(format("KGC    %d    %s\n", -(n + 1), kc))
+    elseif typ == "table" then
+      out:write(format("KGC    %d    table\n", -(n + 1)))
+    else
+      -- error("unknown KGC type: " .. typ)
+    end
+  end
+
+  for n=1,1000000000 do
+    local kc = funck(func, n)
+    if not kc then break end
+    if type(kc) == "number" then
+      out:write(format("KN    %d    %s\n", n, kc))
+    end
+  end
+
   local target = bctargets(func)
   for pc=1,1000000000 do
-    local s = bcline(func, pc, target[pc] and "=>")
+    local s = bcline(func, pc, target[pc] and "=>", lineinfo)
     if not s then break end
     out:write(s)
   end
