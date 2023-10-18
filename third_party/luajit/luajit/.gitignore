@@ -9,3 +9,6 @@
 *.dmp
 *.swp
 .tags
+*~
+tags
+*.swo

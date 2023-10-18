@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- DynASM PPC/PPC64 module.
 --
--- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2023 Mike Pall. All rights reserved.
 -- See dynasm.lua for full copyright notice.
 --
 -- Support for various extensions contributed by Caio Souza Oliveira.
@@ -257,9 +257,11 @@ map_op = {
   addic_3 =	"30000000RRI",
   ["addic._3"] = "34000000RRI",
   addi_3 =	"38000000RR0I",
+  addil_3 =	"38000000RR0J",
   li_2 =	"38000000RI",
   la_2 =	"38000000RD",
   addis_3 =	"3c000000RR0I",
+  addisl_3 =	"3c000000RR0J",
   lis_2 =	"3c000000RI",
   lus_2 =	"3c000000RU",
   bc_3 =	"40000000AAK",
@@ -840,6 +842,9 @@ map_op = {
     p[4] = "63-("..p[3]..")"
   end),
   srdi_3 =	op_alias("rldicl_4", function(p)
+    p[4] = p[3]; p[3] = "64-("..p[3]..")"
+  end),
+  ["srdi._3"] =	op_alias("rldicl._4", function(p)
     p[4] = p[3]; p[3] = "64-("..p[3]..")"
   end),
   clrldi_3 =	op_alias("rldicl_4", function(p)

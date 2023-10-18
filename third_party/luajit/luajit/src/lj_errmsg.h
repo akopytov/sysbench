@@ -1,6 +1,6 @@
 /*
 ** VM error messages.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* This file may be included multiple times with different ERRDEF macros. */
@@ -109,6 +109,8 @@ ERRDEF(NOJIT,	"no JIT compiler for this architecture (yet)")
 ERRDEF(NOJIT,	"JIT compiler permanently disabled by build option")
 #endif
 ERRDEF(JITOPT,	"unknown or malformed optimization flag " LUA_QS)
+ERRDEF(PRNGSTATE,     "PRNG state must be an array with up to 8 integers "
+                  "or an integer")
 
 /* Lexer/parser errors. */
 ERRDEF(XMODE,	"attempt to load chunk with wrong mode")
@@ -178,6 +180,7 @@ ERRDEF(FFI_CBACKOV,	"too many callbacks")
 #endif
 ERRDEF(FFI_NYIPACKBIT,	"NYI: packed bit fields")
 ERRDEF(FFI_NYICALL,	"NYI: cannot call this C function (yet)")
+ERRDEF(FFI_NOTLOAD,	"ffi module not loaded (yet)")
 #endif
 
 #if LJ_HASBUFFER

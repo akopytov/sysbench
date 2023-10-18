@@ -1,6 +1,6 @@
 /*
 ** Debugging and introspection.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_debug_c
@@ -110,6 +110,11 @@ static BCPos debug_framepc(lua_State *L, GCfunc *fn, cTValue *nextframe)
   }
 #endif
   return pos;
+}
+
+LJ_FUNC BCPos lj_debug_framepc(lua_State *L, GCfunc *fn, cTValue *nextframe)
+{
+  return debug_framepc(L, fn, nextframe);
 }
 
 /* -- Line numbers -------------------------------------------------------- */
@@ -706,3 +711,128 @@ LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
   lua_concat(L, (int)(L->top - L->base) - top);
 }
 
+#ifdef LUA_USE_TRACE_LOGS
+
+#include "lj_dispatch.h"
+
+#define MAX_TRACE_EVENTS  64
+
+enum {
+    LJ_TRACE_EVENT_ENTER,
+    LJ_TRACE_EVENT_EXIT,
+    LJ_TRACE_EVENT_START
+};
+
+typedef struct {
+    int              event;
+    unsigned         traceno;
+    unsigned         exitno;
+    int              directexit;
+    const BCIns     *ins;
+    lua_State       *thread;
+    GCfunc          *fn;
+} lj_trace_event_record_t;
+
+static lj_trace_event_record_t lj_trace_events[MAX_TRACE_EVENTS];
+
+static int  rb_start = 0;
+static int  rb_end = 0;
+static int  rb_full = 0;
+
+static void
+lj_trace_log_event(lj_trace_event_record_t *rec)
+{
+  lj_trace_events[rb_end] = *rec;
+
+  if (rb_full) {
+    rb_end++;
+    if (rb_end == MAX_TRACE_EVENTS) {
+      rb_end = 0;
+    }
+    rb_start = rb_end;
+
+  } else {
+    rb_end++;
+    if (rb_end == MAX_TRACE_EVENTS) {
+      rb_end = 0;
+      rb_full = MAX_TRACE_EVENTS;
+    }
+  }
+}
+
+static GCfunc*
+lj_debug_top_frame_fn(lua_State *L, const BCIns *pc)
+{
+  int size;
+  cTValue *frame;
+
+  frame = lj_debug_frame(L, 0, &size);
+  if (frame == NULL) {
+    return NULL;
+  }
+
+  return frame_func(frame);
+}
+
+LJ_FUNC void LJ_FASTCALL
+lj_log_trace_start_record(lua_State *L, unsigned traceno, const BCIns *pc,
+  GCfunc *fn)
+{
+  lj_trace_event_record_t  r;
+
+  r.event = LJ_TRACE_EVENT_START;
+  r.thread = L;
+  r.ins = pc;
+  r.traceno = traceno;
+  r.fn = fn;
+
+  lj_trace_log_event(&r);
+}
+
+LJ_FUNC void LJ_FASTCALL
+lj_log_trace_entry(lua_State *L, unsigned traceno, const BCIns *pc)
+{
+  lj_trace_event_record_t  r;
+
+  r.event = LJ_TRACE_EVENT_ENTER;
+  r.thread = L;
+  r.ins = pc;
+  r.traceno = traceno;
+  r.fn = lj_debug_top_frame_fn(L, pc);
+
+  lj_trace_log_event(&r);
+}
+
+static void
+lj_log_trace_exit_helper(lua_State *L, int vmstate, const BCIns *pc, int direct)
+{
+  if (vmstate >= 0) {
+    lj_trace_event_record_t  r;
+
+    jit_State *J = L2J(L);
+
+    r.event = LJ_TRACE_EVENT_EXIT;
+    r.thread = L;
+    r.ins = pc;
+    r.traceno = vmstate;
+    r.exitno = J->exitno;
+    r.directexit = direct;
+    r.fn = lj_debug_top_frame_fn(L, pc);
+
+    lj_trace_log_event(&r);
+  }
+}
+
+LJ_FUNC void LJ_FASTCALL
+lj_log_trace_normal_exit(lua_State *L, int vmstate, const BCIns *pc)
+{
+  lj_log_trace_exit_helper(L, vmstate, pc, 0);
+}
+
+LJ_FUNC void LJ_FASTCALL
+lj_log_trace_direct_exit(lua_State *L, int vmstate, const BCIns *pc)
+{
+  lj_log_trace_exit_helper(L, vmstate, pc, 1);
+}
+
+#endif  /* LUA_USE_TRACE_LOGS */

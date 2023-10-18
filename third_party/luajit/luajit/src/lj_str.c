@@ -1,6 +1,6 @@
 /*
 ** String handling.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_str_c
@@ -19,6 +19,15 @@
 int32_t LJ_FASTCALL lj_str_cmp(GCstr *a, GCstr *b)
 {
   MSize i, n = a->len > b->len ? b->len : a->len;
+#ifdef LUAJIT_USE_VALGRIND
+  for (i = 0; i < n; i++) {
+    uint8_t va = *(const uint8_t *)(strdata(a)+i);
+    uint8_t vb = *(const uint8_t *)(strdata(b)+i);
+    if (va != vb) {
+        return va < vb ? -1 : 1;
+    }
+  }
+#else
   for (i = 0; i < n; i += 4) {
     /* Note: innocuous access up to end of string + 3. */
     uint32_t va = *(const uint32_t *)(strdata(a)+i);
@@ -35,6 +44,7 @@ int32_t LJ_FASTCALL lj_str_cmp(GCstr *a, GCstr *b)
       return va < vb ? -1 : 1;
     }
   }
+#endif
   return (int32_t)(a->len - b->len);
 }
 
@@ -72,8 +82,22 @@ int lj_str_haspattern(GCstr *s)
 
 /* -- String hashing ------------------------------------------------------ */
 
+#ifdef LJ_HAS_OPTIMISED_HASH
+static StrHash hash_sparse_def (uint64_t, const char *, MSize);
+str_sparse_hashfn hash_sparse = hash_sparse_def;
+#if LUAJIT_SECURITY_STRHASH
+static StrHash hash_dense_def(uint64_t, StrHash, const char *, MSize);
+str_dense_hashfn hash_dense = hash_dense_def;
+#endif
+#else
+#define hash_sparse hash_sparse_def
+#if LUAJIT_SECURITY_STRHASH
+#define hash_dense hash_dense_def
+#endif
+#endif
+
 /* Keyed sparse ARX string hash. Constant time. */
-static StrHash hash_sparse(uint64_t seed, const char *str, MSize len)
+static StrHash hash_sparse_def(uint64_t seed, const char *str, MSize len)
 {
   /* Constants taken from lookup3 hash by Bob Jenkins. */
   StrHash a, b, h = len ^ (StrHash)seed;
@@ -97,8 +121,8 @@ static StrHash hash_sparse(uint64_t seed, const char *str, MSize len)
 
 #if LUAJIT_SECURITY_STRHASH
 /* Keyed dense ARX string hash. Linear time. */
-static LJ_NOINLINE StrHash hash_dense(uint64_t seed, StrHash h,
-				      const char *str, MSize len)
+static LJ_NOINLINE StrHash hash_dense_def(uint64_t seed, StrHash h,
+					  const char *str, MSize len)
 {
   StrHash b = lj_bswap(lj_rol(h ^ (StrHash)(seed >> 32), 4));
   if (len > 12) {
@@ -282,6 +306,17 @@ static GCstr *lj_str_alloc(lua_State *L, const char *str, MSize len,
   s->gct = ~LJ_TSTR;
   s->len = len;
   s->hash = hash;
+
+#ifdef LUAJIT_TEST_FIXED_ORDER
+  /* If you need predictable key iteration order in lua tables (eg: in data driven test),
+   * build with
+   * "XCFLAGS=-DLUAJIT_TEST_FIXED_ORDER=1 -DLUAJIT_SECURITY_STRID=0
+   * -DLUAJIT_SECURITY_STRHASH=0 -DLUAJIT_SECURITY_PRNG=0 -DLUAJIT_SECURITY_MCODE=0"
+   *
+   * This is for testing only. Please don't use it in production builds.
+   */
+  s->sid = hash;
+#else
 #ifndef STRID_RESEED_INTERVAL
   s->sid = g->str.id++;
 #elif STRID_RESEED_INTERVAL
@@ -293,6 +328,7 @@ static GCstr *lj_str_alloc(lua_State *L, const char *str, MSize len,
   s->sid = g->str.id++;
 #else
   s->sid = (StrID)lj_prng_u64(&g->prng);
+#endif
 #endif
   s->reserved = 0;
   s->hashalg = (uint8_t)hashalg;

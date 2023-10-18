@@ -1,6 +1,6 @@
 /*
 ** Common header for IR emitter and optimizations.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_IROPT_H
@@ -54,6 +54,12 @@ LJ_FUNC TRef lj_ir_ktrace(jit_State *J);
 #define lj_ir_kintp(J, k)	lj_ir_kint64(J, (uint64_t)(k))
 #else
 #define lj_ir_kintp(J, k)	lj_ir_kint(J, (int32_t)(k))
+#endif
+
+#if LJ_GC64
+#define lj_ir_kintpgc		lj_ir_kintp
+#else
+#define lj_ir_kintpgc		lj_ir_kint
 #endif
 
 static LJ_AINLINE TRef lj_ir_knum(jit_State *J, lua_Number n)
