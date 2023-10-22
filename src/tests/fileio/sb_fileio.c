@@ -477,7 +477,7 @@ sb_event_t file_get_seq_request(void)
 }
 
 
-/* Request generatior for random tests */
+/* Request generator for random tests */
 
 
 sb_event_t file_get_rnd_request(int thread_id)
