@@ -411,6 +411,10 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
     DEBUG("mysql_options(%p, %s, %s)",con, "MYSQL_OPT_COMPRESS", "NULL");
     mysql_options(con, MYSQL_OPT_COMPRESS, NULL);
   }
+  const char* cs = getenv("MYSQL_CONN_CHARSET");
+  if (cs) {
+    mysql_options(con, MYSQL_SET_CHARSET_NAME, cs);
+  }
 
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",
         con,
