@@ -51,6 +51,14 @@ function thread_init()
          SELECT count(*), sum(length(c)) FROM sbtest1 WHERE id IN
         (SELECT * FROM (SELECT id FROM sbtest1 WHERE %s LIMIT %d) as t)]],
          ranges, sysbench.opt.range_size))
+   elseif (sysbench.opt.secondary_ranges == 3) then
+      -- MySQL does not generate MRR query plan for secondary_ranges == 2,
+      -- We add secondary_ranges == 3 as the query for get range_size rows
+      -- by MRR, secondary_ranges == 1 likely get more rows than range_size.
+      stmt = con:prepare(string.format([[
+         SELECT length(c)
+            FROM sbtest1
+            WHERE %s LIMIT %d]], ranges, sysbench.opt.range_size))
    else
       stmt = con:prepare(string.format([[
          SELECT sum(length(c))
