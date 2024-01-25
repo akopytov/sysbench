@@ -40,7 +40,7 @@
 #include "sb_ck_pr.h"
 
 /* Query length limit for bulk insert queries */
-#define BULK_PACKET_SIZE (5120*1024)
+static unsigned int BULK_PACKET_SIZE = 5120*1024;
 
 /* How many rows to insert before COMMITs (used in bulk insert) */
 static int ROWS_BEFORE_COMMIT = 1000;
@@ -942,6 +942,8 @@ int db_bulk_insert_init(db_conn_t *con, const char *query, size_t query_len)
     log_text(LOG_FATAL, "failed to get database capabilities!");
     return 1;
   }
+
+  BULK_PACKET_SIZE = atoi(getenv("BULK_PACKET_SIZE")?:"5242880");
 
   /* Allocate query buffer */
   if (query_len + 1 > BULK_PACKET_SIZE)
