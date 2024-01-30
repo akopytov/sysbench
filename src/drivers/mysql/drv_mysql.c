@@ -403,12 +403,14 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
 
   if (args.use_ssl)
   {
-    DEBUG("mysql_ssl_set(%p, \"%s\", \"%s\", \"%s\", NULL, \"%s\")", con,
+    DEBUG("mysql_options(%p, \"%s\", \"%s\", \"%s\", \"%s\")", con,
           SAFESTR(args.ssl_key), SAFESTR(args.ssl_cert), SAFESTR(args.ssl_ca),
           SAFESTR(args.ssl_cipher));
 
-    mysql_ssl_set(con, args.ssl_key, args.ssl_cert, args.ssl_ca, NULL,
-                  args.ssl_cipher);
+    mysql_options(con, MYSQL_OPT_SSL_KEY, args.ssl_key);
+    mysql_options(con, MYSQL_OPT_SSL_CERT, args.ssl_cert);
+    mysql_options(con, MYSQL_OPT_SSL_CA, args.ssl_ca);
+    mysql_options(con, MYSQL_OPT_SSL_CIPHER, args.ssl_cipher);
   }
 
   if (args.use_compression)
