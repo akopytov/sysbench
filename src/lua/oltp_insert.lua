@@ -43,12 +43,18 @@ end
 function event()
    local table_name = "sbtest" .. sysbench.rand.uniform(1, sysbench.opt.tables)
    local k_val = sysbench.rand.default(1, sysbench.opt.table_size)
-   local c_val = get_c_value()
-   local pad_val = get_pad_value()
+   local c_val
+   local pad_val
 
+   if sysbench.opt.use_file then
+      c_val, pad_val = get_str_value()
+   else
+      c_val = get_c_value()
+      pad_val = get_pad_value()
+   end
    if (drv:name() == "pgsql" and sysbench.opt.auto_inc) then
       con:query(string.format("INSERT INTO %s (k, c, pad) VALUES " ..
-                                 "(%d, '%s', '%s')",
+                                 "(%d, \"%s\", \"%s\")",
                               table_name, k_val, c_val, pad_val))
    else
       if (sysbench.opt.auto_inc) then
@@ -59,8 +65,8 @@ function event()
       end
 
       con:query(string.format("INSERT INTO %s (id, k, c, pad) VALUES " ..
-                                 "(%d, %d, '%s', '%s')",
-                              table_name, i, k_val, c_val, pad_val))
+                                 "(%d, %d, \"%s\", \"",
+                              table_name, i, k_val, c_val) ..  pad_val .. "\")")
    end
 
    check_reconnect()

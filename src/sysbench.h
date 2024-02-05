@@ -208,6 +208,7 @@ typedef struct
   int             warmup_time;  /* warmup time */
   uint64_t        nevents CK_CC_CACHELINE; /* event counter */
   const char      *luajit_cmd; /* LuaJIT command */
+  const char      *filename; /*if use a text file as dataset*/
 } sb_globals_t;
 
 extern sb_globals_t sb_globals CK_CC_CACHELINE;

@@ -40,10 +40,11 @@
 #include "sb_ck_pr.h"
 
 /* Query length limit for bulk insert queries */
-#define BULK_PACKET_SIZE (512*1024)
+static unsigned int BULK_PACKET_SIZE = 5120*1024;
+static unsigned int MAX_BULK_CNT = 1000;
 
 /* How many rows to insert before COMMITs (used in bulk insert) */
-#define ROWS_BEFORE_COMMIT 1000
+static int ROWS_BEFORE_COMMIT = 1000;
 
 /* Global variables */
 db_globals_t db_globals CK_CC_CACHELINE;
@@ -131,7 +132,7 @@ void db_print_help(void)
   log_text(LOG_NOTICE, "General database options:\n");
   sb_print_options(db_args);
   log_text(LOG_NOTICE, "");
-  
+
   log_text(LOG_NOTICE, "Compiled-in database drivers:");
   SB_LIST_FOR_EACH(pos, &drivers)
   {
@@ -841,7 +842,7 @@ int db_parse_arguments(void)
   db_globals.driver = sb_get_value_string("db-driver");
 
   db_globals.debug = sb_get_value_flag("db-debug");
-  
+
   return 0;
 }
 
@@ -859,7 +860,7 @@ int db_print_value(db_bind_t *var, char *buf, int buflen)
     n = snprintf(buf, buflen, "NULL");
     return (n < buflen) ? n : -1;
   }
-  
+
   switch (var->type) {
     case DB_TYPE_TINYINT:
       n = snprintf(buf, buflen, "%hhd", *(char *)var->buffer);
@@ -943,6 +944,9 @@ int db_bulk_insert_init(db_conn_t *con, const char *query, size_t query_len)
     return 1;
   }
 
+  BULK_PACKET_SIZE = atoi(getenv("BULK_PACKET_SIZE")?:"5242880");
+  MAX_BULK_CNT = atoi(getenv("MAX_BULK_CNT")?:"1000");
+
   /* Allocate query buffer */
   if (query_len + 1 > BULK_PACKET_SIZE)
   {
@@ -955,7 +959,9 @@ int db_bulk_insert_init(db_conn_t *con, const char *query, size_t query_len)
   con->bulk_buffer = (char *)malloc(con->bulk_buflen);
   if (con->bulk_buffer == NULL)
     return 1;
-  
+
+  ROWS_BEFORE_COMMIT = atoi(getenv("ROWS_BEFORE_COMMIT")?:"1000");
+
   con->bulk_commit_max = driver_caps.needs_commit ? ROWS_BEFORE_COMMIT : 0;
   con->bulk_commit_cnt = 0;
   strcpy(con->bulk_buffer, query);
@@ -993,7 +999,8 @@ int db_bulk_insert_next(db_conn_t *con, const char *query, size_t query_len)
     Reserve space for '\0' and ',' (if not the first chunk in
     a bulk insert
   */
-  if (con->bulk_ptr + query_len + 1 + (con->bulk_cnt>0) > con->bulk_buflen)
+  if (con->bulk_cnt >= MAX_BULK_CNT ||
+      con->bulk_ptr + query_len + 1 + (con->bulk_cnt>0) > con->bulk_buflen)
   {
     /* Is this a first row? */
     if (!con->bulk_cnt)
