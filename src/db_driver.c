@@ -41,6 +41,7 @@
 
 /* Query length limit for bulk insert queries */
 static unsigned int BULK_PACKET_SIZE = 5120*1024;
+static unsigned int MAX_BULK_CNT = 1000;
 
 /* How many rows to insert before COMMITs (used in bulk insert) */
 static int ROWS_BEFORE_COMMIT = 1000;
@@ -944,6 +945,7 @@ int db_bulk_insert_init(db_conn_t *con, const char *query, size_t query_len)
   }
 
   BULK_PACKET_SIZE = atoi(getenv("BULK_PACKET_SIZE")?:"5242880");
+  MAX_BULK_CNT = atoi(getenv("MAX_BULK_CNT")?:"1000");
 
   /* Allocate query buffer */
   if (query_len + 1 > BULK_PACKET_SIZE)
@@ -997,7 +999,8 @@ int db_bulk_insert_next(db_conn_t *con, const char *query, size_t query_len)
     Reserve space for '\0' and ',' (if not the first chunk in
     a bulk insert
   */
-  if (con->bulk_ptr + query_len + 1 + (con->bulk_cnt>0) > con->bulk_buflen)
+  if (con->bulk_cnt >= MAX_BULK_CNT ||
+      con->bulk_ptr + query_len + 1 + (con->bulk_cnt>0) > con->bulk_buflen)
   {
     /* Is this a first row? */
     if (!con->bulk_cnt)
