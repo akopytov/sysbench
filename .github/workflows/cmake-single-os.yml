@@ -128,7 +128,7 @@ jobs:
   test-asan:
     runs-on: ${{ inputs.os }}
     # Linux is excluded, due to buggy ASAN ubuntu
-    if: ${{ !contains(inputs.os,'ubuntu') }}
+    if: ${{ !contains(inputs.os,'windows') }}
     name: test-asan
     continue-on-error: true
     steps:
@@ -189,7 +189,7 @@ jobs:
     #if: contains(inputs.os,'windows')
     name: test-${{matrix.db}}
     env:
-      COMMON_SYSBENCH_PARAMS: ${{ matrix.db == 'postgres' && '--db-driver=pgsql --pgsql-password=sbtest' || '--mysql-user=root --mysql-socket=/tmp/mysql.sock'}} --time=30 --table-size=1000000 --report-interval=1  --thread-init-timeout=60 --histogram
+      COMMON_SYSBENCH_PARAMS: ${{ matrix.db == 'postgres' && '--db-driver=pgsql --pgsql-password=sbtest' || '--mysql-user=root'}}  --mysql-socket=${{ contains(inputs.os,'windows') && 'mysql.sock' || '/tmp/mysql.sock' }} --time=30 --table-size=1000000 --report-interval=1  --thread-init-timeout=300 --histogram
 
     steps:
       - name: Download build
@@ -246,7 +246,7 @@ jobs:
               max_allowed_packet=16MB
               skip-log-bin
               loose-enable-named-pipe
-              socket=/tmp/mysql.sock
+              socket=${{ runner.os == 'Windows' && 'mysql.sock' || '/tmp/mysql.sock' }}
               max_connections=1000
               innodb_max_dirty_pages_pct_lwm=10
 
