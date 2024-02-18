@@ -648,6 +648,7 @@ static inline int pthread_attr_init(pthread_attr_t *attr)
 static inline int pthread_attr_destroy(pthread_attr_t *attr)
 {
 	/* No need to do anything */
+	(void)attr;
 	return 0;
 }
 
@@ -775,7 +776,7 @@ static inline int pthread_create(pthread_t *th, const pthread_attr_t *attr, void
 {
 	struct _pthread_v *tv = malloc(sizeof(struct _pthread_v));
 	unsigned ssize = 0;
-
+	uintptr_t r;
 	if (!tv) return 1;
 
 	*th = tv;
@@ -798,8 +799,8 @@ static inline int pthread_create(pthread_t *th, const pthread_attr_t *attr, void
 
 	/* Make sure tv->h has value of -1 */
 	_ReadWriteBarrier();
-
-	tv->h = (HANDLE) _beginthreadex(NULL, ssize, pthread_create_wrapper, tv, 0, NULL);
+	r = _beginthreadex(NULL, ssize, pthread_create_wrapper, tv, 0, NULL);
+	tv->h = (HANDLE) r;
 
 	/* Failed */
 	if (!tv->h) return 1;

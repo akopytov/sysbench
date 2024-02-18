@@ -42,7 +42,7 @@ if(NOT WIN32)
 else()
   if (MINGW)
     # GNU compatible make required
-    find_program(MAKE_EXECUTABLE NAMES gmake REQUIRED)
+    find_program(MAKE_EXECUTABLE NAMES gmake mingw32-make REQUIRED)
     set(buildCommand ${MAKE_EXECUTABLE})
     set(luajit_implib ${build_dir}/src/libluajit-5.1.dll.a)
   else()
