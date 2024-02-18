@@ -18,7 +18,7 @@ endif()
 set(mariadbclient_IMPORTED_LOCATION
     ${install_dir}/lib/mariadb/${mariadbclient_LIBRARY_NAME})
 
-set(_EXTRA_CMAKE_ARGS)
+set(_EXTRA_CMAKE_ARGS -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF)
 
 if(WIN32)
   if(MINGW)
@@ -33,28 +33,15 @@ if(WIN32)
 endif()
 
 if(MSVC)
-  list(APPEND _EXTRA_CMAKE_ARGS -DCMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE=ON
-       -DCMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO=ON
-       -DCMAKE_POLICY_DEFAULT_CMP0069=NEW)
-elseif(WIN32)
-  # gcc/clang is not a native env for the mariadb client library can compile
-  # only with some extra flags
-  set(_CFLAGS
-      "-DWIN32_MEAN_AND_LEAN -DNOGDI -DNOMINMAX -D_CRT_NONSTDC_NO_WARNINGS \
-  -D_CRT_SECURE_NO_WARNINGS -D_WINSOCKAPI_ -DNOCRYPT -DNOCOMM\
-  ")
-  if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    string(APPEND _CFLAGS " -Wno-error")
-  endif()
-  if(CMAKE_COMPILER_IS_GNUCC)
-    string(APPEND _CFLAGS
-           " -Dstrerror_r(errno,buf,len)=strerror_s(buf,len,errno)")
-  endif()
-  list(APPEND _EXTRA_CMAKE_ARGS "-DCMAKE_C_FLAGS_INIT=${_CFLAGS}")
-endif()
+list(APPEND  _EXTRA_CMAKE_ARGS
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE=ON
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO=ON
+    -DCMAKE_POLICY_DEFAULT_CMP0069=NEW
+)
+ENDIF()
 
 set(LIBMARIADB_GIT_TAG
-    v3.3.4
+    v3.3.9
     CACHE
       STRING
       "Git tag of mariadb client library. Set to empty string to get most recent revision"
@@ -100,7 +87,7 @@ ExternalProject_Add(
              -DCLIENT_PLUGIN_CACHING_SHA2_PASSWORD=STATIC
              -DCLIENT_PLUGIN_DIALOG=OFF
              -DCLIENT_PLUGIN_CLIENT_ED25519=OFF
-             -DCLIENT_PLUGIN_SHA256_PASSWORD=OFF
+             -DCLIENT_PLUGIN_SHA256_PASSWORD=STATIC
              -DCLIENT_PLUGIN_MYSQL_CLEAR_PASSWORD=OFF
              -DCLIENT_PLUGIN_ZSTD=OFF
              -DSKIP_TESTS=1
