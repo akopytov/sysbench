@@ -38,6 +38,8 @@ if(WIN32)
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_FILE ${sysbench_def}.tmp
     COMMAND_ERROR_IS_FATAL ANY)
+  # Hack to get percona's tpcc running
+  file(APPEND ${sysbench_def}.tmp "\nsb_counter_inc")
   configure_file(${sysbench_def}.tmp ${sysbench_def} COPYONLY)
   file(REMOVE ${sysbench_def}.tmp)
   target_sources(sysbench PRIVATE ${sysbench_def})
