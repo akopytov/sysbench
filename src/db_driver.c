@@ -46,7 +46,7 @@
 #define ROWS_BEFORE_COMMIT 1000
 
 /* Global variables */
-db_globals_t db_globals CK_CC_CACHELINE;
+CK_CC_CACHELINE db_globals_t db_globals;
 
 static sb_list_t        drivers;          /* list of available DB drivers */
 
@@ -70,17 +70,17 @@ static void db_reset_stats(void);
 static int db_free_results_int(db_conn_t *con);
 
 /* DB layer arguments */
+#ifdef USE_MYSQL
+#define DEFAULT_DB_DRIVER "mysql"
+#else
+#define DEFAULT_DB_DRIVER NULL
+#endif
 
 static sb_arg_t db_args[] =
 {
   SB_OPT("db-driver", "specifies database driver to use "
          "('help' to get list of available drivers)",
-#ifdef USE_MYSQL
-         "mysql",
-#else
-         NULL,
-#endif
-         STRING),
+         DEFAULT_DB_DRIVER, STRING),
   SB_OPT("db-ps-mode", "prepared statements usage mode {auto, disable}", "auto",
          STRING),
   SB_OPT("db-debug", "print database-specific debug information", "off", BOOL),
@@ -572,6 +572,7 @@ db_row_t *db_fetch_row(db_result_t *rs)
   if (con->driver->ops.fetch_row == NULL)
   {
     log_text(LOG_ALERT, "fetching rows is not supported by the driver");
+    return NULL;
   }
 
   if (rs->nrows == 0 || rs->nfields == 0)
@@ -799,8 +800,8 @@ void db_done(void)
 
   if (db_globals.debug)
   {
-    free(exec_timers);
-    free(fetch_timers);
+    sb_free_memaligned(exec_timers);
+    sb_free_memaligned(fetch_timers);
 
     exec_timers = fetch_timers = NULL;
   }
@@ -959,8 +960,8 @@ int db_bulk_insert_init(db_conn_t *con, const char *query, size_t query_len)
   con->bulk_commit_max = driver_caps.needs_commit ? ROWS_BEFORE_COMMIT : 0;
   con->bulk_commit_cnt = 0;
   strcpy(con->bulk_buffer, query);
-  con->bulk_ptr = query_len;
-  con->bulk_values = query_len;
+  con->bulk_ptr = (unsigned int)query_len;
+  con->bulk_values = (unsigned int)query_len;
   con->bulk_cnt = 0;
 
   return 0;
@@ -1014,7 +1015,7 @@ int db_bulk_insert_next(db_conn_t *con, const char *query, size_t query_len)
   }
   else
     strcpy(con->bulk_buffer + con->bulk_ptr, query);
-  con->bulk_ptr += query_len + (con->bulk_cnt > 0);
+  con->bulk_ptr += (unsigned int)query_len + (con->bulk_cnt > 0);
 
   con->bulk_cnt++;
 

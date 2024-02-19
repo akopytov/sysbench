@@ -61,7 +61,7 @@
 #define REPORT_INTERMEDIATE_HOOK "report_intermediate"
 #define REPORT_CUMULATIVE_HOOK "report_cumulative"
 
-#define xfree(ptr) ({ if ((ptr) != NULL) free((void *) ptr); ptr = NULL; })
+#define xfree(ptr) do{ if ((ptr) != NULL) free((void *) ptr); ptr = NULL; }while(0)
 
 /* Interpreter context */
 
@@ -96,11 +96,11 @@ int sb_lua_set_test_args(sb_arg_t *, size_t);
 
 /* Lua interpreter states */
 
-static lua_State **states CK_CC_CACHELINE;
+static CK_CC_CACHELINE lua_State **states;
 
-static sb_test_t sbtest CK_CC_CACHELINE;
+static CK_CC_CACHELINE sb_test_t sbtest;
 
-static TLS sb_lua_ctxt_t tls_lua_ctxt CK_CC_CACHELINE;
+static CK_CC_CACHELINE TLS sb_lua_ctxt_t tls_lua_ctxt;
 
 /* List of pre-loaded internal scripts */
 static internal_script_t internal_scripts[] = {
@@ -230,7 +230,7 @@ static int do_export_options(lua_State *L, bool global)
         lua_pushnumber(L, sb_opt_to_double(opt));
         break;
       case SB_ARG_TYPE_SIZE:
-        lua_pushnumber(L, sb_opt_to_size(opt));
+        lua_pushinteger(L, sb_opt_to_size(opt));
         break;
       case SB_ARG_TYPE_STRING:
         tmp = sb_opt_to_string(opt);
@@ -514,6 +514,40 @@ static void sb_lua_var_string(lua_State *L, const char *name, const char *s)
     lua_settable(L, -3);
 }
 
+#ifdef _WIN32
+/*
+  Path relative to current executable, in the same way luajit is doing it.
+*/
+static void sb_setprogdir_path(lua_State * L)
+{
+  char path[MAX_PATH + 1];
+  char* lb;
+  DWORD nsize = sizeof(path);
+  DWORD n = GetModuleFileNameA(NULL, path, nsize);
+  if (n == 0 || n == nsize || (lb = strrchr(path, '\\')) == NULL) {
+    luaL_error(L, "unable to get ModuleFileName");
+  }
+  else
+  {
+    *lb = '\0';
+    lua_pushstring(L, path);
+    lua_pushliteral(L, "\\?.lua;");
+    lua_pushstring(L, path);
+    lua_pushliteral(L, "\\lua\\?.lua;");
+    /* Resolve path */
+    lb = strrchr(path, '\\');
+    if (lb)
+    {
+      *lb = '\0';
+      lua_pushstring(L, path);
+      lua_pushliteral(L, "\\share\\sysbench\\?.lua;");
+    }
+  }
+}
+#else
+#define sb_setprogdir_path(L) (void)0
+#endif
+
 /*
   Set package.path and package.cpath in a given environment. Also honor
   LUA_PATH/LUA_CPATH to mimic the default Lua behavior.
@@ -526,6 +560,7 @@ static void sb_lua_set_paths(lua_State *L)
 
   lua_pushliteral(L, "./?.lua;");
   lua_pushliteral(L, "./?/init.lua;");
+  sb_setprogdir_path(L);
   lua_pushliteral(L, "./src/lua/?.lua;");
 
   const char *home = getenv("HOME");
@@ -541,8 +576,10 @@ static void sb_lua_set_paths(lua_State *L)
     lua_pushliteral(L, "/.luarocks/share/lua/?/init.lua;");
   }
 
+#ifndef _WIN32
   lua_pushliteral(L, "/usr/local/share/lua/5.1/?.lua;");
   lua_pushliteral(L, "/usr/share/lua/5.1/?.lua;");
+#endif
   lua_pushliteral(L, DATADIR "/?.lua;");
 
   lua_concat(L, lua_gettop(L) - top);
@@ -567,9 +604,11 @@ static void sb_lua_set_paths(lua_State *L)
     lua_pushliteral(L, "/.luarocks/lib/lua/?" DLEXT ";");
   }
 
+#ifndef _WIN32
   lua_pushliteral(L, "/usr/local/lib/lua/5.1/?" DLEXT ";");
   lua_pushliteral(L, "/usr/lib/lua/5.1/?" DLEXT ";");
-  lua_pushliteral(L, LIBDIR ";");
+  lua_pushliteral(L, LIBDIR "/?" DLEXT ";");
+#endif
 
   lua_concat(L, lua_gettop(L) - top);
 
@@ -1001,7 +1040,7 @@ int sb_lua_call_custom_command(const char *name)
   return call_custom_command(gstate);
 }
 
-#define stat_to_number(name) sb_lua_var_number(L, #name, stat->name)
+#define stat_to_number(name) sb_lua_var_number(L, #name, (lua_Number)stat->name)
 
 static void stat_to_lua_table(lua_State *L, sb_stat_t *stat)
 {

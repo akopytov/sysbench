@@ -5,6 +5,7 @@
 [![Coverage Status][coveralls-badge]][coveralls-url]
 [![License][license-badge]][license-url]
 
+
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-generate-toc again -->
 **Table of Contents**
 
@@ -13,7 +14,6 @@
 - [Installing from Binary Packages](#installing-from-binary-packages)
     - [Linux](#linux)
     - [macOS](#macos)
-    - [Windows](#windows)
 - [Building and Installing From Source](#building-and-installing-from-source)
     - [Build Requirements](#build-requirements)
         - [Windows](#windows)
@@ -22,6 +22,8 @@
         - [Fedora](#fedora)
         - [macOS](#macos)
     - [Build and Install](#build-and-install)
+        - [Using CMake](#using-cmake)
+        - [Using autotools](#using-autotools)
 - [Usage](#usage)
     - [General Syntax](#general-syntax)
     - [General Command Line Options](#general-command-line-options)
@@ -104,18 +106,6 @@ On macOS, up-to-date sysbench packages are available from Homebrew:
 brew install sysbench
 ```
 
-## Windows
-As of sysbench 1.0 support for native Windows builds was dropped. It may
-be re-introduced in later releases. Currently, the recommended way to
-obtain sysbench on Windows is
-using
-[Windows Subsystem for Linux available in Windows 10](https://msdn.microsoft.com/en-us/commandline/wsl/about).
-
-After installing WSL and getting into he bash prompt on Windows
-following Debian/Ubuntu installation instructions is
-sufficient. Alternatively, one can use WSL to build and install sysbench
-from source, or use an older sysbench release to build a native binary.
-
 # Building and Installing From Source
 
 It is recommended to install sysbench from the official binary
@@ -127,15 +117,12 @@ architecture for which no binary packages are available.
 ## Build Requirements
 
 ### Windows
-As of sysbench 1.0 support for native Windows builds was
-dropped. It may be re-introduced in later versions. Currently, the
-recommended way to build sysbench on Windows is using
-[Windows Subsystem for Linux available in Windows 10](https://msdn.microsoft.com/en-us/commandline/wsl/about).
 
-After installing WSL and getting into bash prompt on Windows, following
-Debian/Ubuntu build instructions is sufficient. Alternatively, one can
-build and use an older 0.5 release on Windows.
-
+If you want to build with postgresql, recommended way to do that
+is to install *libpq* via vcpkg dependency manager like this:
+``` shell
+    vcpkg install libpq
+```
 ### Debian/Ubuntu
 ``` shell
     apt -y install make automake libtool pkg-config libaio-dev
@@ -177,6 +164,21 @@ Assuming you have Xcode (or Xcode Command Line Tools) and Homebrew installed:
 ```
 
 ## Build and Install
+As of sysbench 1.1.0, support for building with CMake was added on all supported platforms.
+### Using CMake
+```shell
+   # add -DWITH_PGSQL=ON to build with PostgreSQL support
+   cmake .
+   cmake --build . -j --config Release
+   cmake --install .
+```
+On Windows, cmake will build sysbench on Windows with MySQL support via libmariadb
+external project. That means, there is no needs to install the client drivers, but you
+will need Git and internet access at the build time.
+If this is not desired, pass -DWITH_LIBMARIADB=OFF to cmake command line
+
+To build without MySQL support, pass -DWITH_MYSQL=OFF
+### Using autotools
 ``` shell
     ./autogen.sh
     # Add --with-pgsql to build with PostgreSQL support

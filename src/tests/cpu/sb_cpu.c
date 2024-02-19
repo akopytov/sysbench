@@ -94,6 +94,9 @@ sb_event_t cpu_next_event(int thread_id)
   return req;
 }
 
+/* helps to avoid compilers optimizing cpu_execute_event() away */
+static TLS unsigned long long thread_count_primes;
+
 int cpu_execute_event(sb_event_t *r, int thread_id)
 {
   unsigned long long c;
@@ -115,7 +118,7 @@ int cpu_execute_event(sb_event_t *r, int thread_id)
     if (l > t )
       n++; 
   }
-
+  thread_count_primes= n;
   return 0;
 }
 

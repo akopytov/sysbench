@@ -46,7 +46,9 @@
 # define SB_ATTRIBUTE_UNUSED
 #endif
 
-#if defined(__MACH__)
+#ifdef _WIN32
+#define DLEXT ".dll"
+#elif defined(__MACH__)
 # define DLEXT ".dylib"
 #else
 # define DLEXT ".so"
@@ -96,10 +98,14 @@
     (char *)(SB_MEMBER_TYPE(type, member) *){ ptr } - offsetof(type, member)))
 
 /* Compile-time assertion */
+#if  __STDC_VERSION__ >= 201112L
+#define SB_COMPILE_TIME_ASSERT(expr) _Static_assert(expr, #expr)
+#else
 #define SB_COMPILE_TIME_ASSERT(expr)                                    \
   do {                                                                  \
     typedef char cta[(expr) ? 1 : -1] SB_ATTRIBUTE_UNUSED;              \
   } while(0)
+#endif
 
 #ifdef HAVE_ISATTY
 # define SB_ISATTY() isatty(0)
@@ -112,6 +118,9 @@
   specified alignment.
 */
 void *sb_memalign(size_t size, size_t alignment);
+
+/* Free memory allocated with sb_memalign() */
+void sb_free_memaligned(void* p);
 
 /* Get OS page size */
 size_t sb_getpagesize(void);

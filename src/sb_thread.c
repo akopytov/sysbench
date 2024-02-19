@@ -49,7 +49,7 @@ static int thread_stack_size;
 
 int sb_thread_init(void)
 {
-  thread_stack_size = sb_get_value_size("thread-stack-size");
+  thread_stack_size = (int)sb_get_value_size("thread-stack-size");
   if (thread_stack_size <= 0)
   {
     log_text(LOG_FATAL, "Invalid value for thread-stack-size: %d.\n", thread_stack_size);
