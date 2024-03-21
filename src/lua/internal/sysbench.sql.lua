@@ -150,6 +150,8 @@ sql_result *db_execute(sql_statement *stmt);
 int db_close(sql_statement *stmt);
 
 int db_free_results(sql_result *);
+
+void sb_rand_varstr_alpha(char *, uint32_t, uint32_t);
 ]]
 
 local sql_driver = ffi.typeof('sql_driver *')
@@ -367,6 +369,28 @@ function sql_param.set_rand_str(self, fmt)
    else
       error("Unsupported argument type: " .. btype, 2)
    end
+end
+
+function sql_param.set_rand_str_alpha(self, fmt)
+   local sql_type = sysbench.sql.type
+   local btype = self.type
+   local max_len = 1
+   local min_len = 1
+   self.is_null[0] = false
+
+   if btype == sql_type.CHAR or
+      btype == sql_type.VARCHAR
+   then
+      max_len = self.max_len + 1
+      assert(min_len <= max_len)
+      assert(max_len > 0)
+      local buflen = max_len
+      local buf = ffi.new("uint8_t[?]", buflen)
+      local nchars = ffi.C.sb_rand_varstr_alpha(self.buffer, min_len, max_len)
+   else
+      error("Unsupported argument type: " .. btype, 2)
+   end
+
 end
 
 sql_param.__index = sql_param

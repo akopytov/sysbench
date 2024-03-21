@@ -67,8 +67,14 @@ sysbench.cmdline.options = {
    secondary =
       {"Use a secondary index in place of the PRIMARY KEY", false},
    create_secondary =
-      {"Create a secondary index in addition to the PRIMARY KEY", true},
-  reconnect =
+      {"Create a secondary index esin addition to the PRIMARY KEY", true},
+   create_compound =
+      {"Create compound indexes in addition to the PRIMARY KEY", true},
+   use_replace =
+      {"Use replace instead Insert", false},
+   no_primary_key =
+      {"We will not create an explicit primary key on the tables. Keep in mind INNODB will generate anyhow", false},
+   reconnect =
       {"Reconnect after every N events. The default (0) is to not reconnect",
        0},      
    mysql_storage_engine =
@@ -129,7 +135,7 @@ function cmd_warmup()
                    t, sysbench.opt.table_size))
       con:query(string.format(
                    "SELECT COUNT(*) FROM " ..
-                      "(SELECT * FROM %s WHERE k LIKE '%%0%%' LIMIT %u) t",
+                      "(SELECT * FROM %s WHERE kwatts_s LIKE '%%0%%' LIMIT %u) t",
                    t, sysbench.opt.table_size))
    end
 end
@@ -201,6 +207,12 @@ function create_table(drv, con, table_num)
    
    con:query(string.format([[DROP TABLE IF EXISTS %s%d]],sysbench.opt.table_name, table_num))
    
+   local primaryKeyDefinition = ", PRIMARY KEY (`id`)"
+   
+   if sysbench.opt.no_primary_key and not sysbench.opt.auto_inc then
+      primaryKeyDefinition = ""
+   end
+   
    query = string.format([[   
    CREATE TABLE `%s%d` (
   `id` %s,
@@ -212,13 +224,9 @@ function create_table(drv, con, table_num)
   `continent` varchar(50) NOT NULL,
   `active` tinyint(2) NOT NULL DEFAULT '1',
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `strrecordtype` char(3) COLLATE utf8_bin NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `IDX_millid` (`millid`,`active`),
-  KEY `IDX_active` (`id`,`active`),
-  KEY `kcontinent_x` (continent,id)
+  `strrecordtype` char(3) COLLATE utf8_bin NOT NULL %s
   ) %s ROW_FORMAT=DYNAMIC  %s]],
-sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
+sysbench.opt.table_name, table_num, id_def, primaryKeyDefinition,engine_def, extra_table_options)
    
    
    --print("DEBUG :" .. query)
@@ -300,6 +308,7 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
    if sysbench.opt.create_secondary then
       print(string.format("Creating a secondary index on '%s%d'...",
                           sysbench.opt.table_name,table_num))
+                        
       con:query(string.format("CREATE INDEX kuuid_x ON %s%d(uuid)",
                               sysbench.opt.table_name,table_num, table_num))
       con:query(string.format("CREATE INDEX millid_x ON %s%d(millid)",
@@ -308,9 +317,28 @@ sysbench.opt.table_name, table_num, id_def, engine_def, extra_table_options)
                               sysbench.opt.table_name,table_num, table_num))
                               
    end
+   if sysbench.opt.create_compound then
+      print(string.format("Creating a compound index on '%s%d'...",
+                          sysbench.opt.table_name,table_num))
+                          
+      con:query(string.format("CREATE INDEX IDX_millid ON %s%d(`millid`,`active`)",
+                              sysbench.opt.table_name,table_num, table_num))                    
+
+      con:query(string.format("CREATE INDEX IDX_active ON %s%d(`id`,`active`)",
+                              sysbench.opt.table_name,table_num, table_num))                    
+
+      con:query(string.format("CREATE INDEX kcontinent_x ON %s%d(`continent`,`id`)",
+                              sysbench.opt.table_name,table_num, table_num))                    
+
+   end
+
+
 end
 
 local t = sysbench.sql.type
+local insertAction = "INSERT"
+local onDuplicateKeyAction = " ON DUPLICATE KEY UPDATE kwatts_s=kwatts_s+1"
+
 local stmt_defs = {
    point_selects = {
       "SELECT id, millid, date,continent,active,kwatts_s FROM %s%u WHERE id=?",
@@ -319,25 +347,28 @@ local stmt_defs = {
       "SELECT id, millid, date,continent,active,kwatts_s FROM %s%u WHERE id BETWEEN ? AND ?",
       t.INT, t.INT},
    sum_ranges = {
-      "SELECT SUM(kwatts_s) FROM %s%u WHERE id BETWEEN ? AND ?  and active=1",
+      "SELECT SUM(kwatts_s) FROM %s%u WHERE id BETWEEN ? AND ?",
         t.INT, t.INT},
    order_ranges = {
       "SELECT id, millid, date,continent,active,kwatts_s  FROM %s%u WHERE id BETWEEN ? AND ? ORDER BY millid",
        t.INT, t.INT},
    distinct_ranges = {
-      "SELECT DISTINCT millid,continent,active,kwatts_s   FROM %s%u WHERE id BETWEEN ? AND ? AND active =1 ORDER BY millid",
+      "SELECT DISTINCT millid,continent,active,kwatts_s   FROM %s%u WHERE id BETWEEN ? AND ? ",
       t.INT, t.INT},
    index_updates = {
       "UPDATE %s%u SET active=? WHERE id=?",
       t.INT,t.INT},
    non_index_updates = {
-      "UPDATE %s%u SET strrecordtype=? WHERE id=?",
-       {t.CHAR,3},t.INT},
+      "UPDATE %s%u SET location=? WHERE id=?",
+       {t.VARCHAR,50},t.INT},
    deletes = {
       "DELETE FROM %s%u WHERE id=?",
       t.INT},
    inserts = {
       "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,continent,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?, ?) ON DUPLICATE KEY UPDATE kwatts_s=kwatts_s+1",
+      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},{t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
+   replace = {
+      "REPLACE INTO %s%u (id,uuid,millid,kwatts_s,date,location,continent,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?, ?)",
       t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},{t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
   
 }
@@ -352,7 +383,6 @@ end
 
 function prepare_for_each_table(key)
    for t = 1, sysbench.opt.tables do
-
    
       stmt[t][key] = con:prepare(string.format(stmt_defs[key][1], sysbench.opt.table_name,t))
 -- print("DEBUG: " .. string.format(stmt_defs[key][1], sysbench.opt.table_name,t)
@@ -415,8 +445,22 @@ end
 
 function prepare_delete_inserts()
    prepare_for_each_table("deletes")
-   prepare_for_each_table("inserts")
+   if sysbench.opt.use_replace then
+	   prepare_for_each_table("replace")
+	else   
+	   prepare_for_each_table("inserts")
+   end 
 end
+
+function prepare_inserts()
+   if sysbench.opt.use_replace then
+	   prepare_for_each_table("replace")
+	else   
+	   prepare_for_each_table("inserts")
+   end 
+end
+
+
 
 function thread_init()
    drv = sysbench.sql.driver()
@@ -527,13 +571,13 @@ function execute_index_updates()
    local tnum = get_table_num()
 
    for i = 1, sysbench.opt.index_updates do
-      param[tnum].index_updates[1]:set(0)
+      param[tnum].index_updates[1]:set(sysbench.rand.default(0,1))
       param[tnum].index_updates[2]:set(get_id())
       stmt[tnum].index_updates:execute()
       
-      param[tnum].index_updates[1]:set(1)
-      param[tnum].index_updates[2]:set(get_id())
-      stmt[tnum].index_updates:execute()      
+--      param[tnum].index_updates[1]:set(1)
+--      param[tnum].index_updates[2]:set(get_id())
+--      stmt[tnum].index_updates:execute()      
       
    end
 end
@@ -542,7 +586,7 @@ function execute_non_index_updates()
    local tnum = get_table_num()
     
    for i = 1, sysbench.opt.non_index_updates do
-      param[tnum].non_index_updates[1]:set(sysbench.rand.varstringalpha(3,3))
+      param[tnum].non_index_updates[1]:set_rand_str_alpha("")
       param[tnum].non_index_updates[2]:set(get_id())
 
       stmt[tnum].non_index_updates:execute()
@@ -564,21 +608,76 @@ function execute_delete_inserts()
       location =sysbench.rand.varstringalpha(5, 50)
       continent =sysbench.rand.continent(6)
       active = sysbench.rand.default(0,1)
-      strrecordtype =  sysbench.rand.varstringalpha(3, 3)
       
       param[tnum].deletes[1]:set(id)
 
-      param[tnum].inserts[1]:set(id)
-      param[tnum].inserts[2]:set(millid)
-      param[tnum].inserts[3]:set(kwatts_s)
-      param[tnum].inserts[4]:set(location)
-      param[tnum].inserts[5]:set(continent)
-      param[tnum].inserts[6]:set(active)
-      param[tnum].inserts[7]:set(strrecordtype)
-      
+      if not sysbench.opt.use_replace then
+	    param[tnum].inserts[1]:set(id)
+    	param[tnum].inserts[2]:set(millid)
+     	param[tnum].inserts[3]:set(kwatts_s)
+     	param[tnum].inserts[4]:set(location)
+      	param[tnum].inserts[5]:set(continent)
+      	param[tnum].inserts[6]:set(active)
+      	param[tnum].inserts[7]:set_rand_str_alpha("")
+      else
+	    param[tnum].replace[1]:set(id)
+    	param[tnum].replace[2]:set(millid)
+     	param[tnum].replace[3]:set(kwatts_s)
+     	param[tnum].replace[4]:set(location)
+      	param[tnum].replace[5]:set(continent)
+      	param[tnum].replace[6]:set(active)
+      	param[tnum].replace[7]:set_rand_str_alpha("")
+      end
       
       stmt[tnum].deletes:execute()
-      stmt[tnum].inserts:execute()
+      if not sysbench.opt.use_replace then
+	     stmt[tnum].inserts:execute()
+	    else
+	    stmt[tnum].replace:execute()
+	  end  
+   end
+end
+
+function execute_inserts()
+   local tnum = get_table_num()
+
+   for i = 1, sysbench.opt.delete_inserts do
+      local id = get_id()
+
+
+--      "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,active,strrecordtyped) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?)",
+--      t.BIGINT, t.TINYINT, t.INT, {t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
+      
+      millid = sysbench.rand.default(1,400)
+      kwatts_s = sysbench.rand.default(0,4000000)
+      location =sysbench.rand.varstringalpha(5, 50)
+      continent =sysbench.rand.continent(6)
+      active = sysbench.rand.default(0,1)
+          
+      if not sysbench.opt.use_replace then
+	    param[tnum].inserts[1]:set(id)
+    	param[tnum].inserts[2]:set(millid)
+     	param[tnum].inserts[3]:set(kwatts_s)
+     	param[tnum].inserts[4]:set(location)
+      	param[tnum].inserts[5]:set(continent)
+      	param[tnum].inserts[6]:set(active)
+      	param[tnum].inserts[7]:set_rand_str_alpha("")
+      else
+	    param[tnum].replace[1]:set(id)
+    	param[tnum].replace[2]:set(millid)
+     	param[tnum].replace[3]:set(kwatts_s)
+     	param[tnum].replace[4]:set(location)
+      	param[tnum].replace[5]:set(continent)
+      	param[tnum].replace[6]:set(active)
+      	param[tnum].replace[7]:set_rand_str_alpha("")
+      end
+      
+      if not sysbench.opt.use_replace then
+	     stmt[tnum].inserts:execute()
+	    else
+	    stmt[tnum].replace:execute()      
+      end    
+
    end
 end
 

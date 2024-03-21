@@ -160,10 +160,10 @@ function sysbench.report_default(stat)
 end
 
 function sysbench.report_cumulative_csv(stat)
-      print("Work in progress")
+      print("TEST SUMMARY:")
       print("TotalTime,RunningThreads,totalEvents,Events/s," ..
             "Tot Operations,operations/s,tot reads,reads/s,Tot writes,writes/s," ..
-            "oterOps/s,latencyPct,Tot errors,errors/s,Tot reconnects,reconnects/s," ..
+            "oterOps/s,latencyPct95(μs) ,Tot errors,errors/s,Tot reconnects,reconnects/s," ..
             "Latency(ms) min, Latency(ms) max, Latency(ms) avg, Latency(ms) sum"
       )
       local seconds = stat.time_interval
