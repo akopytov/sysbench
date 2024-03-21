@@ -1,6 +1,6 @@
 /*
 ** SSA IR (Intermediate Representation) emitter.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_ir_c
@@ -30,6 +30,7 @@
 #endif
 #include "lj_vm.h"
 #include "lj_strscan.h"
+#include "lj_serialize.h"
 #include "lj_strfmt.h"
 #include "lj_prng.h"
 
@@ -147,7 +148,7 @@ TRef lj_ir_call(jit_State *J, IRCallID id, ...)
 }
 
 /* Load field of type t from GG_State + offset. Must be 32 bit aligned. */
-LJ_FUNC TRef lj_ir_ggfload(jit_State *J, IRType t, uintptr_t ofs)
+TRef lj_ir_ggfload(jit_State *J, IRType t, uintptr_t ofs)
 {
   lj_assertJ((ofs & 3) == 0, "unaligned GG_State field offset");
   ofs >>= 2;

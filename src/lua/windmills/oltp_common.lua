@@ -222,7 +222,7 @@ function create_table(drv, con, table_num)
   `date` date NOT NULL ,
   `location` varchar(50) NOT NULL,
   `continent` varchar(50) NOT NULL,
-  `active` tinyint(2) NOT NULL DEFAULT '1',
+  `active` smallint UNSIGNED NOT NULL DEFAULT '1',
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `strrecordtype` char(3) COLLATE utf8_bin NOT NULL %s
   ) %s ROW_FORMAT=DYNAMIC  %s]],
@@ -269,7 +269,7 @@ sysbench.opt.table_name, table_num, id_def, primaryKeyDefinition,engine_def, ext
       strrecordtype =  sysbench.rand.string("@@@")
       location =sysbench.rand.varstringalpha(5, 50)
       continent =sysbench.rand.continent(6)
-      active = sysbench.rand.default(0,1)
+      active = sysbench.rand.default(0,65535)
       millid = sysbench.rand.default(1,400)
       kwatts_s = sysbench.rand.default(0,4000000)
  
@@ -366,10 +366,10 @@ local stmt_defs = {
       t.INT},
    inserts = {
       "INSERT INTO %s%u (id,uuid,millid,kwatts_s,date,location,continent,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?, ?) ON DUPLICATE KEY UPDATE kwatts_s=kwatts_s+1",
-      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},{t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
+      t.BIGINT, t.INT,t.INT, {t.VARCHAR, 50},{t.VARCHAR, 50},t.INT, {t.CHAR, 3}},
    replace = {
       "REPLACE INTO %s%u (id,uuid,millid,kwatts_s,date,location,continent,active,strrecordtype) VALUES (?, UUID(), ?, ?, NOW(), ?, ?, ?, ?)",
-      t.BIGINT, t.TINYINT,t.INT, {t.VARCHAR, 50},{t.VARCHAR, 50},t.TINYINT, {t.CHAR, 3}},
+      t.BIGINT, t.INT,t.INT, {t.VARCHAR, 50},{t.VARCHAR, 50},t.INT, {t.CHAR, 3}},
   
 }
 
@@ -571,7 +571,7 @@ function execute_index_updates()
    local tnum = get_table_num()
 
    for i = 1, sysbench.opt.index_updates do
-      param[tnum].index_updates[1]:set(sysbench.rand.default(0,1))
+      param[tnum].index_updates[1]:set(sysbench.rand.default(0,65535))
       param[tnum].index_updates[2]:set(get_id())
       stmt[tnum].index_updates:execute()
       
@@ -607,7 +607,7 @@ function execute_delete_inserts()
       kwatts_s = sysbench.rand.default(0,4000000)
       location =sysbench.rand.varstringalpha(5, 50)
       continent =sysbench.rand.continent(6)
-      active = sysbench.rand.default(0,1)
+      active = sysbench.rand.default(0,65535)
       
       param[tnum].deletes[1]:set(id)
 
@@ -652,7 +652,7 @@ function execute_inserts()
       kwatts_s = sysbench.rand.default(0,4000000)
       location =sysbench.rand.varstringalpha(5, 50)
       continent =sysbench.rand.continent(6)
-      active = sysbench.rand.default(0,1)
+      active = sysbench.rand.default(0,65535)
           
       if not sysbench.opt.use_replace then
 	    param[tnum].inserts[1]:set(id)

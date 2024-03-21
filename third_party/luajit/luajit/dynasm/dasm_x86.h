@@ -1,6 +1,6 @@
 /*
 ** DynASM x86 encoding engine.
-** Copyright (C) 2005-2020 Mike Pall. All rights reserved.
+** Copyright (C) 2005-2022 Mike Pall. All rights reserved.
 ** Released under the MIT license. See dynasm.lua for full copyright notice.
 */
 
@@ -239,8 +239,11 @@ void dasm_put(Dst_DECL, int start, ...)
 	}
 	pos++;
 	ofs += 4;  /* Maximum offset needed. */
-	if (action == DASM_REL_LG || action == DASM_REL_PC)
+	if (action == DASM_REL_LG || action == DASM_REL_PC) {
 	  b[pos++] = ofs;  /* Store pass1 offset estimate. */
+	} else if (sizeof(ptrdiff_t) == 8) {
+	  ofs += 4;
+	}
 	break;
       case DASM_LABEL_LG: pl = D->lglabels + *p++; CKPL(lg, LG); goto putlabel;
       case DASM_LABEL_PC: pl = D->pclabels + va_arg(ap, int); CKPL(pc, PC);
@@ -365,10 +368,22 @@ int dasm_link(Dst_DECL, size_t *szp)
   do { *((unsigned short *)cp) = (unsigned short)(x); cp+=2; } while (0)
 #define dasmd(x) \
   do { *((unsigned int *)cp) = (unsigned int)(x); cp+=4; } while (0)
+#define dasmq(x) \
+  do { *((unsigned long long *)cp) = (unsigned long long)(x); cp+=8; } while (0)
 #else
 #define dasmw(x)	do { dasmb(x); dasmb((x)>>8); } while (0)
 #define dasmd(x)	do { dasmw(x); dasmw((x)>>16); } while (0)
+#define dasmq(x)	do { dasmd(x); dasmd((x)>>32); } while (0)
 #endif
+static unsigned char *dasma_(unsigned char *cp, ptrdiff_t x)
+{
+  if (sizeof(ptrdiff_t) == 8)
+    dasmq((unsigned long long)x);
+  else
+    dasmd((unsigned int)x);
+  return cp;
+}
+#define dasma(x)	(cp = dasma_(cp, (x)))
 
 /* Pass 3: Encode sections. */
 int dasm_encode(Dst_DECL, void *buffer)
@@ -443,12 +458,13 @@ int dasm_encode(Dst_DECL, void *buffer)
 	  goto wb;
 	}
 	case DASM_IMM_LG:
-	  p++; if (n < 0) { n = (int)(ptrdiff_t)D->globals[-n]; goto wd; }
+	  p++;
+	  if (n < 0) { dasma((ptrdiff_t)D->globals[-n]); break; }
 	  /* fallthrough */
 	case DASM_IMM_PC: {
 	  int *pb = DASM_POS2PTR(D, n);
-	  n = *pb < 0 ? pb[1] : (*pb + (int)(ptrdiff_t)base);
-	  goto wd;
+	  dasma(*pb < 0 ? (ptrdiff_t)pb[1] : (*pb + (ptrdiff_t)base));
+	  break;
 	}
 	case DASM_LABEL_LG: {
 	  int idx = *p++;

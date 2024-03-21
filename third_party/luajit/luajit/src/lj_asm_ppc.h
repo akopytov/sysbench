@@ -1,6 +1,6 @@
 /*
 ** PPC IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Register allocator extensions --------------------------------------- */
@@ -156,6 +156,9 @@ static Reg asm_fuseahuref(ASMState *as, IRRef ref, int32_t *ofsp, RegSet allow)
 	  return ra_allock(as, ofs-(int16_t)ofs, allow);
 	}
       }
+    } else if (ir->o == IR_TMPREF) {
+      *ofsp = (int32_t)(offsetof(global_State, tmptv)-32768);
+      return RID_JGL;
     }
   }
   *ofsp = 0;
@@ -232,7 +235,8 @@ static int asm_fusemadd(ASMState *as, IRIns *ir, PPCIns pi, PPCIns pir)
 {
   IRRef lref = ir->op1, rref = ir->op2;
   IRIns *irm;
-  if (lref != rref &&
+  if ((as->flags & JIT_F_OPT_FMA) &&
+      lref != rref &&
       ((mayfuse(as, lref) && (irm = IR(lref), irm->o == IR_MUL) &&
 	ra_noreg(irm->r)) ||
        (mayfuse(as, rref) && (irm = IR(rref), irm->o == IR_MUL) &&
@@ -337,10 +341,8 @@ static void asm_setupresult(ASMState *as, IRIns *ir, const CCallInfo *ci)
       } else {
 	ra_destreg(as, ir, RID_FPRET);
       }
-#if LJ_32
     } else if (hiop) {
       ra_destpair(as, ir);
-#endif
     } else {
       ra_destreg(as, ir, RID_RET);
     }
@@ -388,6 +390,21 @@ static void asm_retf(ASMState *as, IRIns *ir)
 	  ra_allock(as, i32ptr(pc), rset_exclude(RSET_GPR, base)));
   emit_tai(as, PPCI_LWZ, RID_TMP, base, -8);
 }
+
+/* -- Buffer operations --------------------------------------------------- */
+
+#if LJ_HASBUFFER
+static void asm_bufhdr_write(ASMState *as, Reg sb)
+{
+  Reg tmp = ra_scratch(as, rset_exclude(RSET_GPR, sb));
+  IRIns irgc;
+  irgc.ot = IRT(0, IRT_PGC);  /* GC type. */
+  emit_storeofs(as, &irgc, RID_TMP, sb, offsetof(SBuf, L));
+  emit_rot(as, PPCI_RLWIMI, RID_TMP, tmp, 0, 31-lj_fls(SBUF_MASK_FLAG), 31);
+  emit_getgl(as, RID_TMP, cur_L);
+  emit_loadofs(as, &irgc, tmp, sb, offsetof(SBuf, L));
+}
+#endif
 
 /* -- Type conversions ---------------------------------------------------- */
 
@@ -567,28 +584,54 @@ static void asm_strto(ASMState *as, IRIns *ir)
 /* -- Memory references --------------------------------------------------- */
 
 /* Get pointer to TValue. */
-static void asm_tvptr(ASMState *as, Reg dest, IRRef ref)
+static void asm_tvptr(ASMState *as, Reg dest, IRRef ref, MSize mode)
 {
-  IRIns *ir = IR(ref);
-  if (irt_isnum(ir->t)) {
-    if (irref_isk(ref))  /* Use the number constant itself as a TValue. */
-      ra_allockreg(as, i32ptr(ir_knum(ir)), dest);
-    else  /* Otherwise force a spill and use the spill slot. */
-      emit_tai(as, PPCI_ADDI, dest, RID_SP, ra_spill(as, ir));
-  } else {
-    /* Otherwise use g->tmptv to hold the TValue. */
-    RegSet allow = rset_exclude(RSET_GPR, dest);
-    Reg type;
-    emit_tai(as, PPCI_ADDI, dest, RID_JGL, (int32_t)offsetof(global_State, tmptv)-32768);
-    if (!irt_ispri(ir->t)) {
-      Reg src = ra_alloc1(as, ref, allow);
-      emit_setgl(as, src, tmptv.gcr);
+  int32_t tmpofs = (int32_t)(offsetof(global_State, tmptv)-32768);
+  if ((mode & IRTMPREF_IN1)) {
+    IRIns *ir = IR(ref);
+    if (irt_isnum(ir->t)) {
+      if ((mode & IRTMPREF_OUT1)) {
+#if LJ_SOFTFP
+	lj_assertA(irref_isk(ref), "unsplit FP op");
+	emit_tai(as, PPCI_ADDI, dest, RID_JGL, tmpofs);
+	emit_setgl(as,
+		   ra_allock(as, (int32_t)ir_knum(ir)->u32.lo, RSET_GPR),
+		   tmptv.u32.lo);
+	emit_setgl(as,
+		   ra_allock(as, (int32_t)ir_knum(ir)->u32.hi, RSET_GPR),
+		   tmptv.u32.hi);
+#else
+	Reg src = ra_alloc1(as, ref, RSET_FPR);
+	emit_tai(as, PPCI_ADDI, dest, RID_JGL, tmpofs);
+	emit_fai(as, PPCI_STFD, src, RID_JGL, tmpofs);
+#endif
+      } else if (irref_isk(ref)) {
+	/* Use the number constant itself as a TValue. */
+	ra_allockreg(as, i32ptr(ir_knum(ir)), dest);
+      } else {
+#if LJ_SOFTFP
+	lj_assertA(0, "unsplit FP op");
+#else
+	/* Otherwise force a spill and use the spill slot. */
+	emit_tai(as, PPCI_ADDI, dest, RID_SP, ra_spill(as, ir));
+#endif
+      }
+    } else {
+      /* Otherwise use g->tmptv to hold the TValue. */
+      Reg type;
+      emit_tai(as, PPCI_ADDI, dest, RID_JGL, tmpofs);
+      if (!irt_ispri(ir->t)) {
+	Reg src = ra_alloc1(as, ref, RSET_GPR);
+	emit_setgl(as, src, tmptv.gcr);
+      }
+      if (LJ_SOFTFP && (ir+1)->o == IR_HIOP && !irt_isnil((ir+1)->t))
+	type = ra_alloc1(as, ref+1, RSET_GPR);
+      else
+	type = ra_allock(as, irt_toitype(ir->t), RSET_GPR);
+      emit_setgl(as, type, tmptv.it);
     }
-    if (LJ_SOFTFP && (ir+1)->o == IR_HIOP)
-      type = ra_alloc1(as, ref+1, allow);
-    else
-      type = ra_allock(as, irt_toitype(ir->t), allow);
-    emit_setgl(as, type, tmptv.it);
+  } else {
+    emit_tai(as, PPCI_ADDI, dest, RID_JGL, tmpofs);
   }
 }
 
@@ -894,7 +937,7 @@ static void asm_fload(ASMState *as, IRIns *ir)
   int32_t ofs;
   if (ir->op1 == REF_NIL) {  /* FLOAD from GG_State with offset. */
     idx = RID_JGL;
-    ofs = (ir->op2 << 2) - 32768;
+    ofs = (ir->op2 << 2) - 32768 - GG_OFS(g);
   } else {
     idx = ra_alloc1(as, ir->op1, RSET_GPR);
     if (ir->op2 == IRFL_TAB_ARRAY) {
@@ -975,6 +1018,10 @@ static void asm_ahuvload(ASMState *as, IRIns *ir)
     rset_clear(allow, dest);
   }
   idx = asm_fuseahuref(as, ir->op1, &ofs, allow);
+  if (ir->o == IR_VLOAD) {
+    ofs = ofs != AHUREF_LSX ? ofs + 8 * ir->op2 :
+	  ir->op2 ? 8 * ir->op2 : AHUREF_LSX;
+  }
   if (irt_isnum(t)) {
     Reg tisnum = ra_allock(as, (int32_t)LJ_TISNUM, rset_exclude(allow, idx));
     asm_guardcc(as, CC_GE);
@@ -1057,7 +1104,8 @@ static void asm_sload(ASMState *as, IRIns *ir)
   lj_assertA(irt_isguard(ir->t) || !(ir->op2 & IRSLOAD_TYPECHECK),
 	     "inconsistent SLOAD variant");
   lj_assertA(LJ_DUALNUM ||
-	     !irt_isint(t) || (ir->op2 & (IRSLOAD_CONVERT|IRSLOAD_FRAME)),
+	     !irt_isint(t) ||
+	     (ir->op2 & (IRSLOAD_CONVERT|IRSLOAD_FRAME|IRSLOAD_KEYINDEX)),
 	     "bad SLOAD type");
 #if LJ_SOFTFP
   lj_assertA(!(ir->op2 & IRSLOAD_CONVERT),
@@ -1122,7 +1170,12 @@ dotypecheck:
   } else {
     if ((ir->op2 & IRSLOAD_TYPECHECK)) {
       asm_guardcc(as, CC_NE);
-      emit_ai(as, PPCI_CMPWI, RID_TMP, irt_toitype(t));
+      if ((ir->op2 & IRSLOAD_KEYINDEX)) {
+	emit_ai(as, PPCI_CMPWI, RID_TMP, (LJ_KEYINDEX & 0xffff));
+	emit_asi(as, PPCI_XORIS, RID_TMP, RID_TMP, (LJ_KEYINDEX >> 16));
+      } else {
+	emit_ai(as, PPCI_CMPWI, RID_TMP, irt_toitype(t));
+      }
       type = RID_TMP;
     }
     if (ra_hasreg(dest)) emit_tai(as, PPCI_LWZ, dest, base, ofs);
@@ -1894,15 +1947,15 @@ static void asm_comp64(ASMState *as, IRIns *ir)
 }
 #endif
 
-/* -- Support for 64 bit ops in 32 bit mode ------------------------------- */
+/* -- Split register ops -------------------------------------------------- */
 
-/* Hiword op of a split 64 bit op. Previous op must be the loword op. */
+/* Hiword op of a split 32/32 bit op. Previous op is be the loword op. */
 static void asm_hiop(ASMState *as, IRIns *ir)
 {
-#if LJ_HASFFI || LJ_SOFTFP
   /* HIOP is marked as a store because it needs its own DCE logic. */
   int uselo = ra_used(ir-1), usehi = ra_used(ir);  /* Loword/hiword used? */
   if (LJ_UNLIKELY(!(as->flags & JIT_F_OPT_DCE))) uselo = usehi = 1;
+#if LJ_HASFFI || LJ_SOFTFP
   if ((ir-1)->o == IR_CONV) {  /* Conversions to/from 64 bit. */
     as->curins--;  /* Always skip the CONV. */
 #if LJ_HASFFI && !LJ_SOFTFP
@@ -1937,12 +1990,16 @@ static void asm_hiop(ASMState *as, IRIns *ir)
     }
     return;
   }
+#endif
   if (!usehi) return;  /* Skip unused hiword op for all remaining ops. */
   switch ((ir-1)->o) {
 #if LJ_HASFFI
   case IR_ADD: as->curins--; asm_add64(as, ir); break;
   case IR_SUB: as->curins--; asm_sub64(as, ir); break;
   case IR_NEG: as->curins--; asm_neg64(as, ir); break;
+  case IR_CNEWI:
+    /* Nothing to do here. Handled by lo op itself. */
+    break;
 #endif
 #if LJ_SOFTFP
   case IR_SLOAD: case IR_ALOAD: case IR_HLOAD: case IR_ULOAD: case IR_VLOAD:
@@ -1950,25 +2007,16 @@ static void asm_hiop(ASMState *as, IRIns *ir)
     if (!uselo)
       ra_allocref(as, ir->op1, RSET_GPR);  /* Mark lo op as used. */
     break;
+  case IR_ASTORE: case IR_HSTORE: case IR_USTORE: case IR_TOSTR: case IR_TMPREF:
+    /* Nothing to do here. Handled by lo op itself. */
+    break;
 #endif
-  case IR_CALLN:
-  case IR_CALLS:
-  case IR_CALLXS:
+  case IR_CALLN: case IR_CALLL: case IR_CALLS: case IR_CALLXS:
     if (!uselo)
       ra_allocref(as, ir->op1, RID2RSET(RID_RETLO));  /* Mark lo op as used. */
     break;
-#if LJ_SOFTFP
-  case IR_ASTORE: case IR_HSTORE: case IR_USTORE: case IR_TOSTR:
-#endif
-  case IR_CNEWI:
-    /* Nothing to do here. Handled by lo op itself. */
-    break;
   default: lj_assertA(0, "bad HIOP for op %d", (ir-1)->o); break;
   }
-#else
-  /* Unused without SOFTFP or FFI. */
-  UNUSED(as); UNUSED(ir); lj_assertA(0, "unexpected HIOP");
-#endif
 }
 
 /* -- Profiling ----------------------------------------------------------- */
@@ -2055,6 +2103,8 @@ static void asm_stack_restore(ASMState *as, SnapShot *snap)
       } else if ((sn & SNAP_SOFTFPNUM)) {
 	type = ra_alloc1(as, ref+1, rset_exclude(RSET_GPR, RID_BASE));
 #endif
+      } else if ((sn & SNAP_KEYINDEX)) {
+	type = ra_allock(as, (int32_t)LJ_KEYINDEX, allow);
       } else {
 	type = ra_allock(as, (int32_t)irt_toitype(ir->t), allow);
       }
@@ -2111,6 +2161,12 @@ static void asm_loop_fixup(ASMState *as)
   } else {
     p[-1] = PPCI_B|(((target-p+1)&0x00ffffffu)<<2);
   }
+}
+
+/* Fixup the tail of the loop. */
+static void asm_loop_tail_fixup(ASMState *as)
+{
+  UNUSED(as);  /* Nothing to do. */
 }
 
 /* -- Head of trace ------------------------------------------------------- */

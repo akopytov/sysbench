@@ -1,6 +1,6 @@
 /*
 ** C type conversions.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include "lj_obj.h"
@@ -8,6 +8,7 @@
 #if LJ_HASFFI
 
 #include "lj_err.h"
+#include "lj_buf.h"
 #include "lj_tab.h"
 #include "lj_ctype.h"
 #include "lj_cdata.h"
@@ -568,7 +569,9 @@ void lj_cconv_ct_tv(CTState *cts, CType *d,
     }
     s = ctype_raw(cts, sid);
     if (ctype_isfunc(s->info)) {
+      CTypeID did = ctype_typeid(cts, d);
       sid = lj_ctype_intern(cts, CTINFO(CT_PTR, CTALIGN_PTR|sid), CTSIZE_PTR);
+      d = ctype_get(cts, did);  /* cts->tab may have been reallocated. */
     } else {
       if (ctype_isenum(s->info)) s = ctype_child(cts, s);
       goto doconv;
@@ -619,6 +622,8 @@ void lj_cconv_ct_tv(CTState *cts, CType *d,
     tmpptr = uddata(ud);
     if (ud->udtype == UDTYPE_IO_FILE)
       tmpptr = *(void **)tmpptr;
+    else if (ud->udtype == UDTYPE_BUFFER)
+      tmpptr = ((SBufExt *)tmpptr)->r;
   } else if (tvislightud(o)) {
     tmpptr = lightudV(cts->g, o);
   } else if (tvisfunc(o)) {

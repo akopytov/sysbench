@@ -1,6 +1,6 @@
 /*
 ** I/O library.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2011 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -60,12 +60,12 @@ static IOFileUD *io_tofile(lua_State *L)
   return iof;
 }
 
-static FILE *io_stdfile(lua_State *L, ptrdiff_t id)
+static IOFileUD *io_stdfile(lua_State *L, ptrdiff_t id)
 {
   IOFileUD *iof = IOSTDF_IOF(L, id);
   if (iof->fp == NULL)
     lj_err_caller(L, LJ_ERR_IOSTDCL);
-  return iof->fp;
+  return iof;
 }
 
 static IOFileUD *io_file_new(lua_State *L)
@@ -178,7 +178,7 @@ static int io_file_readlen(lua_State *L, FILE *fp, MSize m)
     MSize n = (MSize)fread(buf, 1, m, fp);
     setstrV(L, L->top++, lj_str_new(L, buf, (size_t)n));
     lj_gc_check(L);
-    return (n > 0 || m == 0);
+    return n > 0;
   } else {
     int c = getc(fp);
     ungetc(c, fp);
@@ -187,8 +187,9 @@ static int io_file_readlen(lua_State *L, FILE *fp, MSize m)
   }
 }
 
-static int io_file_read(lua_State *L, FILE *fp, int start)
+static int io_file_read(lua_State *L, IOFileUD *iof, int start)
 {
+  FILE *fp = iof->fp;
   int ok, n, nargs = (int)(L->top - L->base) - start;
   clearerr(fp);
   if (nargs == 0) {
@@ -224,8 +225,9 @@ static int io_file_read(lua_State *L, FILE *fp, int start)
   return n - start;
 }
 
-static int io_file_write(lua_State *L, FILE *fp, int start)
+static int io_file_write(lua_State *L, IOFileUD *iof, int start)
 {
+  FILE *fp = iof->fp;
   cTValue *tv;
   int status = 1;
   for (tv = L->base+start; tv < L->top; tv++) {
@@ -253,13 +255,11 @@ static int io_file_iter(lua_State *L)
     lj_err_caller(L, LJ_ERR_IOCLFL);
   L->top = L->base;
   if (n) {  /* Copy upvalues with options to stack. */
-    if (n > LUAI_MAXCSTACK)
-      lj_err_caller(L, LJ_ERR_STKOV);
     lj_state_checkstack(L, (MSize)n);
     memcpy(L->top, &fn->c.upvalue[1], n*sizeof(TValue));
     L->top += n;
   }
-  n = io_file_read(L, iof->fp, 0);
+  n = io_file_read(L, iof, 0);
   if (ferror(iof->fp))
     lj_err_callermsg(L, strVdata(L->top-2));
   if (tvisnil(L->base) && (iof->type & IOFILE_FLAG_CLOSE)) {
@@ -284,19 +284,25 @@ static int io_file_lines(lua_State *L)
 
 LJLIB_CF(io_method_close)
 {
-  IOFileUD *iof = L->base < L->top ? io_tofile(L) :
-		  IOSTDF_IOF(L, GCROOT_IO_OUTPUT);
+  IOFileUD *iof;
+  if (L->base < L->top) {
+    iof = io_tofile(L);
+  } else {
+    iof = IOSTDF_IOF(L, GCROOT_IO_OUTPUT);
+    if (iof->fp == NULL)
+      lj_err_caller(L, LJ_ERR_IOCLFL);
+  }
   return io_file_close(L, iof);
 }
 
 LJLIB_CF(io_method_read)
 {
-  return io_file_read(L, io_tofile(L)->fp, 1);
+  return io_file_read(L, io_tofile(L), 1);
 }
 
 LJLIB_CF(io_method_write)		LJLIB_REC(io_write 0)
 {
-  return io_file_write(L, io_tofile(L)->fp, 1);
+  return io_file_write(L, io_tofile(L), 1);
 }
 
 LJLIB_CF(io_method_flush)		LJLIB_REC(io_flush 0)
@@ -433,7 +439,7 @@ LJLIB_CF(io_popen)
 LJLIB_CF(io_tmpfile)
 {
   IOFileUD *iof = io_file_new(L);
-#if LJ_TARGET_PS3 || LJ_TARGET_PS4 || LJ_TARGET_PSVITA
+#if LJ_TARGET_PS3 || LJ_TARGET_PS4 || LJ_TARGET_PS5 || LJ_TARGET_PSVITA || LJ_TARGET_NX
   iof->fp = NULL; errno = ENOSYS;
 #else
   iof->fp = tmpfile();
@@ -458,7 +464,7 @@ LJLIB_CF(io_write)		LJLIB_REC(io_write GCROOT_IO_OUTPUT)
 
 LJLIB_CF(io_flush)		LJLIB_REC(io_flush GCROOT_IO_OUTPUT)
 {
-  return luaL_fileresult(L, fflush(io_stdfile(L, GCROOT_IO_OUTPUT)) == 0, NULL);
+  return luaL_fileresult(L, fflush(io_stdfile(L, GCROOT_IO_OUTPUT)->fp) == 0, NULL);
 }
 
 static int io_std_getset(lua_State *L, ptrdiff_t id, const char *mode)

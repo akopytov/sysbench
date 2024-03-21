@@ -1,6 +1,6 @@
 /*
 ** MIPS instruction emitter.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #if LJ_64
@@ -70,7 +70,7 @@ static void emit_rotr(ASMState *as, Reg dest, Reg src, Reg tmp, uint32_t shift)
   }
 }
 
-#if LJ_64
+#if LJ_64 || LJ_HASBUFFER
 static void emit_tsml(ASMState *as, MIPSIns mi, Reg rt, Reg rs, uint32_t msb,
 		      uint32_t lsb)
 {

@@ -1,6 +1,6 @@
 /*
 ** IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_asm_c
@@ -11,6 +11,7 @@
 #if LJ_HASJIT
 
 #include "lj_gc.h"
+#include "lj_buf.h"
 #include "lj_str.h"
 #include "lj_tab.h"
 #include "lj_frame.h"
@@ -71,6 +72,8 @@ typedef struct ASMState {
   IRRef snaprename;	/* Rename highwater mark for snapshot check. */
   SnapNo snapno;	/* Current snapshot number. */
   SnapNo loopsnapno;	/* Loop snapshot number. */
+  int snapalloc;	/* Current snapshot needs allocation. */
+  BloomFilter snapfilt1, snapfilt2;	/* Filled with snapshot refs. */
 
   IRRef fuseref;	/* Fusion limit (loopref, 0 or FUSE_DISABLED). */
   IRRef sectref;	/* Section base reference (loopref or 0). */
@@ -84,6 +87,7 @@ typedef struct ASMState {
 
   MCode *mcbot;		/* Bottom of reserved MCode. */
   MCode *mctop;		/* Top of generated MCode. */
+  MCode *mctoporig;	/* Original top of generated MCode. */
   MCode *mcloop;	/* Pointer to loop MCode (or NULL). */
   MCode *invmcp;	/* Points to invertible loop branch (or NULL). */
   MCode *flagmcp;	/* Pending opportunity to merge flag setting ins. */
@@ -694,7 +698,14 @@ static void ra_rename(ASMState *as, Reg down, Reg up)
   RA_DBGX((as, "rename    $f $r $r", regcost_ref(as->cost[up]), down, up));
   emit_movrr(as, ir, down, up);  /* Backwards codegen needs inverse move. */
   if (!ra_hasspill(IR(ref)->s)) {  /* Add the rename to the IR. */
-    ra_addrename(as, down, ref, as->snapno);
+    /*
+    ** The rename is effective at the subsequent (already emitted) exit
+    ** branch. This is for the current snapshot (as->snapno). Except if we
+    ** haven't yet allocated any refs for the snapshot (as->snapalloc == 1),
+    ** then it belongs to the next snapshot.
+    ** See also the discussion at asm_snap_checkrename().
+    */
+    ra_addrename(as, down, ref, as->snapno + as->snapalloc);
   }
 }
 
@@ -807,11 +818,11 @@ static void ra_leftov(ASMState *as, Reg dest, IRRef lref)
 }
 #endif
 
-#if !LJ_64
 /* Force a RID_RETLO/RID_RETHI destination register pair (marked as free). */
 static void ra_destpair(ASMState *as, IRIns *ir)
 {
   Reg destlo = ir->r, desthi = (ir+1)->r;
+  IRIns *irx = (LJ_64 && !irt_is64(ir->t)) ? ir+1 : ir;
   /* First spill unrelated refs blocking the destination registers. */
   if (!rset_test(as->freeset, RID_RETLO) &&
       destlo != RID_RETLO && desthi != RID_RETLO)
@@ -835,29 +846,29 @@ static void ra_destpair(ASMState *as, IRIns *ir)
   /* Check for conflicts and shuffle the registers as needed. */
   if (destlo == RID_RETHI) {
     if (desthi == RID_RETLO) {
-#if LJ_TARGET_X86
+#if LJ_TARGET_X86ORX64
       *--as->mcp = XI_XCHGa + RID_RETHI;
+      if (LJ_64 && irt_is64(irx->t)) *--as->mcp = 0x48;
 #else
-      emit_movrr(as, ir, RID_RETHI, RID_TMP);
-      emit_movrr(as, ir, RID_RETLO, RID_RETHI);
-      emit_movrr(as, ir, RID_TMP, RID_RETLO);
+      emit_movrr(as, irx, RID_RETHI, RID_TMP);
+      emit_movrr(as, irx, RID_RETLO, RID_RETHI);
+      emit_movrr(as, irx, RID_TMP, RID_RETLO);
 #endif
     } else {
-      emit_movrr(as, ir, RID_RETHI, RID_RETLO);
-      if (desthi != RID_RETHI) emit_movrr(as, ir, desthi, RID_RETHI);
+      emit_movrr(as, irx, RID_RETHI, RID_RETLO);
+      if (desthi != RID_RETHI) emit_movrr(as, irx, desthi, RID_RETHI);
     }
   } else if (desthi == RID_RETLO) {
-    emit_movrr(as, ir, RID_RETLO, RID_RETHI);
-    if (destlo != RID_RETLO) emit_movrr(as, ir, destlo, RID_RETLO);
+    emit_movrr(as, irx, RID_RETLO, RID_RETHI);
+    if (destlo != RID_RETLO) emit_movrr(as, irx, destlo, RID_RETLO);
   } else {
-    if (desthi != RID_RETHI) emit_movrr(as, ir, desthi, RID_RETHI);
-    if (destlo != RID_RETLO) emit_movrr(as, ir, destlo, RID_RETLO);
+    if (desthi != RID_RETHI) emit_movrr(as, irx, desthi, RID_RETHI);
+    if (destlo != RID_RETLO) emit_movrr(as, irx, destlo, RID_RETLO);
   }
   /* Restore spill slots (if any). */
   if (ra_hasspill((ir+1)->s)) ra_save(as, ir+1, RID_RETHI);
   if (ra_hasspill(ir->s)) ra_save(as, ir, RID_RETLO);
 }
-#endif
 
 /* -- Snapshot handling --------- ----------------------------------------- */
 
@@ -892,7 +903,10 @@ static int asm_sunk_store(ASMState *as, IRIns *ira, IRIns *irs)
 static void asm_snap_alloc1(ASMState *as, IRRef ref)
 {
   IRIns *ir = IR(ref);
-  if (!irref_isk(ref) && (!(ra_used(ir) || ir->r == RID_SUNK))) {
+  if (!irref_isk(ref) && ir->r != RID_SUNK) {
+    bloomset(as->snapfilt1, ref);
+    bloomset(as->snapfilt2, hashrot(ref, ref + HASH_BIAS));
+    if (ra_used(ir)) return;
     if (ir->r == RID_SINK) {
       ir->r = RID_SUNK;
 #if LJ_HASFFI
@@ -947,11 +961,12 @@ static void asm_snap_alloc1(ASMState *as, IRRef ref)
 }
 
 /* Allocate refs escaping to a snapshot. */
-static void asm_snap_alloc(ASMState *as)
+static void asm_snap_alloc(ASMState *as, int snapno)
 {
-  SnapShot *snap = &as->T->snap[as->snapno];
+  SnapShot *snap = &as->T->snap[snapno];
   SnapEntry *map = &as->T->snapmap[snap->mapofs];
   MSize n, nent = snap->nent;
+  as->snapfilt1 = as->snapfilt2 = 0;
   for (n = 0; n < nent; n++) {
     SnapEntry sn = map[n];
     IRRef ref = snap_ref(sn);
@@ -960,7 +975,7 @@ static void asm_snap_alloc(ASMState *as)
       if (LJ_SOFTFP && (sn & SNAP_SOFTFPNUM)) {
 	lj_assertA(irt_type(IR(ref+1)->t) == IRT_SOFTFP,
 		   "snap %d[%d] points to bad SOFTFP IR %04d",
-		   as->snapno, n, ref - REF_BIAS);
+		   snapno, n, ref - REF_BIAS);
 	asm_snap_alloc1(as, ref+1);
       }
     }
@@ -976,41 +991,61 @@ static void asm_snap_alloc(ASMState *as)
 */
 static int asm_snap_checkrename(ASMState *as, IRRef ren)
 {
-  SnapShot *snap = &as->T->snap[as->snapno];
-  SnapEntry *map = &as->T->snapmap[snap->mapofs];
-  MSize n, nent = snap->nent;
-  for (n = 0; n < nent; n++) {
-    SnapEntry sn = map[n];
-    IRRef ref = snap_ref(sn);
-    if (ref == ren || (LJ_SOFTFP && (sn & SNAP_SOFTFPNUM) && ++ref == ren)) {
-      IRIns *ir = IR(ref);
-      ra_spill(as, ir);  /* Register renamed, so force a spill slot. */
-      RA_DBGX((as, "snaprensp $f $s", ref, ir->s));
-      return 1;  /* Found. */
-    }
+  if (bloomtest(as->snapfilt1, ren) &&
+      bloomtest(as->snapfilt2, hashrot(ren, ren + HASH_BIAS))) {
+    IRIns *ir = IR(ren);
+    ra_spill(as, ir);  /* Register renamed, so force a spill slot. */
+    RA_DBGX((as, "snaprensp $f $s", ren, ir->s));
+    return 1;  /* Found. */
   }
   return 0;  /* Not found. */
 }
 
-/* Prepare snapshot for next guard instruction. */
+/* Prepare snapshot for next guard or throwing instruction. */
 static void asm_snap_prep(ASMState *as)
 {
-  if (as->curins < as->snapref) {
-    do {
-      if (as->snapno == 0) return;  /* Called by sunk stores before snap #0. */
-      as->snapno--;
-      as->snapref = as->T->snap[as->snapno].ref;
-    } while (as->curins < as->snapref);
-    asm_snap_alloc(as);
+  if (as->snapalloc) {
+    /* Alloc on first invocation for each snapshot. */
+    as->snapalloc = 0;
+    asm_snap_alloc(as, as->snapno);
     as->snaprename = as->T->nins;
   } else {
-    /* Process any renames above the highwater mark. */
+    /* Check any renames above the highwater mark. */
     for (; as->snaprename < as->T->nins; as->snaprename++) {
       IRIns *ir = &as->T->ir[as->snaprename];
       if (asm_snap_checkrename(as, ir->op1))
 	ir->op2 = REF_BIAS-1;  /* Kill rename. */
     }
   }
+}
+
+/* Move to previous snapshot when we cross the current snapshot ref. */
+static void asm_snap_prev(ASMState *as)
+{
+  if (as->curins < as->snapref) {
+    uintptr_t ofs = (uintptr_t)(as->mctoporig - as->mcp);
+    if (ofs >= 0x10000) lj_trace_err(as->J, LJ_TRERR_MCODEOV);
+    do {
+      if (as->snapno == 0) return;
+      as->snapno--;
+      as->snapref = as->T->snap[as->snapno].ref;
+      as->T->snap[as->snapno].mcofs = (uint16_t)ofs;  /* Remember mcode ofs. */
+    } while (as->curins < as->snapref);  /* May have no ins inbetween. */
+    as->snapalloc = 1;
+  }
+}
+
+/* Fixup snapshot mcode offsetst. */
+static void asm_snap_fixup_mcofs(ASMState *as)
+{
+  uint32_t sz = (uint32_t)(as->mctoporig - as->mcp);
+  SnapShot *snap = as->T->snap;
+  SnapNo i;
+  for (i = as->T->nsnap-1; i > 0; i--) {
+    /* Compute offset from mcode start and store in correct snapshot. */
+    snap[i].mcofs = (uint16_t)(sz - snap[i-1].mcofs);
+  }
+  snap[0].mcofs = 0;
 }
 
 /* -- Miscellaneous helpers ----------------------------------------------- */
@@ -1057,6 +1092,7 @@ static void asm_snew(ASMState *as, IRIns *ir)
 {
   const CCallInfo *ci = &lj_ir_callinfo[IRCALL_lj_str_new];
   IRRef args[3];
+  asm_snap_prep(as);
   args[0] = ASMREF_L;  /* lua_State *L    */
   args[1] = ir->op1;   /* const char *str */
   args[2] = ir->op2;   /* size_t len      */
@@ -1069,6 +1105,7 @@ static void asm_tnew(ASMState *as, IRIns *ir)
 {
   const CCallInfo *ci = &lj_ir_callinfo[IRCALL_lj_tab_new1];
   IRRef args[2];
+  asm_snap_prep(as);
   args[0] = ASMREF_L;     /* lua_State *L    */
   args[1] = ASMREF_TMP1;  /* uint32_t ahsize */
   as->gcsteps++;
@@ -1081,6 +1118,7 @@ static void asm_tdup(ASMState *as, IRIns *ir)
 {
   const CCallInfo *ci = &lj_ir_callinfo[IRCALL_lj_tab_dup];
   IRRef args[2];
+  asm_snap_prep(as);
   args[0] = ASMREF_L;  /* lua_State *L    */
   args[1] = ir->op1;   /* const GCtab *kt */
   as->gcsteps++;
@@ -1106,28 +1144,43 @@ static void asm_gcstep(ASMState *as, IRIns *ir)
 
 /* -- Buffer operations --------------------------------------------------- */
 
-static void asm_tvptr(ASMState *as, Reg dest, IRRef ref);
+static void asm_tvptr(ASMState *as, Reg dest, IRRef ref, MSize mode);
+#if LJ_HASBUFFER
+static void asm_bufhdr_write(ASMState *as, Reg sb);
+#endif
 
 static void asm_bufhdr(ASMState *as, IRIns *ir)
 {
   Reg sb = ra_dest(as, ir, RSET_GPR);
-  if ((ir->op2 & IRBUFHDR_APPEND)) {
+  switch (ir->op2) {
+  case IRBUFHDR_RESET: {
+    Reg tmp = ra_scratch(as, rset_exclude(RSET_GPR, sb));
+    IRIns irbp;
+    irbp.ot = IRT(0, IRT_PTR);  /* Buffer data pointer type. */
+    emit_storeofs(as, &irbp, tmp, sb, offsetof(SBuf, w));
+    emit_loadofs(as, &irbp, tmp, sb, offsetof(SBuf, b));
+    break;
+    }
+  case IRBUFHDR_APPEND: {
     /* Rematerialize const buffer pointer instead of likely spill. */
     IRIns *irp = IR(ir->op1);
     if (!(ra_hasreg(irp->r) || irp == ir-1 ||
 	  (irp == ir-2 && !ra_used(ir-1)))) {
-      while (!(irp->o == IR_BUFHDR && !(irp->op2 & IRBUFHDR_APPEND)))
+      while (!(irp->o == IR_BUFHDR && irp->op2 == IRBUFHDR_RESET))
 	irp = IR(irp->op1);
       if (irref_isk(irp->op1)) {
 	ra_weak(as, ra_allocref(as, ir->op1, RSET_GPR));
 	ir = irp;
       }
     }
-  } else {
-    Reg tmp = ra_scratch(as, rset_exclude(RSET_GPR, sb));
-    /* Passing ir isn't strictly correct, but it's an IRT_PGC, too. */
-    emit_storeofs(as, ir, tmp, sb, offsetof(SBuf, p));
-    emit_loadofs(as, ir, tmp, sb, offsetof(SBuf, b));
+    break;
+    }
+#if LJ_HASBUFFER
+  case IRBUFHDR_WRITE:
+    asm_bufhdr_write(as, sb);
+    break;
+#endif
+  default: lj_assertA(0, "bad BUFHDR op2 %d", ir->op2); break;
   }
 #if LJ_TARGET_X86ORX64
   ra_left(as, sb, ir->op1);
@@ -1179,7 +1232,7 @@ static void asm_bufput(ASMState *as, IRIns *ir)
   if (args[1] == ASMREF_TMP1) {
     Reg tmp = ra_releasetmp(as, ASMREF_TMP1);
     if (kchar == -129)
-      asm_tvptr(as, tmp, irs->op1);
+      asm_tvptr(as, tmp, irs->op1, IRTMPREF_IN1);
     else
       ra_allockreg(as, kchar, tmp);
   }
@@ -1201,6 +1254,7 @@ static void asm_tostr(ASMState *as, IRIns *ir)
 {
   const CCallInfo *ci;
   IRRef args[2];
+  asm_snap_prep(as);
   args[0] = ASMREF_L;
   as->gcsteps++;
   if (ir->op2 == IRTOSTR_NUM) {
@@ -1216,7 +1270,7 @@ static void asm_tostr(ASMState *as, IRIns *ir)
   asm_setupresult(as, ir, ci);  /* GCstr * */
   asm_gencall(as, ci, args);
   if (ir->op2 == IRTOSTR_NUM)
-    asm_tvptr(as, ra_releasetmp(as, ASMREF_TMP1), ir->op1);
+    asm_tvptr(as, ra_releasetmp(as, ASMREF_TMP1), ir->op1, IRTMPREF_IN1);
 }
 
 #if LJ_32 && LJ_HASFFI && !LJ_SOFTFP && !LJ_TARGET_X86
@@ -1257,12 +1311,19 @@ static void asm_newref(ASMState *as, IRIns *ir)
   IRRef args[3];
   if (ir->r == RID_SINK)
     return;
+  asm_snap_prep(as);
   args[0] = ASMREF_L;     /* lua_State *L */
   args[1] = ir->op1;      /* GCtab *t     */
   args[2] = ASMREF_TMP1;  /* cTValue *key */
   asm_setupresult(as, ir, ci);  /* TValue * */
   asm_gencall(as, ci, args);
-  asm_tvptr(as, ra_releasetmp(as, ASMREF_TMP1), ir->op2);
+  asm_tvptr(as, ra_releasetmp(as, ASMREF_TMP1), ir->op2, IRTMPREF_IN1);
+}
+
+static void asm_tmpref(ASMState *as, IRIns *ir)
+{
+  Reg r = ra_dest(as, ir, RSET_GPR);
+  asm_tvptr(as, r, ir->op1, ir->op2);
 }
 
 static void asm_lref(ASMState *as, IRIns *ir)
@@ -1610,7 +1671,6 @@ static void asm_loop(ASMState *as)
 #if !LJ_SOFTFP32
 #if !LJ_TARGET_X86ORX64
 #define asm_ldexp(as, ir)	asm_callid(as, ir, IRCALL_ldexp)
-#define asm_fppowi(as, ir)	asm_callid(as, ir, IRCALL_lj_vm_powi)
 #endif
 
 static void asm_pow(ASMState *as, IRIns *ir)
@@ -1621,10 +1681,7 @@ static void asm_pow(ASMState *as, IRIns *ir)
 					  IRCALL_lj_carith_powu64);
   else
 #endif
-  if (irt_isnum(IR(ir->op2)->t))
-    asm_callid(as, ir, IRCALL_pow);
-  else
-    asm_fppowi(as, ir);
+  asm_callid(as, ir, IRCALL_pow);
 }
 
 static void asm_div(ASMState *as, IRIns *ir)
@@ -1744,6 +1801,7 @@ static void asm_ir(ASMState *as, IRIns *ir)
   case IR_NEWREF: asm_newref(as, ir); break;
   case IR_UREFO: case IR_UREFC: asm_uref(as, ir); break;
   case IR_FREF: asm_fref(as, ir); break;
+  case IR_TMPREF: asm_tmpref(as, ir); break;
   case IR_STRREF: asm_strref(as, ir); break;
   case IR_LREF: asm_lref(as, ir); break;
 
@@ -1838,8 +1896,7 @@ static void asm_head_side(ASMState *as)
 
   if (as->snapno && as->topslot > as->parent->topslot) {
     /* Force snap #0 alloc to prevent register overwrite in stack check. */
-    as->snapno = 0;
-    asm_snap_alloc(as);
+    asm_snap_alloc(as, 0);
   }
   allow = asm_head_side_base(as, irp, allow);
 
@@ -2078,6 +2135,9 @@ static void asm_setup_regsp(ASMState *as)
 #endif
 
   ra_setup(as);
+#if LJ_TARGET_ARM64
+  ra_setkref(as, RID_GL, (intptr_t)J2G(as->J));
+#endif
 
   /* Clear reg/sp for constants. */
   for (ir = IR(T->nk), lastir = IR(REF_BASE); ir < lastir; ir++) {
@@ -2100,6 +2160,7 @@ static void asm_setup_regsp(ASMState *as)
   as->snaprename = nins;
   as->snapref = nins;
   as->snapno = T->nsnap;
+  as->snapalloc = 0;
 
   as->stopins = REF_BASE;
   as->orignins = nins;
@@ -2148,6 +2209,10 @@ static void asm_setup_regsp(ASMState *as)
       ir->prev = (uint16_t)REGSP_HINT((rload & 15));
       rload = lj_ror(rload, 4);
       continue;
+    case IR_TMPREF:
+      if ((ir->op2 & IRTMPREF_OUT2) && as->evenspill < 4)
+	as->evenspill = 4;  /* TMPREF OUT2 needs two TValues on the stack. */
+      break;
 #endif
     case IR_CALLXS: {
       CCallInfo ci;
@@ -2157,7 +2222,17 @@ static void asm_setup_regsp(ASMState *as)
 	as->modset |= RSET_SCRATCH;
       continue;
       }
-    case IR_CALLN: case IR_CALLA: case IR_CALLL: case IR_CALLS: {
+    case IR_CALLL:
+      /* lj_vm_next needs two TValues on the stack. */
+#if LJ_TARGET_X64 && LJ_ABI_WIN
+      if (ir->op2 == IRCALL_lj_vm_next && as->evenspill < SPS_FIRST + 4)
+	as->evenspill = SPS_FIRST + 4;
+#else
+      if (SPS_FIRST < 4 && ir->op2 == IRCALL_lj_vm_next && as->evenspill < 4)
+	as->evenspill = 4;
+#endif
+      /* fallthrough */
+    case IR_CALLN: case IR_CALLA: case IR_CALLS: {
       const CCallInfo *ci = &lj_ir_callinfo[ir->op2];
       ir->prev = asm_setup_call_slots(as, ir, ci);
       if (inloop)
@@ -2165,7 +2240,6 @@ static void asm_setup_regsp(ASMState *as)
 		      (RSET_SCRATCH & ~RSET_FPR) : RSET_SCRATCH;
       continue;
       }
-#if LJ_SOFTFP || (LJ_32 && LJ_HASFFI)
     case IR_HIOP:
       switch ((ir-1)->o) {
 #if LJ_SOFTFP && LJ_TARGET_ARM
@@ -2176,7 +2250,7 @@ static void asm_setup_regsp(ASMState *as)
 	}
 	break;
 #endif
-#if !LJ_SOFTFP && LJ_NEED_FP64
+#if !LJ_SOFTFP && LJ_NEED_FP64 && LJ_32 && LJ_HASFFI
       case IR_CONV:
 	if (irt_isfp((ir-1)->t)) {
 	  ir->prev = REGSP_HINT(RID_FPRET);
@@ -2184,7 +2258,7 @@ static void asm_setup_regsp(ASMState *as)
 	}
 #endif
       /* fallthrough */
-      case IR_CALLN: case IR_CALLXS:
+      case IR_CALLN: case IR_CALLL: case IR_CALLS: case IR_CALLXS:
 #if LJ_SOFTFP
       case IR_MIN: case IR_MAX:
 #endif
@@ -2195,7 +2269,6 @@ static void asm_setup_regsp(ASMState *as)
 	break;
       }
       break;
-#endif
 #if LJ_SOFTFP
     case IR_MIN: case IR_MAX:
       if ((ir+1)->o != IR_HIOP) break;
@@ -2250,13 +2323,23 @@ static void asm_setup_regsp(ASMState *as)
       }
       /* fallthrough */ /* for integer POW */
     case IR_DIV: case IR_MOD:
-      if (!irt_isnum(ir->t)) {
+      if ((LJ_64 && LJ_SOFTFP) || !irt_isnum(ir->t)) {
 	ir->prev = REGSP_HINT(RID_RET);
 	if (inloop)
 	  as->modset |= (RSET_SCRATCH & RSET_GPR);
 	continue;
       }
       break;
+#if LJ_64 && LJ_SOFTFP
+    case IR_ADD: case IR_SUB: case IR_MUL:
+      if (irt_isnum(ir->t)) {
+	ir->prev = REGSP_HINT(RID_RET);
+	if (inloop)
+	  as->modset |= (RSET_SCRATCH & RSET_GPR);
+	continue;
+      }
+      break;
+#endif
     case IR_FPMATH:
 #if LJ_TARGET_X86ORX64
       if (ir->op2 <= IRFPM_TRUNC) {
@@ -2327,7 +2410,6 @@ void lj_asm_trace(jit_State *J, GCtrace *T)
 {
   ASMState as_;
   ASMState *as = &as_;
-  MCode *origtop;
 
   /* Remove nops/renames left over from ASM restart due to LJ_TRERR_MCODELM. */
   {
@@ -2355,7 +2437,7 @@ void lj_asm_trace(jit_State *J, GCtrace *T)
   as->parent = J->parent ? traceref(J, J->parent) : NULL;
 
   /* Reserve MCode memory. */
-  as->mctop = origtop = lj_mcode_reserve(J, &as->mcbot);
+  as->mctop = as->mctoporig = lj_mcode_reserve(J, &as->mcbot);
   as->mcp = as->mctop;
   as->mclim = as->mcbot + MCLIM_REDZONE;
   asm_setup_target(as);
@@ -2417,6 +2499,7 @@ void lj_asm_trace(jit_State *J, GCtrace *T)
       lj_assertA(!(LJ_32 && irt_isint64(ir->t)),
 		 "IR %04d has unsplit 64 bit type",
 		 (int)(ir - as->ir) - REF_BIAS);
+      asm_snap_prev(as);
       if (!ra_used(ir) && !ir_sideeff(ir) && (as->flags & JIT_F_OPT_DCE))
 	continue;  /* Dead-code elimination can be soooo easy. */
       if (irt_isguard(ir->t))
@@ -2450,6 +2533,9 @@ void lj_asm_trace(jit_State *J, GCtrace *T)
       memcpy(J->curfinal->ir + as->orignins, T->ir + as->orignins,
 	     (T->nins - as->orignins) * sizeof(IRIns));  /* Copy RENAMEs. */
       T->nins = J->curfinal->nins;
+      /* Fill mcofs of any unprocessed snapshots. */
+      as->curins = REF_FIRST;
+      asm_snap_prev(as);
       break;  /* Done. */
     }
 
@@ -2468,13 +2554,16 @@ void lj_asm_trace(jit_State *J, GCtrace *T)
   /* Set trace entry point before fixing up tail to allow link to self. */
   T->mcode = as->mcp;
   T->mcloop = as->mcloop ? (MSize)((char *)as->mcloop - (char *)as->mcp) : 0;
-  if (!as->loopref)
+  if (as->loopref)
+    asm_loop_tail_fixup(as);
+  else
     asm_tail_fixup(as, T->link);  /* Note: this may change as->mctop! */
   T->szmcode = (MSize)((char *)as->mctop - (char *)as->mcp);
+  asm_snap_fixup_mcofs(as);
 #if LJ_TARGET_MCODE_FIXUP
   asm_mcode_fixup(T->mcode, T->szmcode);
 #endif
-  lj_mcode_sync(T->mcode, origtop);
+  lj_mcode_sync(T->mcode, as->mctoporig);
 }
 
 #undef IR

@@ -330,7 +330,7 @@ static void *mmap_plain(size_t size)
 #define CALL_MMAP(prng, size)	mmap_plain(size)
 #endif
 
-#if LJ_64 && !LJ_GC64 && ((defined(__FreeBSD__) && __FreeBSD__ < 10) || defined(__FreeBSD_kernel__)) && !LJ_TARGET_PS4
+#if LJ_64 && !LJ_GC64 && ((defined(__FreeBSD__) && __FreeBSD__ < 10) || defined(__FreeBSD_kernel__)) && !LJ_TARGET_PS4 && !LJ_TARGET_PS5
 
 #include <sys/resource.h>
 
@@ -365,7 +365,7 @@ static void *CALL_MREMAP_(void *ptr, size_t osz, size_t nsz, int flags)
 #define CALL_MREMAP(addr, osz, nsz, mv) CALL_MREMAP_((addr), (osz), (nsz), (mv))
 #define CALL_MREMAP_NOMOVE	0
 #define CALL_MREMAP_MAYMOVE	1
-#if LJ_64 && !LJ_GC64
+#if LJ_64 && (!LJ_GC64 || LJ_TARGET_ARM64)
 #define CALL_MREMAP_MV		CALL_MREMAP_NOMOVE
 #else
 #define CALL_MREMAP_MV		CALL_MREMAP_MAYMOVE

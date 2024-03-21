@@ -1,6 +1,6 @@
 /*
 ** LOOP: Loop Optimizations.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_opt_loop_c
@@ -225,6 +225,7 @@ static void loop_subst_snap(jit_State *J, SnapShot *osnap,
   /* Setup new snapshot. */
   snap->mapofs = (uint32_t)nmapofs;
   snap->ref = (IRRef1)J->cur.nins;
+  snap->mcofs = 0;
   snap->nslots = nslots;
   snap->topslot = osnap->topslot;
   snap->count = 0;

@@ -1,6 +1,6 @@
 /*
 ** C type management.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_CTYPE_H
@@ -298,6 +298,7 @@ typedef struct CTState {
   _(P_VOID,	CTSIZE_PTR,	CT_PTR, CTALIGN_PTR|CTID_VOID) \
   _(P_CVOID,	CTSIZE_PTR,	CT_PTR, CTALIGN_PTR|CTID_CVOID) \
   _(P_CCHAR,	CTSIZE_PTR,	CT_PTR, CTALIGN_PTR|CTID_CCHAR) \
+  _(P_UINT8,	CTSIZE_PTR,	CT_PTR, CTALIGN_PTR|CTID_UINT8) \
   _(A_CCHAR,		-1,	CT_ARRAY, CTF_CONST|CTALIGN(0)|CTID_CCHAR) \
   _(CTYPEID,		4,	CT_ENUM, CTALIGN(2)|CTID_INT32) \
   CTTYDEFP(_) \
@@ -389,6 +390,16 @@ static LJ_AINLINE CTState *ctype_cts(lua_State *L)
   return cts;
 }
 
+/* Load FFI library on-demand. */
+#define ctype_loadffi(L) \
+  do { \
+    if (!ctype_ctsG(G(L))) { \
+      ptrdiff_t oldtop = (char *)L->top - mref(L->stack, char); \
+      luaopen_ffi(L); \
+      L->top = (TValue *)(mref(L->stack, char) + oldtop); \
+    } \
+  } while (0)
+
 /* Save and restore state of C type table. */
 #define LJ_CTYPE_SAVE(cts)	CTState savects_ = *(cts)
 #define LJ_CTYPE_RESTORE(cts) \
@@ -457,6 +468,7 @@ LJ_FUNC CType *lj_ctype_rawref(CTState *cts, CTypeID id);
 LJ_FUNC CTSize lj_ctype_size(CTState *cts, CTypeID id);
 LJ_FUNC CTSize lj_ctype_vlsize(CTState *cts, CType *ct, CTSize nelem);
 LJ_FUNC CTInfo lj_ctype_info(CTState *cts, CTypeID id, CTSize *szp);
+LJ_FUNC CTInfo lj_ctype_info_raw(CTState *cts, CTypeID id, CTSize *szp);
 LJ_FUNC cTValue *lj_ctype_meta(CTState *cts, CTypeID id, MMS mm);
 LJ_FUNC GCstr *lj_ctype_repr(lua_State *L, CTypeID id, GCstr *name);
 LJ_FUNC GCstr *lj_ctype_repr_int64(lua_State *L, uint64_t n, int isunsigned);

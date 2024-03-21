@@ -1,6 +1,6 @@
 /*
 ** Snapshot handling.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_snap_c
@@ -171,6 +171,7 @@ static void snapshot_stack(jit_State *J, SnapShot *snap, MSize nsnapmap)
   nent += snapshot_framelinks(J, p + nent, &snap->topslot);
   snap->mapofs = (uint32_t)nsnapmap;
   snap->ref = (IRRef1)J->cur.nins;
+  snap->mcofs = 0;
   snap->nslots = (uint8_t)nslots;
   snap->count = 0;
   J->cur.nsnapmap = (uint32_t)(nsnapmap + nent);
@@ -251,7 +252,12 @@ static BCReg snap_usedef(jit_State *J, uint8_t *udf,
       BCReg minslot = bc_a(ins);
       if (op >= BC_FORI && op <= BC_JFORL) minslot += FORL_EXT;
       else if (op >= BC_ITERL && op <= BC_JITERL) minslot += bc_b(pc[-2])-1;
-      else if (op == BC_UCLO) { pc += bc_j(ins); break; }
+      else if (op == BC_UCLO) {
+	ptrdiff_t delta = bc_j(ins);
+	if (delta < 0) return maxslot;  /* Prevent loop. */
+	pc += delta;
+	break;
+      }
       for (s = minslot; s < maxslot; s++) DEF_SLOT(s);
       return minslot < maxslot ? minslot : maxslot;
       }
@@ -275,7 +281,7 @@ static BCReg snap_usedef(jit_State *J, uint8_t *udf,
        if (!(op == BC_ISTC || op == BC_ISFC)) DEF_SLOT(bc_a(ins));
        break;
     case BCMbase:
-      if (op >= BC_CALLM && op <= BC_VARG) {
+      if (op >= BC_CALLM && op <= BC_ITERN) {
 	BCReg top = (op == BC_CALLM || op == BC_CALLMT || bc_c(ins) == 0) ?
 		    maxslot : (bc_a(ins) + bc_c(ins)+LJ_FR2);
 	if (LJ_FR2) DEF_SLOT(bc_a(ins)+1);
@@ -286,6 +292,8 @@ static BCReg snap_usedef(jit_State *J, uint8_t *udf,
 	  for (s = 0; s < bc_a(ins); s++) DEF_SLOT(s);
 	  return 0;
 	}
+      } else if (op == BC_VARG) {
+	return maxslot;  /* NYI: punt. */
       } else if (op == BC_KNIL) {
 	for (s = bc_a(ins); s <= bc_d(ins); s++) DEF_SLOT(s);
       } else if (op == BC_TSETM) {
@@ -304,15 +312,45 @@ static BCReg snap_usedef(jit_State *J, uint8_t *udf,
   return 0;  /* unreachable */
 }
 
+/* Mark slots used by upvalues of child prototypes as used. */
+static void snap_useuv(GCproto *pt, uint8_t *udf)
+{
+  /* This is a coarse check, because it's difficult to correlate the lifetime
+  ** of slots and closures. But the number of false positives is quite low.
+  ** A false positive may cause a slot not to be purged, which is just
+  ** a missed optimization.
+  */
+  if ((pt->flags & PROTO_CHILD)) {
+    ptrdiff_t i, j, n = pt->sizekgc;
+    GCRef *kr = mref(pt->k, GCRef) - 1;
+    for (i = 0; i < n; i++, kr--) {
+      GCobj *o = gcref(*kr);
+      if (o->gch.gct == ~LJ_TPROTO) {
+	for (j = 0; j < gco2pt(o)->sizeuv; j++) {
+	  uint32_t v = proto_uv(gco2pt(o))[j];
+	  if ((v & PROTO_UV_LOCAL)) {
+	    udf[(v & 0xff)] = 0;
+	  }
+	}
+      }
+    }
+  }
+}
+
 /* Purge dead slots before the next snapshot. */
 void lj_snap_purge(jit_State *J)
 {
   uint8_t udf[SNAP_USEDEF_SLOTS];
-  BCReg maxslot = J->maxslot;
-  BCReg s = snap_usedef(J, udf, J->pc, maxslot);
-  for (; s < maxslot; s++)
-    if (udf[s] != 0)
-      J->base[s] = 0;  /* Purge dead slots. */
+  BCReg s, maxslot = J->maxslot;
+  if (bc_op(*J->pc) == BC_FUNCV && maxslot > J->pt->numparams)
+    maxslot = J->pt->numparams;
+  s = snap_usedef(J, udf, J->pc, maxslot);
+  if (s < maxslot) {
+    snap_useuv(J->pt, udf);
+    for (; s < maxslot; s++)
+      if (udf[s] != 0)
+	J->base[s] = 0;  /* Purge dead slots. */
+  }
 }
 
 /* Shrink last snapshot. */
@@ -325,6 +363,7 @@ void lj_snap_shrink(jit_State *J)
   BCReg maxslot = J->maxslot;
   BCReg baseslot = J->baseslot;
   BCReg minslot = snap_usedef(J, udf, snap_pc(&map[nent]), maxslot);
+  if (minslot < maxslot) snap_useuv(J->pt, udf);
   maxslot += baseslot;
   minslot += baseslot;
   snap->nslots = (uint8_t)maxslot;
@@ -424,7 +463,7 @@ static TRef snap_dedup(jit_State *J, SnapEntry *map, MSize nmax, IRRef ref)
   MSize j;
   for (j = 0; j < nmax; j++)
     if (snap_ref(map[j]) == ref)
-      return J->slot[snap_slot(map[j])] & ~(SNAP_CONT|SNAP_FRAME);
+      return J->slot[snap_slot(map[j])] & ~(SNAP_KEYINDEX|SNAP_CONT|SNAP_FRAME);
   return 0;
 }
 
@@ -499,10 +538,12 @@ void lj_snap_replay(jit_State *J, GCtrace *T)
       uint32_t mode = IRSLOAD_INHERIT|IRSLOAD_PARENT;
       if (LJ_SOFTFP32 && (sn & SNAP_SOFTFPNUM)) t = IRT_NUM;
       if (ir->o == IR_SLOAD) mode |= (ir->op2 & IRSLOAD_READONLY);
+      if ((sn & SNAP_KEYINDEX)) mode |= IRSLOAD_KEYINDEX;
       tr = emitir_raw(IRT(IR_SLOAD, t), s, mode);
     }
   setslot:
-    J->slot[s] = tr | (sn&(SNAP_CONT|SNAP_FRAME));  /* Same as TREF_* flags. */
+    /* Same as TREF_* flags. */
+    J->slot[s] = tr | (sn&(SNAP_KEYINDEX|SNAP_CONT|SNAP_FRAME));
     J->framedepth += ((sn & (SNAP_CONT|SNAP_FRAME)) && (s != LJ_FR2));
     if ((sn & SNAP_FRAME))
       J->baseslot = s+1;
@@ -922,6 +963,10 @@ const BCIns *lj_snap_restore(jit_State *J, void *exptr)
 	setframe_ftsz(o, snap_slot(sn) != 0 ? (int32_t)*flinks-- : ftsz0);
 	L->base = o+1;
 #endif
+      } else if ((sn & SNAP_KEYINDEX)) {
+	/* A IRT_INT key index slot is restored as a number. Undo this. */
+	o->u32.lo = (uint32_t)(LJ_DUALNUM ? intV(o) : lj_num2int(numV(o)));
+	o->u32.hi = LJ_KEYINDEX;
       }
     }
   }

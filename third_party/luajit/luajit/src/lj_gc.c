@@ -1,6 +1,6 @@
 /*
 ** Garbage collector.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -27,6 +27,7 @@
 #include "lj_trace.h"
 #include "lj_dispatch.h"
 #include "lj_vm.h"
+#include "lj_vmevent.h"
 
 #define GCSTEPSIZE	1024u
 #define GCSWEEPMAX	40
@@ -65,6 +66,15 @@ static void gc_mark(global_State *g, GCobj *o)
     gray2black(o);  /* Userdata are never gray. */
     if (mt) gc_markobj(g, mt);
     gc_markobj(g, tabref(gco2ud(o)->env));
+    if (LJ_HASBUFFER && gco2ud(o)->udtype == UDTYPE_BUFFER) {
+      SBufExt *sbx = (SBufExt *)uddata(gco2ud(o));
+      if (sbufiscow(sbx) && gcref(sbx->cowref))
+	gc_markobj(g, gcref(sbx->cowref));
+      if (gcref(sbx->dict_str))
+	gc_markobj(g, gcref(sbx->dict_str));
+      if (gcref(sbx->dict_mt))
+	gc_markobj(g, gcref(sbx->dict_mt));
+    }
   } else if (LJ_UNLIKELY(gct == ~LJ_TUPVAL)) {
     GCupval *uv = gco2uv(o);
     gc_marktv(g, uvval(uv));
@@ -512,8 +522,13 @@ static void gc_call_finalizer(global_State *g, lua_State *L,
   hook_restore(g, oldh);
   if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g);
   g->gc.threshold = oldt;  /* Restore GC threshold. */
-  if (errcode)
-    lj_err_throw(L, errcode);  /* Propagate errors. */
+  if (errcode) {
+    ptrdiff_t errobj = savestack(L, L->top-1);  /* Stack may be resized. */
+    lj_vmevent_send(L, ERRFIN,
+      copyTV(L, L->top++, restorestack(L, errobj));
+    );
+    L->top--;
+  }
 }
 
 /* Finalize one userdata or cdata object from the mmudata list. */
@@ -691,9 +706,12 @@ static size_t gc_onestep(lua_State *L)
     }
   case GCSfinalize:
     if (gcref(g->gc.mmudata) != NULL) {
+      GCSize old = g->gc.total;
       if (tvref(g->jit_base))  /* Don't call finalizers on trace. */
 	return LJ_MAX_MEM;
       gc_finalize(L);  /* Finalize one userdata object. */
+      if (old >= g->gc.total && g->gc.estimate > old - g->gc.total)
+	g->gc.estimate -= old - g->gc.total;
       if (g->gc.estimate > GCFINALIZECOST)
 	g->gc.estimate -= GCFINALIZECOST;
       return GCFINALIZECOST;

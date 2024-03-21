@@ -1,6 +1,6 @@
 /*
 ** LuaJIT VM tags, values and objects.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -34,13 +34,17 @@ typedef struct MRef {
 
 #if LJ_GC64
 #define mref(r, t)	((t *)(void *)(r).ptr64)
+#define mrefu(r)	((r).ptr64)
 
 #define setmref(r, p)	((r).ptr64 = (uint64_t)(void *)(p))
+#define setmrefu(r, u)	((r).ptr64 = (uint64_t)(u))
 #define setmrefr(r, v)	((r).ptr64 = (v).ptr64)
 #else
 #define mref(r, t)	((t *)(void *)(uintptr_t)(r).ptr32)
+#define mrefu(r)	((r).ptr32)
 
 #define setmref(r, p)	((r).ptr32 = (uint32_t)(uintptr_t)(void *)(p))
+#define setmrefu(r, u)	((r).ptr32 = (uint32_t)(u))
 #define setmrefr(r, v)	((r).ptr32 = (v).ptr32)
 #endif
 
@@ -153,11 +157,9 @@ typedef int32_t BCLine;  /* Bytecode line number. */
 typedef void (*ASMFunction)(void);
 
 /* Resizable string buffer. Need this here, details in lj_buf.h. */
+#define SBufHeader	char *w, *e, *b; MRef L
 typedef struct SBuf {
-  MRef p;		/* String buffer pointer. */
-  MRef e;		/* String buffer end pointer. */
-  MRef b;		/* String buffer base. */
-  MRef L;		/* lua_State, used for buffer resizing. */
+  SBufHeader;
 } SBuf;
 
 /* -- Tags and values ----------------------------------------------------- */
@@ -282,6 +284,9 @@ typedef const TValue cTValue;
 #define LJ_TISGCV		(LJ_TSTR+1)
 #define LJ_TISTABUD		LJ_TTAB
 
+/* Type marker for slot holding a traversal index. Must be lightuserdata. */
+#define LJ_KEYINDEX		0xfffe7fffu
+
 #if LJ_GC64
 #define LJ_GCVMASK		(((uint64_t)1 << 47) - 1)
 #endif
@@ -330,6 +335,7 @@ enum {
   UDTYPE_USERDATA,	/* Regular userdata. */
   UDTYPE_IO_FILE,	/* I/O library FILE. */
   UDTYPE_FFI_CLIB,	/* FFI C library namespace. */
+  UDTYPE_BUFFER,	/* String buffer. */
   UDTYPE__MAX
 };
 
@@ -407,7 +413,7 @@ typedef struct GCproto {
 #define PROTO_UV_IMMUTABLE	0x4000	/* Immutable upvalue. */
 
 #define proto_kgc(pt, idx) \
-  check_exp((uintptr_t)(intptr_t)(idx) >= (uintptr_t)-(intptr_t)(pt)->sizekgc, \
+  check_exp((uintptr_t)(intptr_t)(idx) >= ~(uintptr_t)(pt)->sizekgc+1u, \
 	    gcref(mref((pt)->k, GCRef)[(idx)]))
 #define proto_knumtv(pt, idx) \
   check_exp((uintptr_t)(idx) < (pt)->sizekn, &mref((pt)->k, TValue)[(idx)])
@@ -505,7 +511,7 @@ typedef struct GCtab {
 } GCtab;
 
 #define sizetabcolo(n)	((n)*sizeof(TValue) + sizeof(GCtab))
-#define tabref(r)	(&gcref((r))->tab)
+#define tabref(r)	((GCtab *)gcref((r)))
 #define noderef(r)	(mref((r), Node))
 #define nextnode(n)	(mref((n)->next, Node))
 #if LJ_GC64
@@ -839,6 +845,7 @@ static LJ_AINLINE void *lightudV(global_State *g, cTValue *o)
   uint64_t seg = lightudseg(u);
   uint32_t *segmap = mref(g->gc.lightudseg, uint32_t);
   lj_assertG(tvislightud(o), "lightuserdata expected");
+  if (seg == (1 << LJ_LIGHTUD_BITS_SEG)-1) return NULL;
   lj_assertG(seg <= g->gc.lightudnum, "bad lightuserdata segment %d", seg);
   return (void *)(((uint64_t)segmap[seg] << 32) | lightudlo(u));
 }
@@ -920,7 +927,7 @@ static LJ_AINLINE void setgcV(lua_State *L, TValue *o, GCobj *v, uint32_t it)
 }
 
 #define define_setV(name, type, tag) \
-static LJ_AINLINE void name(lua_State *L, TValue *o, type *v) \
+static LJ_AINLINE void name(lua_State *L, TValue *o, const type *v) \
 { \
   setgcV(L, o, obj2gco(v), tag); \
 }

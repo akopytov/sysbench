@@ -1,6 +1,6 @@
 /*
 ** Trace recorder for C data operations.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_ffrecord_c
@@ -78,7 +78,7 @@ static CTypeID argv2ctype(jit_State *J, TRef tr, cTValue *o)
     /* Specialize to the string containing the C type declaration. */
     emitir(IRTG(IR_EQ, IRT_STR), tr, lj_ir_kstr(J, s));
     cp.L = J->L;
-    cp.cts = ctype_ctsG(J2G(J));
+    cp.cts = ctype_cts(J->L);
     oldtop = cp.cts->top;
     cp.srcname = strdata(s);
     cp.p = strdata(s);
@@ -616,10 +616,12 @@ static TRef crec_ct_tv(jit_State *J, CType *d, TRef dp, TRef sp, cTValue *sval)
     sp = lj_ir_kptr(J, NULL);
   } else if (tref_isudata(sp)) {
     GCudata *ud = udataV(sval);
-    if (ud->udtype == UDTYPE_IO_FILE) {
+    if (ud->udtype == UDTYPE_IO_FILE || ud->udtype == UDTYPE_BUFFER) {
       TRef tr = emitir(IRT(IR_FLOAD, IRT_U8), sp, IRFL_UDATA_UDTYPE);
-      emitir(IRTGI(IR_EQ), tr, lj_ir_kint(J, UDTYPE_IO_FILE));
-      sp = emitir(IRT(IR_FLOAD, IRT_PTR), sp, IRFL_UDATA_FILE);
+      emitir(IRTGI(IR_EQ), tr, lj_ir_kint(J, ud->udtype));
+      sp = emitir(IRT(IR_FLOAD, IRT_PTR), sp,
+		  ud->udtype == UDTYPE_IO_FILE ? IRFL_UDATA_FILE :
+						 IRFL_SBUF_R);
     } else {
       sp = emitir(IRT(IR_ADD, IRT_PTR), sp, lj_ir_kintp(J, sizeof(GCudata)));
     }
@@ -1024,8 +1026,26 @@ static void crec_alloc(jit_State *J, RecordFFData *rd, CTypeID id)
 	crec_ct_tv(J, dc, dp, sp, sval);
       }
     } else if (ctype_isstruct(d->info)) {
-      CTypeID fid = d->sib;
+      CTypeID fid;
       MSize i = 1;
+      if (!J->base[1]) {  /* Handle zero-fill of struct-of-NYI. */
+	fid = d->sib;
+	while (fid) {
+	  CType *df = ctype_get(cts, fid);
+	  fid = df->sib;
+	  if (ctype_isfield(df->info)) {
+	    CType *dc;
+	    if (!gcref(df->name)) continue;  /* Ignore unnamed fields. */
+	    dc = ctype_rawchild(cts, df);  /* Field type. */
+	    if (!(ctype_isnum(dc->info) || ctype_isptr(dc->info) ||
+		  ctype_isenum(dc->info)))
+	      goto special;
+	  } else if (!ctype_isconstval(df->info)) {
+	    goto special;
+	  }
+	}
+      }
+      fid = d->sib;
       while (fid) {
 	CType *df = ctype_get(cts, fid);
 	fid = df->sib;
@@ -1050,6 +1070,11 @@ static void crec_alloc(jit_State *J, RecordFFData *rd, CTypeID id)
 	  dp = emitir(IRT(IR_ADD, IRT_PTR), trcd,
 		      lj_ir_kintp(J, df->size + sizeof(GCcdata)));
 	  crec_ct_tv(J, dc, dp, sp, sval);
+	  if ((d->info & CTF_UNION)) {
+	    if (d->size != dc->size)  /* NYI: partial init of union. */
+	      lj_trace_err(J, LJ_TRERR_NYICONV);
+	    break;
+	  }
 	} else if (!ctype_isconstval(df->info)) {
 	  /* NYI: init bitfields and sub-structures. */
 	  lj_trace_err(J, LJ_TRERR_NYICONV);
@@ -1479,9 +1504,13 @@ void LJ_FASTCALL recff_cdata_arith(jit_State *J, RecordFFData *rd)
 	if (ctype_isenum(ct->info)) ct = ctype_child(cts, ct);
 	goto ok;
       } else if (ctype_isfunc(ct->info)) {
+	CTypeID id0 = i ? ctype_typeid(cts, s[0]) : 0;
 	tr = emitir(IRT(IR_FLOAD, IRT_PTR), tr, IRFL_CDATA_PTR);
 	ct = ctype_get(cts,
 	  lj_ctype_intern(cts, CTINFO(CT_PTR, CTALIGN_PTR|id), CTSIZE_PTR));
+	if (i) {
+	  s[0] = ctype_get(cts, id0);  /* cts->tab may have been reallocated. */
+	}
 	goto ok;
       } else {
 	tr = emitir(IRT(IR_ADD, IRT_PTR), tr, lj_ir_kintp(J, sizeof(GCcdata)));
@@ -1850,7 +1879,8 @@ TRef recff_bit64_tohex(jit_State *J, RecordFFData *rd, TRef hdr)
   } else {
     n = id ? 16 : 8;
   }
-  if (n < 0) { n = -n; sf |= STRFMT_F_UPPER; }
+  if (n < 0) { n = (int32_t)(~n+1u); sf |= STRFMT_F_UPPER; }
+  if ((uint32_t)n > 254) n = 254;
   sf |= ((SFormat)((n+1)&255) << STRFMT_SH_PREC);
   if (id) {
     tr = crec_ct_tv(J, ctype_get(cts, id), 0, J->base[0], &rd->argv[0]);
@@ -1887,6 +1917,30 @@ void LJ_FASTCALL lj_crecord_tonumber(jit_State *J, RecordFFData *rd)
     J->base[0] = TREF_NIL;
   }
 }
+
+TRef lj_crecord_loadiu64(jit_State *J, TRef tr, cTValue *o)
+{
+  CTypeID id = argv2cdata(J, tr, o)->ctypeid;
+  if (!(id == CTID_INT64 || id == CTID_UINT64))
+    lj_trace_err(J, LJ_TRERR_BADTYPE);
+  lj_needsplit(J);
+  return emitir(IRT(IR_FLOAD, id == CTID_INT64 ? IRT_I64 : IRT_U64), tr,
+		IRFL_CDATA_INT64);
+}
+
+#if LJ_HASBUFFER
+TRef lj_crecord_topcvoid(jit_State *J, TRef tr, cTValue *o)
+{
+  CTState *cts = ctype_ctsG(J2G(J));
+  if (!tref_iscdata(tr)) lj_trace_err(J, LJ_TRERR_BADTYPE);
+  return crec_ct_tv(J, ctype_get(cts, CTID_P_CVOID), 0, tr, o);
+}
+
+TRef lj_crecord_topuint8(jit_State *J, TRef tr)
+{
+  return emitir(IRTG(IR_CNEWI, IRT_CDATA), lj_ir_kint(J, CTID_P_UINT8), tr);
+}
+#endif
 
 #undef IR
 #undef emitir

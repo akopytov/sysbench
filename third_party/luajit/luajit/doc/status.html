@@ -1,9 +1,9 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <html>
 <head>
 <title>Status</title>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<meta name="Copyright" content="Copyright (C) 2005-2020">
+<meta charset="utf-8">
+<meta name="Copyright" content="Copyright (C) 2005-2022">
 <meta name="Language" content="en">
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
@@ -40,6 +40,8 @@ ul li { padding-bottom: 0.3em; }
 <a href="ext_ffi_semantics.html">FFI Semantics</a>
 </li></ul>
 </li><li>
+<a href="ext_buffer.html">String Buffers</a>
+</li><li>
 <a href="ext_jit.html">jit.* Library</a>
 </li><li>
 <a href="ext_c_api.html">Lua/C API</a>
@@ -51,16 +53,20 @@ ul li { padding-bottom: 0.3em; }
 </li><li>
 <a href="faq.html">FAQ</a>
 </li><li>
-<a href="http://wiki.luajit.org/">Wiki <span class="ext">&raquo;</span></a>
-</li><li>
 <a href="https://luajit.org/list.html">Mailing List <span class="ext">&raquo;</span></a>
 </li></ul>
 </div>
 <div id="main">
 <p>
-<span style="color: #0000c0;">LuaJIT&nbsp;2.0</span> is the current
-<span style="color: #0000c0;">stable branch</span>. This branch is in
-feature-freeze &mdash; new features will only be added to LuaJIT&nbsp;2.1.
+This documentation is for LuaJIT 2.1.0-beta3. Please check the <tt>doc</tt>
+directory in each git branch for the version-specific documentation.
+</p>
+<p>
+The currently developed branches are LuaJIT&nbsp;2.1 and LuaJIT&nbsp;2.0.
+</p>
+<p>
+LuaJIT&nbsp;2.0 is in feature-freeze &mdash; new features will only
+be added to LuaJIT&nbsp;2.1.
 </p>
 
 <h2>Current Status</h2>
@@ -75,7 +81,7 @@ Known incompatibilities and issues in LuaJIT&nbsp;2.0:
 <ul>
 <li>
 There are some differences in <b>implementation-defined</b> behavior.
-These either have a good reason, are arbitrary design choices
+These either have a good reason, are arbitrary design choices,
 or are due to quirks in the VM. The latter cases may get fixed if a
 demonstrable need is shown.
 </li>
@@ -84,19 +90,12 @@ The Lua <b>debug API</b> is missing a couple of features (return
 hooks for non-Lua functions) and shows slightly different behavior
 in LuaJIT (no per-coroutine hooks, no tail call counting).
 </li>
-<li>
-Currently some <b>out-of-memory</b> errors from <b>on-trace code</b> are not
-handled correctly. The error may fall through an on-trace
-<tt>pcall</tt> or it may be passed on to the function set with
-<tt>lua_atpanic</tt> on x64. This issue will be fixed with the new
-garbage collector.
-</li>
 </ul>
 <br class="flush">
 </div>
 <div id="foot">
 <hr class="hide">
-Copyright &copy; 2005-2020
+Copyright &copy; 2005-2022
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

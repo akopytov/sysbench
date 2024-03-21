@@ -1,6 +1,6 @@
 /*
 ** IR CALL* instruction definitions.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_IRCALL_H
@@ -30,10 +30,12 @@ typedef struct CCallInfo {
 #define CCI_CALL_L		(IR_CALLL << CCI_OPSHIFT)
 #define CCI_CALL_S		(IR_CALLS << CCI_OPSHIFT)
 #define CCI_CALL_FN		(CCI_CALL_N|CCI_CC_FASTCALL)
+#define CCI_CALL_FA		(CCI_CALL_A|CCI_CC_FASTCALL)
 #define CCI_CALL_FL		(CCI_CALL_L|CCI_CC_FASTCALL)
 #define CCI_CALL_FS		(CCI_CALL_S|CCI_CC_FASTCALL)
 
 /* C call info flags. */
+#define CCI_T			(IRT_GUARD << CCI_OTSHIFT)  /* May throw. */
 #define CCI_L			0x0100	/* Implicit L arg. */
 #define CCI_CASTU64		0x0200	/* Cast u64 result to number. */
 #define CCI_NOFPRCLOBBER	0x0400	/* Does not clobber any FPRs. */
@@ -111,6 +113,18 @@ typedef struct CCallInfo {
 #define IRCALLCOND_FFI32(x)		NULL
 #endif
 
+#if LJ_HASBUFFER
+#define IRCALLCOND_BUFFER(x)		x
+#else
+#define IRCALLCOND_BUFFER(x)		NULL
+#endif
+
+#if LJ_HASBUFFER && LJ_HASFFI
+#define IRCALLCOND_BUFFFI(x)		x
+#else
+#define IRCALLCOND_BUFFFI(x)		NULL
+#endif
+
 #if LJ_SOFTFP
 #define XA_FP		CCI_XA
 #define XA2_FP		(CCI_XA+CCI_XA)
@@ -139,39 +153,47 @@ typedef struct CCallInfo {
 #define IRCALLDEF(_) \
   _(ANY,	lj_str_cmp,		2,  FN, INT, CCI_NOFPRCLOBBER) \
   _(ANY,	lj_str_find,		4,   N, PGC, 0) \
-  _(ANY,	lj_str_new,		3,   S, STR, CCI_L) \
+  _(ANY,	lj_str_new,		3,   S, STR, CCI_L|CCI_T) \
   _(ANY,	lj_strscan_num,		2,  FN, INT, 0) \
-  _(ANY,	lj_strfmt_int,		2,  FN, STR, CCI_L) \
-  _(ANY,	lj_strfmt_num,		2,  FN, STR, CCI_L) \
-  _(ANY,	lj_strfmt_char,		2,  FN, STR, CCI_L) \
-  _(ANY,	lj_strfmt_putint,	2,  FL, PGC, 0) \
-  _(ANY,	lj_strfmt_putnum,	2,  FL, PGC, 0) \
-  _(ANY,	lj_strfmt_putquoted,	2,  FL, PGC, 0) \
-  _(ANY,	lj_strfmt_putfxint,	3,   L, PGC, XA_64) \
-  _(ANY,	lj_strfmt_putfnum_int,	3,   L, PGC, XA_FP) \
-  _(ANY,	lj_strfmt_putfnum_uint,	3,   L, PGC, XA_FP) \
-  _(ANY,	lj_strfmt_putfnum,	3,   L, PGC, XA_FP) \
-  _(ANY,	lj_strfmt_putfstr,	3,   L, PGC, 0) \
-  _(ANY,	lj_strfmt_putfchar,	3,   L, PGC, 0) \
-  _(ANY,	lj_buf_putmem,		3,   S, PGC, 0) \
-  _(ANY,	lj_buf_putstr,		2,  FL, PGC, 0) \
-  _(ANY,	lj_buf_putchar,		2,  FL, PGC, 0) \
-  _(ANY,	lj_buf_putstr_reverse,	2,  FL, PGC, 0) \
-  _(ANY,	lj_buf_putstr_lower,	2,  FL, PGC, 0) \
-  _(ANY,	lj_buf_putstr_upper,	2,  FL, PGC, 0) \
-  _(ANY,	lj_buf_putstr_rep,	3,   L, PGC, 0) \
-  _(ANY,	lj_buf_puttab,		5,   L, PGC, 0) \
-  _(ANY,	lj_buf_tostr,		1,  FL, STR, 0) \
-  _(ANY,	lj_tab_new_ah,		3,   A, TAB, CCI_L) \
-  _(ANY,	lj_tab_new1,		2,  FS, TAB, CCI_L) \
-  _(ANY,	lj_tab_dup,		2,  FS, TAB, CCI_L) \
+  _(ANY,	lj_strfmt_int,		2,  FN, STR, CCI_L|CCI_T) \
+  _(ANY,	lj_strfmt_num,		2,  FN, STR, CCI_L|CCI_T) \
+  _(ANY,	lj_strfmt_char,		2,  FN, STR, CCI_L|CCI_T) \
+  _(ANY,	lj_strfmt_putint,	2,  FL, PGC, CCI_T) \
+  _(ANY,	lj_strfmt_putnum,	2,  FL, PGC, CCI_T) \
+  _(ANY,	lj_strfmt_putquoted,	2,  FL, PGC, CCI_T) \
+  _(ANY,	lj_strfmt_putfxint,	3,   L, PGC, XA_64|CCI_T) \
+  _(ANY,	lj_strfmt_putfnum_int,	3,   L, PGC, XA_FP|CCI_T) \
+  _(ANY,	lj_strfmt_putfnum_uint,	3,   L, PGC, XA_FP|CCI_T) \
+  _(ANY,	lj_strfmt_putfnum,	3,   L, PGC, XA_FP|CCI_T) \
+  _(ANY,	lj_strfmt_putfstr,	3,   L, PGC, CCI_T) \
+  _(ANY,	lj_strfmt_putfchar,	3,   L, PGC, CCI_T) \
+  _(ANY,	lj_buf_putmem,		3,   S, PGC, CCI_T) \
+  _(ANY,	lj_buf_putstr,		2,  FL, PGC, CCI_T) \
+  _(ANY,	lj_buf_putchar,		2,  FL, PGC, CCI_T) \
+  _(ANY,	lj_buf_putstr_reverse,	2,  FL, PGC, CCI_T) \
+  _(ANY,	lj_buf_putstr_lower,	2,  FL, PGC, CCI_T) \
+  _(ANY,	lj_buf_putstr_upper,	2,  FL, PGC, CCI_T) \
+  _(ANY,	lj_buf_putstr_rep,	3,   L, PGC, CCI_T) \
+  _(ANY,	lj_buf_puttab,		5,   L, PGC, CCI_T) \
+  _(BUFFER,	lj_bufx_set,		4,   S, NIL, 0) \
+  _(BUFFFI,	lj_bufx_more,		2,  FS, INT, CCI_T) \
+  _(BUFFER,	lj_serialize_put,	2,  FS, PGC, CCI_T) \
+  _(BUFFER,	lj_serialize_get,	2,  FS, PTR, CCI_T) \
+  _(BUFFER,	lj_serialize_encode,	2,  FA, STR, CCI_L|CCI_T) \
+  _(BUFFER,	lj_serialize_decode,	3,   A, INT, CCI_L|CCI_T) \
+  _(ANY,	lj_buf_tostr,		1,  FL, STR, CCI_T) \
+  _(ANY,	lj_tab_new_ah,		3,   A, TAB, CCI_L|CCI_T) \
+  _(ANY,	lj_tab_new1,		2,  FA, TAB, CCI_L|CCI_T) \
+  _(ANY,	lj_tab_dup,		2,  FA, TAB, CCI_L|CCI_T) \
   _(ANY,	lj_tab_clear,		1,  FS, NIL, 0) \
-  _(ANY,	lj_tab_newkey,		3,   S, PGC, CCI_L) \
+  _(ANY,	lj_tab_newkey,		3,   S, PGC, CCI_L|CCI_T) \
+  _(ANY,	lj_tab_keyindex,	2,  FL, INT, 0) \
+  _(ANY,	lj_vm_next,		2,  FL, PTR, 0) \
   _(ANY,	lj_tab_len,		1,  FL, INT, 0) \
   _(ANY,	lj_tab_len_hint,	2,  FL, INT, 0) \
   _(ANY,	lj_gc_step_jit,		2,  FS, NIL, CCI_L) \
   _(ANY,	lj_gc_barrieruv,	2,  FS, NIL, 0) \
-  _(ANY,	lj_mem_newgco,		2,  FS, PGC, CCI_L) \
+  _(ANY,	lj_mem_newgco,		2,  FA, PGC, CCI_L|CCI_T) \
   _(ANY,	lj_prng_u64d,		1,  FS, NUM, CCI_CASTU64) \
   _(ANY,	lj_vm_modi,		2,  FN, INT, 0) \
   _(ANY,	log10,			1,   N, NUM, XA_FP) \
@@ -195,7 +217,6 @@ typedef struct CCallInfo {
   _(FPMATH,	sqrt,			1,   N, NUM, XA_FP) \
   _(ANY,	log,			1,   N, NUM, XA_FP) \
   _(ANY,	lj_vm_log2,		1,   N, NUM, XA_FP) \
-  _(ANY,	lj_vm_powi,		2,   N, NUM, XA_FP) \
   _(ANY,	pow,			2,   N, NUM, XA2_FP) \
   _(ANY,	atan2,			2,   N, NUM, XA2_FP) \
   _(ANY,	ldexp,			2,   N, NUM, XA_FP) \

@@ -1,6 +1,6 @@
 /*
 ** Bytecode reader.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_bcread_c
@@ -53,11 +53,11 @@ static LJ_NOINLINE void bcread_fill(LexState *ls, MSize len, int need)
   do {
     const char *buf;
     size_t sz;
-    char *p = sbufB(&ls->sb);
+    char *p = ls->sb.b;
     MSize n = (MSize)(ls->pe - ls->p);
     if (n) {  /* Copy remainder to buffer. */
       if (sbuflen(&ls->sb)) {  /* Move down in buffer. */
-	lj_assertLS(ls->pe == sbufP(&ls->sb), "bad buffer pointer");
+	lj_assertLS(ls->pe == ls->sb.w, "bad buffer pointer");
 	if (ls->p != p) memmove(p, ls->p, n);
       } else {  /* Copy from buffer provided by reader. */
 	p = lj_buf_need(&ls->sb, len);
@@ -66,7 +66,7 @@ static LJ_NOINLINE void bcread_fill(LexState *ls, MSize len, int need)
       ls->p = p;
       ls->pe = p + n;
     }
-    setsbufP(&ls->sb, p + n);
+    ls->sb.w = p + n;
     buf = ls->rfunc(ls->L, ls->rdata, &sz);  /* Get more data from reader. */
     if (buf == NULL || sz == 0) {  /* EOF? */
       if (need) bcread_error(ls, LJ_ERR_BCBAD);
@@ -77,8 +77,8 @@ static LJ_NOINLINE void bcread_fill(LexState *ls, MSize len, int need)
     if (n) {  /* Append to buffer. */
       n += (MSize)sz;
       p = lj_buf_need(&ls->sb, n < len ? len : n);
-      memcpy(sbufP(&ls->sb), buf, sz);
-      setsbufP(&ls->sb, p + n);
+      memcpy(ls->sb.w, buf, sz);
+      ls->sb.w = p + n;
       ls->p = p;
       ls->pe = p + n;
     } else {  /* Return buffer provided by reader. */
@@ -399,11 +399,7 @@ static int bcread_header(LexState *ls)
   if ((flags & BCDUMP_F_FFI)) {
 #if LJ_HASFFI
     lua_State *L = ls->L;
-    if (!ctype_ctsG(G(L))) {
-      ptrdiff_t oldtop = savestack(L, L->top);
-      luaopen_ffi(L);  /* Load FFI library on-demand. */
-      L->top = restorestack(L, oldtop);
-    }
+    ctype_loadffi(L);
 #else
     return 0;
 #endif

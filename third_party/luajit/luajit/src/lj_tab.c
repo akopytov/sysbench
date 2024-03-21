@@ -1,6 +1,6 @@
 /*
 ** Table handling.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -15,25 +15,6 @@
 #include "lj_tab.h"
 
 /* -- Object hashing ------------------------------------------------------ */
-
-/* Hash values are masked with the table hash mask and used as an index. */
-static LJ_AINLINE Node *hashmask(const GCtab *t, uint32_t hash)
-{
-  Node *n = noderef(t->node);
-  return &n[hash & t->hmask];
-}
-
-/* String IDs are generated when a string is interned. */
-#define hashstr(t, s)		hashmask(t, (s)->sid)
-
-#define hashlohi(t, lo, hi)	hashmask((t), hashrot((lo), (hi)))
-#define hashnum(t, o)		hashlohi((t), (o)->u32.lo, ((o)->u32.hi << 1))
-#if LJ_GC64
-#define hashgcref(t, r) \
-  hashlohi((t), (uint32_t)gcrefu(r), (uint32_t)(gcrefu(r) >> 32))
-#else
-#define hashgcref(t, r)		hashlohi((t), gcrefu(r), gcrefu(r) + HASH_BIAS)
-#endif
 
 /* Hash an arbitrary key and return its anchor position in the hash table. */
 static Node *hashkey(const GCtab *t, cTValue *key)
@@ -413,7 +394,7 @@ cTValue * LJ_FASTCALL lj_tab_getinth(GCtab *t, int32_t key)
   return NULL;
 }
 
-cTValue *lj_tab_getstr(GCtab *t, GCstr *key)
+cTValue *lj_tab_getstr(GCtab *t, const GCstr *key)
 {
   Node *n = hashstr(t, key);
   do {
@@ -546,7 +527,7 @@ TValue *lj_tab_setinth(lua_State *L, GCtab *t, int32_t key)
   return lj_tab_newkey(L, t, &k);
 }
 
-TValue *lj_tab_setstr(lua_State *L, GCtab *t, GCstr *key)
+TValue *lj_tab_setstr(lua_State *L, GCtab *t, const GCstr *key)
 {
   TValue k;
   Node *n = hashstr(t, key);
@@ -587,56 +568,66 @@ TValue *lj_tab_set(lua_State *L, GCtab *t, cTValue *key)
 
 /* -- Table traversal ----------------------------------------------------- */
 
-/* Get the traversal index of a key. */
-static uint32_t keyindex(lua_State *L, GCtab *t, cTValue *key)
+/* Table traversal indexes:
+**
+** Array key index: [0 .. t->asize-1]
+** Hash key index:  [t->asize .. t->asize+t->hmask]
+** Invalid key:     ~0
+*/
+
+/* Get the successor traversal index of a key. */
+uint32_t LJ_FASTCALL lj_tab_keyindex(GCtab *t, cTValue *key)
 {
   TValue tmp;
   if (tvisint(key)) {
     int32_t k = intV(key);
     if ((uint32_t)k < t->asize)
-      return (uint32_t)k;  /* Array key indexes: [0..t->asize-1] */
+      return (uint32_t)k + 1;
     setnumV(&tmp, (lua_Number)k);
     key = &tmp;
   } else if (tvisnum(key)) {
     lua_Number nk = numV(key);
     int32_t k = lj_num2int(nk);
     if ((uint32_t)k < t->asize && nk == (lua_Number)k)
-      return (uint32_t)k;  /* Array key indexes: [0..t->asize-1] */
+      return (uint32_t)k + 1;
   }
   if (!tvisnil(key)) {
     Node *n = hashkey(t, key);
     do {
       if (lj_obj_equal(&n->key, key))
-	return t->asize + (uint32_t)(n - noderef(t->node));
-	/* Hash key indexes: [t->asize..t->asize+t->nmask] */
+	return t->asize + (uint32_t)((n+1) - noderef(t->node));
     } while ((n = nextnode(n)));
-    if (key->u32.hi == 0xfffe7fff)  /* ITERN was despecialized while running. */
-      return key->u32.lo - 1;
-    lj_err_msg(L, LJ_ERR_NEXTIDX);
-    return 0;  /* unreachable */
+    if (key->u32.hi == LJ_KEYINDEX)  /* Despecialized ITERN while running. */
+      return key->u32.lo;
+    return ~0u;  /* Invalid key to next. */
   }
-  return ~0u;  /* A nil key starts the traversal. */
+  return 0;  /* A nil key starts the traversal. */
 }
 
-/* Advance to the next step in a table traversal. */
-int lj_tab_next(lua_State *L, GCtab *t, TValue *key)
+/* Get the next key/value pair of a table traversal. */
+int lj_tab_next(GCtab *t, cTValue *key, TValue *o)
 {
-  uint32_t i = keyindex(L, t, key);  /* Find predecessor key index. */
-  for (i++; i < t->asize; i++)  /* First traverse the array keys. */
-    if (!tvisnil(arrayslot(t, i))) {
-      setintV(key, i);
-      copyTV(L, key+1, arrayslot(t, i));
-      return 1;
-    }
-  for (i -= t->asize; i <= t->hmask; i++) {  /* Then traverse the hash keys. */
-    Node *n = &noderef(t->node)[i];
-    if (!tvisnil(&n->val)) {
-      copyTV(L, key, &n->key);
-      copyTV(L, key+1, &n->val);
+  uint32_t idx = lj_tab_keyindex(t, key);  /* Find successor index of key. */
+  /* First traverse the array part. */
+  for (; idx < t->asize; idx++) {
+    cTValue *a = arrayslot(t, idx);
+    if (LJ_LIKELY(!tvisnil(a))) {
+      setintV(o, idx);
+      o[1] = *a;
       return 1;
     }
   }
-  return 0;  /* End of traversal. */
+  idx -= t->asize;
+  /* Then traverse the hash part. */
+  for (; idx <= t->hmask; idx++) {
+    Node *n = &noderef(t->node)[idx];
+    if (!tvisnil(&n->val)) {
+      o[0] = n->key;
+      o[1] = n->val;
+      return 1;
+    }
+  }
+  return (int32_t)idx < 0 ? -1 : 0;  /* Invalid key or end of traversal. */
 }
 
 /* -- Table length calculation -------------------------------------------- */

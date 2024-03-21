@@ -1,6 +1,6 @@
 /*
 ** C type management.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include "lj_obj.h"
@@ -191,8 +191,20 @@ CTypeID lj_ctype_intern(CTState *cts, CTInfo info, CTSize size)
   }
   id = cts->top;
   if (LJ_UNLIKELY(id >= cts->sizetab)) {
+#ifdef LUAJIT_CTYPE_CHECK_ANCHOR
+    CType *ct;
+#endif
     if (id >= CTID_MAX) lj_err_msg(cts->L, LJ_ERR_TABOV);
+#ifdef LUAJIT_CTYPE_CHECK_ANCHOR
+    ct = lj_mem_newvec(cts->L, id+1, CType);
+    memcpy(ct, cts->tab, id*sizeof(CType));
+    memset(cts->tab, 0, id*sizeof(CType));
+    lj_mem_freevec(cts->g, cts->tab, cts->sizetab, CType);
+    cts->tab = ct;
+    cts->sizetab = id+1;
+#else
     lj_mem_growvec(cts->L, cts->tab, cts->sizetab, CTID_MAX, CType);
+#endif
   }
   cts->top = id+1;
   cts->tab[id].info = info;
@@ -331,6 +343,14 @@ CTInfo lj_ctype_info(CTState *cts, CTypeID id, CTSize *szp)
     ct = ctype_get(cts, ctype_cid(info));
   }
   return qual;
+}
+
+/* Ditto, but follow a reference. */
+CTInfo lj_ctype_info_raw(CTState *cts, CTypeID id, CTSize *szp)
+{
+  CType *ct = ctype_get(cts, id);
+  if (ctype_isref(ct->info)) id = ctype_cid(ct->info);
+  return lj_ctype_info(cts, id, szp);
 }
 
 /* Get ctype metamethod. */
@@ -562,7 +582,7 @@ GCstr *lj_ctype_repr_int64(lua_State *L, uint64_t n, int isunsigned)
   if (isunsigned) {
     *--p = 'U';
   } else if ((int64_t)n < 0) {
-    n = (uint64_t)-(int64_t)n;
+    n = ~n+1u;
     sign = 1;
   }
   do { *--p = (char)('0' + n % 10); } while (n /= 10);
@@ -583,7 +603,7 @@ GCstr *lj_ctype_repr_complex(lua_State *L, void *sp, CTSize size)
   lj_strfmt_putfnum(sb, STRFMT_G14, re.n);
   if (!(im.u32.hi & 0x80000000u) || im.n != im.n) lj_buf_putchar(sb, '+');
   lj_strfmt_putfnum(sb, STRFMT_G14, im.n);
-  lj_buf_putchar(sb, sbufP(sb)[-1] >= 'a' ? 'I' : 'i');
+  lj_buf_putchar(sb, sb->w[-1] >= 'a' ? 'I' : 'i');
   return lj_buf_str(L, sb);
 }
 

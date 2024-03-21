@@ -1,6 +1,6 @@
 /*
 ** Stack frames.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_FRAME_H
@@ -192,12 +192,12 @@ enum { LJ_CONT_TAILCALL, LJ_CONT_FFI_CALLBACK };  /* Special continuations. */
 #endif
 #define CFRAME_SHIFT_MULTRES	3
 #elif LJ_TARGET_ARM64
-#define CFRAME_OFS_ERRF		196
-#define CFRAME_OFS_NRES		200
-#define CFRAME_OFS_PREV		160
-#define CFRAME_OFS_L		176
-#define CFRAME_OFS_PC		168
-#define CFRAME_OFS_MULTRES	192
+#define CFRAME_OFS_ERRF		36
+#define CFRAME_OFS_NRES		40
+#define CFRAME_OFS_PREV		0
+#define CFRAME_OFS_L		16
+#define CFRAME_OFS_PC		8
+#define CFRAME_OFS_MULTRES	32
 #define CFRAME_SIZE		208
 #define CFRAME_SHIFT_MULTRES	3
 #elif LJ_TARGET_PPC

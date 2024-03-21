@@ -1,9 +1,9 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <html>
 <head>
 <title>LuaJIT</title>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<meta name="Copyright" content="Copyright (C) 2005-2020">
+<meta charset="utf-8">
+<meta name="Copyright" content="Copyright (C) 2005-2022">
 <meta name="Language" content="en">
 <link rel="stylesheet" type="text/css" href="bluequad.css" media="screen">
 <link rel="stylesheet" type="text/css" href="bluequad-print.css" media="print">
@@ -122,6 +122,8 @@ table.feature small {
 <a href="ext_ffi_semantics.html">FFI Semantics</a>
 </li></ul>
 </li><li>
+<a href="ext_buffer.html">String Buffers</a>
+</li><li>
 <a href="ext_jit.html">jit.* Library</a>
 </li><li>
 <a href="ext_c_api.html">Lua/C API</a>
@@ -132,8 +134,6 @@ table.feature small {
 <a href="status.html">Status</a>
 </li><li>
 <a href="faq.html">FAQ</a>
-</li><li>
-<a href="http://wiki.luajit.org/">Wiki <span class="ext">&raquo;</span></a>
 </li><li>
 <a href="https://luajit.org/list.html">Mailing List <span class="ext">&raquo;</span></a>
 </li></ul>
@@ -146,7 +146,7 @@ Lua is a powerful, dynamic and light-weight programming language.
 It may be embedded or used as a general-purpose, stand-alone language.
 </p>
 <p>
-LuaJIT is Copyright &copy; 2005-2020 Mike Pall, released under the
+LuaJIT is Copyright &copy; 2005-2022 Mike Pall, released under the
 <a href="https://www.opensource.org/licenses/mit-license.php"><span class="ext">&raquo;</span>&nbsp;MIT open source license</a>.
 </p>
 <p>
@@ -154,13 +154,13 @@ LuaJIT is Copyright &copy; 2005-2020 Mike Pall, released under the
 
 <h2>Compatibility</h2>
 <table class="feature os os1">
-<tr><td>Windows</td><td>Linux</td><td>BSD</td><td>OSX</td><td>POSIX</td></tr>
+<tr><td>Windows</td><td>Linux</td><td>BSD</td><td>macOS</td><td>POSIX</td></tr>
 </table>
 <table class="feature os os2">
 <tr><td><span style="font-size:90%;">Embedded</span></td><td>Android</td><td>iOS</td></tr>
 </table>
 <table class="feature os os3">
-<tr><td>PS3</td><td>PS4</td><td>PS Vita</td><td>Xbox 360</td><td>Xbox One</td></tr>
+<tr><td>PS3</td><td>PS4<br>PS5</td><td>PS Vita</td><td>Xbox 360</td><td>Xbox One</td><td>Nintendo<br>Switch</td></tr>
 </table>
 <table class="feature compiler">
 <tr><td>GCC</td><td>Clang<br>LLVM</td><td>MSVC</td></tr>
@@ -220,7 +220,7 @@ Please select a sub-topic in the navigation bar to learn more about LuaJIT.
 </div>
 <div id="foot">
 <hr class="hide">
-Copyright &copy; 2005-2020
+Copyright &copy; 2005-2022
 <span class="noprint">
 &middot;
 <a href="contact.html">Contact</a>

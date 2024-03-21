@@ -1,6 +1,6 @@
 |// Low-level VM code for PowerPC 32 bit or 32on64 bit mode.
 |// Bytecode interpreter, fast functions and helper functions.
-|// Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+|// Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 |
 |.arch ppc
 |.section code_op, code_sub
@@ -859,11 +859,11 @@ static void build_subroutines(BuildCtx *ctx)
   |.endif
   |     lwz PC, -16(RB)			// Restore PC from [cont|PC].
   |   subi TMP2, RD, 8
-  |    lwz TMP1, LFUNC:TMP1->pc
   |   stwx TISNIL, RA, TMP2		// Ensure one valid arg.
   |.if FFI
   |  ble >1
   |.endif
+  |    lwz TMP1, LFUNC:TMP1->pc
   |    lwz KBASE, PC2PROTO(k)(TMP1)
   |  // BASE = base, RA = resultptr, RB = meta base
   |  mtctr TMP0
@@ -1559,43 +1559,24 @@ static void build_subroutines(BuildCtx *ctx)
   |
   |//-- Base library: iterators -------------------------------------------
   |
-  |.ffunc next
-  |  cmplwi NARGS8:RC, 8
-  |   lwz CARG1, 0(BASE)
-  |    lwz TAB:CARG2, 4(BASE)
-  |  blt ->fff_fallback
+  |.ffunc_1 next
   |   stwx TISNIL, BASE, NARGS8:RC	// Set missing 2nd arg to nil.
-  |  checktab CARG1
+  |  checktab CARG3
   |   lwz PC, FRAME_PC(BASE)
   |  bne ->fff_fallback
-  |   stp BASE, L->base			// Add frame since C call can throw.
-  |  mr CARG1, L
-  |   stp BASE, L->top			// Dummy frame length is ok.
-  |  la CARG3, 8(BASE)
-  |   stw PC, SAVE_PC
-  |  bl extern lj_tab_next	// (lua_State *L, GCtab *t, TValue *key)
-  |  // Returns 0 at end of traversal.
-  |  cmplwi CRET1, 0
+  |  la CARG2, 8(BASE)
+  |  la CARG3, -8(BASE)
+  |  bl extern lj_tab_next		// (GCtab *t, cTValue *key, TValue *o)
+  |  // Returns 1=found, 0=end, -1=error.
+  |  cmpwi CRET1, 0
+  |   la RA, -8(BASE)
+  |   li RD, (2+1)*8
+  |  bgt ->fff_res			// Found key/value.
   |   li CARG3, LJ_TNIL
   |  beq ->fff_restv			// End of traversal: return nil.
-  |   la RA, -8(BASE)
-  |.if FPU
-  |  lfd f0, 8(BASE)			// Copy key and value to results.
-  |  lfd f1, 16(BASE)
-  |  stfd f0, 0(RA)
-  |  stfd f1, 8(RA)
-  |.else
-  |  lwz CARG1, 8(BASE)
-  |  lwz CARG2, 12(BASE)
-  |  lwz CARG3, 16(BASE)
-  |  lwz CARG4, 20(BASE)
-  |  stw CARG1, 0(RA)
-  |  stw CARG2, 4(RA)
-  |  stw CARG3, 8(RA)
-  |  stw CARG4, 12(RA)
-  |.endif
-  |   li RD, (2+1)*8
-  |  b ->fff_res
+  |   lwz CFUNC:RB, FRAME_FUNC(BASE)
+  |   li NARGS8:RC, 2*8
+  |  b ->fff_fallback			// Invalid key.
   |
   |.ffunc_1 pairs
   |  checktab CARG3
@@ -2516,7 +2497,7 @@ static void build_subroutines(BuildCtx *ctx)
   |  stw L, SBUF:CARG1->L
   |  stp BASE, L->base
   |  stw PC, SAVE_PC
-  |   stw TMP0, SBUF:CARG1->p
+  |   stw TMP0, SBUF:CARG1->w
   |  bl extern lj_buf_putstr_ .. name
   |  bl extern lj_buf_tostr
   |  b ->fff_resstr
@@ -3090,8 +3071,9 @@ static void build_subroutines(BuildCtx *ctx)
   |  bctr
   |
   |9:  // Rethrow error from the right C frame.
+  |  neg CARG2, CARG1
   |  mr CARG1, L
-  |  bl extern lj_err_run		// (lua_State *L)
+  |  bl extern lj_err_trace		// (lua_State *L, int errcode)
   |.endif
   |
   |//-----------------------------------------------------------------------
@@ -3179,6 +3161,11 @@ static void build_subroutines(BuildCtx *ctx)
   |  bdnz <1
   |  isync
   |  blr
+  |.endif
+  |
+  |->vm_next:
+  |.if JIT
+  |  NYI  // On big-endian.
   |.endif
   |
   |//-----------------------------------------------------------------------
@@ -4100,8 +4087,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |.macro addo32., y, a, b
     |  // Need to check overflow for (a<<32) + (b<<32).
     |  rldicr TMP0, a, 32, 31
-    |  rldicr TMP3, b, 32, 31
-    |  addo. TMP0, TMP0, TMP3
+    |  rldicr TMP1, b, 32, 31
+    |  addo. TMP0, TMP0, TMP1
     |  add y, a, b
     |.endmacro
     |  ins_arith addo32., fadd, __adddf3
@@ -4114,8 +4101,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |.macro subo32., y, a, b
     |  // Need to check overflow for (a<<32) - (b<<32).
     |  rldicr TMP0, a, 32, 31
-    |  rldicr TMP3, b, 32, 31
-    |  subo. TMP0, TMP0, TMP3
+    |  rldicr TMP1, b, 32, 31
+    |  subo. TMP0, TMP0, TMP1
     |  sub y, a, b
     |.endmacro
     |  ins_arith subo32., fsub, __subdf3
@@ -5130,8 +5117,9 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
   case BC_ITERN:
     |  // RA = base*8, (RB = (nresults+1)*8, RC = (nargs+1)*8 (2+1)*8)
     |.if JIT
-    |  // NYI: add hotloop, record BC_ITERN.
+    |  // NYI on big-endian
     |.endif
+    |->vm_IITERN:
     |  add RA, BASE, RA
     |  lwz TAB:RB, -12(RA)
     |  lwz RC, -4(RA)			// Get index from control var.
@@ -5250,8 +5238,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |  crand 4*cr0+eq, 4*cr0+eq, 4*cr7+eq
     |    add TMP3, PC, TMP0
     |  bne cr0, >5
-    |  lus TMP1, 0xfffe
-    |  ori TMP1, TMP1, 0x7fff
+    |  lus TMP1, (LJ_KEYINDEX >> 16)
+    |  ori TMP1, TMP1, (LJ_KEYINDEX & 0xffff)
     |  stw ZERO, -4(RA)			// Initialize control var.
     |  stw TMP1, -8(RA)
     |    addis PC, TMP3, -(BCBIAS_J*4 >> 16)
@@ -5262,6 +5250,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
     |   li TMP1, BC_ITERC
     |  stb TMP0, -1(PC)
     |    addis PC, TMP3, -(BCBIAS_J*4 >> 16)
+    |  // NYI on big-endian: unpatch JLOOP.
     |   stb TMP1, 3(PC)
     |  b <1
     break;

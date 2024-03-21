@@ -1,6 +1,6 @@
 /*
 ** String formatting.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_STRFMT_H
@@ -95,7 +95,9 @@ LJ_FUNC SBuf * LJ_FASTCALL lj_strfmt_putint(SBuf *sb, int32_t k);
 LJ_FUNC SBuf * LJ_FASTCALL lj_strfmt_putnum(SBuf *sb, cTValue *o);
 #endif
 LJ_FUNC SBuf * LJ_FASTCALL lj_strfmt_putptr(SBuf *sb, const void *v);
+#if LJ_HASJIT
 LJ_FUNC SBuf * LJ_FASTCALL lj_strfmt_putquoted(SBuf *sb, GCstr *str);
+#endif
 
 /* Formatted conversions to buffer. */
 LJ_FUNC SBuf *lj_strfmt_putfxint(SBuf *sb, SFormat sf, uint64_t k);
@@ -103,7 +105,10 @@ LJ_FUNC SBuf *lj_strfmt_putfnum_int(SBuf *sb, SFormat sf, lua_Number n);
 LJ_FUNC SBuf *lj_strfmt_putfnum_uint(SBuf *sb, SFormat sf, lua_Number n);
 LJ_FUNC SBuf *lj_strfmt_putfnum(SBuf *sb, SFormat, lua_Number n);
 LJ_FUNC SBuf *lj_strfmt_putfchar(SBuf *sb, SFormat, int32_t c);
+#if LJ_HASJIT
 LJ_FUNC SBuf *lj_strfmt_putfstr(SBuf *sb, SFormat, GCstr *str);
+#endif
+LJ_FUNC int lj_strfmt_putarg(lua_State *L, SBuf *sb, int arg, int retry);
 
 /* Conversions to strings. */
 LJ_FUNC GCstr * LJ_FASTCALL lj_strfmt_int(lua_State *L, int32_t k);

@@ -1,6 +1,6 @@
 /*
 ** FFI C call handling.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include "lj_obj.h"
@@ -334,7 +334,7 @@
   isfp = sz == 2*sizeof(float) ? 2 : 1;
 
 #define CCALL_HANDLE_REGARG \
-  if (LJ_TARGET_IOS && isva) { \
+  if (LJ_TARGET_OSX && isva) { \
     /* IOS: All variadic arguments are on the stack. */ \
   } else if (isfp) {  /* Try to pass argument in FPRs. */ \
     int n2 = ctype_isvector(d->info) ? 1 : \
@@ -345,10 +345,10 @@
       goto done; \
     } else { \
       nfpr = CCALL_NARG_FPR;  /* Prevent reordering. */ \
-      if (LJ_TARGET_IOS && d->size < 8) goto err_nyi; \
+      if (LJ_TARGET_OSX && d->size < 8) goto err_nyi; \
     } \
   } else {  /* Try to pass argument in GPRs. */ \
-    if (!LJ_TARGET_IOS && (d->info & CTF_ALIGN) > CTALIGN_PTR) \
+    if (!LJ_TARGET_OSX && (d->info & CTF_ALIGN) > CTALIGN_PTR) \
       ngpr = (ngpr + 1u) & ~1u;  /* Align to regpair. */ \
     if (ngpr + n <= maxgpr) { \
       dp = &cc->gpr[ngpr]; \
@@ -356,7 +356,7 @@
       goto done; \
     } else { \
       ngpr = maxgpr;  /* Prevent reordering. */ \
-      if (LJ_TARGET_IOS && d->size < 8) goto err_nyi; \
+      if (LJ_TARGET_OSX && d->size < 8) goto err_nyi; \
     } \
   }
 

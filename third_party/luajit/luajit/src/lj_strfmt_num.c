@@ -1,6 +1,6 @@
 /*
 ** String formatting for floating-point numbers.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 ** Contributed by Peter Cawley.
 */
 
@@ -576,7 +576,7 @@ static char *lj_strfmt_wfnum(SBuf *sb, SFormat sf, lua_Number n, char *p)
 /* Add formatted floating-point number to buffer. */
 SBuf *lj_strfmt_putfnum(SBuf *sb, SFormat sf, lua_Number n)
 {
-  setsbufP(sb, lj_strfmt_wfnum(sb, sf, n, NULL));
+  sb->w = lj_strfmt_wfnum(sb, sf, n, NULL);
   return sb;
 }
 

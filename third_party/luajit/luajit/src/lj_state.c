@@ -1,6 +1,6 @@
 /*
 ** State and stack handling.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -114,7 +114,7 @@ void LJ_FASTCALL lj_state_growstack(lua_State *L, MSize need)
       n = LJ_STACK_MAX;
   }
   resizestack(L, n);
-  if (L->stacksize > LJ_STACK_MAXEX)
+  if (L->stacksize >= LJ_STACK_MAXEX)
     lj_err_msg(L, LJ_ERR_STKOV);
 }
 
@@ -156,6 +156,7 @@ static TValue *cpluaopen(lua_State *L, lua_CFunction dummy, void *ud)
   fixstring(lj_err_str(L, LJ_ERR_ERRMEM));  /* Preallocate memory error msg. */
   g->gc.threshold = 4*g->gc.total;
   lj_trace_initstate(g);
+  lj_err_verify();
   return NULL;
 }
 
