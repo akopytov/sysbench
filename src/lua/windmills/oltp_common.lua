@@ -719,6 +719,12 @@ end
 
 function sysbench.hooks.report_cumulative(stat)
    if sysbench.opt.stats_format == "csv" then
-         sysbench.report_cumulative_csv(stat)
+      sysbench.report_cumulative_csv(stat)
+   elseif sysbench.opt.stats_format == "json" then
+      sysbench.report_cumulative_csv(stat)   
+      -- sysbench.report_cumulative_json(stat)
+   else
+      sysbench.report_cumulative_default(stat)
    end
 end
+

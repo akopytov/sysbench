@@ -194,7 +194,55 @@ function sysbench.report_cumulative_csv(stat)
                        stat.latency_avg,
                        stat.latency_sum
     ))
-      
-      
-      
 end
+
+function sysbench.report_cumulative_default(stat)
+   local seconds = stat.time_interval
+   local queries = stat.reads + stat.writes + stat.other
+
+   print(string.format(
+      "SQL statistics:\n" ..
+      "    queries performed:\n" ..
+      "        read:                            %u\n" ..
+      "        write:                           %u\n" ..
+      "        other:                           %u\n" ..
+      "        total:                           %u\n" ..
+      "    transactions:                        %-6u (%.2f per sec.)\n" ..
+      "    queries:                             %-6u (%.2f per sec.)\n" ..
+      "    ignored errors:                      %-6u (%.2f per sec.)\n" ..
+      "    reconnects:                          %-6u (%.2f per sec.)\n" ..
+      "\n" ..
+      "Throughput:\n" ..
+      "    events/s (eps):                      %.4f\n" ..
+      "    time elapsed:                        %.4fs\n" ..
+      "    total number of events:              %u\n" ..
+      "\n" ..
+      "Latency (ms):\n" ..
+      "         min: %39.2f\n" ..
+      "         avg: %39.2f\n" ..
+      "         max: %39.2f",
+         stat.reads,
+         stat.writes,
+         stat.other,
+         queries,
+         stat.events, stat.events / seconds,
+         queries, queries / seconds,
+         stat.errors, stat.errors / seconds,
+         stat.reconnects, stat.reconnects / seconds,
+         stat.events / seconds,
+         stat.time_total,
+         stat.events,
+         stat.latency_min * 1000,
+         stat.latency_avg * 1000,
+         stat.latency_max * 1000
+   ))
+
+   if sysbench.opt.percentile > 0 then
+      print(string.format("        %3dth percentile: %27.2f", sysbench.opt.percentile, stat.latency_pct * 1000))
+   else
+      print(string.format("         percentile stats:               disabled"))
+   end
+
+   print(string.format("         sum: %39.2f\n", stat.latency_sum * 1000))
+end
+
