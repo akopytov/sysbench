@@ -90,7 +90,9 @@ sysbench.cmdline.options = {
    table_name=
    {"Specify a table name instead sbtest", "sbtest"},
    stats_format=
-   {"Specify how you want the statistics written [default=human readable; csv; json ", "human"}
+   {"Specify how you want the statistics written [default=human readable; csv; json ", "human"},
+   create_indexes_before_dataload =
+   {"Create all imdexes before loading data. This can be useful when in the need to avoid the operation with table filled", false}
    
 
       
@@ -166,6 +168,36 @@ function get_pad_value()
    return sysbench.rand.string(pad_value_template)
 end
 
+function create_indexes(drv, con, table_num)
+   if sysbench.opt.create_secondary then
+	  print(string.format("Creating a secondary index on '%s%d'...",
+						  sysbench.opt.table_name,table_num))
+					
+	  con:query(string.format("CREATE INDEX kuuid_x ON %s%d(uuid)",
+							  sysbench.opt.table_name,table_num, table_num))
+	  con:query(string.format("CREATE INDEX millid_x ON %s%d(millid)",
+							  sysbench.opt.table_name,table_num, table_num))
+	  con:query(string.format("CREATE INDEX active_x ON %s%d(active)",
+							  sysbench.opt.table_name,table_num, table_num))
+						  
+   end
+   if sysbench.opt.create_compound then
+	  print(string.format("Creating a compound index on '%s%d'...",
+						  sysbench.opt.table_name,table_num))
+					  
+	  con:query(string.format("CREATE INDEX IDX_millid ON %s%d(`millid`,`active`)",
+							  sysbench.opt.table_name,table_num, table_num))                    
+
+	  con:query(string.format("CREATE INDEX IDX_active ON %s%d(`id`,`active`)",
+							  sysbench.opt.table_name,table_num, table_num))                    
+
+	  con:query(string.format("CREATE INDEX kcontinent_x ON %s%d(`continent`,`id`)",
+							  sysbench.opt.table_name,table_num, table_num))                    
+
+   end
+
+end
+
 function create_table(drv, con, table_num)
    local id_index_def, id_def
    local engine_def = ""
@@ -232,6 +264,11 @@ sysbench.opt.table_name, table_num, id_def, primaryKeyDefinition,engine_def, ext
    --print("DEBUG :" .. query)
       
    con:query(query)
+
+   if sysbench.opt.create_indexes_before_dataload then 
+	   create_indexes(drv, con, table_num)
+	end
+
 
    if (sysbench.opt.table_size > 0) then
       print(string.format("Inserting %d records into '%s%d'",
@@ -305,32 +342,9 @@ sysbench.opt.table_name, table_num, id_def, primaryKeyDefinition,engine_def, ext
 
    con:bulk_insert_done()
 
-   if sysbench.opt.create_secondary then
-      print(string.format("Creating a secondary index on '%s%d'...",
-                          sysbench.opt.table_name,table_num))
-                        
-      con:query(string.format("CREATE INDEX kuuid_x ON %s%d(uuid)",
-                              sysbench.opt.table_name,table_num, table_num))
-      con:query(string.format("CREATE INDEX millid_x ON %s%d(millid)",
-                              sysbench.opt.table_name,table_num, table_num))
-      con:query(string.format("CREATE INDEX active_x ON %s%d(active)",
-                              sysbench.opt.table_name,table_num, table_num))
-                              
-   end
-   if sysbench.opt.create_compound then
-      print(string.format("Creating a compound index on '%s%d'...",
-                          sysbench.opt.table_name,table_num))
-                          
-      con:query(string.format("CREATE INDEX IDX_millid ON %s%d(`millid`,`active`)",
-                              sysbench.opt.table_name,table_num, table_num))                    
-
-      con:query(string.format("CREATE INDEX IDX_active ON %s%d(`id`,`active`)",
-                              sysbench.opt.table_name,table_num, table_num))                    
-
-      con:query(string.format("CREATE INDEX kcontinent_x ON %s%d(`continent`,`id`)",
-                              sysbench.opt.table_name,table_num, table_num))                    
-
-   end
+   if not sysbench.opt.create_indexes_before_dataload then 
+	   create_indexes(drv, con, table_num)
+	end
 
 
 end
@@ -372,6 +386,7 @@ local stmt_defs = {
       t.BIGINT, t.INT,t.INT, {t.VARCHAR, 50},{t.VARCHAR, 50},t.INT, {t.CHAR, 3}},
   
 }
+
 
 function prepare_begin()
    stmt.begin = con:prepare("BEGIN")
