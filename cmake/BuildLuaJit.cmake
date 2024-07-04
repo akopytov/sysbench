@@ -15,9 +15,15 @@ if(NOT WIN32)
   # gmake is there´
   find_program(MAKE_EXECUTABLE NAMES gmake make REQUIRED)
   # Makefile requires MACOSX_DEPLOYMENT_TARGET on Apple
-  if(CMAKE_OSX_DEPLOYMENT_TARGET)
-    set(MACOSX_DEPLOYMENT_TARGET
+  if (APPLE)
+    if("${CMAKE_OSX_DEPLOYMENT_TARGET}")
+      set(MACOSX_DEPLOYMENT_TARGET
         "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    else()
+      message(WARNING "CMAKE_OSX_DEPLOYMENT_TARGET was not set")
+      set(MACOSX_DEPLOYMENT_TARGET
+        "MACOSX_DEPLOYMENT_TARGET=10.12")
+    endif()
   endif()
   set(libluajit_static_lib ${install_dir}/lib/libluajit-5.1.a)
   ExternalProject_Add(

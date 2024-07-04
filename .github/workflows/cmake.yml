@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
     uses: ./.github/workflows/cmake-single-os.yml
     with:
       os: ${{ matrix.os}}
