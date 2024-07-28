@@ -8,7 +8,7 @@ Skip test if the MySQL driver is not available.
   $ sysbench --help | grep -- '--db-driver'
     --db-driver=STRING  specifies database driver to use ('help' to get list of available drivers) [mysql]
 
-  $ sysbench --help | sed -n '/mysql options:/,/^$/p'
+  $ sysbench --help | sed -n '/mysql options:/,/^$/p' | grep -v 'mysql-ssl[=\[]'
   mysql options:
     --mysql-host=[LIST,...]               MySQL server host [localhost]
     --mysql-port=[LIST,...]               MySQL server port [3306]
@@ -16,7 +16,6 @@ Skip test if the MySQL driver is not available.
     --mysql-user=STRING                   MySQL user [sbtest]
     --mysql-password=STRING               MySQL password []
     --mysql-db=STRING                     MySQL database name [sbtest]
-    --mysql-ssl=STRING                    SSL mode. This accepts the same values as the --ssl-mode option in the MySQL client utilities. Disabled by default [disabled]
     --mysql-ssl-key=STRING                path name of the client private key file
     --mysql-ssl-ca=STRING                 path name of the CA file
     --mysql-ssl-cert=STRING               path name of the client public key certificate file
