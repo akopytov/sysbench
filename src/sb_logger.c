@@ -44,11 +44,13 @@
 
 /*
    Use 1024-element array for latency histogram tracking values between 0.001
-   milliseconds and 100 seconds.
+   milliseconds and 1800 seconds.
+   OPER_LOG_MAX_VALUE set to 30 mins might be not big enough to properly
+   handle 95percentile stats for long-lasting tasks, e.g. OLAP queries.
 */
 #define OPER_LOG_GRANULARITY 1024
 #define OPER_LOG_MIN_VALUE   1e-3
-#define OPER_LOG_MAX_VALUE   1E5
+#define OPER_LOG_MAX_VALUE   1.8E5
 
 /* Array of message handlers (one chain per message type) */
 
