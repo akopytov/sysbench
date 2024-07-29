@@ -109,7 +109,9 @@ typedef struct
   const char         *ssl_ca;
   const char         *ssl_cipher;
   unsigned char      use_compression;
+#ifdef MYSQL_OPT_COMPRESSION_ALGORITHMS
   const char         *compression_alg;
+#endif
   unsigned char      debug;
   sb_list_t          *ignored_errors;
   unsigned int       dry_run;
@@ -337,7 +339,9 @@ int mysql_drv_init(void)
 #endif
 
   args.use_compression = sb_get_value_flag("mysql-compression");
+#ifdef MYSQL_OPT_COMPRESSION_ALGORITHMS
   args.compression_alg = sb_get_value_string("mysql-compression-algorithms");
+#endif
 
   args.debug = sb_get_value_flag("mysql-debug");
   if (args.debug)
