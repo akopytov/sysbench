@@ -79,6 +79,7 @@ static sb_arg_t mysql_drv_args[] =
          "path name of the client public key certificate file", NULL, STRING),
   SB_OPT("mysql-ssl-cipher", "use specific cipher for SSL connections", "",
          STRING),
+  SB_OPT("mysql-ssl-tls-version", "use specific TLS versions", NULL, STRING),
   SB_OPT("mysql-compression", "use compression, if available in the "
          "client library", "off", BOOL),
   SB_OPT("mysql-compression-algorithms", "compression algorithms to use",
@@ -107,6 +108,7 @@ typedef struct
   const char         *ssl_key;
   const char         *ssl_cert;
   const char         *ssl_ca;
+  const char         *ssl_tls_version;
   const char         *ssl_cipher;
   unsigned char      use_compression;
 #ifdef MYSQL_OPT_COMPRESSION_ALGORITHMS
@@ -314,6 +316,7 @@ int mysql_drv_init(void)
   args.ssl_key = sb_get_value_string("mysql-ssl-key");
   args.ssl_cert = sb_get_value_string("mysql-ssl-cert");
   args.ssl_ca = sb_get_value_string("mysql-ssl-ca");
+  args.ssl_tls_version = sb_get_value_string("mysql-ssl-tls-version");
 
 #ifdef HAVE_MYSQL_OPT_SSL_MODE
   const char * const ssl_mode_string = sb_get_value_string("mysql-ssl");
@@ -413,6 +416,9 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
 
     mysql_ssl_set(con, args.ssl_key, args.ssl_cert, args.ssl_ca, NULL,
                   args.ssl_cipher);
+
+    DEBUG("mysql_options(%p,%s,%d)", con, "MYSQL_OPT_TLS_VERSION", args.ssl_tls_version);
+    mysql_options(con, MYSQL_OPT_TLS_VERSION, &args.ssl_tls_version);
   }
 
   if (args.use_compression)
