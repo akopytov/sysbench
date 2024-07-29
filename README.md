@@ -11,6 +11,7 @@
 - [sysbench](#sysbench)
     - [Features](#features)
 - [Installing from Binary Packages](#installing-from-binary-packages)
+    - [FreeBSD](#freebsd)
     - [Linux](#linux)
     - [macOS](#macos)
     - [Windows](#windows)
@@ -59,6 +60,13 @@ sysbench comes with the following bundled benchmarks:
   replace `#!/usr/bin/lua` with `#!/usr/bin/sysbench` in your script.
 
 # Installing from Binary Packages
+
+## FreeBSD
+
+On FreeBSD, up-to-date sysbench packages are available from package mirrors:
+```shell
+pkg install sysbench
+```
 
 ## Linux
 
