@@ -112,6 +112,9 @@ LUA_API lua_State *(lua_newstate) (lua_Alloc f, void *ud);
 LUA_API void       (lua_close) (lua_State *L);
 LUA_API lua_State *(lua_newthread) (lua_State *L);
 
+#define HAVE_LUA_RESETTHREAD  1
+LUA_API void	   (lua_resetthread) (lua_State *L, lua_State *th);
+
 LUA_API lua_CFunction (lua_atpanic) (lua_State *L, lua_CFunction panicf);
 
 
@@ -245,7 +248,12 @@ LUA_API void  (lua_concat) (lua_State *L, int n);
 LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
 LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);
 
+LUA_API void lua_setexdata(lua_State *L, void *exdata);
+LUA_API void *lua_getexdata(lua_State *L);
 
+#define HAVE_LUA_EXDATA2 1
+LUA_API void lua_setexdata2(lua_State *L, void *exdata2);
+LUA_API void *lua_getexdata2(lua_State *L);
 
 /*
 ** ===============================================================

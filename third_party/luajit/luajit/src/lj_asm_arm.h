@@ -1,6 +1,6 @@
 /*
 ** ARM IR assembler (SSA IR -> machine code).
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 /* -- Register allocator extensions --------------------------------------- */
@@ -1990,6 +1990,7 @@ static void asm_prof(ASMState *as, IRIns *ir)
 static void asm_stack_check(ASMState *as, BCReg topslot,
 			    IRIns *irp, RegSet allow, ExitNo exitno)
 {
+  int savereg = 0;
   Reg pbase;
   uint32_t k;
   if (irp) {
@@ -2000,12 +2001,14 @@ static void asm_stack_check(ASMState *as, BCReg topslot,
       pbase = rset_pickbot(allow);
     } else {
       pbase = RID_RET;
-      emit_lso(as, ARMI_LDR, RID_RET, RID_SP, 0);  /* Restore temp. register. */
+      savereg = 1;
     }
   } else {
     pbase = RID_BASE;
   }
   emit_branch(as, ARMF_CC(ARMI_BL, CC_LS), exitstub_addr(as->J, exitno));
+  if (savereg)
+    emit_lso(as, ARMI_LDR, RID_RET, RID_SP, 0);  /* Restore temp. register. */
   k = emit_isk12(0, (int32_t)(8*topslot));
   lj_assertA(k, "slot offset %d does not fit in K12", 8*topslot);
   emit_n(as, ARMI_CMP^k, RID_TMP);
@@ -2017,7 +2020,7 @@ static void asm_stack_check(ASMState *as, BCReg topslot,
     if (ra_hasspill(irp->s))
       emit_lso(as, ARMI_LDR, pbase, RID_SP, sps_scale(irp->s));
     emit_lso(as, ARMI_LDR, RID_TMP, RID_TMP, (i & 4095));
-    if (ra_hasspill(irp->s) && !allow)
+    if (savereg)
       emit_lso(as, ARMI_STR, RID_RET, RID_SP, 0);  /* Save temp. register. */
     emit_loadi(as, RID_TMP, (i & ~4095));
   } else {
@@ -2167,7 +2170,7 @@ static void asm_head_root_base(ASMState *as)
 }
 
 /* Coalesce BASE register for a side trace. */
-static RegSet asm_head_side_base(ASMState *as, IRIns *irp, RegSet allow)
+static Reg asm_head_side_base(ASMState *as, IRIns *irp)
 {
   IRIns *ir;
   asm_head_lreg(as);
@@ -2175,16 +2178,15 @@ static RegSet asm_head_side_base(ASMState *as, IRIns *irp, RegSet allow)
   if (ra_hasreg(ir->r) && (rset_test(as->modset, ir->r) || irt_ismarked(ir->t)))
     ra_spill(as, ir);
   if (ra_hasspill(irp->s)) {
-    rset_clear(allow, ra_dest(as, ir, allow));
+    return ra_dest(as, ir, RSET_GPR);
   } else {
     Reg r = irp->r;
     lj_assertA(ra_hasreg(r), "base reg lost");
-    rset_clear(allow, r);
     if (r != ir->r && !rset_test(as->freeset, r))
       ra_restore(as, regcost_ref(as->cost[r]));
     ra_destreg(as, ir, r);
+    return r;
   }
-  return allow;
 }
 
 /* -- Tail of trace ------------------------------------------------------- */

@@ -1,6 +1,6 @@
 /*
 ** Public Lua/C API.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 **
 ** Major portions taken verbatim or adapted from the Lua interpreter.
 ** Copyright (C) 1994-2008 Lua.org, PUC-Rio. See Copyright Notice in lua.h
@@ -104,7 +104,12 @@ LUA_API int lua_checkstack(lua_State *L, int size)
   if (size > LUAI_MAXCSTACK || (L->top - L->base + size) > LUAI_MAXCSTACK) {
     return 0;  /* Stack overflow. */
   } else if (size > 0) {
-    lj_state_checkstack(L, (MSize)size);
+    int avail = (int)(mref(L->maxstack, TValue) - L->top);
+    if (size > avail &&
+	lj_state_cpgrowstack(L, (MSize)(size - avail)) != LUA_OK) {
+      L->top--;
+      return 0;  /* Out of memory. */
+    }
   }
   return 1;
 }
@@ -1195,6 +1200,36 @@ LUA_API int lua_isyieldable(lua_State *L)
   return cframe_canyield(L->cframe);
 }
 
+LUA_API void lua_resetthread(lua_State *L, lua_State *th)
+{
+  TValue *stend, *st;
+
+  th->dummy_ffid = FF_C;
+  th->status = LUA_OK;
+
+  setmrefr(th->glref, L->glref);
+  setgcrefr(th->env, L->env);
+
+  th->cframe = NULL;
+
+  st = tvref(th->stack);
+
+  if (st != NULL) {
+    lj_state_relimitstack(th);
+
+    stend = st + th->stacksize;
+    st++; /* Needed for curr_funcisL() on empty stack. */
+    if (LJ_FR2) st++;
+    th->base = th->top = st;
+    lj_func_closeuv(L, st);
+    while (st < stend)  /* Clear new slots. */
+      setnilV(st++);
+  }
+
+  th->exdata = L->exdata;
+  th->exdata2 = L->exdata2;
+}
+
 LUA_API int lua_yield(lua_State *L, int nresults)
 {
   void *cf = L->cframe;
@@ -1311,3 +1346,22 @@ LUA_API void lua_setallocf(lua_State *L, lua_Alloc f, void *ud)
   g->allocf = f;
 }
 
+LUA_API void lua_setexdata(lua_State *L, void *exdata)
+{
+  L->exdata = exdata;
+}
+
+LUA_API void *lua_getexdata(lua_State *L)
+{
+  return L->exdata;
+}
+
+LUA_API void lua_setexdata2(lua_State *L, void *exdata2)
+{
+  L->exdata2 = exdata2;
+}
+
+LUA_API void *lua_getexdata2(lua_State *L)
+{
+  return L->exdata2;
+}
