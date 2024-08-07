@@ -40,6 +40,8 @@
 #endif
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
 #ifdef HAVE_STRING_H
 # include <string.h>
 #endif
@@ -50,11 +52,13 @@
 # include <math.h>
 #endif
 
+#include "sysbench.h"
 #include "sb_options.h"
 #include "sb_rand.h"
 #include "sb_logger.h"
 
 #include "sb_ck_pr.h"
+#include <ctype.h>
 
 TLS sb_rng_state_t sb_rng_state CK_CC_CACHELINE;
 
@@ -455,6 +459,81 @@ uint32_t sb_rand_zipfian(uint32_t a, uint32_t b)
   return a +
     sb_rand_zipfian_int(b - a + 1, zipf_exp, zipf_s, zipf_hIntegralX1) - 1;
 }
+
+struct SbKeyVal {
+  size_t cap;
+  size_t klen;
+  size_t vlen;
+  char*  str; // also key
+  char*  val; // ptr after tab char
+};
+static __thread struct SbKeyVal* g_kv = NULL;
+
+static FILE* file = NULL;
+
+int sb_file_init()
+{
+  assert(sb_globals.filename != NULL);
+
+  file = fopen(sb_globals.filename, "r");
+  if (file == NULL)
+  {
+    log_text(LOG_FATAL, "Invalid filename: %s", sb_globals.filename);
+    return 1;
+  }
+
+  return 0;
+}
+
+struct SbKeyVal* sb_file_str()
+{
+  assert(file != NULL);
+
+  if (NULL == g_kv) {
+    g_kv = (struct SbKeyVal*)malloc(sizeof(struct SbKeyVal));
+    g_kv->klen = 0;
+    g_kv->vlen = 0;
+    g_kv->cap = 4*1024*1024;
+    g_kv->str = (char*)malloc(g_kv->cap);
+    g_kv->val = NULL;
+  }
+  while (true) {
+    ssize_t read = getline(&g_kv->str, &g_kv->cap, file);
+    if (read != -1) {
+      char* str = g_kv->str;
+      while (read > 0 && isspace((unsigned char)str[read])) {
+        str[--read] = '\0'; // trim trailing spaces
+      }
+      char* tab = (char*)memchr(str, '\t', read);
+      if (NULL == tab) {
+        g_kv->val = str + read; // empty c string
+        g_kv->vlen = 0;
+        g_kv->klen = read;
+      }
+      else {
+        tab[0] = '\0';
+        g_kv->klen = tab - str;
+        g_kv->vlen = read - (tab - str) - 1;
+        g_kv->val = tab + 1;
+      }
+      break;
+    }
+    else {
+      rewind(file);
+      fprintf(stderr, "sb_file_str: read eof, rewind(%s)\n", sb_globals.filename);
+    }
+  }
+  return g_kv;
+}
+
+void sb_file_done()
+{
+  if (file)
+  {
+    fclose(file);
+  }
+}
+
 
 /*
   H(x) is defined as
