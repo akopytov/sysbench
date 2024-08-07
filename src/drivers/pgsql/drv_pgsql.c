@@ -33,7 +33,7 @@
 #include "db_driver.h"
 #include "sb_rand.h"
 
-#define xfree(ptr) ({ if (ptr) free((void *)ptr); ptr = NULL; })
+#define xfree(ptr) do{ if (ptr) free((void *)ptr); ptr = NULL; }while(0)
 
 /* Maximum length of text representation of bind parameters */
 #define MAX_PARAM_LENGTH 256UL
@@ -432,7 +432,7 @@ int pgsql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
   if (stmt->bound_param == NULL)
     return 1;
   memcpy(stmt->bound_param, params, len * sizeof(db_bind_t));
-  stmt->bound_param_len = len;
+  stmt->bound_param_len = (unsigned int)len;
  
   if (stmt->emulated)
     return 0;
@@ -756,12 +756,12 @@ int pgsql_drv_fetch_row(db_result_t *rs, db_row_t *row)
       PQgetvalue() returns an empty string, not a NULL value for a NULL
       field. Callers of this function expect a NULL pointer in this case.
     */
-    if (PQgetisnull(rs->ptr, rownum, i))
+    if (PQgetisnull(rs->ptr, (int)rownum, i))
       row->values[i].ptr = NULL;
     else
     {
-      row->values[i].len = PQgetlength(rs->ptr, rownum, i);
-      row->values[i].ptr = PQgetvalue(rs->ptr, rownum, i);
+      row->values[i].len = PQgetlength(rs->ptr, (int)rownum, i);
+      row->values[i].ptr = PQgetvalue(rs->ptr, (int)rownum, i);
     }
   }
 

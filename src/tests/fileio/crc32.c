@@ -191,10 +191,8 @@ local void write_table(out, table)
 
 
 /* ========================================================================= */
-unsigned long ZEXPORT crc32(crc, buf, len)
-    unsigned long crc;
-    const unsigned char FAR *buf;
-    unsigned len;
+unsigned long ZEXPORT crc32(unsigned long crc,  const unsigned char FAR *buf,
+                            unsigned len)
 {
     if (buf == Z_NULL) return 0UL;
 
@@ -234,10 +232,8 @@ unsigned long ZEXPORT crc32(crc, buf, len)
 #define DOLIT32 DOLIT4; DOLIT4; DOLIT4; DOLIT4; DOLIT4; DOLIT4; DOLIT4; DOLIT4
 
 /* ========================================================================= */
-local unsigned long crc32_little(crc, buf, len)
-    unsigned long crc;
-    const unsigned char FAR *buf;
-    unsigned len;
+local unsigned long crc32_little(unsigned long crc, const unsigned char FAR *buf,
+                                 unsigned len)
 {
     register u4 c;
     register const u4 FAR *buf4;
@@ -274,10 +270,8 @@ local unsigned long crc32_little(crc, buf, len)
 #define DOBIG32 DOBIG4; DOBIG4; DOBIG4; DOBIG4; DOBIG4; DOBIG4; DOBIG4; DOBIG4
 
 /* ========================================================================= */
-local unsigned long crc32_big(crc, buf, len)
-    unsigned long crc;
-    const unsigned char FAR *buf;
-    unsigned len;
+local unsigned long crc32_big(unsigned long crc, const unsigned char FAR *buf,
+                              unsigned len)
 {
     register u4 c;
     register const u4 FAR *buf4;
