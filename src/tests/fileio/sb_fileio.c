@@ -477,7 +477,7 @@ sb_event_t file_get_seq_request(void)
 }
 
 
-/* Request generatior for random tests */
+/* Request generator for random tests */
 
 
 sb_event_t file_get_rnd_request(int thread_id)
@@ -489,6 +489,7 @@ sb_event_t file_get_rnd_request(int thread_id)
   unsigned int         i;
 
   sb_req.type = SB_REQ_TYPE_FILE;
+  SB_THREAD_MUTEX_LOCK();
 
   if (test_mode == MODE_RND_RW)
   {
