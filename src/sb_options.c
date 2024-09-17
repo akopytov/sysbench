@@ -112,7 +112,7 @@ option_t *sb_find_option(const char *name)
   return find_option(&options, name);
 }
 
-static void read_config_file(const char *filename)
+int read_config_file(const char *filename)
 {
   /* read config options from file */
   FILE *fp = fopen(filename, "r");
@@ -122,6 +122,7 @@ static void read_config_file(const char *filename)
     read_config(fp, &options);
     fclose(fp);
   }
+  return 1;
 }
 
 option_t *set_option(const char *name, const char *value, sb_arg_type_t type)
@@ -175,6 +176,7 @@ option_t *set_option(const char *name, const char *value, sb_arg_type_t type)
 
       break;
     case SB_ARG_TYPE_FILE:
+      add_value(&opt->values, value);
       read_config_file(value);
       break;
     default:
