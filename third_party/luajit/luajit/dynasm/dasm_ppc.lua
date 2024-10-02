@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- DynASM PPC/PPC64 module.
 --
--- Copyright (C) 2005-2020 Mike Pall. All rights reserved.
+-- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
 -- See dynasm.lua for full copyright notice.
 --
 -- Support for various extensions contributed by Caio Souza Oliveira.
@@ -11,9 +11,9 @@
 local _info = {
   arch =	"ppc",
   description =	"DynASM PPC module",
-  version =	"1.4.0",
-  vernum =	 10400,
-  release =	"2015-10-18",
+  version =	"1.5.0",
+  vernum =	 10500,
+  release =	"2021-05-02",
   author =	"Mike Pall",
   license =	"MIT",
 }
@@ -257,11 +257,9 @@ map_op = {
   addic_3 =	"30000000RRI",
   ["addic._3"] = "34000000RRI",
   addi_3 =	"38000000RR0I",
-  addil_3 =	"38000000RR0J",
   li_2 =	"38000000RI",
   la_2 =	"38000000RD",
   addis_3 =	"3c000000RR0I",
-  addisl_3 =	"3c000000RR0J",
   lis_2 =	"3c000000RI",
   lus_2 =	"3c000000RU",
   bc_3 =	"40000000AAK",
@@ -766,7 +764,7 @@ map_op = {
   lfddx_3 =	"7c000646FRR",
   stvepx_3 =	"7c00064eVRR",
   srawi_3 =	"7c000670RR~A.",
-  sradi_3 =	"7c000674RR~f.",
+  sradi_3 =	"7c000674RR~H.",
   eieio_0 =	"7c0006ac",
   lfiwax_3 =	"7c0006aeFR0R",
   divdeuo_3 =	"7c000712RRR.",
@@ -1720,12 +1718,7 @@ op_template = function(params, template, nparams)
     elseif p == "G" then
       op = op + parse_imm(params[n], 8, 12, 0, false); n = n + 1
     elseif p == "H" then
-      v = parse_imm(params[n], 6, 0, 0, false);
-      op = op + shl(band(v,31), 11)+shl(shr(v,5), 1);
-      n = n + 1;
-    elseif p == "f" then
-      v = tonumber(params[n]);
-      op = op + shl(band(v,31), 11)+shl(shr(v,5), 1);
+      op = op + parse_shiftmask(params[n], true); n = n + 1
     elseif p == "M" then
       op = op + parse_shiftmask(params[n], false); n = n + 1
     elseif p == "J" or p == "K" then
