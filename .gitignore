@@ -17,6 +17,7 @@ autom4te.cache
 /src/.libs
 /src/sysbench
 /src/drivers/mysql/.deps
+src/drivers/sqlserver/.deps
 /src/drivers/oracle/.deps
 /src/drivers/pgsql/.deps
 /src/tests/cpu/.deps
