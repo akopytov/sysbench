@@ -20,7 +20,7 @@
 
 #define xfree(ptr) ({ if (ptr) free((void *)ptr); ptr = NULL; })
 
-#define DRIVER_NAME "ODBC Driver 17 for SQL Server"
+#define DRIVER_NAME "ODBC Driver 18 for SQL Server"
 
 #define DRV_BEGIN 1
 #define DRV_COMMIT 2
@@ -380,15 +380,18 @@ int sqlserver_drv_connect(db_conn_t *sb_conn)
 
   // Connect!
   char conn_str[256];
+  // Updated the connection string to use Managed Identity
   snprintf(conn_str, sizeof(conn_str), 
     "Driver=" DRIVER_NAME ";"
-    "Server=%s,%s;Uid=%s;Pwd=%s;database=%s;", 
-    args.host, args.port, args.user, args.password, args.db);
+    "Server=%s,%s;Authentication=ActiveDirectoryMsi;UID=%s;Database=%s;Encrypt=no;TrustServerCertificate=yes;", 
+    args.host, args.port, args.user, args.db);
+
 
    ret = SQLDriverConnect(conn->hdbc, NULL, (SQLCHAR *)conn_str, SQL_NTS, 
     NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
 
   if (!SQL_SUCCEEDED(ret)) {
+    log_text(LOG_FATAL, "Connection String: %s", conn_str);
     log_text(LOG_FATAL, "Connection to database failed!");
     SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
     SQLFreeHandle(SQL_HANDLE_ENV, conn->henv);
