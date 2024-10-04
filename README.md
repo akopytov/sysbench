@@ -185,7 +185,8 @@ Assuming you have Xcode (or Xcode Command Line Tools) and Homebrew installed:
 ``` shell
     ./autogen.sh
     # Add --with-pgsql to build with PostgreSQL support
-    ./configure --with-sqlserver --without-mysql
+    # Add --with-sqlserver --without-mysql to build with SQL Server support
+    ./configure 
     make -j
     make install
 ```
