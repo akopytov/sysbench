@@ -139,6 +139,11 @@ build and use an older 0.5 release on Windows.
 ### Debian/Ubuntu
 ``` shell
     apt -y install make automake libtool pkg-config libaio-dev
+    # For SQL Server support
+    curl https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
+    curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+    sudo apt-get update
+    sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 sqlcmd
     # For MySQL support
     apt -y install libmysqlclient-dev libssl-dev
     # For PostgreSQL support
@@ -180,7 +185,8 @@ Assuming you have Xcode (or Xcode Command Line Tools) and Homebrew installed:
 ``` shell
     ./autogen.sh
     # Add --with-pgsql to build with PostgreSQL support
-    ./configure --with-sqlserver --without-mysql
+    # Add --with-sqlserver --without-mysql to build with SQL Server support
+    ./configure 
     make -j
     make install
 ```
