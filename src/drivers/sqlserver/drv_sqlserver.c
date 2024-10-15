@@ -20,7 +20,7 @@
 
 #define xfree(ptr) ({ if (ptr) free((void *)ptr); ptr = NULL; })
 
-#define DRIVER_NAME "ODBC Driver 18 for SQL Server"
+#define DRIVER_NAME "ODBC Driver 17 for SQL Server"
 
 #define DRV_BEGIN 1
 #define DRV_COMMIT 2
