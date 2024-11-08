@@ -81,6 +81,8 @@ static sb_arg_t mysql_drv_args[] =
          STRING),
   SB_OPT("mysql-compression", "use compression, if available in the "
          "client library", "off", BOOL),
+  SB_OPT("mysql-compression-algorithms", "compression algorithms to use",
+	 "zlib", STRING),
   SB_OPT("mysql-debug", "trace all client library calls", "off", BOOL),
   SB_OPT("mysql-ignore-errors", "list of errors to ignore, or \"all\"",
          "1213,1020,1205", LIST),
@@ -107,6 +109,9 @@ typedef struct
   const char         *ssl_ca;
   const char         *ssl_cipher;
   unsigned char      use_compression;
+#ifdef MYSQL_OPT_COMPRESSION_ALGORITHMS
+  const char         *compression_alg;
+#endif
   unsigned char      debug;
   sb_list_t          *ignored_errors;
   unsigned int       dry_run;
@@ -334,6 +339,10 @@ int mysql_drv_init(void)
 #endif
 
   args.use_compression = sb_get_value_flag("mysql-compression");
+#ifdef MYSQL_OPT_COMPRESSION_ALGORITHMS
+  args.compression_alg = sb_get_value_string("mysql-compression-algorithms");
+#endif
+
   args.debug = sb_get_value_flag("mysql-debug");
   if (args.debug)
     sb_globals.verbosity = LOG_DEBUG;
@@ -410,6 +419,11 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
   {
     DEBUG("mysql_options(%p, %s, %s)",con, "MYSQL_OPT_COMPRESS", "NULL");
     mysql_options(con, MYSQL_OPT_COMPRESS, NULL);
+
+#ifdef MYSQL_OPT_COMPRESSION_ALGORITHMS
+    DEBUG("mysql_options(%p, %s, %s)",con, "MYSQL_OPT_COMPRESSION_ALGORITHMS", args.compression_alg);
+    mysql_options(con, MYSQL_OPT_COMPRESSION_ALGORITHMS, args.compression_alg);
+#endif
   }
 
   DEBUG("mysql_real_connect(%p, \"%s\", \"%s\", \"%s\", \"%s\", %u, \"%s\", %s)",

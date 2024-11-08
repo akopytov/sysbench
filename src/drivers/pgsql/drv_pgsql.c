@@ -47,6 +47,7 @@ static sb_arg_t pgsql_drv_args[] =
   SB_OPT("pgsql-user", "PostgreSQL user", "sbtest", STRING),
   SB_OPT("pgsql-password", "PostgreSQL password", "", STRING),
   SB_OPT("pgsql-db", "PostgreSQL database name", "sbtest", STRING),
+  SB_OPT("pgsql-sslmode", "PostgreSQL SSL mode (disable, allow, prefer, require, verify-ca, verify-full)", "prefer", STRING),
 
   SB_OPT_END
 };
@@ -180,7 +181,15 @@ int pgsql_drv_init(void)
   args.port = sb_get_value_string("pgsql-port");
   args.user = sb_get_value_string("pgsql-user");
   args.password = sb_get_value_string("pgsql-password");
-  args.db = sb_get_value_string("pgsql-db");
+
+  char * dbname = sb_get_value_string("pgsql-db");
+  char * sslmode = sb_get_value_string("pgsql-sslmode");
+
+  args.db = malloc(strlen("dbname= sslmode=") +
+                   strlen(dbname) +
+                   strlen(sslmode) +
+                   1);
+  sprintf(args.db, "dbname=%s sslmode=%s", dbname, sslmode);
 
   use_ps = 0;
   pgsql_drv_caps.prepared_statements = 1;

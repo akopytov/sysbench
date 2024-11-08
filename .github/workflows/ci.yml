@@ -1,0 +1,51 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04, ubuntu-20.04 ]
+    runs-on: ${{ matrix.os }}
+    name: Build on ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Autogen
+        run: ./autogen.sh
+      - name: Configure
+        run: ./configure --with-mysql --with-pgsql
+      - name: Build
+        run: make
+      - name: MySQL version
+        run: mysql_config --version
+      - name: Sysbench version
+        run: ./src/sysbench --version
+      - name: Test
+        run: make test
+
+  build_mariadb:
+    runs-on: ubuntu-22.04
+    name: Build with MariaDB
+    steps:
+      - name: Setup MariaDB Repo
+        run: |
+          sudo apt-get install software-properties-common
+          sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+          sudo add-apt-repository 'deb [arch=amd64] https://ftp.nluug.nl/db/mariadb/repo/11.0/ubuntu jammy main'
+      - name: Setup MariaDB Libs
+        run: sudo apt install libmariadb-dev libmariadb-dev-compat
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Autogen
+        run: ./autogen.sh
+      - name: Configure
+        run: ./configure --with-mysql --with-pgsql
+      - name: Build
+        run: make
+      - name: MariaDB version
+        run: mariadb_config --version
+      - name: Sysbench version
+        run: ./src/sysbench --version
+      - name: Test
+        run: make test

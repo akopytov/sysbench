@@ -380,15 +380,23 @@ int sqlserver_drv_connect(db_conn_t *sb_conn)
 
   // Connect!
   char conn_str[256];
-  snprintf(conn_str, sizeof(conn_str), 
-    "Driver=" DRIVER_NAME ";"
-    "Server=%s,%s;Uid=%s;Pwd=%s;database=%s;", 
-    args.host, args.port, args.user, args.password, args.db);
-
+  // Updated the connection string to use Managed Identity
+  if (strcmp(args.user, "ms_entra") == 0) {
+    snprintf(conn_str, sizeof(conn_str), 
+        "Driver=" DRIVER_NAME ";"
+        "Server=%s,%s;Authentication=ActiveDirectoryMsi;UID=%s;Database=%s;Encrypt=no;TrustServerCertificate=yes;", 
+        args.host, args.port, args.password, args.db);  // Using password as UID for ms_entra
+  } else {
+    snprintf(conn_str, sizeof(conn_str), 
+        "Driver=" DRIVER_NAME ";"
+        "Server=%s,%s;Uid=%s;Pwd=%s;database=%s;", 
+        args.host, args.port, args.user, args.password, args.db);
+  }
    ret = SQLDriverConnect(conn->hdbc, NULL, (SQLCHAR *)conn_str, SQL_NTS, 
     NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
 
   if (!SQL_SUCCEEDED(ret)) {
+    log_text(LOG_FATAL, "Connection String: %s", conn_str);
     log_text(LOG_FATAL, "Connection to database failed!");
     SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
     SQLFreeHandle(SQL_HANDLE_ENV, conn->henv);

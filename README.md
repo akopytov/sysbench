@@ -1,5 +1,5 @@
 [![Latest Release][release-badge]][release-url]
-[![Build Status][travis-badge]][travis-url]
+[![Build Status][action-badge]][action-url]
 [![Debian Packages][deb-badge]][deb-url]
 [![RPM Packages][rpm-badge]][rpm-url]
 [![Coverage Status][coveralls-badge]][coveralls-url]
@@ -139,6 +139,11 @@ build and use an older 0.5 release on Windows.
 ### Debian/Ubuntu
 ``` shell
     apt -y install make automake libtool pkg-config libaio-dev
+    # For SQL Server support
+    curl https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
+    curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+    sudo apt-get update
+    sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 sqlcmd
     # For MySQL support
     apt -y install libmysqlclient-dev libssl-dev
     # For PostgreSQL support
@@ -180,7 +185,8 @@ Assuming you have Xcode (or Xcode Command Line Tools) and Homebrew installed:
 ``` shell
     ./autogen.sh
     # Add --with-pgsql to build with PostgreSQL support
-    ./configure
+    # Add --with-sqlserver --without-mysql to build with SQL Server support
+    ./configure 
     make -j
     make install
 ```
@@ -298,8 +304,8 @@ For more information on SemVer, please visit [http://semver.org/](http://semver.
 
 [coveralls-badge]: https://coveralls.io/repos/github/akopytov/sysbench/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/akopytov/sysbench?branch=master
-[travis-badge]: https://travis-ci.org/akopytov/sysbench.svg?branch=master
-[travis-url]: https://travis-ci.org/akopytov/sysbench?branch=master
+[action-url]: https://github.com/akopytov/sysbench/actions/workflows/ci.yml
+[action-badge]: https://github.com/akopytov/sysbench/actions/workflows/ci.yml/badge.svg
 [license-badge]: https://img.shields.io/badge/license-GPLv2-blue.svg
 [license-url]: COPYING
 [release-badge]: https://img.shields.io/github/release/akopytov/sysbench.svg

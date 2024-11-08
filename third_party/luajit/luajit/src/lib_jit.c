@@ -1,6 +1,6 @@
 /*
 ** JIT library.
-** Copyright (C) 2005-2020 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lib_jit_c
@@ -111,6 +111,13 @@ LJLIB_CF(jit_status)
   setboolV(L->top++, 0);
   return 1;
 #endif
+}
+
+LJLIB_CF(jit_security)
+{
+  int idx = lj_lib_checkopt(L, 1, -1, LJ_SECURITY_MODESTRING);
+  setintV(L->top++, ((LJ_SECURITY_MODE >> (2*idx)) & 3));
+  return 1;
 }
 
 LJLIB_CF(jit_attach)
@@ -227,7 +234,7 @@ LJLIB_CF(jit_util_funcbc)
   if (pc < pt->sizebc) {
     BCIns ins = proto_bc(pt)[pc];
     BCOp op = bc_op(ins);
-    lua_assert(op < BC__MAX);
+    lj_assertL(op < BC__MAX, "bad bytecode op %d", op);
     setintV(L->top, ins);
     setintV(L->top+1, lj_bc_mode[op]);
     L->top += 2;
@@ -339,11 +346,7 @@ LJLIB_CF(jit_util_tracek)
       ir = &T->ir[ir->op1];
     }
 #if LJ_HASFFI
-    if (ir->o == IR_KINT64 && !ctype_ctsG(G(L))) {
-      ptrdiff_t oldtop = savestack(L, L->top);
-      luaopen_ffi(L);  /* Load FFI library on-demand. */
-      L->top = restorestack(L, oldtop);
-    }
+    if (ir->o == IR_KINT64) ctype_loadffi(L);
 #endif
     lj_ir_kvalue(L, L->top-2, ir);
     setintV(L->top-1, (int32_t)irt_type(ir->t));
@@ -491,7 +494,7 @@ static int jitopt_param(jit_State *J, const char *str)
   int i;
   for (i = 0; i < JIT_P__MAX; i++) {
     size_t len = *(const uint8_t *)lst;
-    lua_assert(len != 0);
+    lj_assertJ(len != 0, "bad JIT_P_STRING");
     if (strncmp(str, lst+1, len) == 0 && str[len] == '=') {
       int32_t n = 0;
       const char *p = &str[len+1];
@@ -540,15 +543,15 @@ LJLIB_CF(jit_opt_start)
 
 /* Not loaded by default, use: local profile = require("jit.profile") */
 
-static const char KEY_PROFILE_THREAD = 't';
-static const char KEY_PROFILE_FUNC = 'f';
+#define KEY_PROFILE_THREAD	(U64x(80000000,00000000)|'t')
+#define KEY_PROFILE_FUNC	(U64x(80000000,00000000)|'f')
 
 static void jit_profile_callback(lua_State *L2, lua_State *L, int samples,
 				 int vmstate)
 {
   TValue key;
   cTValue *tv;
-  setlightudV(&key, (void *)&KEY_PROFILE_FUNC);
+  key.u64 = KEY_PROFILE_FUNC;
   tv = lj_tab_get(L, tabV(registry(L)), &key);
   if (tvisfunc(tv)) {
     char vmst = (char)vmstate;
@@ -575,9 +578,9 @@ LJLIB_CF(jit_profile_start)
   lua_State *L2 = lua_newthread(L);  /* Thread that runs profiler callback. */
   TValue key;
   /* Anchor thread and function in registry. */
-  setlightudV(&key, (void *)&KEY_PROFILE_THREAD);
+  key.u64 = KEY_PROFILE_THREAD;
   setthreadV(L, lj_tab_set(L, registry, &key), L2);
-  setlightudV(&key, (void *)&KEY_PROFILE_FUNC);
+  key.u64 = KEY_PROFILE_FUNC;
   setfuncV(L, lj_tab_set(L, registry, &key), func);
   lj_gc_anybarriert(L, registry);
   luaJIT_profile_start(L, mode ? strdata(mode) : "",
@@ -592,9 +595,9 @@ LJLIB_CF(jit_profile_stop)
   TValue key;
   luaJIT_profile_stop(L);
   registry = tabV(registry(L));
-  setlightudV(&key, (void *)&KEY_PROFILE_THREAD);
+  key.u64 = KEY_PROFILE_THREAD;
   setnilV(lj_tab_set(L, registry, &key));
-  setlightudV(&key, (void *)&KEY_PROFILE_FUNC);
+  key.u64 = KEY_PROFILE_FUNC;
   setnilV(lj_tab_set(L, registry, &key));
   lj_gc_anybarriert(L, registry);
   return 0;
