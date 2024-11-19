@@ -214,7 +214,7 @@ static ssl_mode_map_t ssl_mode_names[] = {
 static int mysql_drv_init(void);
 static int mysql_drv_thread_init(int);
 static int mysql_drv_describe(drv_caps_t *);
-static int mysql_drv_connect(db_conn_t *);
+static int mysql_drv_connect(db_conn_t *, db_conn_setting_t *);
 static int mysql_drv_reconnect(db_conn_t *);
 static int mysql_drv_disconnect(db_conn_t *);
 static int mysql_drv_prepare(db_stmt_t *, const char *, size_t);
@@ -456,7 +456,7 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
 /* Connect to MySQL database */
 
 
-int mysql_drv_connect(db_conn_t *sb_conn)
+int mysql_drv_connect(db_conn_t *sb_conn, db_conn_setting_t *sb_conn_setting)
 {
   MYSQL           *con;
   db_mysql_conn_t *db_mysql_con;
@@ -480,7 +480,21 @@ int mysql_drv_connect(db_conn_t *sb_conn)
 
   pthread_mutex_lock(&pos_mutex);
 
-  if (SB_LIST_IS_EMPTY(args.sockets))
+  if (sb_conn_setting != NULL)
+  {
+    if (sb_conn_setting->socket == NULL) {
+      db_mysql_con->socket = NULL;
+      db_mysql_con->host = sb_conn_setting->host;
+      db_mysql_con->port = sb_conn_setting->port;
+    }
+    else
+    {
+      db_mysql_con->socket = sb_conn_setting->socket;
+      /* follow the case SB_LIST_IS_EMPTY(args.sockets) */
+      db_mysql_con->host = "localhost";
+    }
+  }
+  else if (SB_LIST_IS_EMPTY(args.sockets))
   {
     db_mysql_con->socket = NULL;
     db_mysql_con->host = SB_LIST_ENTRY(hosts_pos, value_t, listitem)->data;
@@ -517,9 +531,18 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   }
   pthread_mutex_unlock(&pos_mutex);
 
-  db_mysql_con->user = args.user;
-  db_mysql_con->password = args.password;
-  db_mysql_con->db = args.db;
+  if (sb_conn_setting != NULL)
+  {
+    db_mysql_con->user = sb_conn_setting->user;
+    db_mysql_con->password = sb_conn_setting->password;
+    db_mysql_con->db = sb_conn_setting->db;
+  }
+  else
+  {
+    db_mysql_con->user = args.user;
+    db_mysql_con->password = args.password;
+    db_mysql_con->db = args.db;
+  }
 
   if (mysql_drv_real_connect(db_mysql_con))
   {
