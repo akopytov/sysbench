@@ -104,6 +104,10 @@ int db_register(void)
   register_driver_pgsql(&drivers);
 #endif
 
+#ifdef USE_SQLSERVER
+  register_driver_sqlserver(&drivers);
+#endif
+
   /* Register command line options for each driver */
   SB_LIST_FOR_EACH(pos, &drivers)
   {
@@ -1017,6 +1021,14 @@ int db_bulk_insert_next(db_conn_t *con, const char *query, size_t query_len)
   con->bulk_ptr += query_len + (con->bulk_cnt > 0);
 
   con->bulk_cnt++;
+
+    if (!strcmp(con->driver->sname, "sqlserver") && con->bulk_cnt >= 1000) 
+  {
+    // SQL Server requires multi row inserts to be limited at 1000,
+    // so let's insert the 1000 we have.
+    if (db_bulk_do_insert(con, 0))
+      return 1;
+  }
 
   return 0;
 }

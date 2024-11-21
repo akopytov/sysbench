@@ -183,6 +183,13 @@ function create_table(drv, con, table_num)
       else
         id_def = "SERIAL"
       end
+   elseif drv:name() == "sqlserver"
+   then
+      if not sysbench.opt.auto_inc then
+         id_def = "INT NOT NULL"
+      else
+         id_def = "INT NOT NULL IDENTITY(1,1)"      
+      end
    else
       error("Unsupported database driver:" .. drv:name())
    end
@@ -276,10 +283,10 @@ local stmt_defs = {
    inserts = {
       "INSERT INTO sbtest%u (id, k, c, pad) VALUES (?, ?, ?, ?)",
       t.INT, t.INT, {t.CHAR, 120}, {t.CHAR, 60}},
-}
+   }
 
 function prepare_begin()
-   stmt.begin = con:prepare("BEGIN")
+   stmt.begin = con:prepare("BEGIN TRANSACTION")
 end
 
 function prepare_commit()
@@ -289,7 +296,6 @@ end
 function prepare_for_each_table(key)
    for t = 1, sysbench.opt.tables do
       stmt[t][key] = con:prepare(string.format(stmt_defs[key][1], t))
-
       local nparam = #stmt_defs[key] - 1
 
       if nparam > 0 then
@@ -354,7 +360,6 @@ end
 function thread_init()
    drv = sysbench.sql.driver()
    con = drv:connect()
-
    -- Create global nested tables for prepared statements and their
    -- parameters. We need a statement and a parameter set for each combination
    -- of connection/table/query

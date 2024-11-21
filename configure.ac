@@ -138,6 +138,17 @@ AS_IF([test "x$with_pgsql" != "xno"],
    [pgsql_support=no])
 AC_MSG_RESULT([$pgsql_support])
 
+# Check if we should compile with SQL Server support
+AC_ARG_WITH([sqlserver],
+            AS_HELP_STRING([--with-sqlserver],
+                           [compile with SQL Server support (default is disabled)]),
+            [], [with_sqlserver=no])
+AC_MSG_CHECKING([whether to compile with SQL Server support])
+AS_IF([test "x$with_sqlserver" != "xno"],
+   [sqlserver_support=yes],
+   [sqlserver_support=no])
+AC_MSG_RESULT([$sqlserver_support])
+
 # Set LuaJIT flags
 SB_LUAJIT
 
@@ -198,6 +209,16 @@ AC_SUBST([USE_PGSQL])
 # Check for libaio
 AC_CHECK_AIO
 AM_CONDITIONAL(USE_AIO, test x$enable_aio = xyes)
+
+AS_IF([test x$with_sqlserver != xno], [
+    AC_CHECK_SQLSERVER([$with_sqlserver])
+    USE_SQLSERVER=1
+    AC_DEFINE(USE_SQLSERVER,1,[Define to 1 if you want to compile with SQL Server support])
+    AC_SUBST([SQLSERVER_LIBS])
+    AC_SUBST([SQLSERVER_CFLAGS])
+])
+AM_CONDITIONAL(USE_SQLSERVER, test x$with_sqlserver != xno)
+AC_SUBST([USE_SQLSERVER])
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -398,6 +419,7 @@ src/Makefile
 src/drivers/Makefile
 src/drivers/mysql/Makefile
 src/drivers/pgsql/Makefile
+src/drivers/sqlserver/Makefile
 src/tests/Makefile
 src/tests/cpu/Makefile
 src/tests/fileio/Makefile
@@ -428,6 +450,7 @@ AC_MSG_RESULT([datadir            : $(eval echo ${datadir})])
 AC_MSG_RESULT([])
 AC_MSG_RESULT([MySQL support      : ${mysql_support}])
 AC_MSG_RESULT([PostgreSQL support : ${pgsql_support}])
+AC_MSG_RESULT([SQL Server support : ${sqlserver_support}])
 AC_MSG_RESULT([])
 AC_MSG_RESULT([LuaJIT             : ${sb_use_luajit}])
 AC_MSG_RESULT([LUAJIT_CFLAGS      : ${LUAJIT_CFLAGS}])
