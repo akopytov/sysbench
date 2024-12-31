@@ -852,6 +852,8 @@ int db_parse_arguments(void)
 int db_print_value(db_bind_t *var, char *buf, int buflen)
 {
   int       n;
+  char     *p;
+  char     *end;
   db_time_t *tm;
 
   if (var->is_null != NULL && *var->is_null)
@@ -881,7 +883,16 @@ int db_print_value(db_bind_t *var, char *buf, int buflen)
       break;
     case DB_TYPE_CHAR:
     case DB_TYPE_VARCHAR:
-      n = snprintf(buf, buflen, "'%s'", (char *)var->buffer);
+      if (buflen < (int)var->max_len + 3)
+        return -1;
+      n = 0;
+      p = (char *)var->buffer;
+      end = p + var->max_len;
+      buf[n++] = '\'';
+      while (*p && p < end)
+        buf[n++] = *p++;
+      buf[n++] = '\'';
+      buf[n] = '\0';
       break;
     case DB_TYPE_DATE:
       tm = (db_time_t *)var->buffer;

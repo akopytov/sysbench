@@ -62,3 +62,5 @@ EOF
 }
 
 DB_DRIVER_ARGS="--db-driver=pgsql $SBTEST_PGSQL_ARGS"
+
+DB_NON_EXISTING="--pgsql-host=non-existing"
