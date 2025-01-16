@@ -27,6 +27,7 @@
 
 #ifdef HAVE_PTHREAD_H
 # include <pthread.h>
+# include <errno.h>
 #endif
 
 #ifndef HAVE_PTHREAD_CANCEL
@@ -122,8 +123,12 @@ static void* thread_start_routine_proxy(void *arg) {
 int sb_thread_create(pthread_t *thread, const pthread_attr_t *attr,
                      void *(*start_routine) (void *), void *arg)
 {
+  int rv;
 #ifdef HAVE_PTHREAD_CANCEL
-  return pthread_create(thread, attr, start_routine, arg);
+  rv = pthread_create(thread, attr, start_routine, arg);
+  if (rv)
+    errno = rv;
+  return rv;
 #else
   struct sb_thread_proxy *proxy = malloc(sizeof(struct sb_thread_proxy));
   if (!proxy)
@@ -132,10 +137,11 @@ int sb_thread_create(pthread_t *thread, const pthread_attr_t *attr,
   }
   proxy->start_routine = start_routine;
   proxy->arg = arg;
-  int rv = pthread_create(thread, attr, thread_start_routine_proxy, proxy);
+  rv = pthread_create(thread, attr, thread_start_routine_proxy, proxy);
   if (rv)
   {
     free(proxy);
+    errno = rv;
   }
   return rv;
 #endif
@@ -143,16 +149,24 @@ int sb_thread_create(pthread_t *thread, const pthread_attr_t *attr,
 
 int sb_thread_join(pthread_t thread, void **retval)
 {
-  return pthread_join(thread, retval);
+  int rv;
+  rv = pthread_join(thread, retval);
+  if (rv)
+    errno = rv;
+  return rv;
 }
 
 int sb_thread_cancel(pthread_t thread)
 {
+  int rv;
 #ifdef HAVE_PTHREAD_CANCEL
-  return pthread_cancel(thread);
+  rv = pthread_cancel(thread);
 #else
-  return pthread_kill(thread, thread_cancel_signal);
+  rv = pthread_kill(thread, thread_cancel_signal);
 #endif
+  if (rv)
+    errno = rv;
+  return rv;
 }
 
 int sb_thread_create_workers(void *(*worker_routine)(void*))
