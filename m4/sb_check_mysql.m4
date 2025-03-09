@@ -31,7 +31,7 @@ fi
 if test [ -z "$ac_cv_mysql_includes" ] 
 then 
     AC_ARG_WITH([mysql-includes], 
-                AC_HELP_STRING([--with-mysql-includes], [path to MySQL header files]),
+                AS_HELP_STRING([--with-mysql-includes], [path to MySQL header files]),
                 [ac_cv_mysql_includes=$withval])
 fi
 if test [ -n "$ac_cv_mysql_includes" ]
@@ -45,7 +45,7 @@ fi
 if test [ -z "$ac_cv_mysql_libs" ]
 then
     AC_ARG_WITH([mysql-libs], 
-                AC_HELP_STRING([--with-mysql-libs], [path to MySQL libraries]),
+                AS_HELP_STRING([--with-mysql-libs], [path to MySQL libraries]),
                 [ac_cv_mysql_libs=$withval])
 fi
 if test [ -n "$ac_cv_mysql_libs" ]

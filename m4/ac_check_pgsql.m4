@@ -10,7 +10,7 @@ AC_DEFUN([AC_CHECK_PGSQL],[
 if test [ -z "$ac_cv_pgsql_includes" ] 
 then 
     AC_ARG_WITH([pgsql-includes], 
-                AC_HELP_STRING([--with-pgsql-includes], [path to PostgreSQL header files]),
+                AS_HELP_STRING([--with-pgsql-includes], [path to PostgreSQL header files]),
                 [ac_cv_pgsql_includes=$withval])
 fi
 if test [ -n "$ac_cv_pgsql_includes" ]
@@ -24,7 +24,7 @@ fi
 if test [ -z "$ac_cv_pgsql_libs" ]
 then
     AC_ARG_WITH([pgsql-libs], 
-                AC_HELP_STRING([--with-pgsql-libs], [path to PostgreSQL libraries]),
+                AS_HELP_STRING([--with-pgsql-libs], [path to PostgreSQL libraries]),
                 [ac_cv_pgsql_libs=$withval])
 fi
 

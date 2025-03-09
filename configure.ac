@@ -1,8 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.63)
-AC_INIT([sysbench],[1.1.0],[https://github.com/akopytov/sysbench/issues],
-        [sysbench], [https://github.com/akopytov/sysbench])
+AC_PREREQ([2.72])
+AC_INIT([sysbench],[1.1.0],[https://github.com/akopytov/sysbench/issues],[sysbench],[https://github.com/akopytov/sysbench])
 AC_CONFIG_AUX_DIR([config])
 
 # Define m4_ifblank and m4_ifnblank macros from introduced in
@@ -31,7 +30,7 @@ CXXFLAGS=${SAVE_CXXFLAGS}
  
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_SRCDIR([src/sysbench.c])
-AC_CONFIG_HEADER([config/config.h])
+AC_CONFIG_HEADERS([config/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 m4_pattern_forbid([^PKG_[A-Z_]+$],
@@ -40,7 +39,6 @@ m4_pattern_forbid([^PKG_[A-Z_]+$],
 ACX_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CC
-AC_PROG_CC_C99
 AC_PROG_CPP
 AM_PROG_CC_C_O
 
@@ -58,7 +56,7 @@ AS_CASE([$CFLAGS],
 
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
-AC_PROG_LIBTOOL
+LT_INIT
 
 AC_CHECK_PROG(sb_have_pkg_config, pkg-config, yes, no)
 if test x"$sb_have_pkg_config" = xno; then
@@ -199,9 +197,6 @@ AC_SUBST([USE_PGSQL])
 AC_CHECK_AIO
 AM_CONDITIONAL(USE_AIO, test x$enable_aio = xyes)
 
-# Checks for header files.
-AC_HEADER_STDC
-
 AC_CHECK_HEADERS([ \
 errno.h \
 fcntl.h \
@@ -225,7 +220,7 @@ libgen.h \
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_OFF_T
-AC_HEADER_TIME
+
 AX_TLS([],
   AC_MSG_ERROR([thread-local storage is not suppored by the target platform!])
 )

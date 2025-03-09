@@ -20,7 +20,7 @@
 AC_DEFUN([SB_CONCURRENCY_KIT], [
 
 AC_ARG_WITH([system-ck],
-  AC_HELP_STRING([--with-system-ck],
+  AS_HELP_STRING([--with-system-ck],
   [Use system-provided Concurrency Kit headers and library (requires pkg-config)]),
   [sb_use_ck="system"],
   [sb_use_ck="bundled"])

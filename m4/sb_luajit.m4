@@ -20,7 +20,7 @@
 AC_DEFUN([SB_LUAJIT], [
 
 AC_ARG_WITH([system-luajit],
-  AC_HELP_STRING([--with-system-luajit],
+  AS_HELP_STRING([--with-system-luajit],
   [Use system-provided LuaJIT headers and library (requires pkg-config)]),
   [sb_use_luajit="system"],
   [sb_use_luajit="bundled"])
