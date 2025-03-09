@@ -16,6 +16,10 @@
 
 EXTRA_DIST = luajit
 
+if IS_MACOS
+export MACOSX_DEPLOYMENT_TARGET := @MACOSX_DEPLOYMENT_TARGET@
+endif
+
 all-local: $(builddir)/lib/libluajit-5.1.a
 
 # LuaJIT does not support VPATH builds

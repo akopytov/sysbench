@@ -71,10 +71,17 @@ AC_LIB_PREFIX()
 
 CPPFLAGS="-D_GNU_SOURCE ${CPPFLAGS}"
 
-# Mac OS X requires _DARWIN_C_SOURCE for valloc(3) to be visible
-case "${host_cpu}-${host_os}" in
-	*-darwin*) CPPFLAGS="-D_DARWIN_C_SOURCE ${CPPFLAGS}";;
-esac
+AM_CONDITIONAL([IS_MACOS], [test "$host_os" = "darwin"])
+
+if test "$host_os" = "darwin"; then
+   # MacOS requires _DARWIN_C_SOURCE for valloc(3) to be visible
+	CPPFLAGS="-D_DARWIN_C_SOURCE ${CPPFLAGS}"
+  # LuaJIT also requires MACOSX_DEPLOYMENT_TARGET to be set on MacOS
+  if test -z "$MACOSX_DEPLOYMENT_TARGET"; then
+     MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion)"
+  fi
+  AC_SUBST(MACOSX_DEPLOYMENT_TARGET, $MACOSX_DEPLOYMENT_TARGET)
+fi
 
 # Build optimized or debug version ?
 # First check for gcc and g++
