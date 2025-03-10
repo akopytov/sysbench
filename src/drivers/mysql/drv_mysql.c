@@ -403,23 +403,29 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
 #ifdef HAVE_MYSQL_OPT_SSL_MODE
   DEBUG("mysql_options(%p,%s,%d)", con, "MYSQL_OPT_SSL_MODE", args.ssl_mode);
   mysql_options(con, MYSQL_OPT_SSL_MODE, &args.ssl_mode);
+#else
+  char bool_opt = 0;
+  mysql_options(con, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &bool_opt);
+  bool_opt = args.use_ssl;
+  mysql_options(con, MYSQL_OPT_SSL_ENFORCE, &bool_opt);
 #endif
 
   if (args.use_ssl)
   {
-    DEBUG("mysql_ssl_set(%p, \"%s\", \"%s\", \"%s\", NULL, \"%s\")", con,
+    DEBUG("mysql_options(%p, \"%s\", \"%s\", \"%s\", \"%s\")", con,
           SAFESTR(args.ssl_key), SAFESTR(args.ssl_cert), SAFESTR(args.ssl_ca),
           SAFESTR(args.ssl_cipher));
 
-    mysql_ssl_set(con, args.ssl_key, args.ssl_cert, args.ssl_ca, NULL,
-                  args.ssl_cipher);
+    mysql_options(con, MYSQL_OPT_SSL_KEY, args.ssl_key);
+    mysql_options(con, MYSQL_OPT_SSL_CERT, args.ssl_cert);
+    mysql_options(con, MYSQL_OPT_SSL_CA, args.ssl_ca);
+    mysql_options(con, MYSQL_OPT_SSL_CIPHER, args.ssl_cipher);
   }
 
   if (args.use_compression)
   {
     DEBUG("mysql_options(%p, %s, %s)",con, "MYSQL_OPT_COMPRESS", "NULL");
     mysql_options(con, MYSQL_OPT_COMPRESS, NULL);
-
 #ifdef MYSQL_OPT_COMPRESSION_ALGORITHMS
     DEBUG("mysql_options(%p, %s, %s)",con, "MYSQL_OPT_COMPRESSION_ALGORITHMS", args.compression_alg);
     mysql_options(con, MYSQL_OPT_COMPRESSION_ALGORITHMS, args.compression_alg);
@@ -452,6 +458,16 @@ static int mysql_drv_real_connect(db_mysql_conn_t *db_mysql_con)
                             ) == NULL;
 }
 
+/*
+ Hostname to pass to client library, if --socket parameter is given
+ On Windows, --socket is interpreted as named pipe name and host must
+ be "." Elsewhere, it is unix domain socket, and host is "localhost"
+*/
+#ifdef _WIN32
+#define LOCAL_SOCKET_MYSQL_HOST "."
+#else
+#define LOCAL_SOCKET_MYSQL_HOST "localhost"
+#endif
 
 /* Connect to MySQL database */
 
@@ -502,7 +518,7 @@ int mysql_drv_connect(db_conn_t *sb_conn)
   }
   else
   {
-    db_mysql_con->host = "localhost";
+    db_mysql_con->host = LOCAL_SOCKET_MYSQL_HOST;
 
     /*
        The sockets list may be empty. So unlike hosts/ports the loop invariant
@@ -599,7 +615,7 @@ int mysql_drv_prepare(db_stmt_t *stmt, const char *query, size_t len)
     stmt->ptr = (void *)mystmt;
     DEBUG("mysql_stmt_prepare(%p, \"%s\", %u) = %p", mystmt, query,
           (unsigned int) len, stmt->ptr);
-    if (mysql_stmt_prepare(mystmt, query, len))
+    if (mysql_stmt_prepare(mystmt, query, (unsigned long)len))
     {
       /* Check if this statement in not supported */
       rc = mysql_errno(con);
@@ -718,7 +734,7 @@ int mysql_drv_bind_param(db_stmt_t *stmt, db_bind_t *params, size_t len)
   if (stmt->bound_param == NULL)
     return 1;
   memcpy(stmt->bound_param, params, len * sizeof(db_bind_t));
-  stmt->bound_param_len = len;
+  stmt->bound_param_len = (unsigned int)len;
 
   return 0;
 
@@ -1059,7 +1075,7 @@ db_error_t mysql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
   db_mysql_con = (db_mysql_conn_t *)sb_conn->ptr;
   con = db_mysql_con->mysql;
 
-  int err = mysql_real_query(con, query, len);
+  int err = mysql_real_query(con, query, (unsigned long)len);
   DEBUG("mysql_real_query(%p, \"%s\", %zd) = %d", con, query, len, err);
 
   if (SB_UNLIKELY(err != 0))
@@ -1092,7 +1108,7 @@ db_error_t mysql_drv_query(db_conn_t *sb_conn, const char *query, size_t len,
   rs->counter = SB_CNT_READ;
   rs->ptr = (void *)res;
 
-  rs->nrows = mysql_num_rows(res);
+  rs->nrows = (uint32_t)mysql_num_rows(res);
   DEBUG("mysql_num_rows(%p) = %u", res, (unsigned int) rs->nrows);
 
   rs->nfields = mysql_num_fields(res);
@@ -1218,7 +1234,7 @@ db_error_t mysql_drv_next_result(db_conn_t *sb_conn, db_result_t *rs)
   rs->counter = SB_CNT_READ;
   rs->ptr = (void *)res;
 
-  rs->nrows = mysql_num_rows(res);
+  rs->nrows = (uint32_t)mysql_num_rows(res);
   DEBUG("mysql_num_rows(%p) = %u", res, (unsigned int) rs->nrows);
 
   rs->nfields = mysql_num_fields(res);

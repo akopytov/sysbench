@@ -1,0 +1,14 @@
+name: CMake
+on: [push, pull_request]
+
+
+jobs:
+  CI:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    uses: ./.github/workflows/cmake-single-os.yml
+    with:
+      os: ${{ matrix.os}}
+

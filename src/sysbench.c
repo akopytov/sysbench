@@ -142,11 +142,11 @@ static sb_barrier_t report_barrier;
 /* structures to handle queue of events, needed for tx_rate mode */
 static pthread_mutex_t    queue_mutex;
 static pthread_cond_t     queue_cond;
-static uint64_t           queue_array[MAX_QUEUE_LEN] CK_CC_CACHELINE;
-static ck_ring_buffer_t   queue_ring_buffer[MAX_QUEUE_LEN] CK_CC_CACHELINE;
-static ck_ring_t          queue_ring CK_CC_CACHELINE;
+static CK_CC_CACHELINE uint64_t queue_array[MAX_QUEUE_LEN];
+static CK_CC_CACHELINE ck_ring_buffer_t   queue_ring_buffer[MAX_QUEUE_LEN];
+static CK_CC_CACHELINE ck_ring_t          queue_ring ;
 
-static int report_thread_created CK_CC_CACHELINE;
+static CK_CC_CACHELINE int report_thread_created;
 static int checkpoints_thread_created;
 static int eventgen_thread_created;
 
@@ -157,11 +157,11 @@ static sb_timer_t *timers;
 static sb_timer_t *timers_copy;
 
 /* Global execution timer */
-sb_timer_t      sb_exec_timer CK_CC_CACHELINE;
+CK_CC_CACHELINE sb_timer_t      sb_exec_timer;
 
 /* timers for intermediate/checkpoint reports */
-sb_timer_t sb_intermediate_timer CK_CC_CACHELINE;
-sb_timer_t sb_checkpoint_timer   CK_CC_CACHELINE;
+CK_CC_CACHELINE sb_timer_t sb_intermediate_timer;
+CK_CC_CACHELINE sb_timer_t sb_checkpoint_timer;
 
 TLS int sb_tls_thread_id;
 
@@ -672,7 +672,7 @@ void print_run_mode(sb_test_t *test)
   {
     log_text(LOG_NOTICE,
              "Initializing random number generator from current time\n");
-    srandom(time(NULL));
+    srandom((unsigned int)time(NULL));
   }
 
   if (sb_globals.force_shutdown)
@@ -849,9 +849,9 @@ static void *worker_thread(void *arg)
 
 /* Generate exponentially distributed number with a given Lambda */
 
-static inline double sb_rand_exp(double lambda)
+static inline uint64_t sb_rand_exp(double lambda)
 {
-  return -lambda * log(1 - sb_rand_uniform_double());
+  return (uint64_t)(-lambda * log(1 - sb_rand_uniform_double()));
 }
 
 static void *eventgen_thread_proc(void *arg)
@@ -1172,7 +1172,7 @@ static int run_test(sb_test_t *test)
     /* Set the alarm to force shutdown */
     signal(SIGALRM, sigalrm_forced_shutdown_handler);
 
-    alarm(NS2SEC(sb_globals.max_time_ns) + sb_globals.timeout);
+    alarm((unsigned int)NS2SEC(sb_globals.max_time_ns) + sb_globals.timeout);
   }
 #endif
 
@@ -1340,7 +1340,7 @@ static int init(void)
     if (tmp == NULL)
     {
       sb_globals.force_shutdown = 1;
-      sb_globals.timeout = NS2SEC(sb_globals.max_time_ns) / 20;
+      sb_globals.timeout = (unsigned int)NS2SEC(sb_globals.max_time_ns) / 20;
     }
     else if (strcasecmp(tmp, "off"))
     {
@@ -1435,10 +1435,26 @@ static int init(void)
 }
 
 
+/* OS specific initialization */
+static inline void os_init(void)
+{
+#ifdef _WIN32
+  /*
+    lua is using C runtime, and is opens multiple files simultaneously
+    in different threads. Allow maximum possible number of open files.
+  */
+  _setmaxstdio(8192);
+  /* improve timer resolution for Sleep() */
+  timeBeginPeriod(1);
+#endif
+}
+
 int main(int argc, char *argv[])
 {
   sb_test_t *test = NULL;
   int rc;
+
+  os_init();
 
   sb_globals.argc = argc;
   sb_globals.argv = malloc(argc * sizeof(char *));
@@ -1598,8 +1614,8 @@ end:
 
   sb_thread_done();
 
-  free(timers);
-  free(timers_copy);
+  sb_free_memaligned(timers);
+  sb_free_memaligned(timers_copy);
 
   free(sb_globals.argv);
 

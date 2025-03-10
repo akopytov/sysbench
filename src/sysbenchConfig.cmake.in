@@ -1,0 +1,15 @@
+@PACKAGE_INIT@
+
+include ( "${CMAKE_CURRENT_LIST_DIR}/sysbenchTargets.cmake" )
+
+get_target_property(loc sysbench::sysbench IMPORTED_LOCATION)
+if (NOT loc)
+  foreach(c RELEASE RELWITHDEBINFO MINSIZEREL DEBUG)
+    get_target_property(loc_config sysbench::sysbench IMPORTED_LOCATION_${c})
+    if (loc_config)
+      set_target_properties(sysbench::sysbench PROPERTIES
+          IMPORTED_LOCATION ${loc_config})
+      return()
+    endif()
+  endforeach()
+endif()

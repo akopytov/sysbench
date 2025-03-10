@@ -23,11 +23,14 @@
 # include "config.h"
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #ifdef TIME_WITH_SYS_TIME
 # include <sys/time.h>
 # include <time.h>
 #else
-# if HAVE_SYS_TIME_H
+# ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
 # else
 #  include <time.h>
@@ -47,7 +50,7 @@
 
 /* Convert nanoseconds to seconds and vice versa */
 #define NS2SEC(nsec) ((nsec) / (double) NS_PER_SEC)
-#define SEC2NS(sec)  ((uint64_t) (sec) * NS_PER_SEC)
+#define SEC2NS(sec)  (((uint64_t) (sec)) * NS_PER_SEC)
 
 /* Convert nanoseconds to milliseconds and vice versa */
 #define NS2MS(nsec) ((nsec) / (double) NS_PER_MS)
@@ -98,9 +101,19 @@ typedef struct
 
 static inline int sb_nanosleep(uint64_t ns)
 {
+#ifdef _WIN32
+  pthread_testcancel();
+  Sleep((DWORD)(ns / NS_PER_MS));
+  return 0;
+#else
   struct timespec ts = { ns / NS_PER_SEC, ns % NS_PER_SEC };
   return nanosleep(&ts, NULL);
+#endif
 }
+
+#ifdef _WIN32
+#define usleep(x) sb_nanosleep(1000ULL*(x))
+#endif
 
 /* timer control functions */
 

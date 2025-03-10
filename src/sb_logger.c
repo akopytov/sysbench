@@ -378,7 +378,7 @@ void log_errno(log_msg_priority_t priority, const char *fmt, ...)
   tmp = errbuf;
 #endif /* STRERROR_R_CHAR_P */
 #else /* !HAVE_STRERROR_P */
-  strncpy(errbuf, strerror(old_errno), sizeof(errbuf));
+  strncpy(errbuf, strerror(old_errno), sizeof(errbuf) - 1);
   tmp = errbuf;
 #endif /* HAVE_STRERROR_P */
 
@@ -447,7 +447,7 @@ int text_handler_process(log_msg_t *msg)
         printf("(last message repeated %u times)\n", text_cnt);
 
       text_cnt = 0;
-      strncpy(text_buf, text_msg->text, TEXT_BUFFER_SIZE);
+      strncpy(text_buf, text_msg->text, TEXT_BUFFER_SIZE - 1);
     }
     pthread_mutex_unlock(&text_mutex);
   }

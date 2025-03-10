@@ -196,9 +196,9 @@ void sb_print_options(sb_arg_t *opts)
   /* Count the maximum name length */
   for (i = 0, maxlen = 0; opts[i].name != NULL; i++)
   {
-    len = strlen(opts[i].name);
+    len = (unsigned int)strlen(opts[i].name);
     len += (opts[i].type < SB_ARG_TYPE_MAX) ?
-      strlen(opt_formats[opts[i].type]) : 8 /* =UNKNOWN */;
+      (unsigned int)strlen(opt_formats[opts[i].type]) : 8 /* =UNKNOWN */;
     if (len > maxlen)
       maxlen = len;
   }
@@ -441,7 +441,7 @@ char *sb_print_value_size(char *buf, unsigned int buflen, double value)
 }
 
 
-value_t *new_value()
+value_t *new_value(void)
 {
   value_t *newval;
   
@@ -453,7 +453,7 @@ value_t *new_value()
 }
 
 
-option_t *new_option()
+option_t *new_option(void)
 {
   option_t *newopt;
   

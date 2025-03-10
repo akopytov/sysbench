@@ -1,0 +1,284 @@
+name: CMake-reusable-workflow
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ${{ inputs.os }}
+    name: Build
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+
+      # On Windows, use vcpkg to build, as pgsql driver on build box is bad (crashes during tests)
+      - name: vcpkg_cache(Windows)
+        uses: actions/cache@v3
+        if: runner.os == 'Windows'
+        id: vcpkg_cache
+        with:
+          path: ~\AppData\Local\vcpkg
+          key: ${{ runner.os }}-vcpkg-libpq-zlib
+
+      - name: install build preprequisites (macOS)
+        if: runner.os == 'macOS'
+        run : |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install mysql-client libpq ninja
+          brew link --force mysql-client
+
+      - name: install build prerequisites (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          vcpkg install libpq zlib --triplet=x64-windows-release
+
+      - name: install build prerequisites (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install ninja-build
+
+      - name: configure
+        env:
+          CMAKE_VCPKG_PARAMS: ${{ runner.os ==  'Windows' && '-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-release' || ' '  }}
+        run: cmake . -DWITH_PGSQL=1 -DCMAKE_COMPILE_WARNING_AS_ERROR=1  ${{ env.CMAKE_VCPKG_PARAMS }}
+
+      - name: build package
+        run: cmake --build . --config Release --target package -j
+
+      - name: setup mysql for unit tests
+        if: runner.os != 'Windows'
+        uses: shogo82148/actions-setup-mysql@v1
+        with:
+          my-cnf: |
+            innodb_redo_log_capacity=4G
+            innodb_buffer_pool_size=4G
+            skip-log-bin
+
+      - name: unit test
+        if: runner.os != 'Windows'
+        run: |
+          mysql -uroot -e "create database sbtest"
+          SBTEST_MYSQL_ARGS=" --mysql-user=root  --mysql-host=127.0.0.1 " cmake --build . --config Release --target test
+
+      - name: upload package(Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.os }}-package
+          path: ./*.zip
+
+      - name: test_install
+        run: |
+          cmake --install . --config Release --prefix install_dir
+
+      - name: Archive build
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ inputs.os }}
+          retention-days: 1
+          path: |
+            install_dir
+
+  # Tests Ninja generator, non-standard compiler (clang on Linux and gcc on Windows and macOS)
+  build-ninja:
+    runs-on: ${{ inputs.os }}
+    name: Build-ninja
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: install ninja (macOS)
+        if: runner.os == 'macOS'
+        run : |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja mysql-client libpq
+          brew link --force mysql-client
+
+      - name: install ninja (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install ninja-build
+
+      - name: install ninja (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install ninja
+
+      - name: configure and build
+        run: |
+          mkdir build
+          cmake -S . -B build -GNinja -DCMAKE_COMPILE_WARNING_AS_ERROR=1 -DCMAKE_BUILD_TYPE=Debug -DWITH_PGSQL=1 -DCMAKE_C_COMPILER=${{ runner.os == 'Linux' && 'clang' || 'gcc' }}
+          cmake --build build
+
+      - uses: seanmiddleditch/gha-setup-vsdevenv@master
+        if: runner.os == 'Windows'
+
+      - name: build with clang-cl
+        if: runner.os == 'Windows'
+        run: |
+          choco install llvm
+          mkdir clang_build
+          cmake -S . -B clang_build -GNinja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_COMPILE_WARNING_AS_ERROR=1 -DCMAKE_BUILD_TYPE=Debug -DWITH_PGSQL=1
+          cmake --build clang_build
+
+  test-asan:
+    runs-on: ${{ inputs.os }}
+    # Linux is excluded, due to buggy ASAN ubuntu
+    if: ${{ !contains(inputs.os,'windows') }}
+    name: test-asan
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: install client libs (macOS)
+        if: runner.os == 'macOS'
+        run : |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install mysql-client
+          brew link --force mysql-client
+      - name: compile
+        run: |
+          mkdir asan_build
+          cmake -S . -B asan_build -DCMAKE_BUILD_TYPE=Debug -DWITH_ASAN=1
+          cmake --build asan_build --config Debug
+          cmake --install asan_build --config Debug --prefix install_dir
+
+      - name: install mysql
+        uses: shogo82148/actions-setup-mysql@v1
+        env:
+          TMPDIR: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+        with:
+          my-cnf: |
+            skip-log-bin
+
+      - name: update env (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "$pwd\install_dir\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: update env (non-Windows)
+        if: runner.os != 'Windows'
+        run: |
+             echo "$PWD/install_dir/bin" >> $GITHUB_PATH
+             echo "LUA_PATH=$PWD/install_dir/share/sysbench/?.lua" >> $GITHUB_ENV
+      - name: smoke test
+        run: |
+          mysql -uroot --host=127.0.0.1 -e "create database sbtest"
+          sysbench --version
+          sysbench --help
+          sysbench oltp_read_write --mysql-user=root --mysql-host=127.0.0.1 prepare
+          sysbench oltp_read_write --mysql-user=root --mysql-host=127.0.0.1 run --threads=2 --histogram
+          sysbench oltp_read_write --mysql-user=root --mysql-host=127.0.0.1 cleanup
+          sysbench cpu run --threads=2
+          sysbench fileio --file-test-mode=seqrewr prepare
+          sysbench fileio --file-test-mode=seqrewr run
+          sysbench fileio --file-test-mode=seqrewr cleanup
+          sysbench mutex run --threads=2
+
+  test-oltp:
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [mariadb, mysql, postgres]
+    needs: build
+    runs-on: ${{ inputs.os }}
+    #if: contains(inputs.os,'windows')
+    name: test-${{matrix.db}}
+    env:
+      COMMON_SYSBENCH_PARAMS: ${{ matrix.db == 'postgres' && '--db-driver=pgsql --pgsql-password=sbtest' || '--mysql-user=root'}}  --mysql-socket=${{ contains(inputs.os,'windows') && 'mysql.sock' || '/tmp/mysql.sock' }} --time=30 --table-size=1000000 --report-interval=1  --thread-init-timeout=300 --histogram
+
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@v3
+        with:
+          name: build-${{ inputs.os }}
+
+      - name: test fixups
+        shell: bash
+        if: runner.os != 'Windows'
+        run: |
+          ls -l bin
+          chmod +x bin/sysbench
+
+      - name: install client drivers (macOS)
+        if: runner.os == 'macOS'
+        run : |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install mysql-client libpq
+          brew link --force mysql-client
+
+      - name: update environment (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "$pwd\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          cat $env:GITHUB_PATH
+
+      - name: update environment (non-Windows)
+        if: runner.os != 'Windows'
+        run: |
+            echo "$PWD/bin" >> $GITHUB_PATH
+            cat $GITHUB_PATH
+            echo "LUA_PATH=$PWD/share/sysbench/?.lua" >> $GITHUB_ENV
+
+      - name: actions-setup-pgsql
+        if: matrix.db =='postgres'
+        uses: ikalnytskyi/action-setup-postgres@v4
+        with:
+          username: sbtest
+          password: sbtest
+          database: sbtest
+
+      - name: actions-setup-mysql
+        if: matrix.db != 'postgres'
+        uses: shogo82148/actions-setup-mysql@v1
+        env: # set temp directory, so that datadir ends up on fast disk
+            TMPDIR: ${{ runner.temp }}
+            TMP: ${{ runner.temp }}
+            TEMP: ${{ runner.temp }}
+        with:
+           distribution: ${{ matrix.db }}
+           my-cnf: |
+              ${{ matrix.db == 'mysql' && 'innodb_redo_log_capacity' || 'innodb_log_file_size' }}=4G
+              innodb_buffer_pool_size=512MB
+              max_allowed_packet=16MB
+              skip-log-bin
+              loose-enable-named-pipe
+              socket=${{ runner.os == 'Windows' && 'mysql.sock' || '/tmp/mysql.sock' }}
+              max_connections=1000
+              innodb_max_dirty_pages_pct_lwm=10
+
+      - name: create database sbtest
+        if: matrix.db != 'postgres'
+        run: |
+          mysql -uroot --host=127.0.0.1 --port=3306 -e "create database sbtest"
+
+      - name: oltp_read_write prepare
+        run: sysbench oltp_read_write ${{ env.COMMON_SYSBENCH_PARAMS }} prepare
+      - name: oltp_point_select run
+        run: sysbench oltp_point_select ${{ env.COMMON_SYSBENCH_PARAMS }} --threads=20 run
+      - name: oltp_read_write
+        run: sysbench oltp_read_write ${{ env.COMMON_SYSBENCH_PARAMS }} --threads=20 run
+      - name: oltp_read_only
+        run: sysbench oltp_read_only ${{ env.COMMON_SYSBENCH_PARAMS }} --threads=20 run
+      - name: oltp_update_index run (1 thread)
+        run: sysbench oltp_update_index ${{ env.COMMON_SYSBENCH_PARAMS }} --threads=1 run
+      - name: oltp_update_index run (20 threads)
+        run: sysbench oltp_update_index ${{ env.COMMON_SYSBENCH_PARAMS }} --threads=20 run
+      - name: oltp_read_write cleanup
+        run: sysbench oltp_update_index ${{ env.COMMON_SYSBENCH_PARAMS }} cleanup
+
+
+      # The below fileio test help estimate whether DBMS has "relaxed" durability, in other words cheats on
+      #
+      # oltp_update_index test with 1 user can't have qps much higher than sequential rewrite test with fdatasync
+      # if it does, durability is mostly likely "relaxed"
+      - name: fileio seqrewr prepare
+        run: sysbench fileio --file-block-size=4096  --file-test-mode=seqrewr --file-num=1 prepare
+      - name: fileio seqrewr run fdatasync
+        if: runner.os != 'macOS'
+        run: sysbench fileio --file-block-size=4096  --file-test-mode=seqrewr --file-fsync-mode=fdatasync --file-fsync-all=on --file-num=1 --report-interval=1 --time=20 --histogram run
+      - name: fileio seqrewr run fsync
+        run: sysbench fileio --file-block-size=4096  --file-test-mode=seqrewr --file-fsync-mode=fsync --file-fsync-all=on --file-num=1 --report-interval=1 --time=20 --histogram run

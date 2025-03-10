@@ -53,6 +53,16 @@
 #include "sb_util.h"
 #include "sb_counter.h"
 
+
+#ifdef _WIN32
+
+/* use portability wrapper that understands O_DIRECT and O_SYNC */
+#ifdef open
+#undef open
+#endif
+#define open(a, b, c) sb_win_open(a, b)
+#endif
+
 /* Lengths of the checksum and the offset fields in a block */
 #define FILE_CHECKSUM_LENGTH sizeof(int)
 #define FILE_OFFSET_LENGTH sizeof(long)
@@ -264,11 +274,10 @@ static int file_wait(int, long);
 #ifdef HAVE_MMAP
 static int file_mmap_prepare(void);
 static int file_mmap_done(void);
+static size_t sb_get_allocation_granularity(void);
 #endif
 
 /* Portability wrappers */
-static size_t sb_get_allocation_granularity(void);
-static void sb_free_memaligned(void *buf);
 static FILE_DESCRIPTOR sb_open(const char *);
 static int sb_create(const char *);
 
@@ -347,8 +356,8 @@ int file_prepare(void)
       log_text(LOG_FATAL,
                "Size of file '%s' is %sB, but at least %sB is expected.",
                file_name,
-               sb_print_value_size(ss1, sizeof(ss1), buf.st_size),
-               sb_print_value_size(ss2, sizeof(ss2), file_size));
+               sb_print_value_size(ss1, sizeof(ss1), (double)buf.st_size),
+               sb_print_value_size(ss2, sizeof(ss2), (double)file_size));
       log_text(LOG_WARNING,
                "Did you run 'prepare' with different --file-total-size or "
                "--file-num values?");
@@ -581,7 +590,7 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
     log_text(LOG_FATAL, "Incorrect file id in request: %u", file_req->file_id);
     return 1;
   }
-  if (file_req->pos + file_req->size > file_size)
+  if (file_req->pos + (intptr_t)file_req->size > file_size)
   {
     log_text(LOG_FATAL, "I/O request exceeds file size. "
              "file id: %d file size: %lld req offset: %lld req size: %lld",
@@ -599,7 +608,7 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
 
       /* Store checksum and offset in a buffer when in validation mode */
       if (sb_globals.validate)
-        file_fill_buffer(per_thread[thread_id].buffer, file_req->size, file_req->pos);
+        file_fill_buffer(per_thread[thread_id].buffer, (unsigned int)file_req->size, file_req->pos);
                          
       if(file_pwrite(file_req->file_id, per_thread[thread_id].buffer,
                      file_req->size, file_req->pos, thread_id)
@@ -634,7 +643,7 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
 
       /* Validate block if run with validation enabled */
       if (sb_globals.validate &&
-          file_validate_buffer(per_thread[thread_id].buffer, file_req->size, file_req->pos))
+          file_validate_buffer(per_thread[thread_id].buffer, (unsigned int)file_req->size, file_req->pos))
       {
         log_text(LOG_FATAL,
           "Validation failed on file " FD_FMT ", block offset %lld, exiting...",
@@ -683,16 +692,16 @@ void file_print_mode(void)
 
   print_file_extra_flags();
   log_text(LOG_NOTICE, "%d files, %sB each", num_files,
-           sb_print_value_size(sizestr, sizeof(sizestr), file_size));
+           sb_print_value_size(sizestr, sizeof(sizestr), (double)file_size));
   log_text(LOG_NOTICE, "%sB total file size",
            sb_print_value_size(sizestr, sizeof(sizestr),
-                               file_size * num_files));
+                               (double)(file_size * num_files)));
   log_text(LOG_NOTICE, "Block size %sB",
-           sb_print_value_size(sizestr, sizeof(sizestr), file_block_size));
+           sb_print_value_size(sizestr, sizeof(sizestr), (double)file_block_size));
   if (file_merged_requests > 0)
     log_text(LOG_NOTICE, "Merging requests up to %sB for sequential IO.",
              sb_print_value_size(sizestr, sizeof(sizestr),
-                                 file_request_size));
+                                 (double)file_request_size));
 
   switch (test_mode)
   {
@@ -876,7 +885,7 @@ static int convert_extra_flags(file_flags_t extra_flags, int *open_flags)
 #endif
     }
 
-    if (extra_flags > SB_FILE_FLAG_DIRECTIO)
+    if (extra_flags > (SB_FILE_FLAG_SYNC|SB_FILE_FLAG_DSYNC|SB_FILE_FLAG_DIRECTIO))
     {
       log_text(LOG_FATAL, "Unknown extra flags value: %d", (int) extra_flags);
       return 1;
@@ -1597,7 +1606,7 @@ int parse_arguments(void)
     return 1;
   }
   
-  file_block_size = sb_get_value_size("file-block-size");
+  file_block_size = (int)sb_get_value_size("file-block-size");
   if (file_block_size <= 0)
   {
     log_text(LOG_FATAL, "Invalid value for file-block-size: %d.",
@@ -1672,6 +1681,11 @@ int parse_arguments(void)
   }
 
   per_thread = malloc(sizeof(*per_thread) * sb_globals.threads);
+  if(per_thread == NULL)
+  {
+    log_text(LOG_FATAL, "Failed to allocate per-thread data");
+    return 1;
+  }
   for (i = 0; i < sb_globals.threads; i++)
   {
     per_thread[i].buffer = sb_memalign(file_request_size, sb_getpagesize());
@@ -1730,7 +1744,7 @@ void check_seq_req(sb_file_request_t *prev_req, sb_file_request_t *r)
   }    
 } 
 
-
+#ifdef HAVE_MMAP
 /*
   Alignment requirement for mmap(). The same as page size, except on Windows
   (on Windows it has to be 64KB, even if pagesize is only 4 or 8KB)
@@ -1739,11 +1753,7 @@ size_t sb_get_allocation_granularity(void)
 {
   return sb_getpagesize();
 }
-
-static void sb_free_memaligned(void *buf)
-{
-  free(buf);
-}
+#endif
 
 static FILE_DESCRIPTOR sb_open(const char *name)
 {
@@ -1800,7 +1810,7 @@ void file_fill_buffer(unsigned char *buf, unsigned int len,
   *(int *)(void *)(buf + i) = (int)crc32(0, (unsigned char *)buf, len -
                                  (FILE_CHECKSUM_LENGTH + FILE_OFFSET_LENGTH));
   /* Store the offset */
-  *(long *)(void *)(buf + i + FILE_CHECKSUM_LENGTH) = offset;
+  *(size_t *)(void *)(buf + i + FILE_CHECKSUM_LENGTH) = offset;
 }
 
 

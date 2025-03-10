@@ -86,3 +86,8 @@ prime
 stage
 *.snap
 /snap/snapcraft.yaml
+/build*
+.vscode
+*.bak
+src/libmariadb-src
+*.pdb

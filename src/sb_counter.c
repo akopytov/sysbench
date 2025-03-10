@@ -25,7 +25,7 @@
 #include "sb_util.h"
 #include "sb_ck_pr.h"
 
-sb_counters_t *sb_counters CK_CC_CACHELINE;
+CK_CC_CACHELINE sb_counters_t *sb_counters ;
 
 static sb_counters_t last_intermediate_counters;
 static sb_counters_t last_cumulative_counters;
@@ -45,15 +45,15 @@ void sb_counters_done(void)
 {
   if (sb_counters != NULL)
   {
-    free(sb_counters);
+    sb_free_memaligned(sb_counters);
     sb_counters = NULL;
   }
 }
 
 static void sb_counters_merge(sb_counters_t dst)
 {
-  for (size_t t = 0; t < SB_CNT_MAX; t++)
-    for (size_t i = 0; i < sb_globals.threads; i++)
+  for (unsigned int t = 0; t < SB_CNT_MAX; t++)
+    for (unsigned int i = 0; i < sb_globals.threads; i++)
       dst[t] += sb_counter_val(i, t);
 }
 
