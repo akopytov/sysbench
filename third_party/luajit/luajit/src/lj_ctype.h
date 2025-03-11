@@ -1,6 +1,6 @@
 /*
 ** C type management.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #ifndef _LJ_CTYPE_H
@@ -153,7 +153,7 @@ typedef struct CType {
 
 /* Simplify target-specific configuration. Checked in lj_ccall.h. */
 #define CCALL_MAX_GPR		8
-#define CCALL_MAX_FPR		8
+#define CCALL_MAX_FPR		14
 
 typedef LJ_ALIGN(8) union FPRCBArg { double d; float f[2]; } FPRCBArg;
 

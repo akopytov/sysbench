@@ -3,7 +3,7 @@
 ** AA: Alias Analysis using high-level semantic disambiguation.
 ** FWD: Load Forwarding (L2L) + Store Forwarding (S2L).
 ** DSE: Dead-Store Elimination.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_opt_mem_c
@@ -229,8 +229,8 @@ static TRef fwd_ahload(jit_State *J, IRRef xref)
 	if (key->o == IR_KSLOT) key = IR(key->op1);
 	lj_ir_kvalue(J->L, &keyv, key);
 	tv = lj_tab_get(J->L, ir_ktab(IR(ir->op1)), &keyv);
-	lj_assertJ(itype2irt(tv) == irt_type(fins->t),
-		   "mismatched type in constant table");
+	if (itype2irt(tv) != irt_type(fins->t))
+	  return 0;  /* Type instability in loop-carried dependency. */
 	if (irt_isnum(fins->t))
 	  return lj_ir_knum_u64(J, tv->u64);
 	else if (LJ_DUALNUM && irt_isint(fins->t))
@@ -376,7 +376,9 @@ TRef LJ_FASTCALL lj_opt_dse_ahstore(jit_State *J)
 	** since they are followed by at least one guarded VLOAD.
 	*/
 	for (ir = IR(J->cur.nins-1); ir > store; ir--)
-	  if (irt_isguard(ir->t) || ir->o == IR_ALEN)
+	  if (irt_isguard(ir->t) || ir->o == IR_ALEN ||
+              (ir->o == IR_CALLL && ir->op2 == IRCALL_lj_tab_nkeys) ||
+              (ir->o == IR_CALLS && ir->op2 == IRCALL_lj_tab_clone))
 	    goto doemit;  /* No elimination possible. */
 	/* Remove redundant store from chain and replace with NOP. */
 	*refp = store->prev;

@@ -1,6 +1,6 @@
 /*
 ** Fast function call recorder.
-** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2023 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #define lj_ffrecord_c
@@ -29,6 +29,7 @@
 #include "lj_vm.h"
 #include "lj_strscan.h"
 #include "lj_strfmt.h"
+#include "lj_cdata.h"
 #include "lj_serialize.h"
 
 /* Some local macros to save typing. Undef'd at the end. */
@@ -1130,7 +1131,7 @@ static TRef recff_sbufx_check(jit_State *J, RecordFFData *rd, ptrdiff_t arg)
 /* Emit BUFHDR for write to extended string buffer. */
 static TRef recff_sbufx_write(jit_State *J, TRef ud)
 {
-  TRef trbuf = emitir(IRT(IR_ADD, IRT_PGC), ud, lj_ir_kint(J, sizeof(GCudata)));
+  TRef trbuf = emitir(IRT(IR_ADD, IRT_PGC), ud, lj_ir_kintpgc(J, sizeof(GCudata)));
   return emitir(IRT(IR_BUFHDR, IRT_PGC), trbuf, IRBUFHDR_WRITE);
 }
 
@@ -1164,20 +1165,19 @@ static void LJ_FASTCALL recff_buffer_method_reset(jit_State *J, RecordFFData *rd
   SBufExt *sbx = bufV(&rd->argv[0]);
   int iscow = (int)sbufiscow(sbx);
   TRef trl = recff_sbufx_get_L(J, ud);
-  TRef trcow = emitir(IRT(IR_BAND, IRT_IGC), trl, lj_ir_kint(J, SBUF_FLAG_COW));
-  TRef zero = lj_ir_kint(J, 0);
-  emitir(IRTG(iscow ? IR_NE : IR_EQ, IRT_IGC), trcow, zero);
+  TRef trcow = emitir(IRT(IR_BAND, IRT_IGC), trl, lj_ir_kintpgc(J, SBUF_FLAG_COW));
+  TRef zeropgc = lj_ir_kintpgc(J, 0);
+  emitir(IRTG(iscow ? IR_NE : IR_EQ, IRT_IGC), trcow, zeropgc);
   if (iscow) {
-    trl = emitir(IRT(IR_BXOR, IRT_IGC), trl,
-		 LJ_GC64 ? lj_ir_kint64(J, SBUF_FLAG_COW) :
-			   lj_ir_kint(J, SBUF_FLAG_COW));
-    recff_sbufx_set_ptr(J, ud, IRFL_SBUF_W, zero);
-    recff_sbufx_set_ptr(J, ud, IRFL_SBUF_E, zero);
-    recff_sbufx_set_ptr(J, ud, IRFL_SBUF_B, zero);
+    TRef zerop = lj_ir_kintp(J, 0);
+    trl = emitir(IRT(IR_BXOR, IRT_IGC), trl, lj_ir_kintpgc(J, SBUF_FLAG_COW));
+    recff_sbufx_set_ptr(J, ud, IRFL_SBUF_W, zerop);
+    recff_sbufx_set_ptr(J, ud, IRFL_SBUF_E, zerop);
+    recff_sbufx_set_ptr(J, ud, IRFL_SBUF_B, zerop);
     recff_sbufx_set_L(J, ud, trl);
     emitir(IRT(IR_FSTORE, IRT_PGC),
-	   emitir(IRT(IR_FREF, IRT_PGC), ud, IRFL_SBUF_REF), zero);
-    recff_sbufx_set_ptr(J, ud, IRFL_SBUF_R, zero);
+	   emitir(IRT(IR_FREF, IRT_PGC), ud, IRFL_SBUF_REF), zeropgc);
+    recff_sbufx_set_ptr(J, ud, IRFL_SBUF_R, zerop);
   } else {
     TRef trb = recff_sbufx_get_ptr(J, ud, IRFL_SBUF_B);
     recff_sbufx_set_ptr(J, ud, IRFL_SBUF_W, trb);
@@ -1458,6 +1458,77 @@ static void LJ_FASTCALL recff_table_clear(jit_State *J, RecordFFData *rd)
     J->needsnap = 1;
   }  /* else: Interpreter will throw. */
 }
+
+static void LJ_FASTCALL recff_table_clone(jit_State *J, RecordFFData *rd)
+{
+  TRef src = J->base[0];
+  J->base[0] = lj_ir_call(J, IRCALL_lj_tab_clone, src);
+  UNUSED(rd);
+}
+
+static void LJ_FASTCALL recff_table_isarray(jit_State *J, RecordFFData *rd)
+{
+  TRef src = J->base[0];
+  if (LJ_LIKELY(tref_istab(src))) {
+    TRef trres = lj_ir_call(J, IRCALL_lj_tab_isarray, src);
+    GCtab *t = tabV(&rd->argv[0]);
+    int isarr = lj_tab_isarray(t);
+    TRef tr0 = lj_ir_kint(J, 0);
+    emitir(isarr ? IRTGI(IR_NE) : IRTGI(IR_EQ), trres, tr0);
+    J->base[0] = isarr ? TREF_TRUE : TREF_FALSE;
+  }  /* else: Interpreter will throw. */
+}
+
+static void LJ_FASTCALL recff_table_nkeys(jit_State *J, RecordFFData *rd)
+{
+  TRef src = J->base[0];
+  if (LJ_LIKELY(tref_istab(src))) {
+    J->base[0] = lj_ir_call(J, IRCALL_lj_tab_nkeys, src);
+  }  /* else: Interpreter will throw. */
+}
+
+static void LJ_FASTCALL recff_table_isempty(jit_State *J, RecordFFData *rd)
+{
+  TRef src = J->base[0];
+  if (LJ_LIKELY(tref_istab(src))) {
+    TRef trres = lj_ir_call(J, IRCALL_lj_tab_isempty, src);
+    GCtab *t = tabV(&rd->argv[0]);
+    int isempty = lj_tab_isempty(t);
+    TRef tr0 = lj_ir_kint(J, 0);
+    emitir(isempty ? IRTGI(IR_NE) : IRTGI(IR_EQ), trres, tr0);
+    J->base[0] = isempty ? TREF_TRUE : TREF_FALSE;
+  }  /* else: Interpreter will throw. */
+}
+
+/* -- thread library fast functions ------------------------------------------ */
+
+#if LJ_HASFFI
+void LJ_FASTCALL recff_thread_exdata(jit_State *J, RecordFFData *rd)
+{
+  TRef tr = J->base[0];
+  if (!tr) {
+    TRef trl = emitir(IRT(IR_LREF, IRT_THREAD), 0, 0);
+    TRef trp = emitir(IRT(IR_FLOAD, IRT_PTR), trl, IRFL_THREAD_EXDATA);
+    TRef trid = lj_ir_kint(J, CTID_P_VOID);
+    J->base[0] = emitir(IRTG(IR_CNEWI, IRT_CDATA), trid, trp);
+    return;
+  }
+  recff_nyiu(J, rd);  /* this case is too rare to be interesting */
+}
+
+void LJ_FASTCALL recff_thread_exdata2(jit_State *J, RecordFFData *rd)
+{
+  TRef tr = J->base[0];
+  if (!tr) {
+    TRef trl = emitir(IRT(IR_LREF, IRT_THREAD), 0, 0);
+    TRef trp = emitir(IRT(IR_FLOAD, IRT_PTR), trl, IRFL_THREAD_EXDATA2);
+    TRef trid = lj_ir_kint(J, CTID_P_VOID);
+    J->base[0] = emitir(IRTG(IR_CNEWI, IRT_CDATA), trid, trp);
+    return;
+  }
+  recff_nyiu(J, rd);  /* this case is too rare to be interesting */
+}
+#endif
 
 /* -- I/O library fast functions ------------------------------------------ */
 
