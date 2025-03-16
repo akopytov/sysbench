@@ -33,14 +33,6 @@ end
 sysbench.cmdline.options = {
    table_size =
       {"Number of rows per table", 10000},
-   start_id =
-      {"Start id of rows for prepare insert into table, " ..
-       "used for parallel prepare data into one table, " ..
-       "users can run multiple sysbench process with different start_id concurrently. " ..
-       "in this case, range_size is the number of rows to be inserted, id of inserted " ..
-       "rows are {start_id, start_id + 1, ..., start_id + range_size - 1}. " ..
-       "this option should not be used with auto_inc. " ..
-       "default is 0 to conform origin sysbench", 0},
    range_size =
       {"Range size for range SELECT queries", 100},
    tables =
@@ -90,7 +82,15 @@ sysbench.cmdline.options = {
           "PostgreSQL driver. The only currently supported " ..
           "variant is 'redshift'. When enabled, " ..
           "create_secondary is automatically disabled, and " ..
-          "delete_inserts is set to 0"}
+          "delete_inserts is set to 0"},
+   index_num =
+      {"create table index numbers", 0},
+   table_with_index =
+      {"if index_num > 0 create table with index", false},
+   db_prefix =
+      {"manual create database prefix, this will disable mysql-db param", "sysbench"},
+   db_num =
+      {"manual create database number, this will disable mysql-db param", 20}
 }
 
 -- Prepare the dataset. This command supports parallel execution, i.e. will
@@ -204,27 +204,45 @@ function create_table(drv, con, table_num)
 
    print(string.format("Creating table 'sbtest%d'...", table_num))
 
+   local t_keys = {}
+   local t_keys_define = {}
+   local t_index = {}
+   for i = 1, sysbench.opt.index_num do
+      table.insert(t_keys, string.format([[k%d,]], i))
+      table.insert(t_keys_define, string.format([[k%d INTEGER DEFAULT '0' NOT NULL,]], i))
+      table.insert(t_index, string.format([[INDEX(k%d),]], i))
+   end
+   local string_keys=table.concat(t_keys)
+   local string_keys_define=table.concat(t_keys_define)
+   local string_index=""
+   if sysbench.opt.table_with_index then
+      string_index=table.concat(t_index)
+   end
+
    if sysbench.opt.use_file then
       query = string.format([[
-   CREATE TABLE IF NOT EXISTS sbtest%d(
+   CREATE TABLE sbtest%d(
      id %s,
      k INTEGER DEFAULT '0' NOT NULL,
-     c VARCHAR(512) DEFAULT '' NOT NULL,
-     pad MEDIUMTEXT,
+     %s
+     c VARBINARY(32000) DEFAULT '' NOT NULL,
+     pad MEDIUMBLOB,
+     %s
      %s (id)
    ) %s %s]],
-         table_num, id_def, id_index_def, engine_def,
+         table_num, id_def, string_keys_define, string_index, id_index_def, engine_def,
          sysbench.opt.create_table_options)
    else
       query = string.format([[
-   CREATE TABLE IF NOT EXISTS sbtest%d(
-     id %s,
-     k INTEGER DEFAULT '0' NOT NULL,
-     c CHAR(120) DEFAULT '' NOT NULL,
-     pad CHAR(60) DEFAULT '' NOT NULL,
-     %s (id)
-   ) %s %s]],
-         table_num, id_def, id_index_def, engine_def,
+      CREATE TABLE sbtest%d(
+        id %s,
+        k INTEGER DEFAULT '0' NOT NULL,
+        %s
+        c BINARY(120) DEFAULT '' NOT NULL,
+        pad BINARY(60) DEFAULT '' NOT NULL,
+        %s (id)
+      ) %s %s]],
+         table_num, id_def, string_keys_define, id_index_def, engine_def,
          sysbench.opt.create_table_options)
    end
 
@@ -236,27 +254,17 @@ function create_table(drv, con, table_num)
    end
 
    if sysbench.opt.auto_inc then
-      query = "INSERT INTO sbtest" .. table_num .. "(k, c, pad) VALUES"
+      query = "INSERT INTO sbtest" .. table_num .. "(k, " .. string_keys .. "c, pad) VALUES"
    else
-      query = "INSERT INTO sbtest" .. table_num .. "(id, k, c, pad) VALUES"
+      query = "INSERT INTO sbtest" .. table_num .. "(id, k, " .. string_keys .. "c, pad) VALUES"
    end
 
    con:bulk_insert_init(query)
 
    local c_val
    local pad_val
-   local start_id;
-   local finish_id;
 
-   if sysbench.opt.start_id == 0 then
-      start_id = 1;
-      finish_id = sysbench.opt.table_size;
-   else
-      start_id = sysbench.opt.start_id;
-      finish_id = start_id + sysbench.opt.range_size - 1;
-   end
-
-   for i = start_id, finish_id do
+   for i = 1, sysbench.opt.table_size do
 
       if sysbench.opt.use_file then
          c_val, pad_val = get_str_value()
@@ -265,14 +273,23 @@ function create_table(drv, con, table_num)
          pad_val = get_pad_value()
       end
 
+
+      local t_query = {}
+      for i = 1, sysbench.opt.index_num do
+         table.insert(t_query, string.format([[%d,]], sysbench.rand.default(1, sysbench.opt.table_size)))
+      end
+      string_query=table.concat(t_query, " ")
+
       if (sysbench.opt.auto_inc) then
-         query = string.format("(%d, \"%s\", \"%s\")",
+         query = string.format("(%d, %s \"%s\", \"%s\")",
                                sysbench.rand.default(1, sysbench.opt.table_size),
+                               string_query,
                                c_val, pad_val)
       else
-         query = string.format("(%d, %d, \"%s\", \"%s\")",
+         query = string.format("(%d, %d, %s \"%s\", \"%s\")",
                                i,
                                sysbench.rand.default(1, sysbench.opt.table_size),
+                               string_query,
                                c_val, pad_val)
       end
 
