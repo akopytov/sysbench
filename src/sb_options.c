@@ -101,7 +101,7 @@ int sb_register_arg_set(sb_arg_t *set)
     option_t * const opt = set_option(set[i].name, set[i].value, set[i].type);
     if (opt == NULL)
       return 1;
-    opt->validate = set->validate;
+    opt->validate = set[i]->validate;
   }
 
   return 0;
