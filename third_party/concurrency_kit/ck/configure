@@ -145,7 +145,6 @@ generate_stdout()
 	echo "            SYSTEM = $SYSTEM"
 	echo "           PROFILE = $PROFILE"
 	echo "                CC = $CC"
-	echo "          COMPILER = $COMPILER"
 	echo "            CFLAGS = $CFLAGS"
 	echo "    PTHREAD_CFLAGS = $PTHREAD_CFLAGS"
 	echo "                LD = $LD"
@@ -589,6 +588,7 @@ int main(void) {
 	puts("mingw32");
 	return (0);
 #else
+	#error MINGW at least version 3 required
 	return (1);
 #endif /* __MINGW32__ && __MINGW32_MAJOR_VERSION >= 3 */
 #elif defined(__clang__) && (__clang_major__ >= 3)
@@ -601,13 +601,13 @@ int main(void) {
 	puts("gcc");
 	return (0);
 #else
+	#error clang at least version 3, or suncc > 0x5110, or gcc >=4 required
 	return (1);
 #endif
 }
 EOF
 
 $CC -o .1 .1.c
-COMPILER=`./.1 2> /dev/null`
 r=$?
 rm -f .1.c .1
 
@@ -617,12 +617,31 @@ else
 	echo "success [$CC]"
 fi
 
-if test "$COMPILER" = "suncc"; then
+printf "Checking if suncc compiler......."
+
+cat << EOF > .2.c
+int main(void) {
+#if defined(__SUNPRO_C)
+	return (0);
+#else
+	#error not suncc - just checking - really not an error
+	return (1);
+#endif
+}
+EOF
+
+$CC -o .2 .2.c 2>&1 >/dev/null
+sunr=$?
+rm -f .2.c .2
+
+if test "$sunr" -eq 0; then
+	echo "success [is suncc]"
 	LD=/bin/ld
 	LDFLAGS="-G -z text -h libck.so.$VERSION_MAJOR $LDFLAGS"
 	CFLAGS="-xO5 $CFLAGS"
 	PTHREAD_CFLAGS="-mt -lpthread"
-elif test "$COMPILER" = "gcc" || test "$COMPILER" = "clang" || test "$COMPILER" = "mingw32" || test "$COMPILER" = "mingw64"; then
+else
+	echo "success [is not suncc]"
 	LD=$CC
 	SONAME="$LDNAME_MAJOR"
 	if test "$SYSTEM" = "darwin"; then
@@ -650,12 +669,6 @@ elif test "$COMPILER" = "gcc" || test "$COMPILER" = "clang" || test "$COMPILER" 
 
 	CFLAGS="-D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -std=gnu99 -pedantic -Wall -W -Wundef -Wendif-labels -Wshadow -Wpointer-arith -Wcast-align -Wcast-qual -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline -Wdisabled-optimization -fstrict-aliasing -O2 -pipe -Wno-parentheses $CFLAGS"
 	PTHREAD_CFLAGS="-pthread"
-	if test "$COMPILER" = "mingw64"; then
-		ENVIRONMENT=64
-		PLATFORM=x86_64
-	fi
-else
-	assert "" "unknown compiler"
 fi
 
 printf "Detecting VMA bits..............."
