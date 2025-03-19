@@ -773,6 +773,7 @@ static int mysql_drv_reconnect(db_conn_t *sb_con)
 
   DEBUG("mysql_close(%p)", con);
   mysql_close(con);
+  mysql_init(con);
 
   while (mysql_drv_real_connect(db_mysql_con))
   {
@@ -780,6 +781,8 @@ static int mysql_drv_reconnect(db_conn_t *sb_con)
       return DB_ERROR_FATAL;
 
     usleep(1000);
+    mysql_close(con);
+    mysql_init(con);
   }
 
   log_text(LOG_DEBUG, "Reconnected");
