@@ -21,4 +21,4 @@ RUN make install
 WORKDIR /root
 RUN rm -rf sysbench
 
-ENTRYPOINT sysbench
+ENTRYPOINT ["sysbench"]
