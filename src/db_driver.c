@@ -296,7 +296,7 @@ int db_describe(db_driver_t *drv, drv_caps_t *caps)
 /* Connect to database */
 
 
-db_conn_t *db_connection_create(db_driver_t *drv)
+db_conn_t *db_connection_create(db_driver_t *drv, db_conn_setting_t *setting)
 {
   db_conn_t *con;
 
@@ -311,7 +311,7 @@ db_conn_t *db_connection_create(db_driver_t *drv)
 
   con->thread_id =  sb_tls_thread_id;
 
-  if (drv->ops.connect(con))
+  if (drv->ops.connect(con, setting))
   {
     free(con);
     return NULL;
