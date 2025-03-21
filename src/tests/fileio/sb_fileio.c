@@ -567,12 +567,12 @@ int file_execute_event(sb_event_t *sb_req, int thread_id)
   if (sb_globals.debug)
   {
     log_text(LOG_DEBUG,
-             "Executing request, operation: %d, file_id: %d, pos: %d, "
-             "size: %d",
+             "Executing request, operation: %d, file_id: %d, pos: %lld, "
+             "size: %lld",
              file_req->operation,
              file_req->file_id,
-             (int)file_req->pos,
-             (int)file_req->size);
+             (long long)file_req->pos,
+             (long long)file_req->size);
   }
   
   /* Check request parameters */
