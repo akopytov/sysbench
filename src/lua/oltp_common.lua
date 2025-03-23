@@ -202,6 +202,13 @@ CREATE TABLE sbtest%d(
 
    con:query(query)
 
+   if sysbench.opt.create_secondary then
+      print(string.format("Creating a secondary index on 'sbtest%d'...",
+                          table_num))
+      con:query(string.format("CREATE INDEX k_%d ON sbtest%d(k)",
+                              table_num, table_num))
+   end
+
    if (sysbench.opt.table_size > 0) then
       print(string.format("Inserting %d records into 'sbtest%d'",
                           sysbench.opt.table_size, table_num))
@@ -238,13 +245,6 @@ CREATE TABLE sbtest%d(
    end
 
    con:bulk_insert_done()
-
-   if sysbench.opt.create_secondary then
-      print(string.format("Creating a secondary index on 'sbtest%d'...",
-                          table_num))
-      con:query(string.format("CREATE INDEX k_%d ON sbtest%d(k)",
-                              table_num, table_num))
-   end
 end
 
 local t = sysbench.sql.type
