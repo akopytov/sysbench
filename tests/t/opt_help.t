@@ -38,8 +38,8 @@ separately.
   Log options:
     --verbosity=N verbosity level {5 - debug, 0 - only critical messages} [3]
   
-    --percentile=N       percentile to calculate in latency statistics (1-100). Use the special value of 0 to disable percentile calculations [95]
-    --histogram[=on|off] print latency histogram in report [off]
+    --percentile=[LIST,...] list of percentiles to calculate in latency statistics (0-100). Use an empty list to disable percentile calculations [95]
+    --histogram[=on|off]    print latency histogram in report [off]
   
   General database options:
   
