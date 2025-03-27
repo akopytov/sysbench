@@ -153,6 +153,8 @@ int remove_option(sb_list_t *, char *);
     
 sb_list_t *read_config(FILE *, sb_list_t *);
 
++int read_config_file(const char *filename);
++
 int write_config(FILE *, sb_list_t *);
 
 #endif /* OPTIONS_H */
