@@ -434,6 +434,13 @@ case $PLATFORM in
 				;;
 		esac
 		;;
+	"mips64")
+		LSE_ENABLE="CK_MD_LSE_DISABLE"
+		PLATFORM=mips
+		ENVIRONMENT=64
+		LDFLAGS="$LDFLAGS"
+		MM="${MM:-"CK_MD_TSO"}"
+		;;
 	"amd64"|"x86_64")
 		LSE_ENABLE="CK_MD_LSE_DISABLE"
 		PLATFORM=x86_64
