@@ -79,6 +79,15 @@ function sysbench.rand.varstring(min_len, max_len)
    return ffi.string(buf, nchars)
 end
 
+function sysbench.rand.hexadecimal(min_len, max_len)
+   assert(min_len <= max_len)
+   assert(max_len > 0)
+   local buflen = max_len
+   local buf = ffi.new("uint8_t[?]", buflen)
+   local nchars = ffi.C.sb_rand_hexadecimal(buf, min_len, max_len)
+   return ffi.string(buf, nchars)
+end
+
 function sysbench.rand.uniform_double()
    return ffi.C.sb_rand_uniform_double()
 end
