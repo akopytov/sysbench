@@ -42,6 +42,8 @@ static sb_arg_t mutex_args[] =
   SB_OPT("mutex-locks", "number of mutex locks to do per thread", "50000", INT),
   SB_OPT("mutex-loops", "number of empty loops to do outside mutex lock",
          "10000", INT),
+  SB_OPT("mutex-cs-loops", "number of increment operations to do inside mutex lock",
+         "10000", INT),
 
   SB_OPT_END
 };
@@ -72,6 +74,7 @@ static thread_lock *thread_locks;
 static unsigned int mutex_num;
 static unsigned int mutex_loops;
 static unsigned int mutex_locks;
+static unsigned int mutex_cs_loops;
 static unsigned int global_var;
 
 static TLS int tls_counter;
@@ -91,7 +94,7 @@ int mutex_init(void)
   mutex_num = sb_get_value_int("mutex-num");
   mutex_loops = sb_get_value_int("mutex-loops");
   mutex_locks = sb_get_value_int("mutex-locks");
-
+  mutex_cs_loops = sb_get_value_int("mutex-cs-loops");
   thread_locks = (thread_lock *)malloc(mutex_num * sizeof(thread_lock));
   if (thread_locks == NULL)
   {
@@ -133,6 +136,7 @@ sb_event_t mutex_next_event(int thread_id)
     sb_req.type = SB_REQ_TYPE_MUTEX;
     mutex_req->nlocks = mutex_locks;
     mutex_req->nloops = mutex_loops;
+    mutex_req->ncs_loops = mutex_cs_loops;
   }
 
   return sb_req;
@@ -142,6 +146,7 @@ sb_event_t mutex_next_event(int thread_id)
 int mutex_execute_event(sb_event_t *sb_req, int thread_id)
 {
   unsigned int         i;
+  unsigned int         j;
   unsigned int         current_lock;
   sb_mutex_request_t   *mutex_req = &sb_req->u.mutex_request;
 
@@ -155,7 +160,9 @@ int mutex_execute_event(sb_event_t *sb_req, int thread_id)
       ck_pr_barrier();
 
     pthread_mutex_lock(&thread_locks[current_lock].mutex);
-    global_var++;
+    for (j = 0; j < mutex_req->ncs_loops; j++)
+      global_var += j;
+
     pthread_mutex_unlock(&thread_locks[current_lock].mutex);
     mutex_req->nlocks--;
   }
