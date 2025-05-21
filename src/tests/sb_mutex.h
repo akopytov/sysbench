@@ -25,6 +25,7 @@ typedef struct
 {
   unsigned int nlocks;
   unsigned int nloops;
+  unsigned int ncs_loops;
 } sb_mutex_request_t;
 
 int register_test_mutex(sb_list_t *tests);
