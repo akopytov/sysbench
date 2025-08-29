@@ -554,10 +554,53 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
     xfree(con->sql_state);
     xfree(con->sql_errmsg);
 
-    con->sql_state = strdup(PQresultErrorField(pgres, PG_DIAG_SQLSTATE));
-    con->sql_errmsg = strdup(PQresultErrorField(pgres, PG_DIAG_MESSAGE_PRIMARY));
+    const char *sqlstate = PQresultErrorField(pgres, PG_DIAG_SQLSTATE);
+    const char *errmsg = PQresultErrorField(pgres, PG_DIAG_MESSAGE_PRIMARY);
+    
+    /* For connection errors, PQresultErrorField might return NULL,
+       so check connection status first */
+    if (PQstatus(pgcon) == CONNECTION_BAD)
+    {
+      /* Connection is bad, get error from connection object */
+      con->sql_state = strdup("08006"); /* connection_failure */
+      const char *conn_errmsg = PQerrorMessage(pgcon);
+      con->sql_errmsg = conn_errmsg ? strdup(conn_errmsg) : strdup("Connection failure");
+      log_text(LOG_DEBUG, "Connection error: %s", 
+               con->sql_errmsg);
+    }
+    else
+    {
+      /* Normal query error, use result error fields */
+      con->sql_state = sqlstate ? strdup(sqlstate) : strdup("00000");
+      con->sql_errmsg = errmsg ? strdup(errmsg) : strdup("Unknown error");
+      log_text(LOG_DEBUG, "Query error: SQLSTATE=%s, error=%s", 
+               con->sql_state, con->sql_errmsg);
+    }
 
-    if (!strcmp(con->sql_state, "40P01") /* deadlock_detected */ ||
+    /* Check for connection-related errors that require reconnection */
+    if (!strcmp(con->sql_state, "08000") /* connection_exception */ ||
+        !strcmp(con->sql_state, "08003") /* connection_does_not_exist */ ||
+        !strcmp(con->sql_state, "08006") /* connection_failure */ ||
+        !strcmp(con->sql_state, "08001") /* sqlclient_unable_to_establish_sqlconnection */ ||
+        !strcmp(con->sql_state, "08004") /* sqlserver_rejected_establishment_of_sqlconnection */ ||
+        !strcmp(con->sql_state, "08007") /* transaction_resolution_unknown */ ||
+        PQstatus(pgcon) == CONNECTION_BAD)
+    {
+      log_text(LOG_DEBUG, "Connection error detected (SQLSTATE: %s), attempting reconnection", 
+               con->sql_state ? con->sql_state : "unknown");
+      
+      rs->counter = SB_CNT_RECONNECT;
+      
+      PQclear(pgres);
+      /* Attempt reconnection */
+      while (pgsql_drv_connect(con))
+      {
+        if (sb_globals.error)
+          return DB_ERROR_FATAL;
+      }
+      return DB_ERROR_IGNORABLE;
+    }
+    else if (!strcmp(con->sql_state, "40P01") /* deadlock_detected */ ||
         !strcmp(con->sql_state, "23505") /* unique violation */ ||
         !strcmp(con->sql_state, "40001"))/* serialization_failure */
     {
@@ -568,8 +611,10 @@ static db_error_t pgsql_check_status(db_conn_t *con, PGresult *pgres,
     }
     else
     {
-      log_text(LOG_FATAL, "%s() failed: %d %s", funcname, status,
-               con->sql_errmsg);
+      log_text(LOG_FATAL, "%s() failed: status=%d, SQLSTATE='%s', error='%s'", 
+               funcname, status, 
+               con->sql_state ? con->sql_state : "unknown",
+               con->sql_errmsg ? con->sql_errmsg : "unknown");
 
       if (query != NULL)
         log_text(LOG_FATAL, "failed query was: %s", query);

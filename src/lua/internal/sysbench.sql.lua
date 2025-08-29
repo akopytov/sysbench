@@ -256,6 +256,7 @@ function connection_methods.check_error(self, rs, query)
           sysbench.hooks.sql_error_ignorable(errdesc)) or
       self.error == sysbench.sql.error.IGNORABLE
    then
+      print("Detected ignorable error, attempting reconnect")
       -- Throw a 'restart event' exception that can be caught by the user script
       -- to do some extra steps to restart a transaction (e.g. reprepare
       -- statements after a reconnect). Otherwise it will be caught by
