@@ -45,7 +45,6 @@ function event()
    if not sysbench.opt.skip_trx then
       begin()
    end
-
    execute_point_selects()
 
    if sysbench.opt.range_selects then

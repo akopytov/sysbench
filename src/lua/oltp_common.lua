@@ -422,7 +422,6 @@ function execute_point_selects()
 
    for i = 1, sysbench.opt.point_selects do
       param[tnum].point_selects[1]:set(get_id())
-
       stmt[tnum].point_selects:execute()
    end
 end
@@ -497,12 +496,25 @@ function execute_delete_inserts()
 end
 
 -- Re-prepare statements if we have reconnected, which is possible when some of
--- the listed error codes are in the --mysql-ignore-errors list
+-- the listed error codes are in the --mysql-ignore-errors list for MySQL
+-- or when PostgreSQL connection errors occur
 function sysbench.hooks.before_restart_event(errdesc)
+   -- MySQL connection errors
    if errdesc.sql_errno == 2013 or -- CR_SERVER_LOST
       errdesc.sql_errno == 2055 or -- CR_SERVER_LOST_EXTENDED
       errdesc.sql_errno == 2006 or -- CR_SERVER_GONE_ERROR
       errdesc.sql_errno == 2011    -- CR_TCP_CONNECTION
+   then
+      close_statements()
+      prepare_statements()
+   -- PostgreSQL connection errors (SQLSTATE codes)
+   elseif errdesc.sql_state and (
+      errdesc.sql_state == "00000" or -- connection_exception
+      errdesc.sql_state == "08003" or -- connection_does_not_exist
+      errdesc.sql_state == "08006" or -- connection_failure
+      errdesc.sql_state == "08001" or -- sqlclient_unable_to_establish_sqlconnection
+      errdesc.sql_state == "08004" or -- sqlserver_rejected_establishment_of_sqlconnection
+      errdesc.sql_state == "08007")   -- transaction_resolution_unknown
    then
       close_statements()
       prepare_statements()
