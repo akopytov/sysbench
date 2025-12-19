@@ -28,11 +28,32 @@
 # include <string.h>
 #endif
 
+#ifdef __QNX__
+#include <sys/syspage.h>
+#include <sys/neutrino.h>
+#include <inttypes.h>
+#endif
 #include "sb_logger.h"
 #include "sb_timer.h"
 #include "sb_util.h"
 
 /* Some functions for simple time operations */
+
+
+#ifdef __QNX__
+int sb_timer_cycle_timer(struct timespec *tsp) {
+  static uint64_t cycles_per_sec = 0;
+  if (cycles_per_sec == 0) {
+    cycles_per_sec = SYSPAGE_ENTRY(qtime)->cycles_per_sec;
+  }
+  uint64_t count;
+  count = ClockCycles();
+  tsp->tv_sec= count/cycles_per_sec;
+  tsp->tv_nsec= (count % cycles_per_sec) * NS_PER_SEC / cycles_per_sec;
+
+  return 0;
+}
+#endif
 
 /* initialize timer */
 

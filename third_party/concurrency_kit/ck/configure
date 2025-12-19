@@ -26,6 +26,18 @@
 # SUCH DAMAGE.
 #
 
+if test ${QNXENV} = "true"; then
+SYSTEM="QNX"
+case $host_cpu in 
+aarch64)
+PLATFORM="aarch64"
+;;
+x86_64)
+PLATFORM="x86_64"
+;;
+esac
+fi
+
 REQUIRE_HEADER="stdbool.h stddef.h stdint.h string.h"
 
 EXIT_SUCCESS=0
@@ -68,6 +80,8 @@ assert()
 		print=true
 	elif test "$#" -eq 3; then
 		fail=$3
+		print=echo
+	elif "${QNXENV}" = "true" && test "$#" -gt 0; then
 		print=echo
 	else
 		echo "Usage: assert <test> <fail string> or assert <test> <success string> <fail string>" 1>&2
@@ -570,12 +584,16 @@ else
 fi
 
 printf "Finding suitable compiler........"
-if test ! -x "${CC}"; then
-	CC=`pathsearch "${CC:-cc}"`
-	if test -z "$CC" -o ! -x "$CC"; then
-		CC=`pathsearch "${CC:-gcc}"`
+
+if test ${QNXENV} != "true"; then
+	if test ! -x "${CC}"; then
+		CC=`pathsearch "${CC:-cc}"`
+		if test -z "$CC" -o ! -x "$CC"; then
+			CC=`pathsearch "${CC:-gcc}"`
+		fi
 	fi
 fi
+
 assert "$CC" "not found"
 
 cat << EOF > .1.c
@@ -611,10 +629,10 @@ COMPILER=`./.1 2> /dev/null`
 r=$?
 rm -f .1.c .1
 
-if test "$r" -ne 0; then
-	assert "" "update compiler"
+if test ${QNXENV} != "true" && test "$r" -ne 0; then
+    assert "" "update compiler"
 else
-	echo "success [$CC]"
+    echo "success [$CC]"
 fi
 
 if test "$COMPILER" = "suncc"; then
@@ -622,7 +640,7 @@ if test "$COMPILER" = "suncc"; then
 	LDFLAGS="-G -z text -h libck.so.$VERSION_MAJOR $LDFLAGS"
 	CFLAGS="-xO5 $CFLAGS"
 	PTHREAD_CFLAGS="-mt -lpthread"
-elif test "$COMPILER" = "gcc" || test "$COMPILER" = "clang" || test "$COMPILER" = "mingw32" || test "$COMPILER" = "mingw64"; then
+elif test ${QNXENV} = "true" || test "$COMPILER" = "gcc" || test "$COMPILER" = "clang" || test "$COMPILER" = "mingw32" || test "$COMPILER" = "mingw64"; then
 	LD=$CC
 	SONAME="$LDNAME_MAJOR"
 	if test "$SYSTEM" = "darwin"; then

@@ -26,7 +26,7 @@ SUFFIXES = .lua .lua.h
 
 .lua.lua.h:
 	@echo "Creating $@ from $<"
-	@var=$$(echo $< | sed 's/\./_/g')	&& \
+	@var=$$(echo $< | xargs basename | sed 's/\./_/g')	&& \
 	( echo "unsigned char $${var}[] =" 	&& \
 	sed -e 's/\\/\\\\/g'			\
 	    -e 's/"/\\"/g'			\

@@ -62,6 +62,10 @@
 			    (a.tv_nsec - b.tv_nsec))
 
 /* Wrapper over various *gettime* functions */
+
+#ifdef __QNX__
+# define SB_GETTIME(tsp) sb_timer_cycle_timer(tsp)
+#else
 #ifdef HAVE_CLOCK_GETTIME
 # define SB_GETTIME(tsp) clock_gettime(CLOCK_MONOTONIC, tsp)
 #else
@@ -72,6 +76,7 @@
     (tsp)->tv_sec = tv.tv_sec;                  \
     (tsp)->tv_nsec = tv.tv_usec * 1000;         \
   } while (0)
+#endif
 #endif
 
 typedef enum {TIMER_UNINITIALIZED, TIMER_INITIALIZED, TIMER_STOPPED, \
@@ -101,6 +106,12 @@ static inline int sb_nanosleep(uint64_t ns)
   struct timespec ts = { ns / NS_PER_SEC, ns % NS_PER_SEC };
   return nanosleep(&ts, NULL);
 }
+
+
+/* Create Clock Cycle timer */
+#ifdef __QNX__
+int sb_timer_cycle_timer(struct timespec *tsp);
+#endif
 
 /* timer control functions */
 

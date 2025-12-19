@@ -192,8 +192,13 @@ ASOPTIONS= $(CCOPT) $(CCWARN) $(XCFLAGS) $(CFLAGS)
 CCOPTIONS= $(CCDEBUG) $(ASOPTIONS)
 LDOPTIONS= $(CCDEBUG) $(LDFLAGS)
 
-HOST_CC= $(CC)
-HOST_RM?= rm -f
+HOST_CC ?= $(CC)
+HOST_RM ?= rm -f
+
+ifeq ($(OS),QNX)
+  HOST_CC = qcc
+endif
+
 # If left blank, minilua is built and used. You can supply an installed
 # copy of (plain) Lua 5.1 or 5.2, plus Lua BitOp. E.g. with: HOST_LUA=lua
 HOST_LUA=
@@ -639,7 +644,11 @@ depend:
 
 $(MINILUA_T): $(MINILUA_O)
 	$(E) "HOSTLINK  $@"
+ifeq ($(QNXENV), true)
+	$(Q)$(HOST_CC) -o $@ $(MINILUA_O) $(MINILUA_LIBS) $(HOST_ALIBS)
+else
 	$(Q)$(HOST_CC) $(HOST_ALDFLAGS) -o $@ $(MINILUA_O) $(MINILUA_LIBS) $(HOST_ALIBS)
+endif
 
 host/buildvm_arch.h: $(DASM_DASC) $(DASM_DEP) $(DASM_DIR)/*.lua lj_arch.h lua.h luaconf.h
 	$(E) "DYNASM    $@"
@@ -649,7 +658,11 @@ host/buildvm.o: $(DASM_DIR)/dasm_*.h
 
 $(BUILDVM_T): $(BUILDVM_O)
 	$(E) "HOSTLINK  $@"
+ifeq ($(QNXENV), true)
+	$(Q)$(HOST_CC) -o $@ $(BUILDVM_O) $(HOST_ALIBS)
+else
 	$(Q)$(HOST_CC) $(HOST_ALDFLAGS) -o $@ $(BUILDVM_O) $(HOST_ALIBS)
+endif
 
 $(LJVM_BOUT): $(BUILDVM_T)
 	$(E) "BUILDVM   $@"
@@ -699,7 +712,11 @@ $(LUAJIT_O):
 
 $(HOST_O): %.o: %.c
 	$(E) "HOSTCC    $@"
+ifeq ($(QNXENV), true)
+	$(Q)$(HOST_CC) $(filter-out -mlittle-endian, $(HOST_ACFLAGS)) -c -o $@ $<
+else
 	$(Q)$(HOST_CC) $(HOST_ACFLAGS) -c -o $@ $<
+endif
 
 include Makefile.dep
 
@@ -714,12 +731,20 @@ $(LUAJIT_A): $(LJVMCORE_O)
 # The dependency on _O, but linking with _DYNO is intentional.
 $(LUAJIT_SO): $(LJVMCORE_O)
 	$(E) "DYNLINK   $@"
+ifeq ($(QNXENV), true)
+	$(Q)$(TARGET_LD) $(TARGET_ASHLDFLAGS) -o $@ $(LJVMCORE_DYNO) $(filter-out -ldl, $(TARGET_ALIBS))
+else 
 	$(Q)$(TARGET_LD) $(TARGET_ASHLDFLAGS) -o $@ $(LJVMCORE_DYNO) $(TARGET_ALIBS)
+endif
 	$(Q)$(TARGET_STRIP) $@
 
 $(LUAJIT_T): $(TARGET_O) $(LUAJIT_O) $(TARGET_DEP)
 	$(E) "LINK      $@"
+ifeq ($(QNXENV), true)
+	$(Q)$(TARGET_LD) $(TARGET_ALDFLAGS) -o $@ $(LUAJIT_O) $(TARGET_O) $(filter-out -ldl, $(TARGET_ALIBS))
+else
 	$(Q)$(TARGET_LD) $(TARGET_ALDFLAGS) -o $@ $(LUAJIT_O) $(TARGET_O) $(TARGET_ALIBS)
+endif
 	$(Q)$(TARGET_STRIP) $@
 	$(E) "OK        Successfully built LuaJIT"
 

@@ -46,6 +46,9 @@ install_test_files:
 	  done \
 	done
 
+	@if test "${QNXENV}" = "true"; then \
+	  $(INSTALL_DATA) $(PWD)/include/config.sh $(testdir)/include/config.sh; \
+	fi
 dist-hook:
 	$(MAKE)	INSTALL_TO_DIR="$(distdir)" install_test_files
 
