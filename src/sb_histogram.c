@@ -309,7 +309,10 @@ void sb_histogram_print(sb_histogram_t *h)
   }
 
   if (maxcnt == 0)
+  {
+    pthread_rwlock_unlock(&h->lock);
     return;
+  }
 
   printf("       value  ------------- distribution ------------- count\n");
 
