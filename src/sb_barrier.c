@@ -40,9 +40,13 @@ int sb_barrier_init(sb_barrier_t *barrier, unsigned int count,
   if (count == 0)
     return 1;
 
-  if (pthread_mutex_init(&barrier->mutex, NULL) ||
-      pthread_cond_init(&barrier->cond, NULL))
+  if (pthread_mutex_init(&barrier->mutex, NULL))
     return 1;
+  if (pthread_cond_init(&barrier->cond, NULL))
+  {
+    pthread_mutex_destroy(&barrier->mutex);
+    return 1;
+  }
 
   barrier->init_count = count;
   barrier->count = count;

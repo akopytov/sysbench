@@ -165,10 +165,11 @@ option_t *set_option(const char *name, const char *value, sb_arg_type_t type)
       if (value == NULL)
         break;
 
+      char *saveptr;
       tmpbuf = strdup(value);
       tmp = tmpbuf;
 
-      for (tmp = strtok(tmp, ","); tmp != NULL; tmp = strtok(NULL, ","))
+      for (tmp = strtok_r(tmp, ",", &saveptr); tmp != NULL; tmp = strtok_r(NULL, ",", &saveptr))
         add_value(&opt->values, tmp);
 
       free(tmpbuf);

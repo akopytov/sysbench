@@ -865,9 +865,14 @@ static void *eventgen_thread_proc(void *arg)
 
   ck_ring_init(&queue_ring, MAX_QUEUE_LEN);
 
-  if (pthread_mutex_init(&queue_mutex, NULL) ||
-      pthread_cond_init(&queue_cond, NULL))
+  if (pthread_mutex_init(&queue_mutex, NULL))
   {
+    sb_barrier_wait(&worker_barrier);
+    return NULL;
+  }
+  if (pthread_cond_init(&queue_cond, NULL))
+  {
+    pthread_mutex_destroy(&queue_mutex);
     sb_barrier_wait(&worker_barrier);
     return NULL;
   }
