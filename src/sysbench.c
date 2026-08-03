@@ -1638,6 +1638,10 @@ void *sb_alloc_per_thread_array(size_t size)
 
   void *ptr = sb_memalign(bsize, CK_MD_CACHELINE);
 
+  if (ptr == NULL) {
+    return NULL;
+  }
+
   memset(ptr, 0, bsize);
 
   return ptr;
