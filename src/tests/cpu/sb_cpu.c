@@ -116,6 +116,14 @@ int cpu_execute_event(sb_event_t *r, int thread_id)
       n++; 
   }
 
+  /*
+    Keep the result live. Without this, optimizing compilers that treat sqrt()
+    as side-effect free (clang on macOS) delete the whole loop as dead code,
+    and the test only measures sysbench's per-event overhead.
+  */
+  volatile unsigned long long result = n;
+  (void) result;
+
   return 0;
 }
 
